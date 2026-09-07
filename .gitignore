@@ -1,0 +1,22 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserdata
+*.xcworkspace/xcuserdata
+xcuserdata/
+
+# Secrets
+Loam/Config/Secrets.xcconfig
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# SPM
+.swiftpm/
+/Package.resolved
+
+# Supabase local
+supabase/.branches
+supabase/.temp
