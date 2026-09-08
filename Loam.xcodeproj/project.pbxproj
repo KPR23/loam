@@ -38,6 +38,7 @@
 		D02FC6D36FA2D65A11C60DBA /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A6B1F3FF6967DADF72F0E5 /* AuthSession.swift */; };
 		D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = A74E2AB24186B00FD500CE4D /* Formatters.swift */; };
 		E4AD418CC631EF801CD981C1 /* MonthlySpendHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */; };
+		E8C1A2F93D4B5E6A7C890123 /* HomeCollapsingTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8C1A2F93D4B5E6A7C890124 /* HomeCollapsingTopBar.swift */; };
 		EC885C4695DC4841AD1668D2 /* SupabaseExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */; };
 		F3540CDF8143C9D908D2720C /* StoreKitStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FCB2D37CB3148229B212824 /* StoreKitStub.swift */; };
 		F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */; };
@@ -92,6 +93,7 @@
 		D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D533C1F5574D7B7BE0F546AC /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		D5950FD4B0A003B32224F60B /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		E8C1A2F93D4B5E6A7C890124 /* HomeCollapsingTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeCollapsingTopBar.swift; sourceTree = "<group>"; };
 		D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculatorTests.swift; sourceTree = "<group>"; };
 		DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetArcLayout.swift; sourceTree = "<group>"; };
@@ -119,6 +121,7 @@
 				ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */,
 				76BB6915492C01E2E6B51959 /* HomeTheme.swift */,
 				D5950FD4B0A003B32224F60B /* HomeView.swift */,
+				E8C1A2F93D4B5E6A7C890124 /* HomeCollapsingTopBar.swift */,
 				8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */,
 			);
 			path = Home;
@@ -454,6 +457,7 @@
 				79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */,
 				D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */,
 				20488F784A448D5470EF4707 /* HomeTheme.swift in Sources */,
+				E8C1A2F93D4B5E6A7C890123 /* HomeCollapsingTopBar.swift in Sources */,
 				FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */,
 				06541C7DADA4433C65A6EEB6 /* HouseholdView.swift in Sources */,
 				A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */,

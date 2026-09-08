@@ -6,6 +6,10 @@ struct HomeView: View {
 
     var arcReloadToken: Int = 0
 
+    @State private var showAddExpense = false
+    @State private var showMonthPicker = false
+    @State private var collapseProgress: CGFloat = 0
+
     var body: some View {
         NavigationStack {
             List {
@@ -14,8 +18,10 @@ struct HomeView: View {
                         amount: expenseStore.summary.totalMine,
                         progress: MonthlyBudgetPlaceholder.progress,
                         sharedShare: expenseStore.summary.sharedShare,
-                        reloadToken: arcReloadToken
+                        reloadToken: arcReloadToken,
+                        collapseProgress: collapseProgress
                     )
+                    .reportHomeHeroScrollOffset()
                     .listRowInsets(EdgeInsets(top: -8, leading: 0, bottom: 4, trailing: 0))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -24,17 +30,52 @@ struct HomeView: View {
                 expenseList
             }
             .listStyle(.insetGrouped)
+            .coordinateSpace(name: "homeScroll")
+            .trackHomeScrollCollapse($collapseProgress)
             .contentMargins(.top, -4, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
-            .navigationTitle(expenseStore.period.displayTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(HomeTheme.background, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HomeCollapsingTopBar(
+                        period: expenseStore.period,
+                        amount: expenseStore.summary.totalMine,
+                        collapseProgress: collapseProgress,
+                        onPickMonth: { showMonthPicker = true }
+                    )
+                }
+                if collapseProgress > 0.15 {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HomeTopBarCalendarButton(
+                            period: expenseStore.period,
+                            onPickMonth: { showMonthPicker = true }
+                        )
+                    }
+                }
+            }
             .task(id: authSession.userId) {
                 await expenseStore.refresh(userId: authSession.userId)
             }
             .refreshable {
                 await expenseStore.refresh(userId: authSession.userId)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                AddExpenseFAB {
+                    showAddExpense = true
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 12)
+            }
+        }
+        .sheet(isPresented: $showAddExpense) {
+            AddExpenseView()
+        }
+        .sheet(isPresented: $showMonthPicker) {
+            MonthPickerSheet(period: expenseStore.period) { newPeriod in
+                guard let userId = authSession.userId else { return }
+                Task { await expenseStore.setPeriod(newPeriod, userId: userId) }
             }
         }
     }
@@ -165,6 +206,23 @@ struct HomeView: View {
                 .symbolRenderingMode(.monochrome)
                 .foregroundStyle(expense.category.color)
         }
+    }
+}
+
+private struct AddExpenseFAB: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Color(.systemBackground))
+                .frame(width: 56, height: 56)
+                .background(Circle().fill(Color.primary))
+                .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add expense")
     }
 }
 

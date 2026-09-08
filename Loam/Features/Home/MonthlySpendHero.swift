@@ -11,6 +11,7 @@ struct MonthlySpendHero: View {
     var sharedShare: Money
     /// Bump when Expenses becomes visible again so the arc reloads.
     var reloadToken: Int = 0
+    var collapseProgress: CGFloat = 0
     var layout: BudgetArcLayout = BudgetArcLayout()
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,6 +19,11 @@ struct MonthlySpendHero: View {
 
     /// Side inset so the amount never kisses the arc horns.
     private let amountSideInset: CGFloat = 96
+
+    private var easedCollapse: CGFloat {
+        let t = min(max(collapseProgress, 0), 1)
+        return t * t * (3 - 2 * t)
+    }
 
     var body: some View {
         let heroAmount = MoneyFormatter.heroAmount(from: amount)
@@ -37,14 +43,18 @@ struct MonthlySpendHero: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, amountSideInset)
+                    .opacity(1 - easedCollapse)
+                    .scaleEffect(1 - 0.12 * easedCollapse, anchor: .center)
+                    .blur(radius: easedCollapse * 3)
 
                     Text("\(percent)% of budget")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(HomeTheme.tertiary)
                         .padding(.horizontal, amountSideInset)
+                        .opacity(1 - easedCollapse)
                 }
                 // Keep the figure in the open bowl under the arc, not overlapping it.
-                .offset(y: 40)
+                .offset(y: 40 + easedCollapse * 10)
             }
             .frame(height: 260)
 
