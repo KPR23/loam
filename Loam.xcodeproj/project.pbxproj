@@ -23,6 +23,7 @@
 		5385DE5F359781E589AADE85 /* BudgetArcLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */; };
 		61B7AF3D80465B3F6F508F58 /* CalendarDateCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E27CDECAD1AC0216EB7FC75 /* CalendarDateCodec.swift */; };
 		654413FF7956D9DB29DD830D /* BudgetArcLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38B664DBA46BD536B44E5F73 /* BudgetArcLayoutTests.swift */; };
+		689897107294EC9BB89E3DBA /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EEBEB450D61F2F9080F0C496 /* AppIcon.icon */; };
 		699C700B7D9C668D32D611EB /* ExpenseStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */; };
 		79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 591C0E16AC62C2272FA783EA /* ExpenseStore.swift */; };
 		88525ED016C8B7513D39C6DE /* SplitCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */; };
@@ -99,6 +100,7 @@
 		D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculatorTests.swift; sourceTree = "<group>"; };
 		DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetArcLayout.swift; sourceTree = "<group>"; };
+		EEBEB450D61F2F9080F0C496 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseStoreTests.swift; sourceTree = "<group>"; };
 		F6CD835D39E131CEAA0B24E8 /* Money.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Money.swift; sourceTree = "<group>"; };
 		F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
@@ -215,6 +217,7 @@
 			isa = PBXGroup;
 			children = (
 				FA6BD4D92C1A7DFA164C33E7 /* brand */,
+				EEBEB450D61F2F9080F0C496 /* AppIcon.icon */,
 				D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */,
 			);
 			path = Resources;
@@ -421,6 +424,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				689897107294EC9BB89E3DBA /* AppIcon.icon in Resources */,
 				2740165736ACD1860265CAD9 /* Assets.xcassets in Resources */,
 				C58A45A8DD071F63B9661499 /* Secrets.xcconfig.example in Resources */,
 				C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */,

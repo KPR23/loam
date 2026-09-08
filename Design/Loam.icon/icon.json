@@ -6,13 +6,15 @@
         {
           "fill-specializations" : [
             {
+              "value" : "system-dark"
+            },
+            {
               "appearance" : "dark",
               "value" : "system-light"
             }
           ],
-          "hidden" : false,
-          "image-name" : "333.svg",
-          "name" : "333"
+          "image-name" : "final.svg",
+          "name" : "final"
         }
       ],
       "shadow" : {
