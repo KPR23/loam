@@ -1,0 +1,13 @@
+#!/bin/sh
+# Strip Cursor co-author trailer injected by the agent harness.
+MSG_FILE="$1"
+if [ -z "$MSG_FILE" ] || [ ! -f "$MSG_FILE" ]; then
+  exit 0
+fi
+tmp="$(mktemp)"
+grep -v '^Co-authored-by: Cursor <cursoragent@cursor.com>$' "$MSG_FILE" > "$tmp" || true
+# Trim trailing blank lines
+# shellcheck disable=SC2002
+cat "$tmp" | awk 'NF { p=1 } p { buf[NR]=$0 } END { for (i=1;i<=NR;i++) if (buf[i] ~ /[^[:space:]]/) last=i; for (i=1;i<=last;i++) print buf[i] }' > "$MSG_FILE"
+rm -f "$tmp"
+exit 0
