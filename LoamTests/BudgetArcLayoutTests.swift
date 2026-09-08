@@ -104,4 +104,12 @@ final class MoneyFormatterHeroTests: XCTestCase {
         )
         XCTAssertEqual(amount, "250.40")
     }
+
+    func testTypingAmountDropsTrailingZero() {
+        let amount = MoneyFormatter.typingAmount(
+            from: Money(amountMinor: 2580, currencyCode: "PLN"),
+            locale: Locale(identifier: "en_US_POSIX")
+        )
+        XCTAssertEqual(amount, "25.8")
+    }
 }

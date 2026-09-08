@@ -3,7 +3,9 @@ import Foundation
 /// On-device store for demo mode and offline Phase 1. Swapped for Supabase when configured.
 actor LocalExpenseRepository: ExpenseRepository {
     private let defaultsKey = "loam.local.expenses"
+    private let recurringDefaultsKey = "loam.local.recurring"
     private var cache: [ExpenseRecord]?
+    private var recurringCache: [RecurringRuleRecord]?
 
     func fetchExpenses(for userId: UUID, in period: DatePeriod) async throws -> [ExpenseRecord] {
         let all = try load()
@@ -23,6 +25,13 @@ actor LocalExpenseRepository: ExpenseRepository {
         all.append(expense)
         try save(all)
         return expense
+    }
+
+    func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
+        var all = try loadRecurring()
+        all.append(rule)
+        try saveRecurring(all)
+        return rule
     }
 
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
@@ -68,5 +77,22 @@ actor LocalExpenseRepository: ExpenseRepository {
         let data = try JSONEncoder().encode(expenses)
         UserDefaults.standard.set(data, forKey: defaultsKey)
         cache = expenses
+    }
+
+    private func loadRecurring() throws -> [RecurringRuleRecord] {
+        if let recurringCache { return recurringCache }
+        guard let data = UserDefaults.standard.data(forKey: recurringDefaultsKey) else {
+            recurringCache = []
+            return []
+        }
+        let decoded = try JSONDecoder().decode([RecurringRuleRecord].self, from: data)
+        recurringCache = decoded
+        return decoded
+    }
+
+    private func saveRecurring(_ rules: [RecurringRuleRecord]) throws {
+        let data = try JSONEncoder().encode(rules)
+        UserDefaults.standard.set(data, forKey: recurringDefaultsKey)
+        recurringCache = rules
     }
 }

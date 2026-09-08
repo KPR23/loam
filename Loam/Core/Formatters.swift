@@ -16,14 +16,32 @@ enum MoneyFormatter {
 
     /// Hero amount without a currency suffix, e.g. `250` or `250,40`.
     static func heroAmount(from money: Money, locale: Locale = .current) -> String {
+        decimalAmount(from: money, locale: locale, minimumFractionDigits: nil)
+    }
+
+    /// Live typing display — no trailing zeros, e.g. `25,8` instead of `25,80`.
+    static func typingAmount(from money: Money, locale: Locale = .current) -> String {
+        decimalAmount(from: money, locale: locale, minimumFractionDigits: 0)
+    }
+
+    private static func decimalAmount(
+        from money: Money,
+        locale: Locale,
+        minimumFractionDigits: Int?
+    ) -> String {
         let major = NSDecimalNumber(value: money.amountMinor).dividing(by: NSDecimalNumber(value: 100))
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.locale = locale
         formatter.usesGroupingSeparator = true
         let fractionDigits = fractionDigits(for: money.amountMinor)
-        formatter.minimumFractionDigits = fractionDigits.min
-        formatter.maximumFractionDigits = fractionDigits.max
+        if let minimumFractionDigits {
+            formatter.minimumFractionDigits = minimumFractionDigits
+            formatter.maximumFractionDigits = 2
+        } else {
+            formatter.minimumFractionDigits = fractionDigits.min
+            formatter.maximumFractionDigits = fractionDigits.max
+        }
         return formatter.string(from: major) ?? "0"
     }
 
@@ -42,6 +60,29 @@ enum DatePeriod: Equatable {
         let year = components.year ?? calendar.component(.year, from: now)
         let month = components.month ?? calendar.component(.month, from: now)
         return .month(year: year, month: month)
+    }
+
+    init(from date: Date) {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month], from: date)
+        let year = components.year ?? calendar.component(.year, from: date)
+        let month = components.month ?? calendar.component(.month, from: date)
+        self = .month(year: year, month: month)
+    }
+
+    var anchorDate: Date {
+        switch self {
+        case let .month(year, month):
+            var components = DateComponents()
+            components.year = year
+            components.month = month
+            components.day = 1
+            return Calendar.current.date(from: components) ?? Date()
+        }
+    }
+
+    static func startOfMonth(for date: Date) -> Date {
+        DatePeriod(from: date).anchorDate
     }
 
     var displayTitle: String {

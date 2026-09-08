@@ -8,10 +8,16 @@ final class ExpenseStore: ObservableObject {
     @Published var lastError: String?
 
     private let repository: ExpenseRepository
-    private(set) var period: DatePeriod = .currentMonth
+    @Published private(set) var period: DatePeriod = .currentMonth
 
     init(repository: ExpenseRepository = ExpenseRepositoryFactory.make()) {
         self.repository = repository
+    }
+
+    func setPeriod(_ newPeriod: DatePeriod, userId: UUID?) async {
+        guard period != newPeriod else { return }
+        period = newPeriod
+        await refresh(userId: userId)
     }
 
     func refresh(userId: UUID?) async {

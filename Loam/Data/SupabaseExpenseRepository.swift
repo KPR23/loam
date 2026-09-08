@@ -28,6 +28,14 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             .filter { $0.shares.contains(where: { $0.userId == userId }) }
     }
 
+    func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
+        _ = try await client
+            .from("recurring_rule")
+            .insert(RecurringRuleInsertDTO(from: rule))
+            .execute()
+        return rule
+    }
+
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
 

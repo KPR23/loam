@@ -3,6 +3,7 @@ import Foundation
 protocol ExpenseRepository: Sendable {
     func fetchExpenses(for userId: UUID, in period: DatePeriod) async throws -> [ExpenseRecord]
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord
+    func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     func delete(id: UUID) async throws
 }
