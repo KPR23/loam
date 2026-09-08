@@ -45,17 +45,28 @@ final class ExpenseStore: ObservableObject {
         category: ExpenseCategory,
         note: String?,
         spentAt: Date,
-        userId: UUID
+        userId: UUID,
+        recurring: RecurringRuleRecord? = nil
     ) async throws {
+        let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+        let recurringRule: RecurringRuleRecord?
+        if var rule = recurring {
+            rule.note = trimmedNote
+            recurringRule = try await repository.createRecurringRule(rule)
+        } else {
+            recurringRule = nil
+        }
+
         let shares = SplitCalculator.personal(totalMinor: amountMinor, userId: userId)
         let expense = ExpenseRecord(
             amountMinor: amountMinor,
             category: category,
-            note: note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 },
+            note: trimmedNote,
             spentAt: spentAt,
             paidBy: userId,
             createdBy: userId,
             householdId: nil,
+            recurringId: recurringRule?.id,
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
         _ = try await repository.create(expense)
