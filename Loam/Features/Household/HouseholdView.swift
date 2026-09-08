@@ -62,7 +62,8 @@ struct HouseholdView: View {
         HStack(spacing: 14) {
             Image(systemName: expense.category.systemImage)
                 .font(.title3)
-                .foregroundStyle(HomeTheme.accent)
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(expense.category.color)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {

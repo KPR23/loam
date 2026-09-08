@@ -80,18 +80,21 @@ struct AddExpenseView: View {
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: item.systemImage)
+                    .font(.title3)
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(item.color)
                 Text(item.displayName)
                     .font(.caption2)
                     .lineLimit(1)
+                    .foregroundStyle(Color.primary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(selected ? Color.accentColor.opacity(0.15) : Color(.secondarySystemFill))
-            .foregroundStyle(selected ? Color.accentColor : Color.primary)
+            .background(selected ? item.color.opacity(0.18) : Color(.secondarySystemFill))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 1.5)
+                    .strokeBorder(selected ? item.color : .clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
