@@ -46,8 +46,8 @@ struct BudgetArcLayout: Equatable {
         (squareSize + outerSquareSize) / 2 + rowGap
     }
 
-    func makeTiles(in size: CGSize) -> [BudgetArcTile] {
-        guard size.width > 0, size.height > 0, rowCount > 0, columnCount > 0 else { return [] }
+    private func arcGeometry(in size: CGSize) -> (center: CGPoint, innerRadius: CGFloat, outerRadius: CGFloat)? {
+        guard size.width > 0, size.height > 0, rowCount > 0, columnCount > 0 else { return nil }
 
         let center = CGPoint(x: size.width / 2, y: size.height * centerYRatio)
         let pitch = rowPitch
@@ -55,6 +55,45 @@ struct BudgetArcLayout: Equatable {
         let topLimited = center.y - topInset - tileReach
         let outerRadius = max(tileReach, min(widthLimited, topLimited))
         let innerRadius = max(tileReach, outerRadius - CGFloat(rowCount - 1) * pitch)
+        return (center, innerRadius, outerRadius)
+    }
+
+    /// Visual centre for the hero amount — inside the arc bowl, clear of the tile ring.
+    func labelAnchor(in size: CGSize) -> CGPoint {
+        guard let geometry = arcGeometry(in: size) else {
+            return CGPoint(x: size.width / 2, y: size.height * 0.58)
+        }
+
+        // Lower in the bowl — more breathing room below the tile ring.
+        let y = geometry.center.y - geometry.innerRadius * 0.08
+        return CGPoint(x: geometry.center.x, y: y)
+    }
+
+    /// Horizontal space for the hero amount — clears the inner horn tiles.
+    func labelMaxWidth(in size: CGSize) -> CGFloat {
+        guard let geometry = arcGeometry(in: size) else {
+            return size.width * 0.52
+        }
+
+        let center = geometry.center
+        let innerRadius = geometry.innerRadius
+        let start = startDegrees * .pi / 180
+        let end = endDegrees * .pi / 180
+        let innerReach = squareSize * CGFloat(2).squareRoot() / 2
+
+        let leftHornCenterX = center.x + innerRadius * cos(start)
+        let rightHornCenterX = center.x + innerRadius * cos(end)
+        let padding: CGFloat = 24
+        let width = (rightHornCenterX - leftHornCenterX) - (2 * innerReach) - padding
+        return max(72, width)
+    }
+
+    func makeTiles(in size: CGSize) -> [BudgetArcTile] {
+        guard let geometry = arcGeometry(in: size) else { return [] }
+
+        let center = geometry.center
+        let innerRadius = geometry.innerRadius
+        let pitch = rowPitch
 
         var tiles: [BudgetArcTile] = []
         var nextID = 0
@@ -92,7 +131,7 @@ struct BudgetArcLayout: Equatable {
 }
 
 enum BudgetArcFill {
-    /// How fully tile `index` should light up for a 0...1 budget ratio.
+    /// How fully tile `index` should light up for a 0...1 reveal ratio.
     static func coverage(index: Int, total: Int, progress: Double) -> Double {
         guard total > 0, index >= 0, index < total else { return 0 }
         let exact = Double(total) * clamp(progress)
@@ -107,11 +146,51 @@ enum BudgetArcFill {
         return Int((Double(total) * clamp(progress)).rounded(.down))
     }
 
-    /// 0, 1 or 2 — the arc switches colour every third of the budget.
-    static func band(index: Int, total: Int) -> Int {
-        guard total > 0, index >= 0 else { return 0 }
-        let fraction = Double(index) / Double(total)
-        return min(2, Int(fraction * 3))
+    /// Maps each tile to a category based on spending share (largest categories first, left→right).
+    static func category(forTile index: Int, total: Int, slices: [CategorySpendSlice]) -> ExpenseCategory? {
+        guard total > 0, index >= 0, index < total, !slices.isEmpty else { return nil }
+
+        let counts = tileCounts(total: total, slices: slices)
+        var cursor = 0
+        for slice in slices {
+            let count = counts[slice.category] ?? 0
+            if index < cursor + count {
+                return slice.category
+            }
+            cursor += count
+        }
+        return nil
+    }
+
+    static func tileCounts(total: Int, slices: [CategorySpendSlice]) -> [ExpenseCategory: Int] {
+        guard total > 0, !slices.isEmpty else { return [:] }
+
+        let totalAmount = slices.reduce(0) { $0 + $1.amountMinor }
+        guard totalAmount > 0 else { return [:] }
+
+        var allocations: [(category: ExpenseCategory, count: Int, remainder: Double)] = []
+        var assigned = 0
+
+        for slice in slices {
+            let exact = Double(total) * Double(slice.amountMinor) / Double(totalAmount)
+            let floor = Int(exact.rounded(.down))
+            allocations.append((slice.category, floor, exact - Double(floor)))
+            assigned += floor
+        }
+
+        var remaining = total - assigned
+        let ranked = allocations.enumerated().sorted { lhs, rhs in
+            if lhs.element.remainder != rhs.element.remainder {
+                return lhs.element.remainder > rhs.element.remainder
+            }
+            return lhs.offset < rhs.offset
+        }
+        for (originalIndex, _) in ranked where remaining > 0 {
+            allocations[originalIndex].count += 1
+            remaining -= 1
+        }
+
+        return Dictionary(uniqueKeysWithValues: allocations.map { ($0.category, $0.count) })
     }
 
     static func clamp(_ progress: Double) -> Double {

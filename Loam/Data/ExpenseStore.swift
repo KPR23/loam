@@ -89,16 +89,29 @@ final class ExpenseStore: ObservableObject {
     ) -> MonthSpendSummary {
         var total = 0
         var shared = 0
+        var byCategory: [ExpenseCategory: Int] = [:]
         for expense in expenses {
             let mine = expense.shares.first(where: { $0.userId == userId })?.amountMinor ?? 0
             total += mine
+            if mine > 0 {
+                byCategory[expense.category, default: 0] += mine
+            }
             if expense.householdId != nil {
                 shared += mine
             }
         }
+        let categoryBreakdown = byCategory
+            .map { CategorySpendSlice(category: $0.key, amountMinor: $0.value) }
+            .sorted { lhs, rhs in
+                if lhs.amountMinor != rhs.amountMinor {
+                    return lhs.amountMinor > rhs.amountMinor
+                }
+                return lhs.category.displayName < rhs.category.displayName
+            }
         return MonthSpendSummary(
             totalMine: Money(amountMinor: total, currencyCode: currency),
-            sharedShare: Money(amountMinor: shared, currencyCode: currency)
+            sharedShare: Money(amountMinor: shared, currencyCode: currency),
+            categoryBreakdown: categoryBreakdown
         )
     }
 }

@@ -16,6 +16,9 @@ final class ExpenseStoreSummaryTests: XCTestCase {
         let summary = ExpenseStore.makeSummary(expenses: [expense], userId: user)
         XCTAssertEqual(summary.totalMine.amountMinor, 2500)
         XCTAssertEqual(summary.sharedShare.amountMinor, 0)
+        XCTAssertEqual(summary.categoryBreakdown.count, 1)
+        XCTAssertEqual(summary.categoryBreakdown.first?.category, .groceries)
+        XCTAssertEqual(summary.categoryBreakdown.first?.amountMinor, 2500)
     }
 
     func testSharedShareSeparated() {

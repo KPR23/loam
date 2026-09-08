@@ -59,6 +59,29 @@ final class BudgetArcLayoutTests: XCTestCase {
         XCTAssertGreaterThan(outer.size, inner.size)
     }
 
+    func testLabelAnchorIsHorizontallyCenteredInBowl() {
+        let anchor = layout.labelAnchor(in: canvas)
+        XCTAssertEqual(anchor.x, canvas.width / 2, accuracy: 0.001)
+        XCTAssertGreaterThan(anchor.y, canvas.height * 0.45)
+        XCTAssertLessThan(anchor.y, canvas.height * 0.72)
+    }
+
+    func testLabelMaxWidthClearsInnerHornTiles() {
+        let maxWidth = layout.labelMaxWidth(in: canvas)
+        XCTAssertLessThan(maxWidth, canvas.width - 80)
+        XCTAssertGreaterThan(maxWidth, 100)
+
+        let tiles = layout.makeTiles(in: canvas)
+        let innerHornTiles = tiles.filter { $0.row == 0 && ($0.column == 0 || $0.column == layout.columnCount - 1) }
+        XCTAssertEqual(innerHornTiles.count, 2)
+
+        let left = innerHornTiles.min(by: { $0.point.x < $1.point.x })!
+        let right = innerHornTiles.max(by: { $0.point.x < $1.point.x })!
+        let innerReach = layout.squareSize * CGFloat(2).squareRoot() / 2
+        let safeSpan = (right.point.x - innerReach) - (left.point.x + innerReach) - 24
+        XCTAssertEqual(maxWidth, max(72, safeSpan), accuracy: 0.5)
+    }
+
     func testSeventyPercentLightsMostTilesButNotAll() {
         let total = layout.makeTiles(in: canvas).count
         let filled = BudgetArcFill.filledCount(total: total, progress: 0.70)
@@ -78,13 +101,24 @@ final class BudgetArcLayoutTests: XCTestCase {
     }
 
     func testColourBandSwitchesEveryThird() {
-        XCTAssertEqual(BudgetArcFill.band(index: 0, total: 30), 0)
-        XCTAssertEqual(BudgetArcFill.band(index: 9, total: 30), 0)
-        XCTAssertEqual(BudgetArcFill.band(index: 10, total: 30), 1)
-        XCTAssertEqual(BudgetArcFill.band(index: 19, total: 30), 1)
-        XCTAssertEqual(BudgetArcFill.band(index: 20, total: 30), 2)
-        XCTAssertEqual(BudgetArcFill.band(index: 29, total: 30), 2)
-        XCTAssertEqual(BudgetArcFill.band(index: 0, total: 0), 0)
+        let slices = [
+            CategorySpendSlice(category: .groceries, amountMinor: 50),
+            CategorySpendSlice(category: .dining, amountMinor: 30),
+            CategorySpendSlice(category: .transport, amountMinor: 20),
+        ]
+        let total = 36
+        let counts = BudgetArcFill.tileCounts(total: total, slices: slices)
+        XCTAssertEqual(counts[.groceries], 18)
+        XCTAssertEqual(counts[.dining], 11)
+        XCTAssertEqual(counts[.transport], 7)
+        XCTAssertEqual(counts.values.reduce(0, +), total)
+
+        XCTAssertEqual(BudgetArcFill.category(forTile: 0, total: total, slices: slices), .groceries)
+        XCTAssertEqual(BudgetArcFill.category(forTile: 17, total: total, slices: slices), .groceries)
+        XCTAssertEqual(BudgetArcFill.category(forTile: 18, total: total, slices: slices), .dining)
+        XCTAssertEqual(BudgetArcFill.category(forTile: 28, total: total, slices: slices), .dining)
+        XCTAssertEqual(BudgetArcFill.category(forTile: 29, total: total, slices: slices), .transport)
+        XCTAssertNil(BudgetArcFill.category(forTile: 0, total: total, slices: []))
     }
 }
 

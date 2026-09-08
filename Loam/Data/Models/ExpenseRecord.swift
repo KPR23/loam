@@ -70,14 +70,21 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
     var isShared: Bool { householdId != nil }
 }
 
+struct CategorySpendSlice: Equatable, Sendable {
+    var category: ExpenseCategory
+    var amountMinor: Int
+}
+
 struct MonthSpendSummary: Sendable {
     var totalMine: Money
     var sharedShare: Money
+    var categoryBreakdown: [CategorySpendSlice]
 
     static func zero(currency: String = "PLN") -> MonthSpendSummary {
         MonthSpendSummary(
             totalMine: Money(amountMinor: 0, currencyCode: currency),
-            sharedShare: Money(amountMinor: 0, currencyCode: currency)
+            sharedShare: Money(amountMinor: 0, currencyCode: currency),
+            categoryBreakdown: []
         )
     }
 }

@@ -16,7 +16,7 @@ struct HomeView: View {
                 Section {
                     MonthlySpendHero(
                         amount: expenseStore.summary.totalMine,
-                        progress: MonthlyBudgetPlaceholder.progress,
+                        categoryBreakdown: expenseStore.summary.categoryBreakdown,
                         sharedShare: expenseStore.summary.sharedShare,
                         reloadToken: arcReloadToken,
                         collapseProgress: collapseProgress
