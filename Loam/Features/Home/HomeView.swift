@@ -116,6 +116,14 @@ struct HomeView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
+
+            if SupabaseConfig.isConfigured {
+                Text("Synced with Supabase")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+            }
         }
     }
 

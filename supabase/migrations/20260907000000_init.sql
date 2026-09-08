@@ -481,6 +481,28 @@ left join shares sh on sh.household_id = u.household_id and sh.user_id = u.user_
 left join settled_in si on si.household_id = u.household_id and si.user_id = u.user_id
 left join settled_out so on so.household_id = u.household_id and so.user_id = u.user_id;
 
+-- ---------------------------------------------------------------------------
+-- Privileges (required for PostgREST; RLS still filters rows)
+-- Without these, clients get "permission denied for table …" and nested
+-- embeds like expense_share are missing from the schema cache.
+-- ---------------------------------------------------------------------------
+
+grant usage on schema public to anon, authenticated, service_role;
+
+grant select, insert, update, delete on all tables in schema public
+  to anon, authenticated, service_role;
+
+grant usage, select on all sequences in schema public
+  to anon, authenticated, service_role;
+
+alter default privileges in schema public
+  grant select, insert, update, delete on tables
+  to anon, authenticated, service_role;
+
+alter default privileges in schema public
+  grant usage, select on sequences
+  to anon, authenticated, service_role;
+
 grant select on public.v_personal_month_spend to authenticated;
 grant select on public.v_household_balances to authenticated;
 

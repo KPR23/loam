@@ -12,14 +12,15 @@ Native iOS expense tracker for personal + household spending. Home answers **how
 ## Phase status
 
 **Phase 0** — project, schema+RLS, Apple auth / demo, empty Home  
-**Phase 1 (current)** — personal expense CRUD, month sum on Home, add in a few taps (local store until Supabase is wired)
+**Phase 1 (done)** — personal expense CRUD, month sum, Supabase sync when secrets are set (local fallback otherwise)
 
 - Xcode project + folder architecture
 - `Money` as `Int` minor units
 - Supabase SQL schema + RLS (incl. empty `recurring_*`)
 - Sign in with Apple (+ demo mode when Supabase is not configured)
 - Home led by personal month total + expense list
-- `LocalExpenseRepository` (UserDefaults) for demo; Supabase repo next
+- `SupabaseExpenseRepository` when configured; `LocalExpenseRepository` demo fallback
+- Secrets via `Loam/Config/Secrets.xcconfig` (gitignored)
 
 ## Setup
 
@@ -46,6 +47,13 @@ Without secrets, the app still runs in **demo mode** (Continue without account) 
 ```bash
 cp Loam/Config/Secrets.xcconfig.example Loam/Config/Secrets.xcconfig
 # edit URL + anon key
+```
+
+**xcconfig gotcha:** `//` starts a comment, so never write `https://…` literally. Use:
+
+```
+SUPABASE_URL = https:/$()/abcdxyz.supabase.co
+SUPABASE_ANON_KEY = eyJhbGciOi...
 ```
 
 Then in Xcode: Project → Info → Configurations → based on `Secrets.xcconfig`, **or** set env vars `SUPABASE_URL` / `SUPABASE_ANON_KEY` in the Run scheme.

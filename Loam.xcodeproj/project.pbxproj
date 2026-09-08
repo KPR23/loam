@@ -9,11 +9,14 @@
 /* Begin PBXBuildFile section */
 		03D450B1F293CE7B1F650960 /* Money.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6CD835D39E131CEAA0B24E8 /* Money.swift */; };
 		095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */; };
+		1F773CF0A1FB5908D798406C /* ExpenseRepositoryFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */; };
+		269663C225006F0D994C1708 /* CalendarDateCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */; };
 		2740165736ACD1860265CAD9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */; };
 		33F1ED5603B3BB1925385A6D /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */; };
 		3B0879A3E31BDEB3E9BB33AE /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CA57745C8FB4E286749E44E /* AuthView.swift */; };
 		4CC7CD6399A63C76561174E0 /* BalanceSimplifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */; };
 		52647BE969B4C648691C9815 /* ExpenseRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */; };
+		61B7AF3D80465B3F6F508F58 /* CalendarDateCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E27CDECAD1AC0216EB7FC75 /* CalendarDateCodec.swift */; };
 		699C700B7D9C668D32D611EB /* ExpenseStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */; };
 		79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 591C0E16AC62C2272FA783EA /* ExpenseStore.swift */; };
 		88525ED016C8B7513D39C6DE /* SplitCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */; };
@@ -22,10 +25,12 @@
 		9D4C5FC21BF1452BAA2D629D /* LocalExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */; };
 		A385DC89F56B32C668A7375C /* AddExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD805CDE31A24AD630A9703 /* AddExpenseView.swift */; };
 		A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C15AD0F34F080CB70FB979F /* LoamApp.swift */; };
+		A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */; };
 		AB2952FF3827975AE2342989 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24727CCA04F4D831F666F2DF /* RootView.swift */; };
 		C58A45A8DD071F63B9661499 /* Secrets.xcconfig.example in Resources */ = {isa = PBXBuildFile; fileRef = F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */; };
 		D02FC6D36FA2D65A11C60DBA /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A6B1F3FF6967DADF72F0E5 /* AuthSession.swift */; };
 		D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = A74E2AB24186B00FD500CE4D /* Formatters.swift */; };
+		EC885C4695DC4841AD1668D2 /* SupabaseExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */; };
 		F3540CDF8143C9D908D2720C /* StoreKitStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FCB2D37CB3148229B212824 /* StoreKitStub.swift */; };
 		F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */; };
 		F7D1E2A7318C3E027F56FBCA /* SettlementMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A97EB25D9F1644021698E45B /* SettlementMode.swift */; };
@@ -48,7 +53,10 @@
 		05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExpenseRepository.swift; sourceTree = "<group>"; };
 		0A3D412D891B98D11462EB02 /* Loam.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Loam.entitlements; sourceTree = "<group>"; };
 		0C15AD0F34F080CB70FB979F /* LoamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamApp.swift; sourceTree = "<group>"; };
+		0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepositoryFactory.swift; sourceTree = "<group>"; };
+		0E27CDECAD1AC0216EB7FC75 /* CalendarDateCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDateCodec.swift; sourceTree = "<group>"; };
 		1BB3E318E7DB0B9CE3B246C1 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
+		1C9A76F1F1B13BB49D3BCA2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceSimplifier.swift; sourceTree = "<group>"; };
 		24727CCA04F4D831F666F2DF /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		38A6B1F3FF6967DADF72F0E5 /* AuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSession.swift; sourceTree = "<group>"; };
@@ -56,20 +64,24 @@
 		5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRecord.swift; sourceTree = "<group>"; };
 		6BD805CDE31A24AD630A9703 /* AddExpenseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseView.swift; sourceTree = "<group>"; };
 		6CA57745C8FB4E286749E44E /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+		6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDTO.swift; sourceTree = "<group>"; };
+		7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseExpenseRepository.swift; sourceTree = "<group>"; };
 		7FCB2D37CB3148229B212824 /* StoreKitStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitStub.swift; sourceTree = "<group>"; };
 		8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepository.swift; sourceTree = "<group>"; };
-		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A08A73A1CF023A5DDE2B32C0 /* DeepLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandler.swift; sourceTree = "<group>"; };
 		A74E2AB24186B00FD500CE4D /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		A97EB25D9F1644021698E45B /* SettlementMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMode.swift; sourceTree = "<group>"; };
+		BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDateCodecTests.swift; sourceTree = "<group>"; };
+		BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
 		D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D5950FD4B0A003B32224F60B /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculatorTests.swift; sourceTree = "<group>"; };
 		F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseStoreTests.swift; sourceTree = "<group>"; };
 		F6CD835D39E131CEAA0B24E8 /* Money.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Money.swift; sourceTree = "<group>"; };
-		F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
-		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
+		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -112,6 +124,7 @@
 		16CDA72160F92E594CE6FEF0 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				0E27CDECAD1AC0216EB7FC75 /* CalendarDateCodec.swift */,
 				1BB3E318E7DB0B9CE3B246C1 /* Category.swift */,
 				A74E2AB24186B00FD500CE4D /* Formatters.swift */,
 				F6CD835D39E131CEAA0B24E8 /* Money.swift */,
@@ -138,6 +151,7 @@
 				ED80673F5A46F7590B187BB0 /* Features */,
 				576D30E4B2344B2E3B62AA5E /* Resources */,
 				3B4E4F9BB43D58DEC0BDEA10 /* System */,
+				1C9A76F1F1B13BB49D3BCA2A /* Info.plist */,
 				0A3D412D891B98D11462EB02 /* Loam.entitlements */,
 				0C15AD0F34F080CB70FB979F /* LoamApp.swift */,
 				24727CCA04F4D831F666F2DF /* RootView.swift */,
@@ -183,6 +197,7 @@
 		82D602BAA840840463B4BFDE /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */,
 				5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */,
 			);
 			path = Models;
@@ -199,6 +214,7 @@
 		AA1A670124B4A58B5074AEE8 /* LoamTests */ = {
 			isa = PBXGroup;
 			children = (
+				BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */,
 				F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */,
 				D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */,
 			);
@@ -227,9 +243,11 @@
 			children = (
 				82D602BAA840840463B4BFDE /* Models */,
 				8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */,
+				0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */,
 				591C0E16AC62C2272FA783EA /* ExpenseStore.swift */,
 				05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */,
 				C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */,
+				7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -247,6 +265,7 @@
 		FD3573B8123A2A6AE8155091 /* Config */ = {
 			isa = PBXGroup;
 			children = (
+				BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */,
 				F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */,
 			);
 			path = Config;
@@ -305,9 +324,6 @@
 					38C741AEE51B5DD4542905E5 = {
 						DevelopmentTeam = "";
 					};
-					8AAF55F2B1E62FB9443C5270 = {
-						DevelopmentTeam = "";
-					};
 				};
 			};
 			buildConfigurationList = 9AFC3B51DF531ABE639D7643 /* Build configuration list for PBXProject "Loam" */;
@@ -350,6 +366,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				269663C225006F0D994C1708 /* CalendarDateCodecTests.swift in Sources */,
 				699C700B7D9C668D32D611EB /* ExpenseStoreTests.swift in Sources */,
 				88525ED016C8B7513D39C6DE /* SplitCalculatorTests.swift in Sources */,
 			);
@@ -363,10 +380,13 @@
 				D02FC6D36FA2D65A11C60DBA /* AuthSession.swift in Sources */,
 				3B0879A3E31BDEB3E9BB33AE /* AuthView.swift in Sources */,
 				4CC7CD6399A63C76561174E0 /* BalanceSimplifier.swift in Sources */,
+				61B7AF3D80465B3F6F508F58 /* CalendarDateCodec.swift in Sources */,
 				8A2FFEF3FDC79F301B77AE32 /* Category.swift in Sources */,
 				F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */,
+				A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */,
 				52647BE969B4C648691C9815 /* ExpenseRecord.swift in Sources */,
 				095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */,
+				1F773CF0A1FB5908D798406C /* ExpenseRepositoryFactory.swift in Sources */,
 				79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */,
 				D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */,
 				FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */,
@@ -378,6 +398,7 @@
 				F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */,
 				F3540CDF8143C9D908D2720C /* StoreKitStub.swift in Sources */,
 				33F1ED5603B3BB1925385A6D /* SupabaseClientProvider.swift in Sources */,
+				EC885C4695DC4841AD1668D2 /* SupabaseExpenseRepository.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -398,25 +419,22 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_SUPABASE_ANON_KEY = "$(SUPABASE_ANON_KEY)";
-				INFOPLIST_KEY_SUPABASE_URL = "$(SUPABASE_URL)";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				DEVELOPMENT_TEAM = XXJA67J9AN;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Loam/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.loam.Loam;
 				SDKROOT = iphoneos;
-				SUPABASE_ANON_KEY = "";
-				SUPABASE_URL = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
 		613D70E58E34291B9DAA4780 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -496,6 +514,7 @@
 		};
 		93C860893498F866A000C69E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -569,19 +588,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_SUPABASE_ANON_KEY = "$(SUPABASE_ANON_KEY)";
-				INFOPLIST_KEY_SUPABASE_URL = "$(SUPABASE_URL)";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				DEVELOPMENT_TEAM = XXJA67J9AN;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Loam/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.loam.Loam;
 				SDKROOT = iphoneos;
-				SUPABASE_ANON_KEY = "";
-				SUPABASE_URL = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;

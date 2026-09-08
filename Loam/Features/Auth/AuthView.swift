@@ -51,6 +51,18 @@ struct AuthView: View {
                 }
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+
+                if let issue = SupabaseConfig.configurationIssue {
+                    Text(issue)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+            } else {
+                Text("Connected to Supabase")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             if let error = authSession.lastError {

@@ -10,7 +10,7 @@ final class ExpenseStore: ObservableObject {
     private let repository: ExpenseRepository
     private(set) var period: DatePeriod = .currentMonth
 
-    init(repository: ExpenseRepository = LocalExpenseRepository()) {
+    init(repository: ExpenseRepository = ExpenseRepositoryFactory.make()) {
         self.repository = repository
     }
 

@@ -15,7 +15,7 @@ final class AuthSession: ObservableObject {
     @Published private(set) var displayName: String?
     @Published var lastError: String?
 
-    /// Local-only session when Supabase is not configured (Phase 0 simulator / UI work).
+    /// Local-only session when Supabase is not configured.
     private var demoMode = false
 
     func bootstrap() async {
@@ -27,20 +27,32 @@ final class AuthSession: ObservableObject {
 
         do {
             let session = try await client.auth.session
-            apply(user: session.user)
+            if session.isExpired {
+                // Local session emitted immediately; wait for refresh via authStateChanges.
+                state = .signedOut
+            } else {
+                apply(user: session.user)
+            }
         } catch {
             state = .signedOut
         }
 
         Task { [weak self] in
-            for await (_, session) in await client.auth.authStateChanges {
+            for await (event, session) in await client.auth.authStateChanges {
                 guard let self else { return }
-                if let session {
-                    self.apply(user: session.user)
-                } else {
-                    self.userId = nil
-                    self.displayName = nil
-                    self.state = .signedOut
+                switch event {
+                case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:
+                    if let session, !session.isExpired {
+                        self.apply(user: session.user)
+                    } else if !self.demoMode {
+                        self.clearSession()
+                    }
+                case .signedOut:
+                    if !self.demoMode {
+                        self.clearSession()
+                    }
+                default:
+                    break
                 }
             }
         }
@@ -51,10 +63,8 @@ final class AuthSession: ObservableObject {
 
         if demoMode || SupabaseClientProvider.shared == nil {
             userId = UUID()
-            displayName = PersonNameComponentsFormatter().string(from: credential.fullName ?? PersonNameComponents())
-            if displayName?.isEmpty != false {
-                displayName = "You"
-            }
+            let name = PersonNameComponentsFormatter().string(from: credential.fullName ?? PersonNameComponents())
+            displayName = name.isEmpty ? "You" : name
             state = .signedIn
             return
         }
@@ -70,7 +80,22 @@ final class AuthSession: ObservableObject {
             let session = try await client.auth.signInWithIdToken(
                 credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken)
             )
+
+            var appleName: String?
+            if let fullName = credential.fullName {
+                let formatted = PersonNameComponentsFormatter().string(from: fullName)
+                if !formatted.isEmpty {
+                    appleName = formatted
+                    _ = try? await client.auth.update(
+                        user: UserAttributes(data: ["full_name": .string(formatted)])
+                    )
+                }
+            }
+
             apply(user: session.user)
+            if let appleName {
+                displayName = appleName
+            }
         } catch {
             lastError = error.localizedDescription
             state = .signedOut
@@ -88,6 +113,10 @@ final class AuthSession: ObservableObject {
         if let client = SupabaseClientProvider.shared, !demoMode {
             try? await client.auth.signOut()
         }
+        clearSession()
+    }
+
+    private func clearSession() {
         userId = nil
         displayName = nil
         state = .signedOut
@@ -96,7 +125,8 @@ final class AuthSession: ObservableObject {
     private func apply(user: User) {
         userId = user.id
         if let meta = user.userMetadata["full_name"] {
-            displayName = "\(meta)"
+            let value = "\(meta)"
+            displayName = value.isEmpty ? (user.email ?? "You") : value
         } else if let email = user.email {
             displayName = email
         } else {
