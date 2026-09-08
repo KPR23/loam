@@ -91,8 +91,7 @@ Loam/
 ├─ Features/   Auth, Home, AddExpense, Root (+ Household, Profile)
 └─ System/     Auth, DeepLinks, StoreKit stub
 
-Design/        App icon source (.icon bundle, exports, generate script output)
-scripts/       generate-app-icon.swift (writes AppIcon-1024.png into Assets)
+Design/        App icon source (.icon bundle + exports → AppIcon.appiconset)
 supabase/      SQL migrations + local config
 ```
 
