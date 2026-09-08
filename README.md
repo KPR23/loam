@@ -20,7 +20,7 @@ Native iOS expense tracker for personal + household spending. Home answers **how
 - Sign in with Apple (+ demo mode when Supabase is not configured)
 - Home led by personal month total + expense list
 - `SupabaseExpenseRepository` when configured; `LocalExpenseRepository` demo fallback
-- Secrets via `Loam/Config/Secrets.xcconfig` (gitignored)
+- Secrets via `Loam/Config/Secrets.xcconfig` (gitignored, optional override of `Config.xcconfig`)
 
 ## Setup
 
@@ -56,7 +56,18 @@ SUPABASE_URL = https:/$()/abcdxyz.supabase.co
 SUPABASE_ANON_KEY = eyJhbGciOi...
 ```
 
-Then in Xcode: Project → Info → Configurations → based on `Secrets.xcconfig`, **or** set env vars `SUPABASE_URL` / `SUPABASE_ANON_KEY` in the Run scheme.
+Then in Xcode: Project → Info → Configurations → based on `Config.xcconfig`, **or** set env vars `SUPABASE_URL` / `SUPABASE_ANON_KEY` in the Run scheme.
+
+### 4. Xcode Cloud
+
+The project references committed `Loam/Config/Config.xcconfig` (placeholders). Builds no longer require a local-only `Secrets.xcconfig`.
+
+To enable Supabase in CI/TestFlight builds, add environment variables in App Store Connect → Xcode Cloud → your workflow → **Environment**:
+
+- `SUPABASE_URL` — e.g. `https://your-project.supabase.co`
+- `SUPABASE_ANON_KEY` — anon / publishable key
+
+`ci_scripts/ci_post_clone.sh` writes `Loam/Config/Secrets.xcconfig` from those variables before the build. Without them, the app still builds and runs in demo mode.
 
 Info.plist keys expected (via build settings):
 
