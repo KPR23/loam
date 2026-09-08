@@ -38,7 +38,7 @@ final class AuthSession: ObservableObject {
         }
 
         Task { [weak self] in
-            for await (event, session) in await client.auth.authStateChanges {
+            for await (event, session) in client.auth.authStateChanges {
                 guard let self else { return }
                 switch event {
                 case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:

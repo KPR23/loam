@@ -16,7 +16,7 @@ struct HomeView: View {
                         sharedShare: expenseStore.summary.sharedShare,
                         reloadToken: arcReloadToken
                     )
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: -8, leading: 0, bottom: 4, trailing: 0))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
@@ -24,6 +24,7 @@ struct HomeView: View {
                 expenseList
             }
             .listStyle(.insetGrouped)
+            .contentMargins(.top, -4, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationTitle(expenseStore.period.displayTitle)
