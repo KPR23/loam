@@ -4,29 +4,37 @@ struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
 
+    var arcReloadToken: Int = 0
     @State private var showAddExpense = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    personalSummary
-                    addShortcut
+                VStack(alignment: .leading, spacing: 20) {
+                    MonthlySpendHero(
+                        amount: expenseStore.summary.totalMine,
+                        progress: MonthlyBudgetPlaceholder.progress,
+                        sharedShare: expenseStore.summary.sharedShare,
+                        reloadToken: arcReloadToken
+                    )
                     expenseList
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 28)
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Home")
+            .background(HomeTheme.background.ignoresSafeArea())
+            .navigationTitle(expenseStore.period.displayTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(HomeTheme.background, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("Sign out", role: .destructive) {
-                            Task { await authSession.signOut() }
-                        }
+                    Button {
+                        showAddExpense = true
                     } label: {
-                        Image(systemName: "person.circle")
+                        Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Add expense")
                 }
             }
             .sheet(isPresented: $showAddExpense) {
@@ -39,55 +47,6 @@ struct HomeView: View {
                 await expenseStore.refresh(userId: authSession.userId)
             }
         }
-    }
-
-    private var personalSummary: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(expenseStore.period.displayTitle)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            Text("You spent")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-
-            Text(MoneyFormatter.string(from: expenseStore.summary.totalMine))
-                .font(.system(size: 40, weight: .semibold, design: .rounded))
-                .accessibilityLabel(
-                    "You spent \(MoneyFormatter.string(from: expenseStore.summary.totalMine)) this month"
-                )
-
-            Text(
-                "of which \(MoneyFormatter.string(from: expenseStore.summary.sharedShare)) is your share of shared expenses"
-            )
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var addShortcut: some View {
-        Button {
-            showAddExpense = true
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                Text("Add expense")
-                    .font(.headline)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -103,7 +62,7 @@ struct HomeView: View {
             } else if expenseStore.expenses.isEmpty {
                 Text("No expenses yet. Add one in a few taps.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(HomeTheme.secondary)
                     .padding(.vertical, 8)
             } else {
                 ForEach(expenseStore.expenses) { expense in
@@ -120,7 +79,7 @@ struct HomeView: View {
             if SupabaseConfig.isConfigured {
                 Text("Synced with Supabase")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(HomeTheme.tertiary)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 8)
             }
@@ -133,12 +92,13 @@ struct HomeView: View {
         return HStack(spacing: 14) {
             Image(systemName: expense.category.systemImage)
                 .font(.title3)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(HomeTheme.accent)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(expense.category.displayName)
                     .font(.body.weight(.medium))
+                    .foregroundStyle(HomeTheme.text)
                 HStack(spacing: 6) {
                     Text(expense.spentAt, format: .dateTime.month(.abbreviated).day())
                     if let note = expense.note, !note.isEmpty {
@@ -148,17 +108,18 @@ struct HomeView: View {
                     }
                 }
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(HomeTheme.secondary)
             }
 
             Spacer()
 
             Text(MoneyFormatter.string(from: mine))
                 .font(.body.weight(.semibold).monospacedDigit())
+                .foregroundStyle(HomeTheme.text)
         }
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(HomeTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: HomeTheme.rowRadius, style: .continuous))
         .contextMenu {
             Button("Delete", role: .destructive) {
                 guard let userId = authSession.userId else { return }

@@ -1,0 +1,120 @@
+import CoreGraphics
+import Foundation
+
+/// One tile on the monthly spend arc. Positions are in the view's coordinate space.
+struct BudgetArcTile: Equatable, Identifiable {
+    let id: Int
+    let row: Int
+    let column: Int
+    /// Side length of this tile (outer row can be larger).
+    let size: CGFloat
+    /// 0 at the left horn, 1 at the right horn.
+    let t: Double
+    let point: CGPoint
+    /// Clockwise degrees so the tile's base faces the centre of the arc.
+    let rotationDegrees: Double
+}
+
+/// Geometry for a few concentric rows of squares following a top-facing arc.
+struct BudgetArcLayout: Equatable {
+    var rowCount: Int = 2
+    var columnCount: Int = 18
+    var squareSize: CGFloat = 17.5
+    /// Outer (top) row is a touch larger than the inner one.
+    var outerSquareSize: CGFloat = 20
+    var rowGap: CGFloat = 9
+    /// Left horn, a little below the horizon so the arc reads as a bowl.
+    var startDegrees: Double = 198
+    /// Right horn, mirrored.
+    var endDegrees: Double = -18
+    var horizontalInset: CGFloat = 16
+    var topInset: CGFloat = 10
+    /// Vertical placement of the circle origin, 0 = top.
+    var centerYRatio: CGFloat = 0.72
+
+    var sweepDegrees: Double { startDegrees - endDegrees }
+
+    /// Half the diagonal of the largest tile — reach from its centre.
+    var tileReach: CGFloat { outerSquareSize * CGFloat(2.0.squareRoot()) / 2 }
+
+    func squareSize(forRow row: Int) -> CGFloat {
+        row == rowCount - 1 ? outerSquareSize : squareSize
+    }
+
+    /// Centre-to-centre distance between consecutive rows.
+    var rowPitch: CGFloat {
+        (squareSize + outerSquareSize) / 2 + rowGap
+    }
+
+    func makeTiles(in size: CGSize) -> [BudgetArcTile] {
+        guard size.width > 0, size.height > 0, rowCount > 0, columnCount > 0 else { return [] }
+
+        let center = CGPoint(x: size.width / 2, y: size.height * centerYRatio)
+        let pitch = rowPitch
+        let widthLimited = (size.width / 2) - horizontalInset - tileReach
+        let topLimited = center.y - topInset - tileReach
+        let outerRadius = max(tileReach, min(widthLimited, topLimited))
+        let innerRadius = max(tileReach, outerRadius - CGFloat(rowCount - 1) * pitch)
+
+        var tiles: [BudgetArcTile] = []
+        var nextID = 0
+
+        // Columns share an angle across rows, so a column lights up as one radial spoke.
+        for column in 0..<columnCount {
+            let t = columnCount == 1 ? 0.5 : Double(column) / Double(columnCount - 1)
+            let degrees = startDegrees - sweepDegrees * t
+            let angle = degrees * .pi / 180
+
+            for row in 0..<rowCount {
+                let tileSize = squareSize(forRow: row)
+                let radius = innerRadius + CGFloat(row) * pitch
+                let point = CGPoint(
+                    x: center.x + radius * CGFloat(cos(angle)),
+                    y: center.y - radius * CGFloat(sin(angle))
+                )
+                tiles.append(
+                    BudgetArcTile(
+                        id: nextID,
+                        row: row,
+                        column: column,
+                        size: tileSize,
+                        t: t,
+                        point: point,
+                        rotationDegrees: 90 - degrees
+                    )
+                )
+                nextID += 1
+            }
+        }
+
+        return tiles
+    }
+}
+
+enum BudgetArcFill {
+    /// How fully tile `index` should light up for a 0...1 budget ratio.
+    static func coverage(index: Int, total: Int, progress: Double) -> Double {
+        guard total > 0, index >= 0, index < total else { return 0 }
+        let exact = Double(total) * clamp(progress)
+        let i = Double(index)
+        if i + 1 <= exact { return 1 }
+        if i >= exact { return 0 }
+        return exact - i
+    }
+
+    static func filledCount(total: Int, progress: Double) -> Int {
+        guard total > 0 else { return 0 }
+        return Int((Double(total) * clamp(progress)).rounded(.down))
+    }
+
+    /// 0, 1 or 2 — the arc switches colour every third of the budget.
+    static func band(index: Int, total: Int) -> Int {
+        guard total > 0, index >= 0 else { return 0 }
+        let fraction = Double(index) / Double(total)
+        return min(2, Int(fraction * 3))
+    }
+
+    static func clamp(_ progress: Double) -> Double {
+        min(max(progress, 0), 1)
+    }
+}

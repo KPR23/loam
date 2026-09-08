@@ -11,7 +11,7 @@ struct RootView: View {
             case .signedOut:
                 AuthView()
             case .signedIn:
-                HomeView()
+                MainTabView()
             }
         }
         .animation(.easeInOut(duration: 0.2), value: authSession.state)
