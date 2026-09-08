@@ -74,30 +74,6 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
         )
     }
 
-    static func insertPayload(from record: ExpenseRecord) -> ExpenseDTO {
-        ExpenseDTO(
-            id: record.id,
-            amountMinor: record.amountMinor,
-            currency: record.currency,
-            category: record.category,
-            note: record.note,
-            spentAt: CalendarDateCodec.string(from: record.spentAt),
-            paidBy: record.paidBy,
-            createdBy: record.createdBy,
-            householdId: record.householdId,
-            recurringId: record.recurringId,
-            createdAt: nil,
-            updatedAt: nil,
-            expenseShare: record.shares.map {
-                ExpenseShareDTO(
-                    id: $0.id,
-                    expenseId: record.id,
-                    userId: $0.userId,
-                    amountMinor: $0.amountMinor
-                )
-            }
-        )
-    }
 }
 
 /// Insert body without timestamps (DB defaults). Shares are inserted separately —

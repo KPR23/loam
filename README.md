@@ -88,8 +88,12 @@ Loam/
 ├─ Core/       Money, Category, Formatters, SettlementMode
 ├─ Data/       Models, ExpenseStore, LocalExpenseRepository, Supabase client
 ├─ Domain/     SplitCalculator, BalanceSimplifier
-├─ Features/   Auth, Home, AddExpense  (+ Household, Balances, Paywall later)
+├─ Features/   Auth, Home, AddExpense, Root (+ Household, Profile)
 └─ System/     Auth, DeepLinks, StoreKit stub
+
+Design/        App icon source (.icon bundle, exports, generate script output)
+scripts/       generate-app-icon.swift (writes AppIcon-1024.png into Assets)
+supabase/      SQL migrations + local config
 ```
 
 ## Product rule

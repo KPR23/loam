@@ -36,8 +36,12 @@ enum DatePeriod: Equatable {
     case month(year: Int, month: Int)
 
     static var currentMonth: DatePeriod {
-        let components = Calendar.current.dateComponents([.year, .month], from: Date())
-        return .month(year: components.year!, month: components.month!)
+        let calendar = Calendar.current
+        let now = Date()
+        let components = calendar.dateComponents([.year, .month], from: now)
+        let year = components.year ?? calendar.component(.year, from: now)
+        let month = components.month ?? calendar.component(.month, from: now)
+        return .month(year: year, month: month)
     }
 
     var displayTitle: String {

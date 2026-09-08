@@ -1,5 +1,4 @@
 import Foundation
-import Supabase
 
 enum ExpenseRepositoryFactory {
     static func make() -> any ExpenseRepository {

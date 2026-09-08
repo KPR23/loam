@@ -10,6 +10,9 @@ final class AuthSession: ObservableObject {
         case signedIn
     }
 
+    private static let demoUserIdKey = "loam.demo.userId"
+    private static let demoDisplayNameKey = "loam.demo.displayName"
+
     @Published private(set) var state: State = .loading
     @Published private(set) var userId: UUID?
     @Published private(set) var displayName: String?
@@ -62,10 +65,9 @@ final class AuthSession: ObservableObject {
         lastError = nil
 
         if demoMode || SupabaseClientProvider.shared == nil {
-            userId = UUID()
-            let name = PersonNameComponentsFormatter().string(from: credential.fullName ?? PersonNameComponents())
-            displayName = name.isEmpty ? "You" : name
-            state = .signedIn
+            activateDemoSession(
+                displayName: formattedAppleName(from: credential.fullName) ?? "You"
+            )
             return
         }
 
@@ -103,10 +105,8 @@ final class AuthSession: ObservableObject {
     }
 
     func signInDemo() {
-        demoMode = true
-        userId = UUID()
-        displayName = "You"
-        state = .signedIn
+        let name = UserDefaults.standard.string(forKey: Self.demoDisplayNameKey) ?? "You"
+        activateDemoSession(displayName: name)
     }
 
     func signOut() async {
@@ -119,7 +119,35 @@ final class AuthSession: ObservableObject {
     private func clearSession() {
         userId = nil
         displayName = nil
+        demoMode = false
         state = .signedOut
+    }
+
+    private func activateDemoSession(displayName: String) {
+        demoMode = true
+        let id = Self.loadDemoUserId()
+        userId = id
+        self.displayName = displayName
+        Self.persistDemoSession(userId: id, displayName: displayName)
+        state = .signedIn
+    }
+
+    private static func loadDemoUserId() -> UUID {
+        if let stored = UserDefaults.standard.string(forKey: demoUserIdKey),
+           let id = UUID(uuidString: stored) {
+            return id
+        }
+        return UUID()
+    }
+
+    private static func persistDemoSession(userId: UUID, displayName: String) {
+        UserDefaults.standard.set(userId.uuidString, forKey: demoUserIdKey)
+        UserDefaults.standard.set(displayName, forKey: demoDisplayNameKey)
+    }
+
+    private func formattedAppleName(from components: PersonNameComponents?) -> String? {
+        let formatted = PersonNameComponentsFormatter().string(from: components ?? PersonNameComponents())
+        return formatted.isEmpty ? nil : formatted
     }
 
     private func apply(user: User) {

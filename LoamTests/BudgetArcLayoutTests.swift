@@ -31,9 +31,10 @@ final class BudgetArcLayoutTests: XCTestCase {
 
     func testTileBaseFacesTheArcCentre() {
         let tiles = layout.makeTiles(in: canvas)
-        // Apex tile points straight up; the left horn leans past a quarter turn.
+        // Even column counts have no exact apex; the nearest tile still faces the arc centre.
         let apex = tiles.min(by: { abs($0.t - 0.5) < abs($1.t - 0.5) })!
-        XCTAssertEqual(apex.rotationDegrees, 0, accuracy: 0.5)
+        let apexDegrees = layout.startDegrees - layout.sweepDegrees * apex.t
+        XCTAssertEqual(apex.rotationDegrees, 90 - apexDegrees, accuracy: 0.000_1)
         XCTAssertEqual(tiles.first!.rotationDegrees, 90 - layout.startDegrees, accuracy: 0.000_1)
         XCTAssertEqual(tiles.last!.rotationDegrees, 90 - layout.endDegrees, accuracy: 0.000_1)
     }

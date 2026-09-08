@@ -91,7 +91,7 @@ func drawRoundedSquare(
 
 let outputPath = CommandLine.arguments.count > 1
     ? CommandLine.arguments[1]
-    : "AppIcon-1024.png"
+    : "Loam/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
 
 let canvas: CGFloat = 1024
 let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -103,7 +103,7 @@ guard let context = CGContext(
     bitsPerComponent: 8,
     bytesPerRow: 0,
     space: colorSpace,
-    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
 ) else {
     fputs("Failed to create graphics context\n", stderr)
     exit(1)

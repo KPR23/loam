@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HouseholdView: View {
+    @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
 
     var body: some View {
@@ -31,6 +32,12 @@ struct HouseholdView: View {
             .navigationTitle("Household")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(HomeTheme.background, for: .navigationBar)
+            .task(id: authSession.userId) {
+                await expenseStore.refresh(userId: authSession.userId)
+            }
+            .refreshable {
+                await expenseStore.refresh(userId: authSession.userId)
+            }
         }
     }
 
@@ -87,5 +94,6 @@ struct HouseholdView: View {
 
 #Preview {
     HouseholdView()
+        .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
 }
