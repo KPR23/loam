@@ -9,6 +9,7 @@ struct HomeView: View {
     @State private var showAddExpense = false
     @State private var showMonthPicker = false
     @State private var collapseProgress: CGFloat = 0
+    @State private var arcReveal: Double = 0
 
     var body: some View {
         NavigationStack {
@@ -19,7 +20,8 @@ struct HomeView: View {
                         categoryBreakdown: expenseStore.summary.categoryBreakdown,
                         sharedShare: expenseStore.summary.sharedShare,
                         reloadToken: arcReloadToken,
-                        collapseProgress: collapseProgress
+                        collapseProgress: collapseProgress,
+                        displayedReveal: $arcReveal
                     )
                     .reportHomeHeroScrollOffset()
                     .listRowInsets(EdgeInsets(top: -8, leading: 0, bottom: 4, trailing: 0))
@@ -36,7 +38,7 @@ struct HomeView: View {
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(HomeTheme.background, for: .navigationBar)
+            .homeTranslucentNavigationBar(collapseProgress: collapseProgress)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HomeCollapsingTopBar(
