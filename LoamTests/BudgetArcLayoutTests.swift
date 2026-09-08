@@ -89,20 +89,18 @@ final class BudgetArcLayoutTests: XCTestCase {
 
 final class MoneyFormatterHeroTests: XCTestCase {
     func testWholeZlotyDropsFraction() {
-        let parts = MoneyFormatter.heroParts(
+        let amount = MoneyFormatter.heroAmount(
             from: Money(amountMinor: 250_00, currencyCode: "PLN"),
             locale: Locale(identifier: "en_US_POSIX")
         )
-        XCTAssertEqual(parts.amount, "250")
-        XCTAssertEqual(parts.currency, "PLN")
+        XCTAssertEqual(amount, "250")
     }
 
     func testGroszeKeepTwoFractionDigits() {
-        let parts = MoneyFormatter.heroParts(
+        let amount = MoneyFormatter.heroAmount(
             from: Money(amountMinor: 250_40, currencyCode: "PLN"),
             locale: Locale(identifier: "en_US_POSIX")
         )
-        XCTAssertEqual(parts.amount, "250.40")
-        XCTAssertEqual(parts.currency, "PLN")
+        XCTAssertEqual(amount, "250.40")
     }
 }

@@ -6,29 +6,29 @@ enum MoneyFormatter {
         formatter.numberStyle = .currency
         formatter.currencyCode = money.currencyCode
         formatter.locale = locale
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
+        let fractionDigits = fractionDigits(for: money.amountMinor)
+        formatter.minimumFractionDigits = fractionDigits.min
+        formatter.maximumFractionDigits = fractionDigits.max
 
         let major = NSDecimalNumber(value: money.amountMinor).dividing(by: NSDecimalNumber(value: 100))
         return formatter.string(from: major) ?? "\(money.amountMinor) \(money.currencyCode)"
     }
 
-    /// Compact hero pair, e.g. `("250", "PLN")`. Whole złoty drop the fraction.
-    static func heroParts(from money: Money, locale: Locale = .current) -> (amount: String, currency: String) {
+    /// Hero amount without a currency suffix, e.g. `250` or `250,40`.
+    static func heroAmount(from money: Money, locale: Locale = .current) -> String {
         let major = NSDecimalNumber(value: money.amountMinor).dividing(by: NSDecimalNumber(value: 100))
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.locale = locale
         formatter.usesGroupingSeparator = true
-        if money.amountMinor % 100 == 0 {
-            formatter.minimumFractionDigits = 0
-            formatter.maximumFractionDigits = 0
-        } else {
-            formatter.minimumFractionDigits = 2
-            formatter.maximumFractionDigits = 2
-        }
-        let amount = formatter.string(from: major) ?? "0"
-        return (amount, money.currencyCode)
+        let fractionDigits = fractionDigits(for: money.amountMinor)
+        formatter.minimumFractionDigits = fractionDigits.min
+        formatter.maximumFractionDigits = fractionDigits.max
+        return formatter.string(from: major) ?? "0"
+    }
+
+    private static func fractionDigits(for amountMinor: Int) -> (min: Int, max: Int) {
+        amountMinor % 100 == 0 ? (0, 0) : (2, 2)
     }
 }
 

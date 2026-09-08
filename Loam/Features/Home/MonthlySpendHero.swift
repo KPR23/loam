@@ -20,7 +20,7 @@ struct MonthlySpendHero: View {
     private let amountSideInset: CGFloat = 96
 
     var body: some View {
-        let parts = MoneyFormatter.heroParts(from: amount)
+        let heroAmount = MoneyFormatter.heroAmount(from: amount)
         let percent = Int((BudgetArcFill.clamp(progress) * 100).rounded())
 
         VStack(spacing: 10) {
@@ -29,11 +29,11 @@ struct MonthlySpendHero: View {
 
                 VStack(spacing: 4) {
                     ViewThatFits(in: .horizontal) {
-                        amountLine(parts: parts, size: 56)
-                        amountLine(parts: parts, size: 48)
-                        amountLine(parts: parts, size: 40)
-                        amountLine(parts: parts, size: 34)
-                        amountLine(parts: parts, size: 28)
+                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 62)
+                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 54)
+                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 46)
+                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 38)
+                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 32)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, amountSideInset)
@@ -68,15 +68,15 @@ struct MonthlySpendHero: View {
         }
     }
 
-    private func amountLine(parts: (amount: String, currency: String), size: CGFloat) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(parts.amount)
+    private func amountStack(amount: String, currency: String, size: CGFloat) -> some View {
+        VStack(spacing: 4) {
+            Text(currency)
+                .font(.system(size: max(13, size * 0.28), weight: .semibold, design: .rounded))
+                .foregroundStyle(HomeTheme.secondary)
+            Text(amount)
                 .font(.system(size: size, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(HomeTheme.text)
-            Text(parts.currency)
-                .font(.system(size: max(13, size * 0.32), weight: .semibold, design: .rounded))
-                .foregroundStyle(HomeTheme.secondary)
         }
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
