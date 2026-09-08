@@ -30,6 +30,8 @@ struct HomeCollapsingTopBar: View {
     let collapseProgress: CGFloat
     let onPickMonth: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     fileprivate var easedProgress: CGFloat {
         smoothstep(collapseProgress)
     }
@@ -74,11 +76,14 @@ struct HomeCollapsingTopBar: View {
     }
 
     private var collapsedAmount: some View {
-        HStack(alignment: .center, spacing: 5) {
+        let amountValue = Double(amount.amountMinor) / 100.0
+
+        return HStack(alignment: .center, spacing: 5) {
             Text(MoneyFormatter.heroAmount(from: amount))
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(HomeTheme.text)
+                .contentTransition(.numericText(value: amountValue))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
 
@@ -86,6 +91,7 @@ struct HomeCollapsingTopBar: View {
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(HomeTheme.secondary)
         }
+        .animation(reduceMotion ? nil : .smooth(duration: 0.42), value: amountValue)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("You spent \(MoneyFormatter.string(from: amount)) this month")
     }

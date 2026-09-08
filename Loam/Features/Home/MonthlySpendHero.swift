@@ -26,7 +26,6 @@ struct MonthlySpendHero: View {
     }
 
     var body: some View {
-        let heroAmount = MoneyFormatter.heroAmount(from: amount)
         let percent = Int((BudgetArcFill.clamp(progress) * 100).rounded())
 
         VStack(spacing: 10) {
@@ -35,11 +34,11 @@ struct MonthlySpendHero: View {
 
                 VStack(spacing: 4) {
                     ViewThatFits(in: .horizontal) {
-                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 62)
-                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 54)
-                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 46)
-                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 38)
-                        amountStack(amount: heroAmount, currency: amount.currencyCode, size: 32)
+                        amountStack(amount: amount, size: 62)
+                        amountStack(amount: amount, size: 54)
+                        amountStack(amount: amount, size: 46)
+                        amountStack(amount: amount, size: 38)
+                        amountStack(amount: amount, size: 32)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, amountSideInset)
@@ -78,18 +77,23 @@ struct MonthlySpendHero: View {
         }
     }
 
-    private func amountStack(amount: String, currency: String, size: CGFloat) -> some View {
-        VStack(spacing: 4) {
-            Text(currency)
+    private func amountStack(amount money: Money, size: CGFloat) -> some View {
+        let heroAmount = MoneyFormatter.heroAmount(from: money)
+        let amountValue = Double(money.amountMinor) / 100.0
+
+        return VStack(spacing: 4) {
+            Text(money.currencyCode)
                 .font(.system(size: max(13, size * 0.28), weight: .semibold, design: .rounded))
                 .foregroundStyle(HomeTheme.secondary)
-            Text(amount)
+            Text(heroAmount)
                 .font(.system(size: size, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(HomeTheme.text)
+                .contentTransition(.numericText(value: amountValue))
         }
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.42), value: amountValue)
     }
 
     private func playFill(_ target: Double) {
