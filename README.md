@@ -9,13 +9,17 @@ Native iOS expense tracker for personal + household spending. Home answers **how
 - Sign in with Apple
 - StoreKit 2 (stub in later phase)
 
-## Phase 0 (current)
+## Phase status
+
+**Phase 0** — project, schema+RLS, Apple auth / demo, empty Home  
+**Phase 1 (current)** — personal expense CRUD, month sum on Home, add in a few taps (local store until Supabase is wired)
 
 - Xcode project + folder architecture
 - `Money` as `Int` minor units
 - Supabase SQL schema + RLS (incl. empty `recurring_*`)
 - Sign in with Apple (+ demo mode when Supabase is not configured)
-- Empty Home led by personal month total
+- Home led by personal month total + expense list
+- `LocalExpenseRepository` (UserDefaults) for demo; Supabase repo next
 
 ## Setup
 
@@ -63,10 +67,10 @@ INFOPLIST_KEY_SUPABASE_ANON_KEY = $(SUPABASE_ANON_KEY)
 ```
 Loam/
 ├─ Core/       Money, Category, Formatters, SettlementMode
-├─ Data/       Supabase client
+├─ Data/       Models, ExpenseStore, LocalExpenseRepository, Supabase client
 ├─ Domain/     SplitCalculator, BalanceSimplifier
-├─ Features/   Auth, Home  (+ AddExpense, Household, Balances, Paywall later)
-└─ System/     Auth
+├─ Features/   Auth, Home, AddExpense  (+ Household, Balances, Paywall later)
+└─ System/     Auth, DeepLinks, StoreKit stub
 ```
 
 ## Product rule
@@ -79,4 +83,4 @@ Home must read as a tracker:
 
 ## Next
 
-**Phase 1** — personal expense CRUD + month sum in ~3 taps.
+**Phase 2** — household + invite + split in Add expense.
