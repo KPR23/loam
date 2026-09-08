@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10.50 3.00 363.50 243.73" fill="none">
+  <title>Loam budget arc</title>
+  <desc>Two-row tile arc from BudgetArcLayout (Loam Home hero).</desc>
+  <g id="budget-arc">
+    <g transform="translate(66.3146,229.0124) rotate(-108.0000)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(39.9228,237.5877) rotate(-108.0000)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(60.2693,199.6846) rotate(-95.2941)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(32.6377,202.2451) rotate(-95.2941)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(60.8227,169.7454) rotate(-82.5882)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(33.3045,166.1657) rotate(-82.5882)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(67.9475,140.6610) rotate(-69.8824)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(41.8906,131.1164) rotate(-69.8824)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(81.2948,113.8559) rotate(-57.1765)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(57.9753,98.8139) rotate(-57.1765)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(100.2110,90.6429) rotate(-44.4706)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(80.7709,70.8403) rotate(-44.4706)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(123.7696,72.1589) rotate(-31.7647)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(109.1611,48.5654) rotate(-31.7647)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(150.8167,59.3092) rotate(-19.0588)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(141.7553,33.0803) rotate(-19.0588)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(180.0278,52.7230) rotate(-6.3529)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(176.9572,25.1435) rotate(-6.3529)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(209.9722,52.7230) rotate(6.3529)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(213.0428,25.1435) rotate(6.3529)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(239.1833,59.3092) rotate(19.0588)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(248.2447,33.0803) rotate(19.0588)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(266.2304,72.1589) rotate(31.7647)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(280.8389,48.5654) rotate(31.7647)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(289.7890,90.6429) rotate(44.4706)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(309.2291,70.8403) rotate(44.4706)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(308.7052,113.8559) rotate(57.1765)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(332.0247,98.8139) rotate(57.1765)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(322.0525,140.6610) rotate(69.8824)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(348.1094,131.1164) rotate(69.8824)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(329.1773,169.7454) rotate(82.5882)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(356.6955,166.1657) rotate(82.5882)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(329.7307,199.6846) rotate(95.2941)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(357.3623,202.2451) rotate(95.2941)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+    <g transform="translate(323.6854,229.0124) rotate(108.0000)">
+    <rect x="-8.7500" y="-8.7500" width="17.5000" height="17.5000" rx="3.5000" ry="3.5000" fill="#000000" />
+    </g>
+    <g transform="translate(350.0772,237.5877) rotate(108.0000)">
+    <rect x="-10.0000" y="-10.0000" width="20.0000" height="20.0000" rx="4.0000" ry="4.0000" fill="#000000" />
+    </g>
+  </g>
+</svg>
