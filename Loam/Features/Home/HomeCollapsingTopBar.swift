@@ -136,45 +136,68 @@ struct MonthPickerSheet: View {
     let onSelect: (DatePeriod) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var pickerDate: Date
+    @State private var selectedMonth: Int
+    @State private var selectedYear: Int
+
+    private let years: [Int]
+    private let monthNames: [String]
 
     init(period: DatePeriod, onSelect: @escaping (DatePeriod) -> Void) {
         self.period = period
         self.onSelect = onSelect
-        _pickerDate = State(initialValue: period.anchorDate)
+
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: Date())
+        years = Array((currentYear - 20)...currentYear)
+        monthNames = calendar.monthSymbols
+
+        switch period {
+        case let .month(year, month):
+            _selectedYear = State(initialValue: year)
+            _selectedMonth = State(initialValue: month)
+        }
+    }
+
+    private var selectedPeriod: DatePeriod {
+        .month(year: selectedYear, month: selectedMonth)
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                DatePicker(
-                    "Month",
-                    selection: $pickerDate,
-                    displayedComponents: [.date]
-                )
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                .padding(.horizontal)
-                .onChange(of: pickerDate) { _, newValue in
-                    pickerDate = DatePeriod.startOfMonth(for: newValue)
+            HStack(spacing: 0) {
+                Picker("Month", selection: $selectedMonth) {
+                    ForEach(1...12, id: \.self) { month in
+                        Text(monthNames[month - 1]).tag(month)
+                    }
                 }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+
+                Picker("Year", selection: $selectedYear) {
+                    ForEach(years, id: \.self) { year in
+                        Text(String(year)).tag(year)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
             }
+            .labelsHidden()
+            .padding(.horizontal)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Selected month, \(selectedPeriod.displayTitle)")
             .navigationTitle("Choose month")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        onSelect(DatePeriod(from: pickerDate))
+                        onSelect(selectedPeriod)
                         dismiss()
                     }
                     .fontWeight(.semibold)
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.height(320)])
         .presentationDragIndicator(.visible)
     }
 }
@@ -226,6 +249,23 @@ extension View {
             }
         }
     }
+
+    func homeTranslucentNavigationBar(collapseProgress: CGFloat) -> some View {
+        modifier(HomeTranslucentNavBarModifier(collapseProgress: collapseProgress))
+    }
+}
+
+private struct HomeTranslucentNavBarModifier: ViewModifier {
+    let collapseProgress: CGFloat
+
+    private var barMaterial: Material {
+        collapseProgress > 0.04 ? .ultraThinMaterial : .bar
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .toolbarBackground(barMaterial, for: .navigationBar)
+    }
 }
 
 #Preview("Expanded") {
@@ -248,4 +288,8 @@ extension View {
     )
     .padding()
     .background(HomeTheme.background)
+}
+
+#Preview("Month picker") {
+    MonthPickerSheet(period: .currentMonth) { _ in }
 }

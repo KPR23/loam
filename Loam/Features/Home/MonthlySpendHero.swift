@@ -4,13 +4,13 @@ struct MonthlySpendHero: View {
     var amount: Money
     var categoryBreakdown: [CategorySpendSlice] = []
     var sharedShare: Money
-    /// Bump when Expenses becomes visible again so the arc reloads.
+    /// Bump when Expenses becomes visible again; only used to recover a stuck arc.
     var reloadToken: Int = 0
     var collapseProgress: CGFloat = 0
     var layout: BudgetArcLayout = BudgetArcLayout()
+    @Binding var displayedReveal: Double
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var displayedReveal: Double = 0
 
     private var easedCollapse: CGFloat {
         let t = min(max(collapseProgress, 0), 1)
@@ -65,12 +65,12 @@ struct MonthlySpendHero: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("You spent \(MoneyFormatter.string(from: amount)) this month")
         .accessibilityValue(accessibilityBreakdownValue)
-        .onAppear { playReveal(hasCategoryMix ? 1 : 0) }
-        .onChange(of: categoryBreakdown) { _, _ in
-            playReveal(hasCategoryMix ? 1 : 0)
+        .task(id: categoryBreakdown) {
+            await animateReveal(to: hasCategoryMix ? 1 : 0)
         }
         .onChange(of: reloadToken) { _, _ in
-            playReveal(hasCategoryMix ? 1 : 0)
+            guard hasCategoryMix, displayedReveal < 1 else { return }
+            Task { await animateReveal(to: 1) }
         }
     }
 
@@ -108,24 +108,30 @@ struct MonthlySpendHero: View {
         .animation(reduceMotion ? nil : .smooth(duration: 0.42), value: amountValue)
     }
 
-    private func playReveal(_ target: Double) {
+    @MainActor
+    private func animateReveal(to target: Double) async {
         let clamped = BudgetArcFill.clamp(target)
-        Task { @MainActor in
+
+        if reduceMotion {
+            displayedReveal = clamped
+            return
+        }
+
+        if clamped == 0 {
             var reset = Transaction()
             reset.disablesAnimations = true
             withTransaction(reset) {
                 displayedReveal = 0
             }
+            return
+        }
 
-            guard !reduceMotion else {
-                displayedReveal = clamped
-                return
-            }
+        if displayedReveal == clamped {
+            return
+        }
 
-            try? await Task.sleep(for: .milliseconds(20))
-            withAnimation(.linear(duration: 1.05)) {
-                displayedReveal = clamped
-            }
+        withAnimation(.linear(duration: 1.05)) {
+            displayedReveal = clamped
         }
     }
 }
@@ -189,7 +195,8 @@ private struct BudgetArcMosaic: View, Animatable {
             CategorySpendSlice(category: .groceries, amountMinor: 120_000),
             CategorySpendSlice(category: .entertainment, amountMinor: 68_406),
         ],
-        sharedShare: Money(amountMinor: 0, currencyCode: "PLN")
+        sharedShare: Money(amountMinor: 0, currencyCode: "PLN"),
+        displayedReveal: .constant(1)
     )
     .padding(20)
     .background(HomeTheme.background)
@@ -203,7 +210,8 @@ private struct BudgetArcMosaic: View, Animatable {
             CategorySpendSlice(category: .dining, amountMinor: 75_00),
             CategorySpendSlice(category: .transport, amountMinor: 50_00),
         ],
-        sharedShare: Money(amountMinor: 40_00, currencyCode: "PLN")
+        sharedShare: Money(amountMinor: 40_00, currencyCode: "PLN"),
+        displayedReveal: .constant(1)
     )
     .padding(20)
     .background(HomeTheme.background)
