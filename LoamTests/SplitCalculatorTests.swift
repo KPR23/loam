@@ -60,6 +60,42 @@ final class SplitCalculatorTests: XCTestCase {
         XCTAssertEqual(shares.count, 1)
         XCTAssertEqual(shares[0].amountMinor, 2500)
     }
+
+    func testPercentageSplit() {
+        let shares = SplitCalculator.percentage(
+            totalMinor: 1000,
+            userPercentages: [(alice, 70), (bob, 30)],
+            paidByUserId: alice
+        )
+        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1000))
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 700)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 300)
+    }
+
+    func testTwoPersonExactSplit() {
+        let shares = SplitCalculator.twoPersonSplit(
+            totalMinor: 999,
+            mode: .exactAmount,
+            myUserId: alice,
+            partnerUserId: bob,
+            paidByUserId: alice,
+            myExactAmountMinor: 400
+        )
+        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 999))
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 400)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 599)
+    }
+
+    func testTwoPersonEqualSplit() {
+        let shares = SplitCalculator.twoPersonSplit(
+            totalMinor: 1001,
+            mode: .equal,
+            myUserId: alice,
+            partnerUserId: bob,
+            paidByUserId: bob
+        )
+        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1001))
+    }
 }
 
 final class BalanceSimplifierTests: XCTestCase {

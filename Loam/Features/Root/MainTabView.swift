@@ -76,4 +76,5 @@ struct MainTabView: View {
     MainTabView()
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
+        .environmentObject(HouseholdStore())
 }

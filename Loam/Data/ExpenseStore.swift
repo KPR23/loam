@@ -40,6 +40,45 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
+    func addSplit(
+        amountMinor: Int,
+        category: ExpenseCategory,
+        note: String?,
+        spentAt: Date,
+        userId: UUID,
+        householdId: UUID,
+        splitMode: SplitExpenseMode,
+        paidBy: UUID,
+        partnerUserId: UUID,
+        myPercentage: Int = 50,
+        myExactAmountMinor: Int? = nil
+    ) async throws {
+        let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+
+        let shares = SplitCalculator.twoPersonSplit(
+            totalMinor: amountMinor,
+            mode: splitMode,
+            myUserId: userId,
+            partnerUserId: partnerUserId,
+            paidByUserId: paidBy,
+            myPercentage: myPercentage,
+            myExactAmountMinor: myExactAmountMinor
+        )
+
+        let expense = ExpenseRecord(
+            amountMinor: amountMinor,
+            category: category,
+            note: trimmedNote,
+            spentAt: spentAt,
+            paidBy: paidBy,
+            createdBy: userId,
+            householdId: householdId,
+            shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
+        )
+        _ = try await repository.create(expense)
+        await refresh(userId: userId)
+    }
+
     func addPersonal(
         amountMinor: Int,
         category: ExpenseCategory,
