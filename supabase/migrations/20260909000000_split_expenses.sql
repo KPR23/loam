@@ -1,8 +1,7 @@
 -- Split expenses: test partner seed + relax paid_by RLS for household splits
 
 -- ---------------------------------------------------------------------------
--- Test partner (Alex) for development splits
--- Login disabled; fixed bcrypt hash avoids pgcrypto dependency in migrations.
+-- Test partner (Alex) — FK-only placeholder. Hardened in 20260909000002.
 -- ---------------------------------------------------------------------------
 
 insert into auth.users (
@@ -13,6 +12,7 @@ insert into auth.users (
   email,
   encrypted_password,
   email_confirmed_at,
+  banned_until,
   created_at,
   updated_at,
   raw_app_meta_data,
@@ -25,12 +25,13 @@ values (
   'authenticated',
   'authenticated',
   'alex.test@loam.app',
-  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+  '',
+  null,
+  '9999-12-31 23:59:59+00'::timestamptz,
   now(),
   now(),
-  now(),
-  '{"provider":"email","providers":["email"]}',
-  '{"full_name":"Alex (Test)"}',
+  '{"provider":"disabled","providers":[]}',
+  '{"full_name":"Alex (Test)","is_placeholder":true}',
   false
 )
 on conflict (id) do nothing;

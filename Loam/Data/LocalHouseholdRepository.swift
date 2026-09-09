@@ -8,7 +8,9 @@ actor LocalHouseholdRepository: HouseholdRepository {
         for userId: UUID,
         userDisplayName: String
     ) async throws -> HouseholdRecord {
-        if let existing = try load(), existing.members.contains(where: { $0.userId == userId }) {
+        if let existing = try load(),
+           existing.members.contains(where: { $0.userId == userId }),
+           existing.members.contains(where: { $0.userId == TestPartner.userId }) {
             return existing
         }
 
