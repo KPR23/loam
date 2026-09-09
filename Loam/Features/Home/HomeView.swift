@@ -24,7 +24,7 @@ struct HomeView: View {
                         displayedReveal: $arcReveal
                     )
                     .reportHomeHeroScrollOffset()
-                    .listRowInsets(EdgeInsets(top: -8, leading: 0, bottom: 4, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: -12, leading: 0, bottom: 4, trailing: 0))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
@@ -34,7 +34,7 @@ struct HomeView: View {
             .listStyle(.insetGrouped)
             .coordinateSpace(name: "homeScroll")
             .trackHomeScrollCollapse($collapseProgress)
-            .contentMargins(.top, -4, for: .scrollContent)
+            .contentMargins(.top, -6, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
