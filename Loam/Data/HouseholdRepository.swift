@@ -15,6 +15,9 @@ enum HouseholdRepositoryError: LocalizedError {
 }
 
 protocol HouseholdRepository: Sendable {
+    /// Returns the user's existing test household without creating one.
+    func fetchTestHousehold(for userId: UUID) async throws -> HouseholdRecord?
+
     /// Returns an existing test household for the user or creates one with the test partner.
     func ensureTestHousehold(
         for userId: UUID,

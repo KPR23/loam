@@ -8,6 +8,38 @@ actor SupabaseHouseholdRepository: HouseholdRepository {
         self.client = client
     }
 
+    func fetchTestHousehold(for userId: UUID) async throws -> HouseholdRecord? {
+        let rows: [HouseholdDTO] = try await client
+            .from("household")
+            .select()
+            .eq("name", value: TestPartner.householdName)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        for household in rows {
+            guard try await isAuthorizedTestHousehold(household: household, userId: userId) else {
+                continue
+            }
+
+            let members = try await fetchMembers(householdId: household.id)
+            guard members.contains(where: { $0.userId == userId }),
+                  members.contains(where: { $0.userId == TestPartner.userId }) else {
+                continue
+            }
+
+            return HouseholdRecord(
+                id: household.id,
+                name: household.name,
+                currency: household.currency,
+                createdBy: household.createdBy,
+                members: members
+            )
+        }
+
+        return nil
+    }
+
     func ensureTestHousehold(
         for userId: UUID,
         userDisplayName: String
@@ -31,6 +63,28 @@ actor SupabaseHouseholdRepository: HouseholdRepository {
             createdBy: household.createdBy,
             members: members
         )
+    }
+
+    private func isAuthorizedTestHousehold(household: HouseholdDTO, userId: UUID) async throws -> Bool {
+        if household.createdBy == userId {
+            return true
+        }
+
+        struct OwnerRow: Decodable {
+            let id: UUID
+        }
+
+        let ownerRows: [OwnerRow] = try await client
+            .from("household_member")
+            .select("id")
+            .eq("household_id", value: household.id)
+            .eq("user_id", value: userId)
+            .eq("role", value: "owner")
+            .limit(1)
+            .execute()
+            .value
+
+        return !ownerRows.isEmpty
     }
 
     private func fetchMembers(householdId: UUID) async throws -> [HouseholdMemberRecord] {
