@@ -121,6 +121,42 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
+    func applySplit(
+        to expenseId: UUID,
+        userId: UUID,
+        householdId: UUID,
+        splitMode: SplitExpenseMode,
+        paidBy: UUID,
+        partnerUserId: UUID,
+        myPercentage: Int = 50,
+        myExactAmountMinor: Int? = nil
+    ) async throws {
+        guard var expense = expenses.first(where: { $0.id == expenseId }) else {
+            throw ExpenseRepositoryError.notFound
+        }
+
+        let shares = SplitCalculator.twoPersonSplit(
+            totalMinor: expense.amountMinor,
+            mode: splitMode,
+            myUserId: userId,
+            partnerUserId: partnerUserId,
+            paidByUserId: paidBy,
+            myPercentage: myPercentage,
+            myExactAmountMinor: myExactAmountMinor
+        )
+
+        expense.householdId = householdId
+        expense.paidBy = paidBy
+        expense.shares = shares.map { share in
+            let existingId = expense.shares.first(where: { $0.userId == share.userId })?.id ?? UUID()
+            return ExpenseShareRecord(id: existingId, userId: share.userId, amountMinor: share.amountMinor)
+        }
+        expense.updatedAt = Date()
+
+        _ = try await repository.update(expense)
+        await refresh(userId: userId)
+    }
+
     nonisolated static func makeSummary(
         expenses: [ExpenseRecord],
         userId: UUID,

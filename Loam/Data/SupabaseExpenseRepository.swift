@@ -76,24 +76,14 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
 
-        // Update expense first, then shares — keeps share-sum trigger valid between requests.
+        // One RPC keeps share replacement in a single DB transaction. Separate HTTP
+        // updates commit individually and trip the deferred share-sum trigger early.
         _ = try await client
-            .from("expense")
-            .update(ExpenseUpdateDTO(from: expense))
-            .eq("id", value: expense.id)
+            .rpc(
+                "update_expense_with_shares",
+                params: UpdateExpenseWithSharesParams(from: expense)
+            )
             .execute()
-
-        for share in expense.shares {
-            struct ShareAmount: Encodable {
-                let amount_minor: Int
-            }
-            _ = try await client
-                .from("expense_share")
-                .update(ShareAmount(amount_minor: share.amountMinor))
-                .eq("expense_id", value: expense.id)
-                .eq("user_id", value: share.userId)
-                .execute()
-        }
 
         return try await fetchExpense(id: expense.id)
     }
@@ -126,5 +116,80 @@ actor SupabaseExpenseRepository: ExpenseRepository {
         guard sum == expense.amountMinor else {
             throw ExpenseRepositoryError.invalidShares
         }
+    }
+}
+
+private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
+    let pExpenseId: UUID
+    let pAmountMinor: Int
+    let pCurrency: String
+    let pCategory: ExpenseCategory
+    let pNote: String?
+    let pSpentAt: String
+    let pPaidBy: UUID
+    let pHouseholdId: UUID?
+    let pRecurringId: UUID?
+    let pShares: [ShareParam]
+
+    enum CodingKeys: String, CodingKey {
+        case pExpenseId = "p_expense_id"
+        case pAmountMinor = "p_amount_minor"
+        case pCurrency = "p_currency"
+        case pCategory = "p_category"
+        case pNote = "p_note"
+        case pSpentAt = "p_spent_at"
+        case pPaidBy = "p_paid_by"
+        case pHouseholdId = "p_household_id"
+        case pRecurringId = "p_recurring_id"
+        case pShares = "p_shares"
+    }
+
+    init(from expense: ExpenseRecord) {
+        pExpenseId = expense.id
+        pAmountMinor = expense.amountMinor
+        pCurrency = expense.currency
+        pCategory = expense.category
+        pNote = expense.note
+        pSpentAt = CalendarDateCodec.string(from: expense.spentAt)
+        pPaidBy = expense.paidBy
+        pHouseholdId = expense.householdId
+        pRecurringId = expense.recurringId
+        pShares = expense.shares.map { ShareParam(userId: $0.userId, amountMinor: $0.amountMinor) }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(pExpenseId, forKey: .pExpenseId)
+        try container.encode(pAmountMinor, forKey: .pAmountMinor)
+        try container.encode(pCurrency, forKey: .pCurrency)
+        try container.encode(pCategory, forKey: .pCategory)
+        if let pNote {
+            try container.encode(pNote, forKey: .pNote)
+        } else {
+            try container.encodeNil(forKey: .pNote)
+        }
+        try container.encode(pSpentAt, forKey: .pSpentAt)
+        try container.encode(pPaidBy, forKey: .pPaidBy)
+        if let pHouseholdId {
+            try container.encode(pHouseholdId, forKey: .pHouseholdId)
+        } else {
+            try container.encodeNil(forKey: .pHouseholdId)
+        }
+        if let pRecurringId {
+            try container.encode(pRecurringId, forKey: .pRecurringId)
+        } else {
+            try container.encodeNil(forKey: .pRecurringId)
+        }
+        try container.encode(pShares, forKey: .pShares)
+    }
+}
+
+private struct ShareParam: Encodable, Sendable {
+    let userId: UUID
+    let amountMinor: Int
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case amountMinor = "amount_minor"
     }
 }
