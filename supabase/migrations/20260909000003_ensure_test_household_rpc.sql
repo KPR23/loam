@@ -24,7 +24,7 @@ begin
     raise exception 'Placeholder partner cannot create households';
   end if;
 
-  -- Reuse the newest test household owned by or joined by the caller.
+  -- Reuse only households the caller created or already owns (not any membership).
   select h.id
   into v_household_id
   from public.household h
@@ -36,6 +36,7 @@ begin
         from public.household_member m
         where m.household_id = h.id
           and m.user_id = v_user_id
+          and m.role = 'owner'
       )
     )
   order by h.created_at desc
@@ -48,11 +49,34 @@ begin
     values (v_household_id, 'Test splits', 'PLN', v_user_id);
   end if;
 
-  insert into public.household_member (household_id, user_id, display_name, role)
-  values (v_household_id, v_user_id, p_display_name, 'owner')
-  on conflict (household_id, user_id) do update
-    set display_name = excluded.display_name,
-        role = 'owner';
+  if not exists (
+    select 1 from public.household h
+    where h.id = v_household_id and h.created_by = v_user_id
+  ) and not exists (
+    select 1 from public.household_member m
+    where m.household_id = v_household_id
+      and m.user_id = v_user_id
+      and m.role = 'owner'
+  ) then
+    raise exception 'Not authorized to access this test household';
+  end if;
+
+  if exists (
+    select 1 from public.household h
+    where h.id = v_household_id and h.created_by = v_user_id
+  ) then
+    insert into public.household_member (household_id, user_id, display_name, role)
+    values (v_household_id, v_user_id, p_display_name, 'owner')
+    on conflict (household_id, user_id) do update
+      set display_name = excluded.display_name,
+          role = 'owner';
+  else
+    update public.household_member
+    set display_name = p_display_name
+    where household_id = v_household_id
+      and user_id = v_user_id
+      and role = 'owner';
+  end if;
 
   insert into public.household_member (household_id, user_id, display_name, role)
   values (v_household_id, v_partner_id, 'Alex (Test)', 'member')
