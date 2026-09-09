@@ -3,6 +3,7 @@ import SwiftUI
 struct HouseholdView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
+    @EnvironmentObject private var householdStore: HouseholdStore
 
     var body: some View {
         NavigationStack {
@@ -15,7 +16,7 @@ struct HouseholdView: View {
                             .font(.headline)
 
                         if sharedExpenses.isEmpty {
-                            Text("No shared expenses this month. Household splitting arrives with invites.")
+                            Text("No shared expenses this month. Split an expense with \(TestPartner.displayName) from the add screen.")
                                 .font(.subheadline)
                                 .foregroundStyle(HomeTheme.secondary)
                         } else {
@@ -34,6 +35,10 @@ struct HouseholdView: View {
             .toolbarBackground(HomeTheme.background, for: .navigationBar)
             .task(id: authSession.userId) {
                 await expenseStore.refresh(userId: authSession.userId)
+                await householdStore.refresh(
+                    userId: authSession.userId,
+                    userDisplayName: authSession.displayName
+                )
             }
             .refreshable {
                 await expenseStore.refresh(userId: authSession.userId)
@@ -66,7 +71,10 @@ struct HouseholdView: View {
     }
 
     private func sharedRow(_ expense: ExpenseRecord) -> some View {
-        HStack(spacing: 14) {
+        let mine = authSession.userId.map { expense.share(for: $0) } ?? expense.money
+        let paidByMe = expense.paidBy == authSession.userId
+
+        return HStack(spacing: 14) {
             Image(systemName: expense.category.systemImage)
                 .font(.title3)
                 .symbolRenderingMode(.monochrome)
@@ -79,12 +87,20 @@ struct HouseholdView: View {
                 Text(expense.spentAt, format: .dateTime.month(.abbreviated).day())
                     .font(.caption)
                     .foregroundStyle(HomeTheme.secondary)
+                Text(paidByMe ? "You paid" : "\(TestPartner.displayName) paid")
+                    .font(.caption2)
+                    .foregroundStyle(HomeTheme.secondary)
             }
 
             Spacer()
 
-            Text(MoneyFormatter.string(from: expense.money))
-                .font(.body.weight(.semibold).monospacedDigit())
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(MoneyFormatter.string(from: mine))
+                    .font(.body.weight(.semibold).monospacedDigit())
+                Text("of \(MoneyFormatter.string(from: expense.money))")
+                    .font(.caption2)
+                    .foregroundStyle(HomeTheme.secondary)
+            }
         }
         .padding(14)
         .background(HomeTheme.surface)
@@ -96,4 +112,5 @@ struct HouseholdView: View {
     HouseholdView()
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
+        .environmentObject(HouseholdStore())
 }

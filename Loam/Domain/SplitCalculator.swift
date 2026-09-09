@@ -71,6 +71,58 @@ enum SplitCalculator {
         return shares
     }
 
+    /// Percentage split (must sum to 100). Remainder grosze go to `paidByUserId`.
+    static func percentage(
+        totalMinor: Int,
+        userPercentages: [(userId: UUID, percent: Int)],
+        paidByUserId: UUID
+    ) -> [Share] {
+        precondition(!userPercentages.isEmpty, "Need at least one participant")
+        let percentSum = userPercentages.reduce(0) { $0 + $1.percent }
+        precondition(percentSum == 100, "Percentages must sum to 100")
+
+        let participants = userPercentages.map { Participant(userId: $0.userId, weight: $0.percent) }
+        return weightedSplit(totalMinor: totalMinor, participants: participants, remainderTo: paidByUserId)
+    }
+
+    /// Builds shares for a two-person split using the selected mode.
+    static func twoPersonSplit(
+        totalMinor: Int,
+        mode: SplitExpenseMode,
+        myUserId: UUID,
+        partnerUserId: UUID,
+        paidByUserId: UUID,
+        myPercentage: Int = 50,
+        myExactAmountMinor: Int? = nil
+    ) -> [Share] {
+        let participants = [myUserId, partnerUserId]
+
+        switch mode {
+        case .equal:
+            return equal(totalMinor: totalMinor, participants: participants, paidByUserId: paidByUserId)
+        case .percentage:
+            let partnerPercentage = 100 - myPercentage
+            return percentage(
+                totalMinor: totalMinor,
+                userPercentages: [
+                    (myUserId, myPercentage),
+                    (partnerUserId, partnerPercentage),
+                ],
+                paidByUserId: paidByUserId
+            )
+        case .exactAmount:
+            guard let mine = myExactAmountMinor else {
+                preconditionFailure("Exact amount mode requires myExactAmountMinor")
+            }
+            let partnerShare = totalMinor - mine
+            precondition(mine >= 0 && partnerShare >= 0, "Exact shares must be non-negative")
+            return custom(shares: [
+                Share(userId: myUserId, amountMinor: mine),
+                Share(userId: partnerUserId, amountMinor: partnerShare),
+            ])
+        }
+    }
+
     /// Private expense: single 100% share.
     static func personal(totalMinor: Int, userId: UUID) -> [Share] {
         [Share(userId: userId, amountMinor: totalMinor)]

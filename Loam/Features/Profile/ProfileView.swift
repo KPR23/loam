@@ -23,6 +23,13 @@ struct ProfileView: View {
                     .padding(.vertical, 6)
                 }
 
+                Section("Split testing") {
+                    LabeledContent("Test partner", value: TestPartner.displayName)
+                    Text("Use “Split with \(TestPartner.displayName)” when adding an expense. Only your share counts in the monthly total.")
+                        .font(.footnote)
+                        .foregroundStyle(HomeTheme.secondary)
+                }
+
                 Section("Budget") {
                     LabeledContent("Monthly budget", value: "Coming soon")
                         .foregroundStyle(HomeTheme.secondary)
