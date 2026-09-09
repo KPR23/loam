@@ -8,6 +8,7 @@ private enum AddExpenseStep {
 struct AddExpenseView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
+    @EnvironmentObject private var householdStore: HouseholdStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -18,6 +19,11 @@ struct AddExpenseView: View {
     @State private var spentAt = Date()
     @State private var isRepeating = false
     @State private var repeatInterval: RecurringIntervalUnit = .month
+    @State private var isSplit = false
+    @State private var splitMode: SplitExpenseMode = .equal
+    @State private var paidByUserId: UUID?
+    @State private var myPercentage = 50
+    @State private var myExactAmountText = ""
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var cancelTapCount = 0
@@ -163,6 +169,29 @@ struct AddExpenseView: View {
                     .lineLimit(1...3)
                     .focused($noteFocused)
             }
+
+            if let userId = authSession.userId {
+                SplitExpenseSection(
+                    totalMinor: parsedMoney?.amountMinor ?? 0,
+                    myUserId: userId,
+                    myDisplayName: authSession.displayName ?? "You",
+                    partnerUserId: TestPartner.userId,
+                    partnerDisplayName: TestPartner.displayName,
+                    isSplit: $isSplit,
+                    splitMode: $splitMode,
+                    paidByUserId: Binding(
+                        get: { paidByUserId ?? userId },
+                        set: { paidByUserId = $0 }
+                    ),
+                    myPercentage: $myPercentage,
+                    myExactAmountText: $myExactAmountText
+                )
+            }
+        }
+        .onAppear {
+            if paidByUserId == nil {
+                paidByUserId = authSession.userId
+            }
         }
     }
 
@@ -231,29 +260,64 @@ struct AddExpenseView: View {
         isSaving = true
         defer { isSaving = false }
 
-        let recurring: RecurringRuleRecord?
-        if isRepeating {
-            recurring = RecurringRuleRecord(
-                ownerUserId: userId,
-                amountMinor: money.amountMinor,
-                category: category,
-                note: note.nilIfBlank,
-                intervalUnit: repeatInterval,
-                nextOccurrence: spentAt
-            )
-        } else {
-            recurring = nil
+        if isSplit && isRepeating {
+            errorMessage = "Recurring expenses cannot be split yet."
+            return
+        }
+
+        if isSplit, let validationError = SplitExpenseSection.validationError(
+            totalMinor: money.amountMinor,
+            splitMode: splitMode,
+            myPercentage: myPercentage,
+            myExactAmountText: myExactAmountText
+        ) {
+            errorMessage = validationError
+            return
         }
 
         do {
-            try await expenseStore.addPersonal(
-                amountMinor: money.amountMinor,
-                category: category,
-                note: note,
-                spentAt: spentAt,
-                userId: userId,
-                recurring: recurring
-            )
+            if isSplit {
+                let household = try await householdStore.ensureTestHousehold(
+                    userId: userId,
+                    userDisplayName: authSession.displayName ?? "You"
+                )
+                try await expenseStore.addSplit(
+                    amountMinor: money.amountMinor,
+                    category: category,
+                    note: note,
+                    spentAt: spentAt,
+                    userId: userId,
+                    householdId: household.id,
+                    splitMode: splitMode,
+                    paidBy: paidByUserId ?? userId,
+                    partnerUserId: TestPartner.userId,
+                    myPercentage: myPercentage,
+                    myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor
+                )
+            } else {
+                let recurring: RecurringRuleRecord?
+                if isRepeating {
+                    recurring = RecurringRuleRecord(
+                        ownerUserId: userId,
+                        amountMinor: money.amountMinor,
+                        category: category,
+                        note: note.nilIfBlank,
+                        intervalUnit: repeatInterval,
+                        nextOccurrence: spentAt
+                    )
+                } else {
+                    recurring = nil
+                }
+
+                try await expenseStore.addPersonal(
+                    amountMinor: money.amountMinor,
+                    category: category,
+                    note: note,
+                    spentAt: spentAt,
+                    userId: userId,
+                    recurring: recurring
+                )
+            }
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -319,4 +383,5 @@ private struct AmountStepButtonStyle: ButtonStyle {
     AddExpenseView()
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
+        .environmentObject(HouseholdStore())
 }

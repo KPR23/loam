@@ -24,7 +24,7 @@ struct HomeView: View {
                         displayedReveal: $arcReveal
                     )
                     .reportHomeHeroScrollOffset()
-                    .listRowInsets(EdgeInsets(top: -12, leading: 0, bottom: 4, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: -2, leading: 0, bottom: 4, trailing: 0))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
@@ -34,7 +34,7 @@ struct HomeView: View {
             .listStyle(.insetGrouped)
             .coordinateSpace(name: "homeScroll")
             .trackHomeScrollCollapse($collapseProgress)
-            .contentMargins(.top, -6, for: .scrollContent)
+            .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
@@ -177,18 +177,37 @@ struct HomeView: View {
         let mine = authSession.userId.map { expense.share(for: $0) } ?? expense.money
 
         return LabeledContent {
-            Text(MoneyFormatter.string(from: mine))
-                .monospacedDigit()
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 5) {
+                    if expense.isShared {
+                        Image(systemName: "person.2.fill")
+                            .font(.caption)
+                            .foregroundStyle(HomeTheme.secondary)
+                            .accessibilityHidden(true)
+                    }
+                    Text(MoneyFormatter.string(from: mine))
+                        .monospacedDigit()
+                }
+                if expense.isShared {
+                    Text("of \(MoneyFormatter.string(from: expense.money))")
+                        .font(.caption2)
+                        .foregroundStyle(HomeTheme.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                expense.isShared
+                    ? "Your share \(MoneyFormatter.string(from: mine)), shared expense"
+                    : MoneyFormatter.string(from: mine)
+            )
         } label: {
-            if let note = expense.note, !note.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    categoryLabel(expense)
+            VStack(alignment: .leading, spacing: 2) {
+                categoryLabel(expense)
+                if let note = expense.note, !note.isEmpty {
                     Text(note)
                         .font(.caption)
                         .foregroundStyle(HomeTheme.secondary)
                 }
-            } else {
-                categoryLabel(expense)
             }
         }
         .contextMenu {
@@ -200,13 +219,13 @@ struct HomeView: View {
     }
 
     private func categoryLabel(_ expense: ExpenseRecord) -> some View {
-        Label {
-            Text(expense.category.displayName)
-        } icon: {
+        HStack(spacing: 8) {
             Image(systemName: expense.category.systemImage)
                 .font(.callout)
                 .symbolRenderingMode(.monochrome)
                 .foregroundStyle(expense.category.color)
+                .frame(width: 22, alignment: .center)
+            Text(expense.category.displayName)
         }
     }
 }
