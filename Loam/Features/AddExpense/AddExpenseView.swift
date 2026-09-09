@@ -170,7 +170,8 @@ struct AddExpenseView: View {
                     .focused($noteFocused)
             }
 
-            if let userId = authSession.userId {
+            if let userId = authSession.userId,
+               TestPartner.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) {
                 SplitExpenseSection(
                     totalMinor: parsedMoney?.amountMinor ?? 0,
                     myUserId: userId,
@@ -191,6 +192,9 @@ struct AddExpenseView: View {
         .onAppear {
             if paidByUserId == nil {
                 paidByUserId = authSession.userId
+            }
+            if isSplit, !TestPartner.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) {
+                isSplit = false
             }
         }
     }

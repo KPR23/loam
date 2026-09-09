@@ -3,11 +3,13 @@ import Foundation
 enum HouseholdRepositoryError: LocalizedError {
     case notConfigured
     case notFound
+    case incompleteSetup
 
     var errorDescription: String? {
         switch self {
         case .notConfigured: "Household storage is not available."
         case .notFound: "Household not found."
+        case .incompleteSetup: "Household setup is incomplete. Try again."
         }
     }
 }
