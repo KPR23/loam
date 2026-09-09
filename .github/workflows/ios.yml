@@ -16,12 +16,15 @@ concurrency:
 jobs:
   build-and-test:
     name: Build & Test
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj
@@ -43,9 +46,10 @@ jobs:
           )
 
           preferred_names = [
-              "iPhone 16",
               "iPhone 17",
-              "iPhone 15",
+              "iPhone 16",
+              "iPhone 16e",
+              "iPhone 17 Pro",
               "iPhone SE (3rd generation)",
           ]
 
