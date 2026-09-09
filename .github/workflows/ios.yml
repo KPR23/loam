@@ -6,6 +6,9 @@ on:
   push:
     branches: [dev]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ios-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -18,10 +21,58 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
 
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj
+
+      - name: Select iOS simulator
+        id: simulator
+        run: |
+          DEVICE_ID="$(
+            python3 <<'PY'
+          import json
+          import subprocess
+          import sys
+
+          data = json.loads(
+              subprocess.check_output(
+                  ["xcrun", "simctl", "list", "devices", "available", "-j"],
+                  text=True,
+              )
+          )
+
+          preferred_names = [
+              "iPhone 16",
+              "iPhone 17",
+              "iPhone 15",
+              "iPhone SE (3rd generation)",
+          ]
+
+          runtimes = sorted(
+              runtime
+              for runtime in data["devices"]
+              if "iOS" in runtime or "SimRuntime.iOS" in runtime
+          )
+
+          for name in preferred_names:
+              for runtime in reversed(runtimes):
+                  for device in data["devices"][runtime]:
+                      if device.get("isAvailable") and device["name"] == name:
+                          print(device["udid"])
+                          sys.exit(0)
+
+          for runtime in reversed(runtimes):
+              for device in data["devices"][runtime]:
+                  if device.get("isAvailable") and "iPhone" in device["name"]:
+                      print(device["udid"])
+                      sys.exit(0)
+
+          sys.exit("No suitable iPhone simulator found on runner")
+          PY
+          )"
+          echo "device_id=${DEVICE_ID}" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices available | grep "${DEVICE_ID}"
 
       - name: Build and test
         run: |
@@ -29,6 +80,6 @@ jobs:
           xcodebuild test \
             -project Loam.xcodeproj \
             -scheme Loam \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.4' \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
             CODE_SIGNING_ALLOWED=NO \
             -skipPackagePluginValidation
