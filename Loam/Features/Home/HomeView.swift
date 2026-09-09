@@ -1,5 +1,12 @@
 import SwiftUI
 
+private struct SplitExpensePresentation: Identifiable {
+    let expense: ExpenseRecord
+    let myUserId: UUID
+
+    var id: UUID { expense.id }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
@@ -10,6 +17,8 @@ struct HomeView: View {
     @State private var showMonthPicker = false
     @State private var collapseProgress: CGFloat = 0
     @State private var arcReveal: Double = 0
+    @State private var expensePendingDelete: ExpenseRecord?
+    @State private var expensePendingSplit: SplitExpensePresentation?
 
     var body: some View {
         NavigationStack {
@@ -80,6 +89,35 @@ struct HomeView: View {
                 Task { await expenseStore.setPeriod(newPeriod, userId: userId) }
             }
         }
+        .sheet(item: $expensePendingSplit) { presentation in
+            SplitExpenseSheet(expense: presentation.expense, myUserId: presentation.myUserId)
+        }
+        .alert(
+            "Delete this expense?",
+            isPresented: Binding(
+                get: { expensePendingDelete != nil },
+                set: { if !$0 { expensePendingDelete = nil } }
+            )
+        ) {
+            if let expense = expensePendingDelete, expense.isShared, canSplit(expense) {
+                Button("Edit split") {
+                    expensePendingDelete = nil
+                    presentSplit(for: expense)
+                }
+            }
+            Button("Delete", role: .destructive) {
+                guard let expense = expensePendingDelete, let userId = authSession.userId else { return }
+                Task { await expenseStore.delete(id: expense.id, userId: userId) }
+                expensePendingDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                expensePendingDelete = nil
+            }
+        } message: {
+            if let expense = expensePendingDelete {
+                Text(deleteConfirmationMessage(for: expense))
+            }
+        }
     }
 
     @ViewBuilder
@@ -99,6 +137,34 @@ struct HomeView: View {
                 Section {
                     ForEach(section.expenses) { expense in
                         expenseRow(expense)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    expensePendingDelete = expense
+                                } label: {
+                                    Label {
+                                        Text("Delete")
+                                            .fontWeight(.semibold)
+                                    } icon: {
+                                        Image(systemName: "trash")
+                                    }
+                                }
+                                .tint(.red)
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                if canSplit(expense) {
+                                    Button {
+                                        presentSplit(for: expense)
+                                    } label: {
+                                        Label {
+                                            Text(expense.isShared ? "Edit split" : "Split")
+                                                .fontWeight(.semibold)
+                                        } icon: {
+                                            Image(systemName: "person.2")
+                                        }
+                                    }
+                                    .tint(HomeTheme.accent)
+                                }
+                            }
                     }
                 } header: {
                     daySectionHeader(date: section.date, expenses: section.expenses)
@@ -211,11 +277,33 @@ struct HomeView: View {
             }
         }
         .contextMenu {
-            Button("Delete", role: .destructive) {
-                guard let userId = authSession.userId else { return }
-                Task { await expenseStore.delete(id: expense.id, userId: userId) }
+            if canSplit(expense) {
+                Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
+                    presentSplit(for: expense)
+                }
+            }
+            Button("Delete", systemImage: "trash", role: .destructive) {
+                expensePendingDelete = expense
             }
         }
+    }
+
+    private func canSplit(_ expense: ExpenseRecord) -> Bool {
+        expense.recurringId == nil
+            && TestPartner.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+    }
+
+    private func presentSplit(for expense: ExpenseRecord) {
+        guard let userId = authSession.userId else { return }
+        expensePendingSplit = SplitExpensePresentation(expense: expense, myUserId: userId)
+    }
+
+    private func deleteConfirmationMessage(for expense: ExpenseRecord) -> String {
+        var message = "\(expense.category.displayName) · \(MoneyFormatter.string(from: expense.money))"
+        if expense.isShared {
+            message += "\n\nThis will also remove the expense for \(TestPartner.displayName)."
+        }
+        return message
     }
 
     private func categoryLabel(_ expense: ExpenseRecord) -> some View {
