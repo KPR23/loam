@@ -24,8 +24,16 @@ private struct SplitFormState: Equatable {
         }
 
         if expense.isShared, expense.amountMinor > 0 {
-            let pct = Int(round(Double(myShare) / Double(expense.amountMinor) * 100))
-            if pct > 0, pct < 100 {
+            let storedShares = expense.shares.map {
+                SplitCalculator.Share(userId: $0.userId, amountMinor: $0.amountMinor)
+            }
+            if let pct = SplitCalculator.matchingTwoPersonPercentage(
+                totalMinor: expense.amountMinor,
+                myUserId: myUserId,
+                partnerUserId: partnerUserId,
+                paidByUserId: expense.paidBy,
+                storedShares: storedShares
+            ) {
                 return SplitFormState(
                     splitMode: .percentage,
                     paidByUserId: expense.paidBy,

@@ -35,10 +35,7 @@ struct HouseholdView: View {
             .toolbarBackground(HomeTheme.background, for: .navigationBar)
             .task(id: authSession.userId) {
                 await expenseStore.refresh(userId: authSession.userId)
-                await householdStore.refresh(
-                    userId: authSession.userId,
-                    userDisplayName: authSession.displayName
-                )
+                await householdStore.refresh(userId: authSession.userId)
             }
             .refreshable {
                 await expenseStore.refresh(userId: authSession.userId)

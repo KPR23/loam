@@ -4,13 +4,20 @@ actor LocalHouseholdRepository: HouseholdRepository {
     private let defaultsKey = "loam.local.household"
     private var cache: HouseholdRecord?
 
+    func fetchTestHousehold(for userId: UUID) async throws -> HouseholdRecord? {
+        guard let existing = try load(),
+              existing.members.contains(where: { $0.userId == userId }),
+              existing.members.contains(where: { $0.userId == TestPartner.userId }) else {
+            return nil
+        }
+        return existing
+    }
+
     func ensureTestHousehold(
         for userId: UUID,
         userDisplayName: String
     ) async throws -> HouseholdRecord {
-        if let existing = try load(),
-           existing.members.contains(where: { $0.userId == userId }),
-           existing.members.contains(where: { $0.userId == TestPartner.userId }) {
+        if let existing = try await fetchTestHousehold(for: userId) {
             return existing
         }
 

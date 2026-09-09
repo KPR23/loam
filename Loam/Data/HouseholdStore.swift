@@ -25,14 +25,18 @@ final class HouseholdStore: ObservableObject {
         return household
     }
 
-    func refresh(userId: UUID?, userDisplayName: String?) async {
-        guard let userId, let userDisplayName else {
+    func refresh(userId: UUID?) async {
+        guard let userId else {
             testHousehold = nil
             return
         }
 
+        isLoading = true
+        lastError = nil
+        defer { isLoading = false }
+
         do {
-            _ = try await ensureTestHousehold(userId: userId, userDisplayName: userDisplayName)
+            testHousehold = try await repository.fetchTestHousehold(for: userId)
         } catch {
             lastError = error.localizedDescription
         }

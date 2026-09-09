@@ -96,6 +96,45 @@ final class SplitCalculatorTests: XCTestCase {
         )
         XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1001))
     }
+
+    func testMatchingPercentageRejectsExactSplitDisguisedAsHalf() {
+        let stored = [
+            SplitCalculator.Share(userId: alice, amountMinor: 500),
+            SplitCalculator.Share(userId: bob, amountMinor: 501),
+        ]
+
+        XCTAssertNil(
+            SplitCalculator.matchingTwoPersonPercentage(
+                totalMinor: 1001,
+                myUserId: alice,
+                partnerUserId: bob,
+                paidByUserId: alice,
+                storedShares: stored
+            )
+        )
+    }
+
+    func testMatchingPercentageAcceptsTruePercentageSplit() {
+        let stored = SplitCalculator.twoPersonSplit(
+            totalMinor: 1000,
+            mode: .percentage,
+            myUserId: alice,
+            partnerUserId: bob,
+            paidByUserId: alice,
+            myPercentage: 70
+        )
+
+        XCTAssertEqual(
+            SplitCalculator.matchingTwoPersonPercentage(
+                totalMinor: 1000,
+                myUserId: alice,
+                partnerUserId: bob,
+                paidByUserId: alice,
+                storedShares: stored
+            ),
+            70
+        )
+    }
 }
 
 final class BalanceSimplifierTests: XCTestCase {
