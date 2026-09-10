@@ -114,6 +114,19 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             .execute()
     }
 
+    func fetchExpenses(ids: [UUID]) async throws -> [ExpenseRecord] {
+        guard !ids.isEmpty else { return [] }
+
+        let rows: [ExpenseDTO] = try await client
+            .from("expense")
+            .select("*, expense_share(*)")
+            .in("id", values: ids.map(\.uuidString))
+            .execute()
+            .value
+
+        return rows.compactMap { $0.toRecord() }
+    }
+
     func fetchPendingProposals(for userId: UUID) async throws -> [ExpenseEditProposal] {
         let rows: [ExpenseEditProposalDTO] = try await client
             .from("expense_edit_proposal")

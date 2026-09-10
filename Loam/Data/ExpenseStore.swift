@@ -4,6 +4,8 @@ import Foundation
 final class ExpenseStore: ObservableObject {
     @Published private(set) var expenses: [ExpenseRecord] = []
     @Published private(set) var pendingProposals: [ExpenseEditProposal] = []
+    /// Expenses referenced by pending proposals that fall outside the active period.
+    @Published private(set) var proposalExpenses: [ExpenseRecord] = []
     @Published private(set) var summary: MonthSpendSummary = .zero()
     @Published private(set) var isLoading = false
     @Published var lastError: String?
@@ -30,6 +32,7 @@ final class ExpenseStore: ObservableObject {
         guard let userId else {
             expenses = []
             pendingProposals = []
+            proposalExpenses = []
             summary = .zero()
             return
         }
@@ -58,7 +61,14 @@ final class ExpenseStore: ObservableObject {
             lastError = error.localizedDescription
         }
 
-        pendingProposals = (try? await primaryRepository.fetchPendingProposals(for: userId)) ?? []
+        let proposals = (try? await primaryRepository.fetchPendingProposals(for: userId)) ?? []
+        pendingProposals = proposals
+        proposalExpenses = await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses)
+    }
+
+    func expense(forProposal proposal: ExpenseEditProposal) -> ExpenseRecord? {
+        expenses.first(where: { $0.id == proposal.expenseId })
+            ?? proposalExpenses.first(where: { $0.id == proposal.expenseId })
     }
 
     func addSplit(
@@ -285,8 +295,11 @@ final class ExpenseStore: ObservableObject {
     func respondToProposal(proposalId: UUID, userId: UUID, accept: Bool) async {
         do {
             let expenseId = pendingProposals.first(where: { $0.id == proposalId })?.expenseId
-            let activeRepository = expenseId.flatMap { id in expenses.first(where: { $0.id == id }).map { repository(for: $0) } }
-                ?? primaryRepository
+            let expense = expenseId.flatMap { id in
+                expenses.first(where: { $0.id == id })
+                    ?? proposalExpenses.first(where: { $0.id == id })
+            }
+            let activeRepository = expense.map { repository(for: $0) } ?? primaryRepository
             try await activeRepository.respondToProposal(proposalId: proposalId, accept: accept)
             await refresh(userId: userId)
         } catch {
@@ -298,16 +311,36 @@ final class ExpenseStore: ObservableObject {
         pendingProposals.filter { proposal in
             proposal.expenseId == expenseId
                 && proposal.status == .pending
-                && (proposal.proposedBy != userId || expenses.contains(where: { $0.id == expenseId && $0.createdBy == userId }))
+                && (proposal.proposedBy != userId || expenses.contains(where: { $0.id == expenseId && $0.createdBy == userId })
+                    || proposalExpenses.contains(where: { $0.id == expenseId && $0.createdBy == userId }))
         }
     }
 
     func incomingProposals(for userId: UUID) -> [ExpenseEditProposal] {
         pendingProposals.filter { proposal in
             guard proposal.status == .pending else { return false }
-            guard let expense = expenses.first(where: { $0.id == proposal.expenseId }) else { return false }
+            guard let expense = expense(forProposal: proposal) else { return false }
             return expense.createdBy == userId
         }
+    }
+
+    private func resolveProposalExpenses(
+        proposals: [ExpenseEditProposal],
+        periodExpenses: [ExpenseRecord]
+    ) async -> [ExpenseRecord] {
+        let knownIds = Set(periodExpenses.map(\.id))
+        let missingIds = Array(Set(proposals.map(\.expenseId)).subtracting(knownIds))
+        guard !missingIds.isEmpty else { return [] }
+
+        var resolved = (try? await primaryRepository.fetchExpenses(ids: missingIds)) ?? []
+        #if DEBUG
+        if !ExpenseRepositoryFactory.usesLocalStorage {
+            let localMissing = (try? await LocalExpenseRepository().fetchExpenses(ids: missingIds)) ?? []
+            let existingIds = Set(resolved.map(\.id))
+            resolved.append(contentsOf: localMissing.filter { !existingIds.contains($0.id) })
+        }
+        #endif
+        return resolved
     }
 
     private func usersTrusting(

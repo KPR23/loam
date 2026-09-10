@@ -24,6 +24,12 @@ actor LocalExpenseRepository: ExpenseRepository {
             .sorted { $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt) }
     }
 
+    func fetchExpenses(ids: [UUID]) async throws -> [ExpenseRecord] {
+        guard !ids.isEmpty else { return [] }
+        let wanted = Set(ids)
+        return try load().filter { wanted.contains($0.id) }
+    }
+
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
         var all = try load()
@@ -123,18 +129,24 @@ actor LocalExpenseRepository: ExpenseRepository {
         }
 
         var proposal = proposals[proposalIndex]
+        var all = try load()
+        guard let expenseIndex = all.firstIndex(where: { $0.id == proposal.expenseId }) else {
+            throw ExpenseRepositoryError.notFound
+        }
+
+        let householdId = all[expenseIndex].householdId
+        let createdBy = all[expenseIndex].createdBy
+
         proposal.status = accept ? .accepted : .rejected
         proposal.respondedAt = Date()
         proposals[proposalIndex] = proposal
 
         if accept {
-            var all = try load()
-            guard let expenseIndex = all.firstIndex(where: { $0.id == proposal.expenseId }) else {
+            let proposerIsParticipant = all[expenseIndex].shares.contains { $0.userId == proposal.proposedBy }
+            guard householdId != nil, proposal.proposedBy != createdBy, proposerIsParticipant else {
                 throw ExpenseRepositoryError.notFound
             }
 
-            let householdId = all[expenseIndex].householdId
-            let createdBy = all[expenseIndex].createdBy
             var usersTrustingCreator: Set<UUID> = []
             if let householdId {
                 for share in proposal.shares where share.userId != createdBy {

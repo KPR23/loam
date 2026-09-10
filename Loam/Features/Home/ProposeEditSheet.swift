@@ -13,16 +13,18 @@ private struct ProposeEditFormState: Equatable {
     var message: String
 
     static func from(expense: ExpenseRecord, myUserId: UUID) -> ProposeEditFormState {
-        ProposeEditFormState(
+        let partnerUserIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId)
+        let splitSeed = SplitFormSeed.from(expense: expense, myUserId: myUserId)
+        return ProposeEditFormState(
             amountText: MoneyFormatter.typingAmount(from: expense.money),
             category: expense.category,
             note: expense.note ?? "",
             spentAt: expense.spentAt,
-            selectedPartnerUserIds: SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId),
-            splitMode: .equal,
+            selectedPartnerUserIds: partnerUserIds,
+            splitMode: splitSeed.splitMode,
             paidByUserId: expense.paidBy,
-            myPercentage: 50,
-            myExactAmountText: "",
+            myPercentage: splitSeed.myPercentage,
+            myExactAmountText: splitSeed.myExactAmountText,
             message: ""
         )
     }

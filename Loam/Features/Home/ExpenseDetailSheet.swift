@@ -58,8 +58,11 @@ struct ExpenseDetailSheet: View {
                     }
 
                     LabeledContent("Category") {
-                        Label(expense.category.displayName, systemImage: expense.category.systemImage)
-                            .foregroundStyle(expense.category.color)
+                        HStack(spacing: 6) {
+                            Image(systemName: expense.category.systemImage)
+                            Text(expense.category.displayName)
+                        }
+                        .foregroundStyle(expense.category.color)
                     }
 
                     LabeledContent("Date") {
@@ -74,7 +77,10 @@ struct ExpenseDetailSheet: View {
 
                     if expense.recurringId != nil {
                         LabeledContent("Type") {
-                            Label("Recurring", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+                                Text("Recurring")
+                            }
                         }
                     }
 
