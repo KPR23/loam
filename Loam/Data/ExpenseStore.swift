@@ -3,11 +3,21 @@ import Foundation
 @MainActor
 final class ExpenseStore: ObservableObject {
     @Published private(set) var expenses: [ExpenseRecord] = []
+    @Published private(set) var pendingProposals: [ExpenseEditProposal] = []
     @Published private(set) var summary: MonthSpendSummary = .zero()
     @Published private(set) var isLoading = false
     @Published var lastError: String?
 
     @Published private(set) var period: DatePeriod = .currentMonth
+
+    var pendingAcceptanceExpenses: [ExpenseRecord] {
+        expenses.filter { expense in
+            guard let userId = currentUserId else { return false }
+            return expense.isPendingAcceptance(for: userId)
+        }
+    }
+
+    private var currentUserId: UUID?
 
     func setPeriod(_ newPeriod: DatePeriod, userId: UUID?) async {
         guard period != newPeriod else { return }
@@ -16,8 +26,10 @@ final class ExpenseStore: ObservableObject {
     }
 
     func refresh(userId: UUID?) async {
+        currentUserId = userId
         guard let userId else {
             expenses = []
+            pendingProposals = []
             summary = .zero()
             return
         }
@@ -30,19 +42,23 @@ final class ExpenseStore: ObservableObject {
             var fetched = try await primaryRepository.fetchExpenses(for: userId, in: period)
             #if DEBUG
             if !ExpenseRepositoryFactory.usesLocalStorage {
-                let localExpenses = try await LocalExpenseRepository().fetchExpenses(for: userId, in: period)
-                let existingIds = Set(fetched.map(\.id))
-                fetched.append(contentsOf: localExpenses.filter { !existingIds.contains($0.id) })
-                fetched.sort {
-                    $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt)
+                if let localExpenses = try? await LocalExpenseRepository().fetchExpenses(for: userId, in: period) {
+                    let existingIds = Set(fetched.map(\.id))
+                    fetched.append(contentsOf: localExpenses.filter { !existingIds.contains($0.id) })
+                    fetched.sort {
+                        $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt)
+                    }
                 }
             }
             #endif
             expenses = fetched
             summary = Self.makeSummary(expenses: fetched, userId: userId)
+            lastError = nil
         } catch {
             lastError = error.localizedDescription
         }
+
+        pendingProposals = (try? await primaryRepository.fetchPendingProposals(for: userId)) ?? []
     }
 
     func addSplit(
@@ -60,7 +76,7 @@ final class ExpenseStore: ObservableObject {
     ) async throws {
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
 
-        let shares = SplitCalculator.split(
+        let calculatedShares = SplitCalculator.split(
             totalMinor: amountMinor,
             mode: splitMode,
             myUserId: userId,
@@ -68,6 +84,30 @@ final class ExpenseStore: ObservableObject {
             paidByUserId: paidBy,
             myPercentage: myPercentage,
             myExactAmountMinor: myExactAmountMinor
+        )
+
+        let draft = ExpenseRecord(
+            amountMinor: amountMinor,
+            category: category,
+            note: trimmedNote,
+            spentAt: spentAt,
+            paidBy: paidBy,
+            createdBy: userId,
+            householdId: householdId,
+            shares: []
+        )
+
+        let activeRepository = repository(forSplitWith: partnerUserIds)
+        let usersTrustingCreator = await usersTrusting(
+            creatorId: userId,
+            partnerUserIds: partnerUserIds,
+            householdId: householdId,
+            repository: activeRepository
+        )
+        let shareRecords = ExpenseShareAcceptance.sharesWithAcceptance(
+            calculatedShares: calculatedShares,
+            expense: draft,
+            usersTrustingCreator: usersTrustingCreator
         )
 
         let expense = ExpenseRecord(
@@ -78,9 +118,8 @@ final class ExpenseStore: ObservableObject {
             paidBy: paidBy,
             createdBy: userId,
             householdId: householdId,
-            shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
+            shares: shareRecords
         )
-        let activeRepository = repository(forSplitWith: partnerUserIds)
         _ = try await activeRepository.create(expense)
         await refresh(userId: userId)
     }
@@ -160,15 +199,110 @@ final class ExpenseStore: ObservableObject {
 
         expense.householdId = householdId
         expense.paidBy = paidBy
-        expense.shares = shares.map { share in
-            let existingId = expense.shares.first(where: { $0.userId == share.userId })?.id ?? UUID()
-            return ExpenseShareRecord(id: existingId, userId: share.userId, amountMinor: share.amountMinor)
-        }
+        let activeRepository = repository(forSplitWith: partnerUserIds)
+        let usersTrustingCreator = await usersTrusting(
+            creatorId: userId,
+            partnerUserIds: partnerUserIds,
+            householdId: householdId,
+            repository: activeRepository
+        )
+        expense.shares = ExpenseShareAcceptance.sharesWithAcceptance(
+            calculatedShares: shares,
+            expense: expense,
+            usersTrustingCreator: usersTrustingCreator
+        )
         expense.updatedAt = Date()
 
-        let activeRepository = repository(forSplitWith: partnerUserIds)
         _ = try await activeRepository.update(expense)
         await refresh(userId: userId)
+    }
+
+    func respondToShare(
+        expenseId: UUID,
+        userId: UUID,
+        action: ExpenseShareResponseAction
+    ) async {
+        do {
+            guard let expense = expenses.first(where: { $0.id == expenseId }) else {
+                throw ExpenseRepositoryError.notFound
+            }
+            let activeRepository = repository(for: expense)
+            try await activeRepository.respondToShare(expenseId: expenseId, userId: userId, action: action)
+            await refresh(userId: userId)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func proposeEdit(
+        for expense: ExpenseRecord,
+        userId: UUID,
+        amountMinor: Int,
+        category: ExpenseCategory,
+        note: String?,
+        spentAt: Date,
+        paidBy: UUID,
+        shares: [ExpenseShareRecord],
+        message: String?
+    ) async throws {
+        let proposal = ExpenseEditProposal(
+            expenseId: expense.id,
+            proposedBy: userId,
+            amountMinor: amountMinor,
+            category: category,
+            note: note,
+            spentAt: spentAt,
+            paidBy: paidBy,
+            shares: shares,
+            message: message
+        )
+        let activeRepository = repository(for: expense)
+        _ = try await activeRepository.createEditProposal(proposal, expenseId: expense.id)
+        await refresh(userId: userId)
+    }
+
+    func respondToProposal(proposalId: UUID, userId: UUID, accept: Bool) async {
+        do {
+            let expenseId = pendingProposals.first(where: { $0.id == proposalId })?.expenseId
+            let activeRepository = expenseId.flatMap { id in expenses.first(where: { $0.id == id }).map { repository(for: $0) } }
+                ?? primaryRepository
+            try await activeRepository.respondToProposal(proposalId: proposalId, accept: accept)
+            await refresh(userId: userId)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func pendingProposals(for expenseId: UUID, userId: UUID) -> [ExpenseEditProposal] {
+        pendingProposals.filter { proposal in
+            proposal.expenseId == expenseId
+                && proposal.status == .pending
+                && (proposal.proposedBy != userId || expenses.contains(where: { $0.id == expenseId && $0.createdBy == userId }))
+        }
+    }
+
+    func incomingProposals(for userId: UUID) -> [ExpenseEditProposal] {
+        pendingProposals.filter { proposal in
+            guard proposal.status == .pending else { return false }
+            guard let expense = expenses.first(where: { $0.id == proposal.expenseId }) else { return false }
+            return expense.createdBy == userId
+        }
+    }
+
+    private func usersTrusting(
+        creatorId: UUID,
+        partnerUserIds: [UUID],
+        householdId: UUID,
+        repository: ExpenseRepository
+    ) async -> Set<UUID> {
+        var trusting: Set<UUID> = []
+        for partnerId in partnerUserIds where partnerId != creatorId {
+            let trustedCreators = (try? await repository.fetchTrustedUserIds(for: partnerId, householdId: householdId)) ?? []
+            if trustedCreators.contains(creatorId) {
+                trusting.insert(partnerId)
+            }
+        }
+        return trusting
     }
 
     private var primaryRepository: ExpenseRepository {
@@ -185,16 +319,22 @@ final class ExpenseStore: ObservableObject {
     }
 
     private func repository(for expense: ExpenseRecord) -> ExpenseRepository {
-        #if DEBUG
-        let partnerIds = expense.shares.map(\.userId).filter { $0 != expense.createdBy }
-        if ExpenseRepositoryFactory.usesLocalStorage
-            || expense.householdId != nil
-            || SplitPartnerOption.shouldUseLocalSimulation(for: partnerIds)
-            || TestAccount.contains(userId: expense.createdBy) {
+        if usesLocalRepository(for: expense) {
             return LocalExpenseRepository()
         }
-        #endif
         return primaryRepository
+    }
+
+    private func usesLocalRepository(for expense: ExpenseRecord) -> Bool {
+        #if DEBUG
+        if ExpenseRepositoryFactory.usesLocalStorage {
+            return true
+        }
+        let partnerIds = expense.shares.map(\.userId).filter { $0 != expense.createdBy }
+        return SplitPartnerOption.shouldUseLocalSimulation(for: partnerIds)
+        #else
+        return false
+        #endif
     }
 
     nonisolated static func makeSummary(
@@ -206,7 +346,7 @@ final class ExpenseStore: ObservableObject {
         var shared = 0
         var byCategory: [ExpenseCategory: Int] = [:]
         for expense in expenses {
-            let mine = expense.shares.first(where: { $0.userId == userId })?.amountMinor ?? 0
+            let mine = expense.acceptedShareMinor(for: userId)
             total += mine
             if mine > 0 {
                 byCategory[expense.category, default: 0] += mine

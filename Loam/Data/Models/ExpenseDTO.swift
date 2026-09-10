@@ -6,19 +6,28 @@ struct ExpenseShareDTO: Codable, Sendable, Hashable {
     var expenseId: UUID?
     var userId: UUID
     var amountMinor: Int
+    var status: ExpenseShareStatus?
+    var respondedAt: Date?
+    var acceptedViaTrust: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
         case expenseId = "expense_id"
         case userId = "user_id"
         case amountMinor = "amount_minor"
+        case status
+        case respondedAt = "responded_at"
+        case acceptedViaTrust = "accepted_via_trust"
     }
 
     func toRecord() -> ExpenseShareRecord {
         ExpenseShareRecord(
             id: id ?? UUID(),
             userId: userId,
-            amountMinor: amountMinor
+            amountMinor: amountMinor,
+            status: status ?? .accepted,
+            respondedAt: respondedAt,
+            acceptedViaTrust: acceptedViaTrust ?? false
         )
     }
 }
@@ -123,12 +132,36 @@ struct ExpenseShareInsertDTO: Encodable, Sendable {
     var expenseId: UUID
     var userId: UUID
     var amountMinor: Int
+    var status: ExpenseShareStatus?
+    var respondedAt: Date?
+    var acceptedViaTrust: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
         case expenseId = "expense_id"
         case userId = "user_id"
         case amountMinor = "amount_minor"
+        case status
+        case respondedAt = "responded_at"
+        case acceptedViaTrust = "accepted_via_trust"
+    }
+
+    init(
+        id: UUID,
+        expenseId: UUID,
+        userId: UUID,
+        amountMinor: Int,
+        status: ExpenseShareStatus? = nil,
+        respondedAt: Date? = nil,
+        acceptedViaTrust: Bool? = nil
+    ) {
+        self.id = id
+        self.expenseId = expenseId
+        self.userId = userId
+        self.amountMinor = amountMinor
+        self.status = status
+        self.respondedAt = respondedAt
+        self.acceptedViaTrust = acceptedViaTrust
     }
 }
 

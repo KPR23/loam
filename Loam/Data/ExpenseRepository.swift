@@ -6,6 +6,12 @@ protocol ExpenseRepository: Sendable {
     func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     func delete(id: UUID) async throws
+    func respondToShare(expenseId: UUID, userId: UUID, action: ExpenseShareResponseAction) async throws
+    func fetchPendingProposals(for userId: UUID) async throws -> [ExpenseEditProposal]
+    func createEditProposal(_ proposal: ExpenseEditProposal, expenseId: UUID) async throws -> ExpenseEditProposal
+    func respondToProposal(proposalId: UUID, accept: Bool) async throws
+    func fetchTrustedUserIds(for userId: UUID, householdId: UUID) async throws -> Set<UUID>
+    func addTrust(for userId: UUID, trustedUserId: UUID, householdId: UUID) async throws
 }
 
 enum ExpenseRepositoryError: LocalizedError {
