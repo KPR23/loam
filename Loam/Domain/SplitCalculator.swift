@@ -85,6 +85,43 @@ enum SplitCalculator {
         return weightedSplit(totalMinor: totalMinor, participants: participants, remainderTo: paidByUserId)
     }
 
+    /// Builds shares for a split using the selected mode.
+    static func split(
+        totalMinor: Int,
+        mode: SplitExpenseMode,
+        myUserId: UUID,
+        partnerUserIds: [UUID],
+        paidByUserId: UUID,
+        myPercentage: Int = 50,
+        myExactAmountMinor: Int? = nil
+    ) -> [Share] {
+        let partners = Array(Set(partnerUserIds))
+        precondition(!partners.isEmpty, "Need at least one partner")
+
+        if partners.count == 1 {
+            return twoPersonSplit(
+                totalMinor: totalMinor,
+                mode: mode,
+                myUserId: myUserId,
+                partnerUserId: partners[0],
+                paidByUserId: paidByUserId,
+                myPercentage: myPercentage,
+                myExactAmountMinor: myExactAmountMinor
+            )
+        }
+
+        switch mode {
+        case .equal:
+            return equal(
+                totalMinor: totalMinor,
+                participants: [myUserId] + partners,
+                paidByUserId: paidByUserId
+            )
+        case .percentage, .exactAmount:
+            preconditionFailure("Percentage and exact amount splits require exactly one partner")
+        }
+    }
+
     /// Builds shares for a two-person split using the selected mode.
     static func twoPersonSplit(
         totalMinor: Int,

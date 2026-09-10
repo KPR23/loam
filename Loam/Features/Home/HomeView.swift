@@ -290,7 +290,7 @@ struct HomeView: View {
 
     private func canSplit(_ expense: ExpenseRecord) -> Bool {
         expense.recurringId == nil
-            && TestPartner.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+            && SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
     }
 
     private func presentSplit(for expense: ExpenseRecord) {
@@ -300,8 +300,10 @@ struct HomeView: View {
 
     private func deleteConfirmationMessage(for expense: ExpenseRecord) -> String {
         var message = "\(expense.category.displayName) · \(MoneyFormatter.string(from: expense.money))"
-        if expense.isShared {
-            message += "\n\nThis will also remove the expense for \(TestPartner.displayName)."
+        if expense.isShared, let userId = authSession.userId {
+            let partnerIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: userId)
+            let partnerNames = SplitPartnerOption.displayNames(for: partnerIds)
+            message += "\n\nThis will also remove the expense for \(partnerNames)."
         }
         return message
     }

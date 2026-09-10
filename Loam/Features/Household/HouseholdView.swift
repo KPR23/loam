@@ -16,7 +16,7 @@ struct HouseholdView: View {
                             .font(.headline)
 
                         if sharedExpenses.isEmpty {
-                            Text("No shared expenses this month. Split an expense with \(TestPartner.displayName) from the add screen.")
+                            Text("No shared expenses this month. Split an expense with Julia or Philip from the add screen.")
                                 .font(.subheadline)
                                 .foregroundStyle(HomeTheme.secondary)
                         } else {
@@ -84,7 +84,7 @@ struct HouseholdView: View {
                 Text(expense.spentAt, format: .dateTime.month(.abbreviated).day())
                     .font(.caption)
                     .foregroundStyle(HomeTheme.secondary)
-                Text(paidByMe ? "You paid" : "\(TestPartner.displayName) paid")
+                Text(paidByMe ? "You paid" : "\(payerName(for: expense)) paid")
                     .font(.caption2)
                     .foregroundStyle(HomeTheme.secondary)
             }
@@ -102,6 +102,10 @@ struct HouseholdView: View {
         .padding(14)
         .background(HomeTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: HomeTheme.rowRadius, style: .continuous))
+    }
+
+    private func payerName(for expense: ExpenseRecord) -> String {
+        SplitPartnerOption.displayName(for: expense.paidBy)
     }
 }
 
