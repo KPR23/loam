@@ -67,7 +67,14 @@ To enable Supabase in CI/TestFlight builds, add environment variables in App Sto
 - `SUPABASE_URL` — e.g. `https://your-project.supabase.co`
 - `SUPABASE_ANON_KEY` — anon / publishable key
 
-`ci_scripts/ci_post_clone.sh` writes `Loam/Config/Secrets.xcconfig` from those variables before the build. Without them, the app still builds and runs in demo mode.
+`ci_scripts/ci_post_clone.sh` writes `Loam/Config/Secrets.xcconfig` before the build:
+
+- `CURRENT_PROJECT_VERSION` — set from Xcode Cloud `CI_BUILD_NUMBER` so each upload gets a unique build number (avoids TestFlight duplicate-tuple stalls).
+- `SUPABASE_URL` / `SUPABASE_ANON_KEY` — from workflow environment variables when set. Without them, the app still builds and runs in demo mode.
+
+Local builds keep the committed fallback in `project.yml` (`CURRENT_PROJECT_VERSION = 6`).
+
+**Export compliance:** `Info.plist` sets `ITSAppUsesNonExemptEncryption = false` (HTTPS/Supabase only — no custom crypto). That skips the manual “App Encryption Documentation” step in App Store Connect and prevents TestFlight post-actions from hanging while waiting for compliance.
 
 Info.plist keys expected (via build settings):
 
