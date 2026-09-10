@@ -70,17 +70,24 @@ actor LocalExpenseRepository: ExpenseRepository {
             throw ExpenseRepositoryError.notFound
         }
 
-        guard let shareIndex = all[index].shares.firstIndex(where: { $0.userId == userId && $0.status == .pending }) else {
+        // Only this participant's share — never mutate other users' statuses.
+        guard let shareIndex = all[index].shares.firstIndex(where: { $0.userId == userId }) else {
+            throw ExpenseRepositoryError.notFound
+        }
+        guard all[index].shares[shareIndex].status == .pending else {
             throw ExpenseRepositoryError.notFound
         }
 
+        var updatedShares = all[index].shares
         switch action {
         case .reject:
-            all[index].shares[shareIndex].status = .rejected
-            all[index].shares[shareIndex].respondedAt = Date()
+            updatedShares[shareIndex].status = .rejected
+            updatedShares[shareIndex].respondedAt = Date()
+            updatedShares[shareIndex].acceptedViaTrust = false
         case .accept, .acceptWithTrust:
-            all[index].shares[shareIndex].status = .accepted
-            all[index].shares[shareIndex].respondedAt = Date()
+            updatedShares[shareIndex].status = .accepted
+            updatedShares[shareIndex].respondedAt = Date()
+            updatedShares[shareIndex].acceptedViaTrust = false
             if action == .acceptWithTrust, let householdId = all[index].householdId {
                 try await addTrust(
                     for: userId,
@@ -89,6 +96,8 @@ actor LocalExpenseRepository: ExpenseRepository {
                 )
             }
         }
+        all[index].shares = updatedShares
+        all[index].updatedAt = Date()
 
         try save(all)
     }
@@ -193,7 +202,8 @@ actor LocalExpenseRepository: ExpenseRepository {
     }
 
     private func load() throws -> [ExpenseRecord] {
-        if let cache { return cache }
+        // Always reload from UserDefaults so separate repository instances
+        // (e.g. after switching test accounts) see each other's share updates.
         guard let data = UserDefaults.standard.data(forKey: defaultsKey) else {
             cache = []
             return []

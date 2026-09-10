@@ -103,6 +103,8 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     }
 
     func respondToShare(expenseId: UUID, userId: UUID, action: ExpenseShareResponseAction) async throws {
+        // RPC uses auth.uid() and updates only that user's expense_share row.
+        // Other participants' pending shares are left unchanged.
         _ = userId
         _ = try await client
             .rpc(
