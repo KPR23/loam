@@ -223,14 +223,35 @@ final class ExpenseStore: ObservableObject {
         action: ExpenseShareResponseAction
     ) async {
         do {
-            guard let expense = expenses.first(where: { $0.id == expenseId }) else {
+            guard let expenseIndex = expenses.firstIndex(where: { $0.id == expenseId }) else {
                 throw ExpenseRepositoryError.notFound
             }
+            guard let shareIndex = expenses[expenseIndex].shares.firstIndex(where: { $0.userId == userId }) else {
+                throw ExpenseRepositoryError.notFound
+            }
+            guard expenses[expenseIndex].shares[shareIndex].status == .pending else {
+                throw ExpenseRepositoryError.notFound
+            }
+
+            // Optimistically update only this user's share so other participants stay pending.
+            var expense = expenses[expenseIndex]
+            switch action {
+            case .reject:
+                expense.shares[shareIndex].status = .rejected
+                expense.shares[shareIndex].respondedAt = Date()
+            case .accept, .acceptWithTrust:
+                expense.shares[shareIndex].status = .accepted
+                expense.shares[shareIndex].respondedAt = Date()
+            }
+            expenses[expenseIndex] = expense
+            summary = Self.makeSummary(expenses: expenses, userId: userId)
+
             let activeRepository = repository(for: expense)
             try await activeRepository.respondToShare(expenseId: expenseId, userId: userId, action: action)
             await refresh(userId: userId)
         } catch {
             lastError = error.localizedDescription
+            await refresh(userId: userId)
         }
     }
 
