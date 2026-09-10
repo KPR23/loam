@@ -230,7 +230,7 @@ struct HomeView: View {
             if !proposals.isEmpty {
                 Section {
                     ForEach(proposals) { proposal in
-                        if let expense = expenseStore.expenses.first(where: { $0.id == proposal.expenseId }) {
+                        if let expense = expenseStore.expense(forProposal: proposal) {
                             EditProposalReviewCard(
                                 proposal: proposal,
                                 expense: expense,
@@ -392,22 +392,24 @@ struct HomeView: View {
     }
 
     private func expenseRow(_ expense: ExpenseRecord) -> some View {
-        Button {
-            selectedExpense = expense
-        } label: {
-            expenseRowContent(expense)
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            if canSplit(expense) {
-                Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
-                    presentSplit(for: expense)
+        expenseRowContent(expense)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectedExpense = expense
+            }
+            .contextMenu {
+                if canSplit(expense) {
+                    Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
+                        presentSplit(for: expense)
+                    }
+                }
+                Button("Delete", systemImage: "trash", role: .destructive) {
+                    expensePendingDelete = expense
                 }
             }
-            Button("Delete", systemImage: "trash", role: .destructive) {
-                expensePendingDelete = expense
-            }
-        }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Shows expense details")
     }
 
     private func expenseRowContent(_ expense: ExpenseRecord) -> some View {
