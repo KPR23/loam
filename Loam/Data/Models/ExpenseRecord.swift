@@ -4,11 +4,45 @@ struct ExpenseShareRecord: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var userId: UUID
     var amountMinor: Int
+    var status: ExpenseShareStatus
+    var respondedAt: Date?
+    var acceptedViaTrust: Bool
 
-    init(id: UUID = UUID(), userId: UUID, amountMinor: Int) {
+    init(
+        id: UUID = UUID(),
+        userId: UUID,
+        amountMinor: Int,
+        status: ExpenseShareStatus = .accepted,
+        respondedAt: Date? = nil,
+        acceptedViaTrust: Bool = false
+    ) {
         self.id = id
         self.userId = userId
         self.amountMinor = amountMinor
+        self.status = status
+        self.respondedAt = respondedAt
+        self.acceptedViaTrust = acceptedViaTrust
+    }
+
+    var countsInSummary: Bool { status.isCountedInSummary }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        userId = try container.decode(UUID.self, forKey: .userId)
+        amountMinor = try container.decode(Int.self, forKey: .amountMinor)
+        status = try container.decodeIfPresent(ExpenseShareStatus.self, forKey: .status) ?? .accepted
+        respondedAt = try container.decodeIfPresent(Date.self, forKey: .respondedAt)
+        acceptedViaTrust = try container.decodeIfPresent(Bool.self, forKey: .acceptedViaTrust) ?? false
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case userId
+        case amountMinor
+        case status
+        case respondedAt
+        case acceptedViaTrust
     }
 }
 
@@ -68,6 +102,27 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
     }
 
     var isShared: Bool { householdId != nil }
+
+    func shareRecord(for userId: UUID) -> ExpenseShareRecord? {
+        shares.first(where: { $0.userId == userId })
+    }
+
+    func shareStatus(for userId: UUID) -> ExpenseShareStatus {
+        shareRecord(for: userId)?.status ?? .accepted
+    }
+
+    func countsTowardSummary(for userId: UUID) -> Bool {
+        shareRecord(for: userId)?.countsInSummary ?? false
+    }
+
+    func isPendingAcceptance(for userId: UUID) -> Bool {
+        isShared && createdBy != userId && shareStatus(for: userId) == .pending
+    }
+
+    func acceptedShareMinor(for userId: UUID) -> Int {
+        guard countsTowardSummary(for: userId) else { return 0 }
+        return shareRecord(for: userId)?.amountMinor ?? 0
+    }
 }
 
 struct CategorySpendSlice: Equatable, Sendable {

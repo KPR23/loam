@@ -7,6 +7,13 @@ private struct SplitExpensePresentation: Identifiable {
     var id: UUID { expense.id }
 }
 
+private struct ProposeEditPresentation: Identifiable {
+    let expense: ExpenseRecord
+    let myUserId: UUID
+
+    var id: UUID { expense.id }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
@@ -19,6 +26,7 @@ struct HomeView: View {
     @State private var arcReveal: Double = 0
     @State private var expensePendingDelete: ExpenseRecord?
     @State private var expensePendingSplit: SplitExpensePresentation?
+    @State private var expensePendingProposeEdit: ProposeEditPresentation?
 
     var body: some View {
         NavigationStack {
@@ -38,6 +46,8 @@ struct HomeView: View {
                     .listRowBackground(Color.clear)
                 }
 
+                pendingAcceptanceSection
+                incomingProposalsSection
                 expenseList
             }
             .listStyle(.insetGrouped)
@@ -92,6 +102,9 @@ struct HomeView: View {
         .sheet(item: $expensePendingSplit) { presentation in
             SplitExpenseSheet(expense: presentation.expense, myUserId: presentation.myUserId)
         }
+        .sheet(item: $expensePendingProposeEdit) { presentation in
+            ProposeEditSheet(expense: presentation.expense, myUserId: presentation.myUserId)
+        }
         .alert(
             "Delete this expense?",
             isPresented: Binding(
@@ -116,6 +129,125 @@ struct HomeView: View {
         } message: {
             if let expense = expensePendingDelete {
                 Text(deleteConfirmationMessage(for: expense))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var pendingAcceptanceSection: some View {
+        if let userId = authSession.userId, !expenseStore.pendingAcceptanceExpenses.isEmpty {
+            Section {
+                ForEach(expenseStore.pendingAcceptanceExpenses) { expense in
+                    PendingExpenseRow(
+                        expense: expense,
+                        myUserId: userId,
+                        creatorName: SplitPartnerOption.displayName(for: expense.createdBy),
+                        onAccept: {
+                            Task {
+                                await expenseStore.respondToShare(
+                                    expenseId: expense.id,
+                                    userId: userId,
+                                    action: .accept
+                                )
+                            }
+                        },
+                        onAcceptWithTrust: {
+                            Task {
+                                await expenseStore.respondToShare(
+                                    expenseId: expense.id,
+                                    userId: userId,
+                                    action: .acceptWithTrust
+                                )
+                            }
+                        },
+                        onReject: {
+                            Task {
+                                await expenseStore.respondToShare(
+                                    expenseId: expense.id,
+                                    userId: userId,
+                                    action: .reject
+                                )
+                            }
+                        },
+                        onProposeEdit: {
+                            expensePendingProposeEdit = ProposeEditPresentation(expense: expense, myUserId: userId)
+                        }
+                    )
+                }
+            } header: {
+                pendingSectionHeader(expenses: expenseStore.pendingAcceptanceExpenses)
+            }
+        }
+    }
+
+    private func pendingSectionHeader(expenses: [ExpenseRecord]) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Awaiting your approval")
+                .font(.subheadline)
+                .fontWeight(.regular)
+                .foregroundStyle(HomeTheme.secondary)
+            Spacer()
+            Text(MoneyFormatter.string(from: pendingTotal(for: expenses)))
+                .font(.subheadline)
+                .fontWeight(.regular)
+                .foregroundStyle(HomeTheme.secondary)
+                .monospacedDigit()
+        }
+        .textCase(nil)
+    }
+
+    private func pendingTotal(for expenses: [ExpenseRecord]) -> Money {
+        guard let userId = authSession.userId else {
+            return Money(amountMinor: 0, currencyCode: "PLN")
+        }
+        let minor = expenses.reduce(0) { partial, expense in
+            partial + (expense.shareRecord(for: userId)?.amountMinor ?? 0)
+        }
+        let currency = expenses.first?.currency ?? "PLN"
+        return Money(amountMinor: minor, currencyCode: currency)
+    }
+
+    @ViewBuilder
+    private var incomingProposalsSection: some View {
+        if let userId = authSession.userId {
+            let proposals = expenseStore.incomingProposals(for: userId)
+            if !proposals.isEmpty {
+                Section {
+                    ForEach(proposals) { proposal in
+                        if let expense = expenseStore.expenses.first(where: { $0.id == proposal.expenseId }) {
+                            EditProposalReviewCard(
+                                proposal: proposal,
+                                expense: expense,
+                                proposerName: SplitPartnerOption.displayName(for: proposal.proposedBy),
+                                onAccept: {
+                                    Task {
+                                        await expenseStore.respondToProposal(
+                                            proposalId: proposal.id,
+                                            userId: userId,
+                                            accept: true
+                                        )
+                                    }
+                                },
+                                onReject: {
+                                    Task {
+                                        await expenseStore.respondToProposal(
+                                            proposalId: proposal.id,
+                                            userId: userId,
+                                            accept: false
+                                        )
+                                    }
+                                }
+                            )
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                        }
+                    }
+                } header: {
+                    Text("Suggested edits")
+                        .font(.subheadline.weight(.semibold))
+                        .textCase(nil)
+                }
             }
         }
     }
@@ -183,7 +315,11 @@ struct HomeView: View {
 
     private var expensesByDay: [(date: Date, expenses: [ExpenseRecord])] {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: expenseStore.expenses) { expense in
+        let listedExpenses = expenseStore.expenses.filter { expense in
+            guard let userId = authSession.userId else { return true }
+            return !expense.isPendingAcceptance(for: userId)
+        }
+        let grouped = Dictionary(grouping: listedExpenses) { expense in
             calendar.startOfDay(for: expense.spentAt)
         }
         return grouped
@@ -233,14 +369,15 @@ struct HomeView: View {
             return expenses.first?.money ?? Money(amountMinor: 0, currencyCode: "PLN")
         }
         let minor = expenses.reduce(0) { partial, expense in
-            partial + (expense.shares.first(where: { $0.userId == userId })?.amountMinor ?? 0)
+            partial + expense.acceptedShareMinor(for: userId)
         }
         let currency = expenses.first?.currency ?? "PLN"
         return Money(amountMinor: minor, currencyCode: currency)
     }
 
     private func expenseRow(_ expense: ExpenseRecord) -> some View {
-        let mine = authSession.userId.map { expense.share(for: $0) } ?? expense.money
+        let userId = authSession.userId
+        let mine = userId.map { expense.share(for: $0) } ?? expense.money
 
         return LabeledContent {
             VStack(alignment: .trailing, spacing: 2) {

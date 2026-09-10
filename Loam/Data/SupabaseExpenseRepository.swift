@@ -25,7 +25,10 @@ actor SupabaseExpenseRepository: ExpenseRepository {
 
         return rows
             .compactMap { $0.toRecord() }
-            .filter { $0.shares.contains(where: { $0.userId == userId }) }
+            .filter { expense in
+                guard let share = expense.shareRecord(for: userId) else { return false }
+                return share.status != .rejected
+            }
     }
 
     func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
@@ -51,7 +54,10 @@ actor SupabaseExpenseRepository: ExpenseRepository {
                 id: $0.id,
                 expenseId: expense.id,
                 userId: $0.userId,
-                amountMinor: $0.amountMinor
+                amountMinor: $0.amountMinor,
+                status: $0.status,
+                respondedAt: $0.respondedAt,
+                acceptedViaTrust: $0.acceptedViaTrust
             )
         }
 
@@ -94,6 +100,105 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             .delete()
             .eq("id", value: id)
             .execute()
+    }
+
+    func respondToShare(expenseId: UUID, userId: UUID, action: ExpenseShareResponseAction) async throws {
+        _ = userId
+        _ = try await client
+            .rpc(
+                "respond_to_expense_share",
+                params: RespondToShareParams(expenseId: expenseId, action: action.rawValue)
+            )
+            .execute()
+    }
+
+    func fetchPendingProposals(for userId: UUID) async throws -> [ExpenseEditProposal] {
+        let rows: [ExpenseEditProposalDTO] = try await client
+            .from("expense_edit_proposal")
+            .select()
+            .eq("status", value: ExpenseProposalStatus.pending.rawValue)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        return rows.compactMap { $0.toRecord() }
+            .filter { proposal in
+                proposal.proposedBy == userId || proposalNeedsCreatorReview(proposal, userId: userId)
+            }
+    }
+
+    func createEditProposal(_ proposal: ExpenseEditProposal, expenseId: UUID) async throws -> ExpenseEditProposal {
+        let params = CreateEditProposalParams(proposal: proposal, expenseId: expenseId)
+        let proposalId: UUID = try await client
+            .rpc("create_expense_edit_proposal", params: params)
+            .execute()
+            .value
+
+        let row: ExpenseEditProposalDTO = try await client
+            .from("expense_edit_proposal")
+            .select()
+            .eq("id", value: proposalId)
+            .single()
+            .execute()
+            .value
+
+        guard let record = row.toRecord() else {
+            throw ExpenseRepositoryError.notFound
+        }
+        return record
+    }
+
+    func respondToProposal(proposalId: UUID, accept: Bool) async throws {
+        _ = try await client
+            .rpc(
+                "respond_to_edit_proposal",
+                params: RespondToProposalParams(proposalId: proposalId, accept: accept)
+            )
+            .execute()
+    }
+
+    func fetchTrustedUserIds(for userId: UUID, householdId: UUID) async throws -> Set<UUID> {
+        struct TrustRow: Decodable {
+            let trustedUserId: UUID
+
+            enum CodingKeys: String, CodingKey {
+                case trustedUserId = "trusted_user_id"
+            }
+        }
+
+        let rows: [TrustRow] = try await client
+            .from("expense_share_trust")
+            .select("trusted_user_id")
+            .eq("user_id", value: userId)
+            .eq("household_id", value: householdId)
+            .execute()
+            .value
+
+        return Set(rows.map(\.trustedUserId))
+    }
+
+    func addTrust(for userId: UUID, trustedUserId: UUID, householdId: UUID) async throws {
+        struct TrustInsert: Encodable {
+            let userId: UUID
+            let trustedUserId: UUID
+            let householdId: UUID
+
+            enum CodingKeys: String, CodingKey {
+                case userId = "user_id"
+                case trustedUserId = "trusted_user_id"
+                case householdId = "household_id"
+            }
+        }
+
+        _ = try await client
+            .from("expense_share_trust")
+            .insert(TrustInsert(userId: userId, trustedUserId: trustedUserId, householdId: householdId))
+            .execute()
+    }
+
+    private func proposalNeedsCreatorReview(_ proposal: ExpenseEditProposal, userId: UUID) -> Bool {
+        // Kept for client-side filtering; server RLS already scopes rows.
+        proposal.status == .pending
     }
 
     private func fetchExpense(id: UUID) async throws -> ExpenseRecord {
@@ -191,5 +296,78 @@ private struct ShareParam: Encodable, Sendable {
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case amountMinor = "amount_minor"
+    }
+}
+
+private struct RespondToShareParams: Encodable, Sendable {
+    let expenseId: UUID
+    let action: String
+
+    enum CodingKeys: String, CodingKey {
+        case expenseId = "p_expense_id"
+        case action = "p_action"
+    }
+}
+
+private struct RespondToProposalParams: Encodable, Sendable {
+    let proposalId: UUID
+    let accept: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case proposalId = "p_proposal_id"
+        case accept = "p_accept"
+    }
+}
+
+private struct CreateEditProposalParams: Encodable, Sendable {
+    let expenseId: UUID
+    let amountMinor: Int
+    let category: ExpenseCategory
+    let note: String?
+    let spentAt: String
+    let paidBy: UUID
+    let shares: [ShareParam]
+    let message: String?
+
+    enum CodingKeys: String, CodingKey {
+        case expenseId = "p_expense_id"
+        case amountMinor = "p_amount_minor"
+        case category = "p_category"
+        case note = "p_note"
+        case spentAt = "p_spent_at"
+        case paidBy = "p_paid_by"
+        case shares = "p_shares"
+        case message = "p_message"
+    }
+
+    init(proposal: ExpenseEditProposal, expenseId: UUID) {
+        self.expenseId = expenseId
+        amountMinor = proposal.amountMinor
+        category = proposal.category
+        note = proposal.note
+        spentAt = CalendarDateCodec.string(from: proposal.spentAt)
+        paidBy = proposal.paidBy
+        shares = proposal.shares.map { ShareParam(userId: $0.userId, amountMinor: $0.amountMinor) }
+        message = proposal.message
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(expenseId, forKey: .expenseId)
+        try container.encode(amountMinor, forKey: .amountMinor)
+        try container.encode(category, forKey: .category)
+        if let note {
+            try container.encode(note, forKey: .note)
+        } else {
+            try container.encodeNil(forKey: .note)
+        }
+        try container.encode(spentAt, forKey: .spentAt)
+        try container.encode(paidBy, forKey: .paidBy)
+        try container.encode(shares, forKey: .shares)
+        if let message {
+            try container.encode(message, forKey: .message)
+        } else {
+            try container.encodeNil(forKey: .message)
+        }
     }
 }

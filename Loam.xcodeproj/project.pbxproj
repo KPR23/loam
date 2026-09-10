@@ -13,6 +13,12 @@
 		095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */; };
 		1F773CF0A1FB5908D798406C /* ExpenseRepositoryFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */; };
 		20488F784A448D5470EF4707 /* HomeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76BB6915492C01E2E6B51959 /* HomeTheme.swift */; };
+		20A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift */; };
+		20A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift */; };
+		20A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift */; };
+		20A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift */; };
+		20A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift */; };
+		20A1B2C3D4E5F60718293A50 /* EditProposalReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4F0 /* EditProposalReviewCard.swift */; };
 		269663C225006F0D994C1708 /* CalendarDateCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */; };
 		2740165736ACD1860265CAD9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */; };
 		33C83051AA7FF1FDA79F0241 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D533C1F5574D7B7BE0F546AC /* RootView.swift */; };
@@ -99,6 +105,12 @@
 		6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDTO.swift; sourceTree = "<group>"; };
 		7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseExpenseRepository.swift; sourceTree = "<group>"; };
 		76BB6915492C01E2E6B51959 /* HomeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTheme.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareStatus.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseEditProposal.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareAcceptance.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpenseCard.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProposeEditSheet.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4F0 /* EditProposalReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProposalReviewCard.swift; sourceTree = "<group>"; };
 		7FCB2D37CB3148229B212824 /* StoreKitStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitStub.swift; sourceTree = "<group>"; };
 		8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySpendHero.swift; sourceTree = "<group>"; };
 		8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepository.swift; sourceTree = "<group>"; };
@@ -145,10 +157,13 @@
 			isa = PBXGroup;
 			children = (
 				ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */,
+				30A1B2C3D4E5F60718293A4F0 /* EditProposalReviewCard.swift */,
 				B73CC2C0E31AA168F61ABFED /* HomeCollapsingTopBar.swift */,
 				76BB6915492C01E2E6B51959 /* HomeTheme.swift */,
 				D5950FD4B0A003B32224F60B /* HomeView.swift */,
 				8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */,
+				30A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift */,
+				30A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -175,6 +190,7 @@
 			children = (
 				0E27CDECAD1AC0216EB7FC75 /* CalendarDateCodec.swift */,
 				1BB3E318E7DB0B9CE3B246C1 /* Category.swift */,
+				30A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift */,
 				A74E2AB24186B00FD500CE4D /* Formatters.swift */,
 				F6CD835D39E131CEAA0B24E8 /* Money.swift */,
 				20C428C07622150791184237 /* Recurring.swift */,
@@ -264,6 +280,7 @@
 			isa = PBXGroup;
 			children = (
 				6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */,
+				30A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift */,
 				5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */,
 				352DDC9EA03E70A678D9AABF /* HouseholdRecord.swift */,
 			);
@@ -309,6 +326,7 @@
 			isa = PBXGroup;
 			children = (
 				239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */,
+				30A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift */,
 				03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */,
 			);
 			path = Domain;
@@ -491,14 +509,20 @@
 				8A2FFEF3FDC79F301B77AE32 /* Category.swift in Sources */,
 				F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */,
 				A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */,
+				20A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift in Sources */,
 				52647BE969B4C648691C9815 /* ExpenseRecord.swift in Sources */,
+				20A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift in Sources */,
+				20A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift in Sources */,
 				095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */,
 				1F773CF0A1FB5908D798406C /* ExpenseRepositoryFactory.swift in Sources */,
 				79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */,
 				D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */,
+				20A1B2C3D4E5F60718293A50 /* EditProposalReviewCard.swift in Sources */,
 				D5198E9063F112C1765093E2 /* HomeCollapsingTopBar.swift in Sources */,
 				20488F784A448D5470EF4707 /* HomeTheme.swift in Sources */,
 				FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */,
+				20A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift in Sources */,
+				20A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift in Sources */,
 				8AB6806BBFF519364B30CF4A /* HouseholdRecord.swift in Sources */,
 				73C7ACE811537D4D2DF68609 /* HouseholdRepository.swift in Sources */,
 				F003E190915C60EA01A187C3 /* HouseholdStore.swift in Sources */,

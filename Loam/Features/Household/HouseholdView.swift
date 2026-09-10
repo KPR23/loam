@@ -44,7 +44,10 @@ struct HouseholdView: View {
     }
 
     private var sharedExpenses: [ExpenseRecord] {
-        expenseStore.expenses.filter(\.isShared)
+        guard let userId = authSession.userId else {
+            return expenseStore.expenses.filter(\.isShared)
+        }
+        return expenseStore.expenses.filter { $0.isShared && $0.countsTowardSummary(for: userId) }
     }
 
     private var summaryCard: some View {
