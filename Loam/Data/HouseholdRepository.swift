@@ -18,18 +18,19 @@ protocol HouseholdRepository: Sendable {
     /// Returns the user's existing test household without creating one.
     func fetchTestHousehold(for userId: UUID) async throws -> HouseholdRecord?
 
-    /// Returns an existing test household for the user or creates one with the test partner.
-    func ensureTestHousehold(
+    /// Returns an existing split household for the user or creates one with the selected partners.
+    func ensureSplitHousehold(
         for userId: UUID,
-        userDisplayName: String
+        userDisplayName: String,
+        partners: [SplitPartnerOption]
     ) async throws -> HouseholdRecord
 }
 
 enum HouseholdRepositoryFactory {
     static func make() -> HouseholdRepository {
-        if SupabaseClientProvider.shared != nil {
-            return SupabaseHouseholdRepository(client: SupabaseClientProvider.shared!)
+        if ExpenseRepositoryFactory.usesLocalStorage {
+            return LocalHouseholdRepository()
         }
-        return LocalHouseholdRepository()
+        return SupabaseHouseholdRepository(client: SupabaseClientProvider.shared!)
     }
 }

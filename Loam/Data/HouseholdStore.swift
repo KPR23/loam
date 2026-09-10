@@ -6,20 +6,20 @@ final class HouseholdStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var lastError: String?
 
-    private let repository: HouseholdRepository
-
-    init(repository: HouseholdRepository = HouseholdRepositoryFactory.make()) {
-        self.repository = repository
-    }
-
-    func ensureTestHousehold(userId: UUID, userDisplayName: String) async throws -> HouseholdRecord {
+    func ensureSplitHousehold(
+        userId: UUID,
+        userDisplayName: String,
+        partners: [SplitPartnerOption]
+    ) async throws -> HouseholdRecord {
         isLoading = true
         lastError = nil
         defer { isLoading = false }
 
-        let household = try await repository.ensureTestHousehold(
+        let activeRepository = repository(for: partners)
+        let household = try await activeRepository.ensureSplitHousehold(
             for: userId,
-            userDisplayName: userDisplayName
+            userDisplayName: userDisplayName,
+            partners: partners
         )
         testHousehold = household
         return household
@@ -36,9 +36,43 @@ final class HouseholdStore: ObservableObject {
         defer { isLoading = false }
 
         do {
-            testHousehold = try await repository.fetchTestHousehold(for: userId)
+            var household = try await activeRepository.fetchTestHousehold(for: userId)
+            #if DEBUG
+            if !ExpenseRepositoryFactory.usesLocalStorage {
+                household = try await LocalHouseholdRepository().fetchTestHousehold(for: userId) ?? household
+            }
+            #endif
+            testHousehold = household
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    private var activeRepository: HouseholdRepository {
+        #if DEBUG
+        if ExpenseRepositoryFactory.usesLocalStorage {
+            return LocalHouseholdRepository()
+        }
+        #endif
+        return HouseholdRepositoryFactory.make()
+    }
+
+    private func repository(for partners: [SplitPartnerOption]) -> HouseholdRepository {
+        #if DEBUG
+        if ExpenseRepositoryFactory.usesLocalStorage || shouldUseLocalStorage(for: partners) {
+            return LocalHouseholdRepository()
+        }
+        #endif
+        return HouseholdRepositoryFactory.make()
+    }
+
+    private func shouldUseLocalStorage(for partners: [SplitPartnerOption]) -> Bool {
+        #if DEBUG
+        let partnerIds = partners.map(\.userId)
+        return SplitPartnerOption.shouldUseLocalSimulation(for: partnerIds)
+        #else
+        _ = partners
+        return false
+        #endif
     }
 }

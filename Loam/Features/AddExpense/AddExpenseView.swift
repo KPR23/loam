@@ -20,6 +20,7 @@ struct AddExpenseView: View {
     @State private var isRepeating = false
     @State private var repeatInterval: RecurringIntervalUnit = .month
     @State private var isSplit = false
+    @State private var selectedPartnerUserIds: Set<UUID> = []
     @State private var splitMode: SplitExpenseMode = .equal
     @State private var paidByUserId: UUID?
     @State private var myPercentage = 50
@@ -171,13 +172,13 @@ struct AddExpenseView: View {
             }
 
             if let userId = authSession.userId,
-               TestPartner.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) {
+               !splitPartners.isEmpty {
                 SplitExpenseSection(
                     totalMinor: parsedMoney?.amountMinor ?? 0,
                     myUserId: userId,
                     myDisplayName: authSession.displayName ?? "You",
-                    partnerUserId: TestPartner.userId,
-                    partnerDisplayName: TestPartner.displayName,
+                    availablePartners: splitPartners,
+                    selectedPartnerUserIds: $selectedPartnerUserIds,
                     isSplit: $isSplit,
                     splitMode: $splitMode,
                     paidByUserId: Binding(
@@ -189,11 +190,16 @@ struct AddExpenseView: View {
                 )
             }
         }
+        .onChange(of: selectedPartnerUserIds) { _, newValue in
+            if newValue.count != 1, splitMode != .equal {
+                splitMode = .equal
+            }
+        }
         .onAppear {
             if paidByUserId == nil {
                 paidByUserId = authSession.userId
             }
-            if isSplit, !TestPartner.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) {
+            if isSplit, !SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) {
                 isSplit = false
             }
         }
@@ -221,6 +227,22 @@ struct AddExpenseView: View {
     }
 
     // MARK: - Helpers
+
+    private var splitPartners: [SplitPartnerOption] {
+        guard let userId = authSession.userId else { return [] }
+        #if DEBUG
+        return SplitPartnerOption.available(
+            for: userId,
+            savedMainAccount: authSession.savedMainAccountPartnerOption
+        )
+        #else
+        return SplitPartnerOption.available(for: userId)
+        #endif
+    }
+
+    private var selectedSplitPartners: [SplitPartnerOption] {
+        splitPartners.filter { selectedPartnerUserIds.contains($0.userId) }
+    }
 
     private var parsedMoney: Money? {
         Money(majorString: amountText)
@@ -271,7 +293,9 @@ struct AddExpenseView: View {
 
         if isSplit, let validationError = SplitExpenseSection.validationError(
             totalMinor: money.amountMinor,
-            splitMode: splitMode,
+            isSplit: isSplit,
+            selectedPartnerCount: selectedPartnerUserIds.count,
+            splitMode: selectedPartnerUserIds.count == 1 ? splitMode : .equal,
             myPercentage: myPercentage,
             myExactAmountText: myExactAmountText
         ) {
@@ -281,9 +305,11 @@ struct AddExpenseView: View {
 
         do {
             if isSplit {
-                let household = try await householdStore.ensureTestHousehold(
+                let partners = selectedSplitPartners
+                let household = try await householdStore.ensureSplitHousehold(
                     userId: userId,
-                    userDisplayName: authSession.displayName ?? "You"
+                    userDisplayName: authSession.displayName ?? "You",
+                    partners: partners
                 )
                 try await expenseStore.addSplit(
                     amountMinor: money.amountMinor,
@@ -292,9 +318,9 @@ struct AddExpenseView: View {
                     spentAt: spentAt,
                     userId: userId,
                     householdId: household.id,
-                    splitMode: splitMode,
+                    splitMode: partners.count == 1 ? splitMode : .equal,
                     paidBy: paidByUserId ?? userId,
-                    partnerUserId: TestPartner.userId,
+                    partnerUserIds: partners.map(\.userId),
                     myPercentage: myPercentage,
                     myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor
                 )

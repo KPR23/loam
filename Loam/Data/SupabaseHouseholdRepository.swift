@@ -40,10 +40,15 @@ actor SupabaseHouseholdRepository: HouseholdRepository {
         return nil
     }
 
-    func ensureTestHousehold(
+    func ensureSplitHousehold(
         for userId: UUID,
-        userDisplayName: String
+        userDisplayName: String,
+        partners: [SplitPartnerOption]
     ) async throws -> HouseholdRecord {
+        guard partners.count == 1, partners[0].userId == TestPartner.userId else {
+            throw HouseholdRepositoryError.incompleteSetup
+        }
+
         let household: HouseholdDTO = try await client
             .rpc(
                 "ensure_test_household",

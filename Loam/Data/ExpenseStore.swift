@@ -7,12 +7,7 @@ final class ExpenseStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var lastError: String?
 
-    private let repository: ExpenseRepository
     @Published private(set) var period: DatePeriod = .currentMonth
-
-    init(repository: ExpenseRepository = ExpenseRepositoryFactory.make()) {
-        self.repository = repository
-    }
 
     func setPeriod(_ newPeriod: DatePeriod, userId: UUID?) async {
         guard period != newPeriod else { return }
@@ -32,7 +27,17 @@ final class ExpenseStore: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let fetched = try await repository.fetchExpenses(for: userId, in: period)
+            var fetched = try await primaryRepository.fetchExpenses(for: userId, in: period)
+            #if DEBUG
+            if !ExpenseRepositoryFactory.usesLocalStorage {
+                let localExpenses = try await LocalExpenseRepository().fetchExpenses(for: userId, in: period)
+                let existingIds = Set(fetched.map(\.id))
+                fetched.append(contentsOf: localExpenses.filter { !existingIds.contains($0.id) })
+                fetched.sort {
+                    $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt)
+                }
+            }
+            #endif
             expenses = fetched
             summary = Self.makeSummary(expenses: fetched, userId: userId)
         } catch {
@@ -49,17 +54,17 @@ final class ExpenseStore: ObservableObject {
         householdId: UUID,
         splitMode: SplitExpenseMode,
         paidBy: UUID,
-        partnerUserId: UUID,
+        partnerUserIds: [UUID],
         myPercentage: Int = 50,
         myExactAmountMinor: Int? = nil
     ) async throws {
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
 
-        let shares = SplitCalculator.twoPersonSplit(
+        let shares = SplitCalculator.split(
             totalMinor: amountMinor,
             mode: splitMode,
             myUserId: userId,
-            partnerUserId: partnerUserId,
+            partnerUserIds: partnerUserIds,
             paidByUserId: paidBy,
             myPercentage: myPercentage,
             myExactAmountMinor: myExactAmountMinor
@@ -75,7 +80,8 @@ final class ExpenseStore: ObservableObject {
             householdId: householdId,
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
-        _ = try await repository.create(expense)
+        let activeRepository = repository(forSplitWith: partnerUserIds)
+        _ = try await activeRepository.create(expense)
         await refresh(userId: userId)
     }
 
@@ -88,10 +94,12 @@ final class ExpenseStore: ObservableObject {
         recurring: RecurringRuleRecord? = nil
     ) async throws {
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+        let activeRepository = primaryRepository
+
         let recurringRule: RecurringRuleRecord?
         if var rule = recurring {
             rule.note = trimmedNote
-            recurringRule = try await repository.createRecurringRule(rule)
+            recurringRule = try await activeRepository.createRecurringRule(rule)
         } else {
             recurringRule = nil
         }
@@ -108,13 +116,18 @@ final class ExpenseStore: ObservableObject {
             recurringId: recurringRule?.id,
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
-        _ = try await repository.create(expense)
+        _ = try await activeRepository.create(expense)
         await refresh(userId: userId)
     }
 
     func delete(id: UUID, userId: UUID) async {
         do {
-            try await repository.delete(id: id)
+            if let expense = expenses.first(where: { $0.id == id }) {
+                let activeRepository = repository(for: expense)
+                try await activeRepository.delete(id: id)
+            } else {
+                try await primaryRepository.delete(id: id)
+            }
             await refresh(userId: userId)
         } catch {
             lastError = error.localizedDescription
@@ -127,7 +140,7 @@ final class ExpenseStore: ObservableObject {
         householdId: UUID,
         splitMode: SplitExpenseMode,
         paidBy: UUID,
-        partnerUserId: UUID,
+        partnerUserIds: [UUID],
         myPercentage: Int = 50,
         myExactAmountMinor: Int? = nil
     ) async throws {
@@ -135,11 +148,11 @@ final class ExpenseStore: ObservableObject {
             throw ExpenseRepositoryError.notFound
         }
 
-        let shares = SplitCalculator.twoPersonSplit(
+        let shares = SplitCalculator.split(
             totalMinor: expense.amountMinor,
             mode: splitMode,
             myUserId: userId,
-            partnerUserId: partnerUserId,
+            partnerUserIds: partnerUserIds,
             paidByUserId: paidBy,
             myPercentage: myPercentage,
             myExactAmountMinor: myExactAmountMinor
@@ -153,8 +166,35 @@ final class ExpenseStore: ObservableObject {
         }
         expense.updatedAt = Date()
 
-        _ = try await repository.update(expense)
+        let activeRepository = repository(forSplitWith: partnerUserIds)
+        _ = try await activeRepository.update(expense)
         await refresh(userId: userId)
+    }
+
+    private var primaryRepository: ExpenseRepository {
+        ExpenseRepositoryFactory.make()
+    }
+
+    private func repository(forSplitWith partnerUserIds: [UUID]) -> ExpenseRepository {
+        #if DEBUG
+        if ExpenseRepositoryFactory.usesLocalStorage || SplitPartnerOption.shouldUseLocalSimulation(for: partnerUserIds) {
+            return LocalExpenseRepository()
+        }
+        #endif
+        return primaryRepository
+    }
+
+    private func repository(for expense: ExpenseRecord) -> ExpenseRepository {
+        #if DEBUG
+        let partnerIds = expense.shares.map(\.userId).filter { $0 != expense.createdBy }
+        if ExpenseRepositoryFactory.usesLocalStorage
+            || expense.householdId != nil
+            || SplitPartnerOption.shouldUseLocalSimulation(for: partnerIds)
+            || TestAccount.contains(userId: expense.createdBy) {
+            return LocalExpenseRepository()
+        }
+        #endif
+        return primaryRepository
     }
 
     nonisolated static func makeSummary(
