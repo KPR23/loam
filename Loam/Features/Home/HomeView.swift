@@ -27,6 +27,7 @@ struct HomeView: View {
     @State private var expensePendingDelete: ExpenseRecord?
     @State private var expensePendingSplit: SplitExpensePresentation?
     @State private var expensePendingProposeEdit: ProposeEditPresentation?
+    @State private var selectedExpense: ExpenseRecord?
 
     var body: some View {
         NavigationStack {
@@ -104,6 +105,21 @@ struct HomeView: View {
         }
         .sheet(item: $expensePendingProposeEdit) { presentation in
             ProposeEditSheet(expense: presentation.expense, myUserId: presentation.myUserId)
+        }
+        .sheet(item: $selectedExpense) { expense in
+            ExpenseDetailSheet(
+                expense: expense,
+                onSplit: canSplit(expense) ? {
+                    let target = expense
+                    selectedExpense = nil
+                    presentSplit(for: target)
+                } : nil,
+                onDelete: {
+                    let target = expense
+                    selectedExpense = nil
+                    expensePendingDelete = target
+                }
+            )
         }
         .alert(
             "Delete this expense?",
@@ -376,6 +392,25 @@ struct HomeView: View {
     }
 
     private func expenseRow(_ expense: ExpenseRecord) -> some View {
+        Button {
+            selectedExpense = expense
+        } label: {
+            expenseRowContent(expense)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            if canSplit(expense) {
+                Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
+                    presentSplit(for: expense)
+                }
+            }
+            Button("Delete", systemImage: "trash", role: .destructive) {
+                expensePendingDelete = expense
+            }
+        }
+    }
+
+    private func expenseRowContent(_ expense: ExpenseRecord) -> some View {
         let userId = authSession.userId
         let mine = userId.map { expense.share(for: $0) } ?? expense.money
 
@@ -411,16 +446,6 @@ struct HomeView: View {
                         .font(.caption)
                         .foregroundStyle(HomeTheme.secondary)
                 }
-            }
-        }
-        .contextMenu {
-            if canSplit(expense) {
-                Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
-                    presentSplit(for: expense)
-                }
-            }
-            Button("Delete", systemImage: "trash", role: .destructive) {
-                expensePendingDelete = expense
             }
         }
     }

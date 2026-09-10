@@ -5,6 +5,8 @@ struct HouseholdView: View {
     @EnvironmentObject private var expenseStore: ExpenseStore
     @EnvironmentObject private var householdStore: HouseholdStore
 
+    @State private var selectedExpense: ExpenseRecord?
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -41,6 +43,9 @@ struct HouseholdView: View {
                 await expenseStore.refresh(userId: authSession.userId)
             }
         }
+        .sheet(item: $selectedExpense) { expense in
+            ExpenseDetailSheet(expense: expense)
+        }
     }
 
     private var sharedExpenses: [ExpenseRecord] {
@@ -74,7 +79,16 @@ struct HouseholdView: View {
         let mine = authSession.userId.map { expense.share(for: $0) } ?? expense.money
         let paidByMe = expense.paidBy == authSession.userId
 
-        return HStack(spacing: 14) {
+        return Button {
+            selectedExpense = expense
+        } label: {
+            sharedRowContent(expense: expense, mine: mine, paidByMe: paidByMe)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func sharedRowContent(expense: ExpenseRecord, mine: Money, paidByMe: Bool) -> some View {
+        HStack(spacing: 14) {
             Image(systemName: expense.category.systemImage)
                 .font(.title3)
                 .symbolRenderingMode(.monochrome)
