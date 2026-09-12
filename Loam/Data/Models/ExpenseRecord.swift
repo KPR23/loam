@@ -51,6 +51,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    var title: String?
     var note: String?
     /// Calendar day only — time component ignored for month aggregation.
     var spentAt: Date
@@ -67,6 +68,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         amountMinor: Int,
         currency: String = "PLN",
         category: ExpenseCategory,
+        title: String? = nil,
         note: String? = nil,
         spentAt: Date = Date(),
         paidBy: UUID,
@@ -81,6 +83,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         self.amountMinor = amountMinor
         self.currency = currency
         self.category = category
+        self.title = title
         self.note = note
         self.spentAt = Calendar.current.startOfDay(for: spentAt)
         self.paidBy = paidBy
@@ -90,6 +93,16 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         self.shares = shares
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    /// Prefer custom title; fall back to category name when blank.
+    var displayTitle: String {
+        let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? category.displayName : trimmed
+    }
+
+    var hasCustomTitle: Bool {
+        !(title?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
 
     var money: Money {

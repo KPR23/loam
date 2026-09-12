@@ -15,6 +15,7 @@ struct AddExpenseView: View {
     @State private var step: AddExpenseStep = .amount
     @State private var amountText = ""
     @State private var category: ExpenseCategory = .groceries
+    @State private var title = ""
     @State private var note = ""
     @State private var spentAt = Date()
     @State private var isRepeating = false
@@ -30,6 +31,7 @@ struct AddExpenseView: View {
     @State private var cancelTapCount = 0
     @State private var continueTapCount = 0
     @FocusState private var amountFocused: Bool
+    @FocusState private var titleFocused: Bool
     @FocusState private var noteFocused: Bool
 
     var body: some View {
@@ -67,31 +69,38 @@ struct AddExpenseView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
-            VStack(alignment: .leading, spacing: 32) {
-                amountDisplay
-
-                HStack(spacing: 12) {
-                    Button("Cancel") {
-                        cancelTapCount += 1
-                        dismiss()
-                    }
-                    .buttonStyle(AmountStepButtonStyle(role: .secondary))
-                    .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.65), trigger: cancelTapCount)
-
-                    Button("Continue") {
-                        continueTapCount += 1
-                        step = .details
-                        amountFocused = false
-                    }
-                    .buttonStyle(AmountStepButtonStyle(role: .primary))
-                    .disabled(!canContinue)
-                    .opacity(canContinue ? 1 : 0.45)
-                    .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.75), trigger: continueTapCount)
-                }
-            }
-            .padding(.horizontal, 28)
+            amountDisplay
+                .padding(.horizontal, 28)
 
             Spacer(minLength: 0)
+
+            HStack(spacing: 12) {
+                Button {
+                    cancelTapCount += 1
+                    dismiss()
+                } label: {
+                    Text("Cancel")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.65), trigger: cancelTapCount)
+
+                Button {
+                    continueTapCount += 1
+                    step = .details
+                    amountFocused = false
+                } label: {
+                    Text("Continue")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(!canContinue)
+                .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.75), trigger: continueTapCount)
+            }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
@@ -135,6 +144,9 @@ struct AddExpenseView: View {
             }
 
             Section {
+                TextField("Title (optional)", text: $title)
+                    .textInputAutocapitalization(.sentences)
+                    .focused($titleFocused)
                 Picker("Category", selection: $category) {
                     ForEach(ExpenseCategory.allCases) { item in
                         HStack(spacing: 12) {
@@ -147,6 +159,8 @@ struct AddExpenseView: View {
                         .tag(item)
                     }
                 }
+            } footer: {
+                Text("If you leave the title empty, the category name is shown instead.")
             }
 
             Section {
@@ -314,6 +328,7 @@ struct AddExpenseView: View {
                 try await expenseStore.addSplit(
                     amountMinor: money.amountMinor,
                     category: category,
+                    title: title.nilIfBlank,
                     note: note,
                     spentAt: spentAt,
                     userId: userId,
@@ -331,6 +346,7 @@ struct AddExpenseView: View {
                         ownerUserId: userId,
                         amountMinor: money.amountMinor,
                         category: category,
+                        title: title.nilIfBlank,
                         note: note.nilIfBlank,
                         intervalUnit: repeatInterval,
                         nextOccurrence: spentAt
@@ -342,6 +358,7 @@ struct AddExpenseView: View {
                 try await expenseStore.addPersonal(
                     amountMinor: money.amountMinor,
                     category: category,
+                    title: title.nilIfBlank,
                     note: note,
                     spentAt: spentAt,
                     userId: userId,
@@ -359,53 +376,6 @@ private extension String {
     var nilIfBlank: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
-    }
-}
-
-private struct AmountStepButtonStyle: ButtonStyle {
-    enum Role {
-        case secondary
-        case primary
-    }
-
-    let role: Role
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.body.weight(.semibold))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .foregroundStyle(foregroundColor(isPressed: configuration.isPressed))
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(backgroundColor(isPressed: configuration.isPressed))
-            )
-            .overlay {
-                if configuration.isPressed {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.black.opacity(role == .primary ? 0.12 : 0.06))
-                }
-            }
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.snappy(duration: 0.18), value: configuration.isPressed)
-    }
-
-    private func backgroundColor(isPressed: Bool) -> Color {
-        switch role {
-        case .primary:
-            return isPressed ? Color.primary.opacity(0.82) : Color.primary
-        case .secondary:
-            return isPressed ? Color(.tertiarySystemGroupedBackground) : Color(.secondarySystemGroupedBackground)
-        }
-    }
-
-    private func foregroundColor(isPressed: Bool) -> Color {
-        switch role {
-        case .primary:
-            return Color(.systemBackground).opacity(isPressed ? 0.9 : 1)
-        case .secondary:
-            return Color.primary.opacity(isPressed ? 0.72 : 1)
-        }
     }
 }
 

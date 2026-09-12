@@ -15,3 +15,16 @@ enum HomeTheme {
 
     static let rowRadius: CGFloat = 14
 }
+
+/// Trailing close control for browse/list sheets (X top-right).
+/// Forms should use `ToolbarItem(placement: .cancellationAction) { Button("Cancel") }` instead.
+struct SheetCloseButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label("Close", systemImage: "xmark")
+        }
+        .labelStyle(.iconOnly)
+    }
+}

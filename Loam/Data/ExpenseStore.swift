@@ -74,6 +74,7 @@ final class ExpenseStore: ObservableObject {
     func addSplit(
         amountMinor: Int,
         category: ExpenseCategory,
+        title: String? = nil,
         note: String?,
         spentAt: Date,
         userId: UUID,
@@ -84,6 +85,7 @@ final class ExpenseStore: ObservableObject {
         myPercentage: Int = 50,
         myExactAmountMinor: Int? = nil
     ) async throws {
+        let trimmedTitle = title.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
 
         let calculatedShares = SplitCalculator.split(
@@ -99,6 +101,7 @@ final class ExpenseStore: ObservableObject {
         let draft = ExpenseRecord(
             amountMinor: amountMinor,
             category: category,
+            title: trimmedTitle,
             note: trimmedNote,
             spentAt: spentAt,
             paidBy: paidBy,
@@ -123,6 +126,7 @@ final class ExpenseStore: ObservableObject {
         let expense = ExpenseRecord(
             amountMinor: amountMinor,
             category: category,
+            title: trimmedTitle,
             note: trimmedNote,
             spentAt: spentAt,
             paidBy: paidBy,
@@ -137,16 +141,19 @@ final class ExpenseStore: ObservableObject {
     func addPersonal(
         amountMinor: Int,
         category: ExpenseCategory,
+        title: String? = nil,
         note: String?,
         spentAt: Date,
         userId: UUID,
         recurring: RecurringRuleRecord? = nil
     ) async throws {
+        let trimmedTitle = title.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
         let activeRepository = primaryRepository
 
         let recurringRule: RecurringRuleRecord?
         if var rule = recurring {
+            rule.title = trimmedTitle
             rule.note = trimmedNote
             recurringRule = try await activeRepository.createRecurringRule(rule)
         } else {
@@ -157,6 +164,7 @@ final class ExpenseStore: ObservableObject {
         let expense = ExpenseRecord(
             amountMinor: amountMinor,
             category: category,
+            title: trimmedTitle,
             note: trimmedNote,
             spentAt: spentAt,
             paidBy: userId,
@@ -232,32 +240,53 @@ final class ExpenseStore: ObservableObject {
         userId: UUID,
         action: ExpenseShareResponseAction
     ) async {
+        await respondToShares(expenseIds: [expenseId], userId: userId, action: action)
+    }
+
+    /// Accepts or rejects multiple pending shares, refreshing once at the end.
+    func respondToShares(
+        expenseIds: [UUID],
+        userId: UUID,
+        action: ExpenseShareResponseAction
+    ) async {
+        let targets: [(id: UUID, expense: ExpenseRecord)] = expenseIds.compactMap { id in
+            guard let expense = expenses.first(where: { $0.id == id }),
+                  expense.isPendingAcceptance(for: userId) else { return nil }
+            return (id, expense)
+        }
+        guard !targets.isEmpty else { return }
+
+        for (id, _) in targets {
+            applyOptimisticShareResponse(expenseId: id, userId: userId, action: action)
+        }
+        summary = Self.makeSummary(expenses: expenses, userId: userId)
+
         do {
-            guard let expenseIndex = expenses.firstIndex(where: { $0.id == expenseId }) else {
-                throw ExpenseRepositoryError.notFound
+            var trustedScopes: Set<String> = []
+            for target in targets {
+                // Trust once per creator/household when bulk-accepting with trust.
+                let itemAction: ExpenseShareResponseAction
+                if action == .acceptWithTrust {
+                    let scopeKey = [
+                        target.expense.householdId?.uuidString ?? "none",
+                        target.expense.createdBy.uuidString
+                    ].joined(separator: "|")
+                    if trustedScopes.contains(scopeKey) {
+                        itemAction = .accept
+                    } else {
+                        itemAction = .acceptWithTrust
+                        trustedScopes.insert(scopeKey)
+                    }
+                } else {
+                    itemAction = action
+                }
+                let activeRepository = repository(for: target.expense)
+                try await activeRepository.respondToShare(
+                    expenseId: target.id,
+                    userId: userId,
+                    action: itemAction
+                )
             }
-            guard let shareIndex = expenses[expenseIndex].shares.firstIndex(where: { $0.userId == userId }) else {
-                throw ExpenseRepositoryError.notFound
-            }
-            guard expenses[expenseIndex].shares[shareIndex].status == .pending else {
-                throw ExpenseRepositoryError.notFound
-            }
-
-            // Optimistically update only this user's share so other participants stay pending.
-            var expense = expenses[expenseIndex]
-            switch action {
-            case .reject:
-                expense.shares[shareIndex].status = .rejected
-                expense.shares[shareIndex].respondedAt = Date()
-            case .accept, .acceptWithTrust:
-                expense.shares[shareIndex].status = .accepted
-                expense.shares[shareIndex].respondedAt = Date()
-            }
-            expenses[expenseIndex] = expense
-            summary = Self.makeSummary(expenses: expenses, userId: userId)
-
-            let activeRepository = repository(for: expense)
-            try await activeRepository.respondToShare(expenseId: expenseId, userId: userId, action: action)
             await refresh(userId: userId)
         } catch {
             lastError = error.localizedDescription
@@ -265,11 +294,34 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
+    private func applyOptimisticShareResponse(
+        expenseId: UUID,
+        userId: UUID,
+        action: ExpenseShareResponseAction
+    ) {
+        guard let expenseIndex = expenses.firstIndex(where: { $0.id == expenseId }),
+              let shareIndex = expenses[expenseIndex].shares.firstIndex(where: { $0.userId == userId }),
+              expenses[expenseIndex].shares[shareIndex].status == .pending
+        else { return }
+
+        var expense = expenses[expenseIndex]
+        switch action {
+        case .reject:
+            expense.shares[shareIndex].status = .rejected
+            expense.shares[shareIndex].respondedAt = Date()
+        case .accept, .acceptWithTrust:
+            expense.shares[shareIndex].status = .accepted
+            expense.shares[shareIndex].respondedAt = Date()
+        }
+        expenses[expenseIndex] = expense
+    }
+
     func proposeEdit(
         for expense: ExpenseRecord,
         userId: UUID,
         amountMinor: Int,
         category: ExpenseCategory,
+        title: String? = nil,
         note: String?,
         spentAt: Date,
         paidBy: UUID,
@@ -281,6 +333,7 @@ final class ExpenseStore: ObservableObject {
             proposedBy: userId,
             amountMinor: amountMinor,
             category: category,
+            title: title,
             note: note,
             spentAt: spentAt,
             paidBy: paidBy,
@@ -365,7 +418,10 @@ final class ExpenseStore: ObservableObject {
 
     private func repository(forSplitWith partnerUserIds: [UUID]) -> ExpenseRepository {
         #if DEBUG
-        if ExpenseRepositoryFactory.usesLocalStorage || SplitPartnerOption.shouldUseLocalSimulation(for: partnerUserIds) {
+        if ExpenseRepositoryFactory.usesLocalStorage
+            || partnerUserIds.contains(where: TestAccount.contains(userId:))
+            || SplitPartnerOption.shouldUseLocalSimulation(for: partnerUserIds)
+        {
             return LocalExpenseRepository()
         }
         #endif
@@ -384,7 +440,14 @@ final class ExpenseStore: ObservableObject {
         if ExpenseRepositoryFactory.usesLocalStorage {
             return true
         }
-        let partnerIds = expense.shares.map(\.userId).filter { $0 != expense.createdBy }
+        // Test personas (Philip/Julia) are not in Supabase auth — any expense that
+        // includes them must use local simulation storage, including when the other
+        // participant is the real Apple account (saved-main detection can miss).
+        let participants = Set(expense.shares.map(\.userId)).union([expense.createdBy])
+        if participants.contains(where: TestAccount.contains(userId:)) {
+            return true
+        }
+        let partnerIds = Array(participants.subtracting([expense.createdBy]))
         return SplitPartnerOption.shouldUseLocalSimulation(for: partnerIds)
         #else
         return false

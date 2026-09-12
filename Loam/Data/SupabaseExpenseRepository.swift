@@ -244,6 +244,7 @@ private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
     let pAmountMinor: Int
     let pCurrency: String
     let pCategory: ExpenseCategory
+    let pTitle: String?
     let pNote: String?
     let pSpentAt: String
     let pPaidBy: UUID
@@ -256,6 +257,7 @@ private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
         case pAmountMinor = "p_amount_minor"
         case pCurrency = "p_currency"
         case pCategory = "p_category"
+        case pTitle = "p_title"
         case pNote = "p_note"
         case pSpentAt = "p_spent_at"
         case pPaidBy = "p_paid_by"
@@ -269,6 +271,7 @@ private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
         pAmountMinor = expense.amountMinor
         pCurrency = expense.currency
         pCategory = expense.category
+        pTitle = expense.title
         pNote = expense.note
         pSpentAt = CalendarDateCodec.string(from: expense.spentAt)
         pPaidBy = expense.paidBy
@@ -283,6 +286,11 @@ private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
         try container.encode(pAmountMinor, forKey: .pAmountMinor)
         try container.encode(pCurrency, forKey: .pCurrency)
         try container.encode(pCategory, forKey: .pCategory)
+        if let pTitle {
+            try container.encode(pTitle, forKey: .pTitle)
+        } else {
+            try container.encodeNil(forKey: .pTitle)
+        }
         if let pNote {
             try container.encode(pNote, forKey: .pNote)
         } else {
@@ -338,6 +346,7 @@ private struct CreateEditProposalParams: Encodable, Sendable {
     let expenseId: UUID
     let amountMinor: Int
     let category: ExpenseCategory
+    let title: String?
     let note: String?
     let spentAt: String
     let paidBy: UUID
@@ -348,6 +357,7 @@ private struct CreateEditProposalParams: Encodable, Sendable {
         case expenseId = "p_expense_id"
         case amountMinor = "p_amount_minor"
         case category = "p_category"
+        case title = "p_title"
         case note = "p_note"
         case spentAt = "p_spent_at"
         case paidBy = "p_paid_by"
@@ -359,6 +369,7 @@ private struct CreateEditProposalParams: Encodable, Sendable {
         self.expenseId = expenseId
         amountMinor = proposal.amountMinor
         category = proposal.category
+        title = proposal.title
         note = proposal.note
         spentAt = CalendarDateCodec.string(from: proposal.spentAt)
         paidBy = proposal.paidBy
@@ -371,6 +382,11 @@ private struct CreateEditProposalParams: Encodable, Sendable {
         try container.encode(expenseId, forKey: .expenseId)
         try container.encode(amountMinor, forKey: .amountMinor)
         try container.encode(category, forKey: .category)
+        if let title {
+            try container.encode(title, forKey: .title)
+        } else {
+            try container.encodeNil(forKey: .title)
+        }
         if let note {
             try container.encode(note, forKey: .note)
         } else {

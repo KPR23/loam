@@ -37,6 +37,7 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    var title: String?
     var note: String?
     var spentAt: String
     var paidBy: UUID
@@ -52,6 +53,7 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
         case amountMinor = "amount_minor"
         case currency
         case category
+        case title
         case note
         case spentAt = "spent_at"
         case paidBy = "paid_by"
@@ -71,6 +73,7 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
             amountMinor: amountMinor,
             currency: currency,
             category: category,
+            title: title,
             note: note,
             spentAt: spent,
             paidBy: paidBy,
@@ -93,6 +96,7 @@ struct ExpenseInsertDTO: Encodable, Sendable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    var title: String?
     var note: String?
     var spentAt: String
     var paidBy: UUID
@@ -105,6 +109,7 @@ struct ExpenseInsertDTO: Encodable, Sendable {
         case amountMinor = "amount_minor"
         case currency
         case category
+        case title
         case note
         case spentAt = "spent_at"
         case paidBy = "paid_by"
@@ -118,6 +123,7 @@ struct ExpenseInsertDTO: Encodable, Sendable {
         amountMinor = record.amountMinor
         currency = record.currency
         category = record.category
+        title = record.title
         note = record.note
         spentAt = CalendarDateCodec.string(from: record.spentAt)
         paidBy = record.paidBy
@@ -169,6 +175,7 @@ struct ExpenseUpdateDTO: Encodable, Sendable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    var title: String?
     var note: String?
     var spentAt: String
     var paidBy: UUID
@@ -180,6 +187,7 @@ struct ExpenseUpdateDTO: Encodable, Sendable {
         case amountMinor = "amount_minor"
         case currency
         case category
+        case title
         case note
         case spentAt = "spent_at"
         case paidBy = "paid_by"
@@ -192,6 +200,7 @@ struct ExpenseUpdateDTO: Encodable, Sendable {
         amountMinor = record.amountMinor
         currency = record.currency
         category = record.category
+        title = record.title
         note = record.note
         spentAt = CalendarDateCodec.string(from: record.spentAt)
         paidBy = record.paidBy

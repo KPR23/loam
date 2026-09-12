@@ -10,16 +10,9 @@ private struct HomeGlassCapsuleButton<Label: View>: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.capsule)
         } else {
-            Button(action: action) {
-                label()
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(HomeTheme.surface.opacity(0.9))
-                    )
-            }
-            .buttonStyle(.plain)
+            Button(action: action, label: label)
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
         }
     }
 }
@@ -116,15 +109,9 @@ struct HomeTopBarCalendarButton: View {
         } else {
             Button(action: onPickMonth) {
                 Image(systemName: "calendar")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(HomeTheme.text)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        Circle()
-                            .fill(HomeTheme.surface.opacity(0.95))
-                    )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
             .accessibilityLabel("Selected month, \(period.displayTitle)")
             .accessibilityHint("Opens month picker")
         }

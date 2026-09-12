@@ -3,6 +3,7 @@ import SwiftUI
 private struct ProposeEditFormState: Equatable {
     var amountText: String
     var category: ExpenseCategory
+    var title: String
     var note: String
     var spentAt: Date
     var selectedPartnerUserIds: Set<UUID>
@@ -18,6 +19,7 @@ private struct ProposeEditFormState: Equatable {
         return ProposeEditFormState(
             amountText: MoneyFormatter.typingAmount(from: expense.money),
             category: expense.category,
+            title: expense.title ?? "",
             note: expense.note ?? "",
             spentAt: expense.spentAt,
             selectedPartnerUserIds: partnerUserIds,
@@ -75,6 +77,8 @@ struct ProposeEditSheet: View {
                 }
 
                 Section("Details") {
+                    TextField("Title (optional)", text: $formState.title)
+                        .textInputAutocapitalization(.sentences)
                     Picker("Category", selection: $formState.category) {
                         ForEach(ExpenseCategory.allCases, id: \.self) { category in
                             Label(category.displayName, systemImage: category.systemImage)
@@ -165,12 +169,14 @@ struct ProposeEditSheet: View {
         defer { isSaving = false }
 
         do {
+            let trimmedTitle = formState.title.trimmingCharacters(in: .whitespacesAndNewlines)
             let trimmedNote = formState.note.trimmingCharacters(in: .whitespacesAndNewlines)
             try await expenseStore.proposeEdit(
                 for: expense,
                 userId: myUserId,
                 amountMinor: amountMinor,
                 category: formState.category,
+                title: trimmedTitle.isEmpty ? nil : trimmedTitle,
                 note: trimmedNote.isEmpty ? nil : trimmedNote,
                 spentAt: formState.spentAt,
                 paidBy: formState.paidByUserId,

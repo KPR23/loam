@@ -22,6 +22,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    var title: String?
     var note: String?
     var intervalUnit: RecurringIntervalUnit
     var intervalCount: Int
@@ -34,6 +35,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         amountMinor: Int,
         currency: String = "PLN",
         category: ExpenseCategory,
+        title: String? = nil,
         note: String? = nil,
         intervalUnit: RecurringIntervalUnit,
         intervalCount: Int = 1,
@@ -45,6 +47,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         self.amountMinor = amountMinor
         self.currency = currency
         self.category = category
+        self.title = title
         self.note = note
         self.intervalUnit = intervalUnit
         self.intervalCount = intervalCount
@@ -74,6 +77,7 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    var title: String?
     var note: String?
     var intervalUnit: String
     var intervalCount: Int
@@ -86,6 +90,7 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
         case amountMinor = "amount_minor"
         case currency
         case category
+        case title
         case note
         case intervalUnit = "interval_unit"
         case intervalCount = "interval_count"
@@ -99,6 +104,7 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
         amountMinor = record.amountMinor
         currency = record.currency
         category = record.category
+        title = record.title
         note = record.note
         intervalUnit = record.intervalUnit.rawValue
         intervalCount = record.intervalCount

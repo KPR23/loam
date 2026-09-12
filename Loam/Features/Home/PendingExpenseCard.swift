@@ -4,12 +4,12 @@ struct PendingExpenseRow: View {
     let expense: ExpenseRecord
     let myUserId: UUID
     let creatorName: String
+    var showsCreatorLabel: Bool = true
     let onAccept: () -> Void
     let onAcceptWithTrust: () -> Void
     let onReject: () -> Void
     let onProposeEdit: () -> Void
-
-    @State private var isProcessing = false
+    let onShowDetails: () -> Void
 
     private var myShare: Money {
         expense.share(for: myUserId)
@@ -17,100 +17,68 @@ struct PendingExpenseRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            LabeledContent {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(MoneyFormatter.string(from: myShare))
-                        .monospacedDigit()
-                    Text("of \(MoneyFormatter.string(from: expense.money))")
-                        .font(.caption2)
-                        .foregroundStyle(HomeTheme.secondary)
-                }
-            } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    categoryLabel
-                    if let note = expense.note, !note.isEmpty {
-                        Text(note)
+            Button(action: onShowDetails) {
+                HStack(alignment: .center, spacing: 12) {
+                    categoryBadge
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(expense.displayTitle)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(HomeTheme.text)
+                            .multilineTextAlignment(.leading)
+
+                        if let note = expense.note, !note.isEmpty {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundStyle(HomeTheme.secondary)
+                                .lineLimit(2)
+                        }
+
+                        if showsCreatorLabel {
+                            Text("Added by \(creatorName)")
+                                .font(.caption)
+                                .foregroundStyle(HomeTheme.tertiary)
+                        }
+                    }
+
+                    Spacer(minLength: 8)
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(MoneyFormatter.string(from: myShare))
+                            .font(.body.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(HomeTheme.text)
+                        Text("of \(MoneyFormatter.string(from: expense.money))")
                             .font(.caption)
                             .foregroundStyle(HomeTheme.secondary)
+                            .monospacedDigit()
                     }
-                    Text("Added by \(creatorName)")
-                        .font(.caption2)
-                        .foregroundStyle(HomeTheme.tertiary)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows expense details")
 
-            HStack(spacing: 8) {
-                Button {
-                    guard !isProcessing else { return }
-                    isProcessing = true
-                    onAccept()
-                } label: {
-                    actionButtonLabel(title: "Accept", systemImage: "checkmark")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(.green)
-                .disabled(isProcessing)
-
-                Button {
-                    guard !isProcessing else { return }
-                    isProcessing = true
-                    onReject()
-                } label: {
-                    actionButtonLabel(title: "Decline", systemImage: "xmark")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .disabled(isProcessing)
-
-                Menu {
-                    Button {
-                        guard !isProcessing else { return }
-                        isProcessing = true
-                        onAcceptWithTrust()
-                    } label: {
-                        Label("Accept & always trust \(creatorName)", systemImage: "hand.thumbsup")
-                    }
-
-                    Button {
-                        onProposeEdit()
-                    } label: {
-                        Label("Suggest changes", systemImage: "square.and.pencil")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(width: 34, height: 34)
-                }
-                .buttonStyle(.bordered)
-                .tint(HomeTheme.secondary)
-                .disabled(isProcessing)
-                .accessibilityLabel("More options")
-            }
+            PendingExpenseActions(
+                creatorName: creatorName,
+                onAccept: onAccept,
+                onAcceptWithTrust: onAcceptWithTrust,
+                onReject: onReject,
+                onProposeEdit: onProposeEdit
+            )
         }
         .accessibilityElement(children: .contain)
     }
 
-    private var categoryLabel: some View {
-        HStack(spacing: 8) {
-            Image(systemName: expense.category.systemImage)
-                .font(.callout)
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(expense.category.color)
-                .frame(width: 22, alignment: .center)
-            Text(expense.category.displayName)
-        }
-    }
-
-    private func actionButtonLabel(title: String, systemImage: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .symbolRenderingMode(.monochrome)
-            Text(title)
-                .font(.subheadline.weight(.medium))
-        }
-        .padding(.vertical, 6)
+    private var categoryBadge: some View {
+        Image(systemName: expense.category.systemImage)
+            .font(.subheadline.weight(.semibold))
+            .symbolRenderingMode(.monochrome)
+            .foregroundStyle(expense.category.color)
+            .frame(width: 32, height: 32)
+            .background(expense.category.color.opacity(0.14))
+            .clipShape(Circle())
+            .accessibilityHidden(true)
     }
 }

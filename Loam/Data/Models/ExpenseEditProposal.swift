@@ -7,6 +7,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
     var status: ExpenseProposalStatus
     var amountMinor: Int
     var category: ExpenseCategory
+    var title: String?
     var note: String?
     var spentAt: Date
     var paidBy: UUID
@@ -22,6 +23,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         status: ExpenseProposalStatus = .pending,
         amountMinor: Int,
         category: ExpenseCategory,
+        title: String? = nil,
         note: String? = nil,
         spentAt: Date,
         paidBy: UUID,
@@ -36,6 +38,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         self.status = status
         self.amountMinor = amountMinor
         self.category = category
+        self.title = title
         self.note = note
         self.spentAt = Calendar.current.startOfDay(for: spentAt)
         self.paidBy = paidBy
@@ -51,6 +54,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
             amountMinor: amountMinor,
             currency: currency,
             category: category,
+            title: title,
             note: note,
             spentAt: spentAt,
             paidBy: paidBy,
@@ -58,6 +62,11 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
             householdId: householdId,
             shares: shares
         )
+    }
+
+    var displayTitle: String {
+        let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? category.displayName : trimmed
     }
 }
 
@@ -68,6 +77,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
     var status: ExpenseProposalStatus
     var amountMinor: Int
     var category: ExpenseCategory
+    var title: String?
     var note: String?
     var spentAt: String
     var paidBy: UUID
@@ -83,6 +93,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
         case status
         case amountMinor = "amount_minor"
         case category
+        case title
         case note
         case spentAt = "spent_at"
         case paidBy = "paid_by"
@@ -101,6 +112,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
             status: status,
             amountMinor: amountMinor,
             category: category,
+            title: title,
             note: note,
             spentAt: spent,
             paidBy: paidBy,

@@ -19,6 +19,8 @@
 		20A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift */; };
 		20A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift */; };
 		20A1B2C3D4E5F60718293A50 /* EditProposalReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4F0 /* EditProposalReviewCard.swift */; };
+		20A1B2C3D4E5F60718293A51 /* PendingExpenseActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A51 /* PendingExpenseActions.swift */; };
+		20A1B2C3D4E5F60718293A52 /* PendingExpensesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A52 /* PendingExpensesSheet.swift */; };
 		269663C225006F0D994C1708 /* CalendarDateCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */; };
 		2740165736ACD1860265CAD9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */; };
 		33C83051AA7FF1FDA79F0241 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D533C1F5574D7B7BE0F546AC /* RootView.swift */; };
@@ -47,6 +49,7 @@
 		A385DC89F56B32C668A7375C /* AddExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD805CDE31A24AD630A9703 /* AddExpenseView.swift */; };
 		A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C15AD0F34F080CB70FB979F /* LoamApp.swift */; };
 		A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */; };
+		A7C4E91F2B8D4061A3E5C0D2 /* SplitFormSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D5F02A3C9E5172B4F6D1E3 /* SplitFormSeed.swift */; };
 		B835F5A9BE1424211EE6FDDF /* SupabaseHouseholdRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AF7E99F1E669A42B08FB2D /* SupabaseHouseholdRepository.swift */; };
 		C58A45A8DD071F63B9661499 /* Secrets.xcconfig.example in Resources */ = {isa = PBXBuildFile; fileRef = F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
@@ -62,7 +65,6 @@
 		F003E190915C60EA01A187C3 /* HouseholdStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F29555C57CD09B0685F9ACEA /* HouseholdStore.swift */; };
 		F3540CDF8143C9D908D2720C /* StoreKitStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FCB2D37CB3148229B212824 /* StoreKitStub.swift */; };
 		F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */; };
-		A7C4E91F2B8D4061A3E5C0D2 /* SplitFormSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D5F02A3C9E5172B4F6D1E3 /* SplitFormSeed.swift */; };
 		F7D1E2A7318C3E027F56FBCA /* SettlementMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A97EB25D9F1644021698E45B /* SettlementMode.swift */; };
 		F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08A73A1CF023A5DDE2B32C0 /* DeepLinkHandler.swift */; };
 		FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5950FD4B0A003B32224F60B /* HomeView.swift */; };
@@ -80,7 +82,6 @@
 
 /* Begin PBXFileReference section */
 		03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculator.swift; sourceTree = "<group>"; };
-		B8D5F02A3C9E5172B4F6D1E3 /* SplitFormSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitFormSeed.swift; sourceTree = "<group>"; };
 		05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExpenseRepository.swift; sourceTree = "<group>"; };
 		0A3D412D891B98D11462EB02 /* Loam.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Loam.entitlements; sourceTree = "<group>"; };
 		0C15AD0F34F080CB70FB979F /* LoamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamApp.swift; sourceTree = "<group>"; };
@@ -90,9 +91,17 @@
 		1BB3E318E7DB0B9CE3B246C1 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
 		1C9A76F1F1B13BB49D3BCA2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		20C428C07622150791184237 /* Recurring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recurring.swift; sourceTree = "<group>"; };
-		21C2E3B3B713F758DAD1B856 /* budget-arc.svg */ = {isa = PBXFileReference; path = "budget-arc.svg"; sourceTree = "<group>"; };
+		21C2E3B3B713F758DAD1B856 /* budget-arc.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "budget-arc.svg"; sourceTree = "<group>"; };
 		239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceSimplifier.swift; sourceTree = "<group>"; };
 		278BBBEE5344D0FD28BCCF98 /* LocalHouseholdRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalHouseholdRepository.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareStatus.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseEditProposal.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareAcceptance.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpenseCard.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProposeEditSheet.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A4F0 /* EditProposalReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProposalReviewCard.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A51 /* PendingExpenseActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpenseActions.swift; sourceTree = "<group>"; };
+		30A1B2C3D4E5F60718293A52 /* PendingExpensesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpensesSheet.swift; sourceTree = "<group>"; };
 		31EC9FEA936CD6D772BB91A9 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		352DDC9EA03E70A678D9AABF /* HouseholdRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdRecord.swift; sourceTree = "<group>"; };
 		38A6B1F3FF6967DADF72F0E5 /* AuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSession.swift; sourceTree = "<group>"; };
@@ -108,22 +117,18 @@
 		6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDTO.swift; sourceTree = "<group>"; };
 		7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseExpenseRepository.swift; sourceTree = "<group>"; };
 		76BB6915492C01E2E6B51959 /* HomeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTheme.swift; sourceTree = "<group>"; };
-		30A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareStatus.swift; sourceTree = "<group>"; };
-		30A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseEditProposal.swift; sourceTree = "<group>"; };
-		30A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareAcceptance.swift; sourceTree = "<group>"; };
-		30A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpenseCard.swift; sourceTree = "<group>"; };
-		30A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProposeEditSheet.swift; sourceTree = "<group>"; };
-		30A1B2C3D4E5F60718293A4F0 /* EditProposalReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProposalReviewCard.swift; sourceTree = "<group>"; };
 		7FCB2D37CB3148229B212824 /* StoreKitStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitStub.swift; sourceTree = "<group>"; };
 		8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySpendHero.swift; sourceTree = "<group>"; };
 		8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepository.swift; sourceTree = "<group>"; };
-		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9D15723F1C7A5EE473CA2889 /* TestAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestAccount.swift; sourceTree = "<group>"; };
 		A08A73A1CF023A5DDE2B32C0 /* DeepLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandler.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6789012345678 /* ExpenseDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDetailSheet.swift; sourceTree = "<group>"; };
 		A74E2AB24186B00FD500CE4D /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		A87AE244F130211B61887F30 /* SplitExpenseSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseSection.swift; sourceTree = "<group>"; };
 		A97EB25D9F1644021698E45B /* SettlementMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMode.swift; sourceTree = "<group>"; };
 		B73CC2C0E31AA168F61ABFED /* HomeCollapsingTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeCollapsingTopBar.swift; sourceTree = "<group>"; };
+		B8D5F02A3C9E5172B4F6D1E3 /* SplitFormSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitFormSeed.swift; sourceTree = "<group>"; };
 		BA8FD22752CACE19C604B0FD /* SplitExpenseMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseMode.swift; sourceTree = "<group>"; };
 		BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDateCodecTests.swift; sourceTree = "<group>"; };
 		BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
@@ -135,14 +140,13 @@
 		DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		E6AF7E99F1E669A42B08FB2D /* SupabaseHouseholdRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseHouseholdRepository.swift; sourceTree = "<group>"; };
 		EB1B6414E2E7130E9A77AE36 /* HouseholdRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdRepository.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F6789012345678 /* ExpenseDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDetailSheet.swift; sourceTree = "<group>"; };
 		ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetArcLayout.swift; sourceTree = "<group>"; };
 		EEBEB450D61F2F9080F0C496 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		F29555C57CD09B0685F9ACEA /* HouseholdStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdStore.swift; sourceTree = "<group>"; };
 		F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseStoreTests.swift; sourceTree = "<group>"; };
 		F6CD835D39E131CEAA0B24E8 /* Money.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Money.swift; sourceTree = "<group>"; };
-		F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
-		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
+		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -167,7 +171,9 @@
 				76BB6915492C01E2E6B51959 /* HomeTheme.swift */,
 				D5950FD4B0A003B32224F60B /* HomeView.swift */,
 				8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */,
+				30A1B2C3D4E5F60718293A51 /* PendingExpenseActions.swift */,
 				30A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift */,
+				30A1B2C3D4E5F60718293A52 /* PendingExpensesSheet.swift */,
 				30A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift */,
 			);
 			path = Home;
@@ -448,9 +454,6 @@
 					38C741AEE51B5DD4542905E5 = {
 						DevelopmentTeam = "";
 					};
-					8AAF55F2B1E62FB9443C5270 = {
-						DevelopmentTeam = "";
-					};
 				};
 			};
 			buildConfigurationList = 9AFC3B51DF531ABE639D7643 /* Build configuration list for PBXProject "Loam" */;
@@ -528,7 +531,9 @@
 				D5198E9063F112C1765093E2 /* HomeCollapsingTopBar.swift in Sources */,
 				20488F784A448D5470EF4707 /* HomeTheme.swift in Sources */,
 				FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */,
+				20A1B2C3D4E5F60718293A51 /* PendingExpenseActions.swift in Sources */,
 				20A1B2C3D4E5F60718293A4E /* PendingExpenseCard.swift in Sources */,
+				20A1B2C3D4E5F60718293A52 /* PendingExpensesSheet.swift in Sources */,
 				20A1B2C3D4E5F60718293A4F /* ProposeEditSheet.swift in Sources */,
 				8AB6806BBFF519364B30CF4A /* HouseholdRecord.swift in Sources */,
 				73C7ACE811537D4D2DF68609 /* HouseholdRepository.swift in Sources */,
@@ -576,6 +581,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = XXJA67J9AN;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -744,6 +750,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = XXJA67J9AN;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -9,28 +9,30 @@ struct HouseholdView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    summaryCard
+            List {
+                Section {
+                    summaryHeader
+                }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Shared expenses")
-                            .font(.headline)
-
-                        if sharedExpenses.isEmpty {
-                            Text("No shared expenses this month. Split an expense with Julia or Philip from the add screen.")
-                                .font(.subheadline)
-                                .foregroundStyle(HomeTheme.secondary)
-                        } else {
-                            ForEach(sharedExpenses) { expense in
+                Section("Shared expenses") {
+                    if sharedExpenses.isEmpty {
+                        Text("No shared expenses this month. Split an expense with Julia or Philip from the add screen.")
+                            .font(.subheadline)
+                            .foregroundStyle(HomeTheme.secondary)
+                    } else {
+                        ForEach(sharedExpenses) { expense in
+                            Button {
+                                selectedExpense = expense
+                            } label: {
                                 sharedRow(expense)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationTitle("Household")
             .navigationBarTitleDisplayMode(.inline)
@@ -55,7 +57,7 @@ struct HouseholdView: View {
         return expenseStore.expenses.filter { $0.isShared && $0.countsTowardSummary(for: userId) }
     }
 
-    private var summaryCard: some View {
+    private var summaryHeader: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(expenseStore.period.displayTitle)
                 .font(.footnote)
@@ -70,25 +72,15 @@ struct HouseholdView: View {
                 .foregroundStyle(HomeTheme.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(HomeTheme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: HomeTheme.rowRadius, style: .continuous))
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 
     private func sharedRow(_ expense: ExpenseRecord) -> some View {
         let mine = authSession.userId.map { expense.share(for: $0) } ?? expense.money
         let paidByMe = expense.paidBy == authSession.userId
 
-        return Button {
-            selectedExpense = expense
-        } label: {
-            sharedRowContent(expense: expense, mine: mine, paidByMe: paidByMe)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func sharedRowContent(expense: ExpenseRecord, mine: Money, paidByMe: Bool) -> some View {
-        HStack(spacing: 14) {
+        return HStack(spacing: 14) {
             Image(systemName: expense.category.systemImage)
                 .font(.title3)
                 .symbolRenderingMode(.monochrome)
@@ -96,8 +88,9 @@ struct HouseholdView: View {
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(expense.category.displayName)
+                Text(expense.displayTitle)
                     .font(.body.weight(.medium))
+                    .foregroundStyle(HomeTheme.text)
                 Text(expense.spentAt, format: .dateTime.month(.abbreviated).day())
                     .font(.caption)
                     .foregroundStyle(HomeTheme.secondary)
@@ -106,19 +99,18 @@ struct HouseholdView: View {
                     .foregroundStyle(HomeTheme.secondary)
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 2) {
                 Text(MoneyFormatter.string(from: mine))
                     .font(.body.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(HomeTheme.text)
                 Text("of \(MoneyFormatter.string(from: expense.money))")
                     .font(.caption2)
                     .foregroundStyle(HomeTheme.secondary)
             }
         }
-        .padding(14)
-        .background(HomeTheme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: HomeTheme.rowRadius, style: .continuous))
+        .contentShape(Rectangle())
     }
 
     private func payerName(for expense: ExpenseRecord) -> String {

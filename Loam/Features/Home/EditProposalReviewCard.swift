@@ -9,12 +9,10 @@ struct EditProposalReviewCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "square.and.pencil")
-                    .foregroundStyle(.blue)
-                Text("\(proposerName) suggested changes")
-                    .font(.subheadline.weight(.semibold))
-            }
+            Label("\(proposerName) suggested changes", systemImage: "square.and.pencil")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.blue)
+                .labelStyle(.titleAndIcon)
 
             if let message = proposal.message, !message.isEmpty {
                 Text(message)
@@ -37,6 +35,13 @@ struct EditProposalReviewCard: View {
                         label: "Category",
                         from: expense.category.displayName,
                         to: proposal.category.displayName
+                    )
+                }
+                if normalizedNote(expense.title) != normalizedNote(proposal.title) {
+                    changeRow(
+                        label: "Title",
+                        from: displayNote(expense.title),
+                        to: displayNote(proposal.title)
                     )
                 }
                 if expense.spentAt != proposal.spentAt {
@@ -70,42 +75,41 @@ struct EditProposalReviewCard: View {
             }
 
             HStack(spacing: 10) {
-                Button("Decline", action: onReject)
-                    .buttonStyle(.bordered)
-                    .frame(maxWidth: .infinity)
+                Button(action: onReject) {
+                    Text("Decline")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
 
-                Button("Apply changes", action: onAccept)
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
+                Button(action: onAccept) {
+                    Text("Apply changes")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
             }
-            .font(.subheadline.weight(.semibold))
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: HomeTheme.rowRadius, style: .continuous)
-                .fill(HomeTheme.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: HomeTheme.rowRadius, style: .continuous)
-                        .strokeBorder(Color.blue.opacity(0.25), lineWidth: 1)
-                )
-        )
+        .padding(.vertical, 4)
     }
 
     private func changeRow(label: String, from: String, to: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
+        LabeledContent {
+            HStack(spacing: 6) {
+                Text(from)
+                    .strikethrough()
+                    .foregroundStyle(HomeTheme.tertiary)
+                Image(systemName: "arrow.right")
+                    .font(.caption2)
+                    .foregroundStyle(HomeTheme.tertiary)
+                Text(to)
+                    .fontWeight(.semibold)
+            }
+            .font(.caption)
+        } label: {
             Text(label)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(HomeTheme.secondary)
-                .frame(width: 64, alignment: .leading)
-            Text(from)
-                .font(.caption)
-                .strikethrough()
-                .foregroundStyle(HomeTheme.tertiary)
-            Image(systemName: "arrow.right")
-                .font(.caption2)
-                .foregroundStyle(HomeTheme.tertiary)
-            Text(to)
-                .font(.caption.weight(.semibold))
         }
     }
 

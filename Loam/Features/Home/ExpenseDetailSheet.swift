@@ -1,9 +1,18 @@
 import SwiftUI
 
+struct ExpenseDetailPendingActions {
+    let creatorName: String
+    let onAccept: () -> Void
+    let onAcceptWithTrust: () -> Void
+    let onReject: () -> Void
+    let onProposeEdit: () -> Void
+}
+
 struct ExpenseDetailSheet: View {
     let expense: ExpenseRecord
     var onSplit: (() -> Void)?
     var onDelete: (() -> Void)?
+    var pendingActions: ExpenseDetailPendingActions?
 
     @EnvironmentObject private var authSession: AuthSession
     @Environment(\.dismiss) private var dismiss
@@ -16,8 +25,14 @@ struct ExpenseDetailSheet: View {
     }
 
     private var canSplit: Bool {
-        expense.recurringId == nil
+        pendingActions == nil
+            && onSplit != nil
+            && expense.recurringId == nil
             && SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+    }
+
+    private var hasOwnerActions: Bool {
+        canSplit || onDelete != nil
     }
 
     var body: some View {
@@ -43,7 +58,7 @@ struct ExpenseDetailSheet: View {
                                 .foregroundStyle(HomeTheme.secondary)
                         }
 
-                        Text(expense.category.displayName)
+                        Text(expense.displayTitle)
                             .font(.headline)
                             .foregroundStyle(HomeTheme.secondary)
                     }
@@ -55,6 +70,12 @@ struct ExpenseDetailSheet: View {
                     LabeledContent("Total") {
                         Text(MoneyFormatter.string(from: expense.money))
                             .monospacedDigit()
+                    }
+
+                    if expense.hasCustomTitle {
+                        LabeledContent("Title") {
+                            Text(expense.displayTitle)
+                        }
                     }
 
                     LabeledContent("Category") {
@@ -77,10 +98,7 @@ struct ExpenseDetailSheet: View {
 
                     if expense.recurringId != nil {
                         LabeledContent("Type") {
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                                Text("Recurring")
-                            }
+                            Label("Recurring", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
                         }
                     }
 
@@ -106,31 +124,56 @@ struct ExpenseDetailSheet: View {
             .navigationTitle("Expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                }
-                if canSplit || onDelete != nil {
-                    ToolbarItem(placement: .primaryAction) {
+                if hasOwnerActions {
+                    ToolbarItem(placement: .topBarLeading) {
                         Menu {
                             if canSplit, let onSplit {
-                                Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
-                                    onSplit()
-                                }
+                                Button(
+                                    expense.isShared ? "Edit split" : "Split expense",
+                                    systemImage: "person.2",
+                                    action: onSplit
+                                )
                             }
-                            if let onDelete {
+                            if onDelete != nil {
                                 Button("Delete", systemImage: "trash", role: .destructive) {
-                                    onDelete()
+                                    onDelete?()
                                 }
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
+                        .accessibilityLabel("Expense actions")
                     }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    SheetCloseButton { dismiss() }
+                }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if let pendingActions {
+                    pendingActionsBar(pendingActions)
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents(pendingActions == nil ? [.medium, .large] : [.large])
         .presentationDragIndicator(.visible)
+    }
+
+    private func pendingActionsBar(_ actions: ExpenseDetailPendingActions) -> some View {
+        VStack(spacing: 0) {
+            Divider()
+            PendingExpenseActions(
+                creatorName: actions.creatorName,
+                onAccept: actions.onAccept,
+                onAcceptWithTrust: actions.onAcceptWithTrust,
+                onReject: actions.onReject,
+                onProposeEdit: actions.onProposeEdit
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
+        }
+        .background(.ultraThinMaterial)
     }
 
     private var payerLabel: String {

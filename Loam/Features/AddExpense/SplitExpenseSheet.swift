@@ -62,6 +62,11 @@ struct SplitExpenseSheet: View {
                         Text(MoneyFormatter.string(from: expense.money))
                             .monospacedDigit()
                     }
+                    if expense.hasCustomTitle {
+                        LabeledContent("Title") {
+                            Text(expense.displayTitle)
+                        }
+                    }
                     LabeledContent("Category") {
                         Text(expense.category.displayName)
                     }

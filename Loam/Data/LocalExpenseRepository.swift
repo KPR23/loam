@@ -93,6 +93,7 @@ actor LocalExpenseRepository: ExpenseRepository {
         case .accept, .acceptWithTrust:
             updatedShares[shareIndex].status = .accepted
             updatedShares[shareIndex].respondedAt = Date()
+            // Manual accept — even with trust opt-in — is not "accepted via trust".
             updatedShares[shareIndex].acceptedViaTrust = false
             if action == .acceptWithTrust, let householdId = all[index].householdId {
                 try await addTrust(
@@ -159,6 +160,7 @@ actor LocalExpenseRepository: ExpenseRepository {
 
             all[expenseIndex].amountMinor = proposal.amountMinor
             all[expenseIndex].category = proposal.category
+            all[expenseIndex].title = proposal.title
             all[expenseIndex].note = proposal.note
             all[expenseIndex].spentAt = proposal.spentAt
             all[expenseIndex].paidBy = proposal.paidBy
