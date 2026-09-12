@@ -66,7 +66,20 @@ struct PendingExpensesSheet: View {
                     ForEach(creatorGroups, id: \.id) { group in
                         Section {
                             ForEach(group.expenses) { expense in
-                                pendingRow(for: expense, showsCreatorLabel: false)
+                                PendingExpenseListRow(
+                                    expense: expense,
+                                    myUserId: myUserId,
+                                    showsCreatorLabel: false,
+                                    onProposeEdit: {
+                                        expensePendingProposeEdit = PendingProposeEditPresentation(
+                                            expense: expense,
+                                            myUserId: myUserId
+                                        )
+                                    },
+                                    onShowDetails: {
+                                        selectedExpense = expense
+                                    }
+                                )
                             }
                         } header: {
                             personSectionHeader(
@@ -79,7 +92,20 @@ struct PendingExpensesSheet: View {
                 } else {
                     Section {
                         ForEach(expenses) { expense in
-                            pendingRow(for: expense, showsCreatorLabel: true)
+                            PendingExpenseListRow(
+                                expense: expense,
+                                myUserId: myUserId,
+                                showsCreatorLabel: true,
+                                onProposeEdit: {
+                                    expensePendingProposeEdit = PendingProposeEditPresentation(
+                                        expense: expense,
+                                        myUserId: myUserId
+                                    )
+                                },
+                                onShowDetails: {
+                                    selectedExpense = expense
+                                }
+                            )
                         }
                     } header: {
                         summaryHeader
@@ -145,7 +171,7 @@ struct PendingExpensesSheet: View {
                 .foregroundStyle(HomeTheme.secondary)
                 .textCase(nil)
             Spacer()
-            Text(MoneyFormatter.string(from: pendingTotal(for: expenses)))
+            Text(MoneyFormatter.string(from: PendingAcceptanceFormatting.total(for: expenses, userId: myUserId)))
                 .font(.subheadline)
                 .foregroundStyle(HomeTheme.tertiary)
                 .monospacedDigit()
@@ -169,8 +195,10 @@ struct PendingExpensesSheet: View {
                 Button("Accept everything", systemImage: "checkmark") {
                     Task { await performBulkAccept(creatorId: nil, withTrust: false) }
                 }
-                Button("Decline everything", systemImage: "xmark", role: .destructive) {
+                Button(role: .destructive) {
                     bulkDeclineTarget = .all
+                } label: {
+                    DestructiveMenuLabel(title: "Decline everything", systemImage: "xmark")
                 }
             } else if let onlyCreator = creatorGroups.first {
                 creatorBulkMenuItems(
@@ -193,8 +221,10 @@ struct PendingExpensesSheet: View {
         Button("Accept all & always trust \(creatorName)", systemImage: "hand.thumbsup") {
             Task { await performBulkAccept(creatorId: creatorId, withTrust: true) }
         }
-        Button("Decline all from \(creatorName)", systemImage: "xmark", role: .destructive) {
+        Button(role: .destructive) {
             bulkDeclineTarget = .creator(id: creatorId, name: creatorName)
+        } label: {
+            DestructiveMenuLabel(title: "Decline all from \(creatorName)", systemImage: "xmark")
         }
     }
 
@@ -231,50 +261,6 @@ struct PendingExpensesSheet: View {
             }
         }
         .textCase(nil)
-    }
-
-    private func pendingRow(for expense: ExpenseRecord, showsCreatorLabel: Bool) -> some View {
-        PendingExpenseRow(
-            expense: expense,
-            myUserId: myUserId,
-            creatorName: SplitPartnerOption.displayName(for: expense.createdBy),
-            showsCreatorLabel: showsCreatorLabel,
-            onAccept: {
-                respond(to: expense, action: .accept)
-            },
-            onAcceptWithTrust: {
-                respond(to: expense, action: .acceptWithTrust)
-            },
-            onReject: {
-                respond(to: expense, action: .reject)
-            },
-            onProposeEdit: {
-                expensePendingProposeEdit = PendingProposeEditPresentation(
-                    expense: expense,
-                    myUserId: myUserId
-                )
-            },
-            onShowDetails: {
-                selectedExpense = expense
-            }
-        )
-        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                respond(to: expense, action: .reject)
-            } label: {
-                Label("Decline", systemImage: "xmark")
-            }
-            .tint(.red)
-        }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button {
-                respond(to: expense, action: .accept)
-            } label: {
-                Label("Accept", systemImage: "checkmark")
-            }
-            .tint(.green)
-        }
     }
 
     private func respond(to expense: ExpenseRecord, action: ExpenseShareResponseAction) {
@@ -365,14 +351,6 @@ struct PendingExpensesSheet: View {
     private func targetExpenseIds(creatorId: UUID?) -> [UUID] {
         guard let creatorId else { return expenses.map(\.id) }
         return expenses.filter { $0.createdBy == creatorId }.map(\.id)
-    }
-
-    private func pendingTotal(for expenses: [ExpenseRecord]) -> Money {
-        let minor = expenses.reduce(0) { partial, expense in
-            partial + (expense.shareRecord(for: myUserId)?.amountMinor ?? 0)
-        }
-        let currency = expenses.first?.currency ?? "PLN"
-        return Money(amountMinor: minor, currencyCode: currency)
     }
 
     private var declineAlertTitle: String {

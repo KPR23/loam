@@ -59,7 +59,7 @@ struct ExpenseDetailSheet: View {
                         }
 
                         Text(expense.displayTitle)
-                            .font(.headline)
+                            .font(.system(.headline, design: .rounded))
                             .foregroundStyle(HomeTheme.secondary)
                     }
                     .frame(maxWidth: .infinity)
@@ -75,6 +75,7 @@ struct ExpenseDetailSheet: View {
                     if expense.hasCustomTitle {
                         LabeledContent("Title") {
                             Text(expense.displayTitle)
+                                .font(.system(.body, design: .rounded))
                         }
                     }
 
@@ -82,6 +83,7 @@ struct ExpenseDetailSheet: View {
                         HStack(spacing: 6) {
                             Image(systemName: expense.category.systemImage)
                             Text(expense.category.displayName)
+                                .font(.system(.body, design: .rounded))
                         }
                         .foregroundStyle(expense.category.color)
                     }
@@ -135,8 +137,10 @@ struct ExpenseDetailSheet: View {
                                 )
                             }
                             if onDelete != nil {
-                                Button("Delete", systemImage: "trash", role: .destructive) {
+                                Button(role: .destructive) {
                                     onDelete?()
+                                } label: {
+                                    DestructiveMenuLabel(title: "Delete", systemImage: "trash")
                                 }
                             }
                         } label: {

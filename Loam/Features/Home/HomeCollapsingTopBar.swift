@@ -71,7 +71,7 @@ struct HomeCollapsingTopBar: View {
     private var collapsedAmount: some View {
         let amountValue = Double(amount.amountMinor) / 100.0
 
-        return HStack(alignment: .center, spacing: 5) {
+        return HStack(alignment: .lastTextBaseline, spacing: 4) {
             Text(MoneyFormatter.heroAmount(from: amount))
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .monospacedDigit()

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum HomeTheme {
     static let background = Color(.systemGroupedBackground)
@@ -26,5 +27,25 @@ struct SheetCloseButton: View {
             Label("Close", systemImage: "xmark")
         }
         .labelStyle(.iconOnly)
+    }
+}
+
+/// Menu / context-menu SF Symbols stay accent-tinted even with `role: .destructive`.
+/// Bake systemRed into an always-original image so UIMenu cannot recolor the icon.
+struct DestructiveMenuLabel: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(uiImage: Self.redSymbol(systemImage))
+        }
+    }
+
+    private static func redSymbol(_ name: String) -> UIImage {
+        let image = UIImage(systemName: name) ?? UIImage()
+        return image.withTintColor(.systemRed, renderingMode: .alwaysOriginal)
     }
 }

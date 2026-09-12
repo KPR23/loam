@@ -71,19 +71,13 @@ struct HomeView: View {
                         onPickMonth: { showMonthPicker = true }
                     )
                 }
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if collapseProgress > 0.15 {
+                if collapseProgress > 0.15 {
+                    ToolbarItem(placement: .topBarTrailing) {
                         HomeTopBarCalendarButton(
                             period: expenseStore.period,
                             onPickMonth: { showMonthPicker = true }
                         )
                     }
-                    Button {
-                        showAddExpense = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Add expense")
                 }
             }
             .task(id: authSession.userId) {
@@ -91,6 +85,13 @@ struct HomeView: View {
             }
             .refreshable {
                 await expenseStore.refresh(userId: authSession.userId)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                AddExpenseFAB {
+                    showAddExpense = true
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 12)
             }
         }
         .sheet(isPresented: $showAddExpense) {
@@ -168,45 +169,19 @@ struct HomeView: View {
 
                 Section {
                     ForEach(preview) { expense in
-                        PendingExpenseRow(
+                        PendingExpenseListRow(
                             expense: expense,
                             myUserId: userId,
-                            creatorName: SplitPartnerOption.displayName(for: expense.createdBy),
-                            onAccept: {
-                                Task {
-                                    await expenseStore.respondToShare(
-                                        expenseId: expense.id,
-                                        userId: userId,
-                                        action: .accept
-                                    )
-                                }
-                            },
-                            onAcceptWithTrust: {
-                                Task {
-                                    await expenseStore.respondToShare(
-                                        expenseId: expense.id,
-                                        userId: userId,
-                                        action: .acceptWithTrust
-                                    )
-                                }
-                            },
-                            onReject: {
-                                Task {
-                                    await expenseStore.respondToShare(
-                                        expenseId: expense.id,
-                                        userId: userId,
-                                        action: .reject
-                                    )
-                                }
-                            },
                             onProposeEdit: {
-                                expensePendingProposeEdit = ProposeEditPresentation(expense: expense, myUserId: userId)
+                                expensePendingProposeEdit = ProposeEditPresentation(
+                                    expense: expense,
+                                    myUserId: userId
+                                )
                             },
                             onShowDetails: {
                                 selectedExpense = expense
                             }
                         )
-                        .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
                     }
 
                     if remainingCount > 0 {
@@ -214,7 +189,7 @@ struct HomeView: View {
                             showAllPendingExpenses = true
                         } label: {
                             HStack {
-                                Text("See all (\(allPending.count))")
+                                Text("See all")
                                     .font(.subheadline.weight(.medium))
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -226,39 +201,14 @@ struct HomeView: View {
                         .accessibilityHint("Shows all expenses awaiting your approval")
                     }
                 } header: {
-                    pendingSectionHeader(expenses: allPending)
+                    PendingAcceptanceFormatting.sectionHeader(
+                        expenses: allPending,
+                        userId: userId,
+                        previewLimit: homePendingPreviewLimit
+                    )
                 }
             }
         }
-    }
-
-    private func pendingSectionHeader(expenses: [ExpenseRecord]) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(expenses.count > homePendingPreviewLimit
-                 ? "Awaiting your approval · \(expenses.count)"
-                 : "Awaiting your approval")
-                .font(.subheadline)
-                .fontWeight(.regular)
-                .foregroundStyle(HomeTheme.secondary)
-            Spacer()
-            Text(MoneyFormatter.string(from: pendingTotal(for: expenses)))
-                .font(.subheadline)
-                .fontWeight(.regular)
-                .foregroundStyle(HomeTheme.secondary)
-                .monospacedDigit()
-        }
-        .textCase(nil)
-    }
-
-    private func pendingTotal(for expenses: [ExpenseRecord]) -> Money {
-        guard let userId = authSession.userId else {
-            return Money(amountMinor: 0, currencyCode: "PLN")
-        }
-        let minor = expenses.reduce(0) { partial, expense in
-            partial + (expense.shareRecord(for: userId)?.amountMinor ?? 0)
-        }
-        let currency = expenses.first?.currency ?? "PLN"
-        return Money(amountMinor: minor, currencyCode: currency)
     }
 
     @ViewBuilder
@@ -439,8 +389,10 @@ struct HomeView: View {
                         presentSplit(for: expense)
                     }
                 }
-                Button("Delete", systemImage: "trash", role: .destructive) {
+                Button(role: .destructive) {
                     expensePendingDelete = expense
+                } label: {
+                    DestructiveMenuLabel(title: "Delete", systemImage: "trash")
                 }
             }
             .accessibilityAddTraits(.isButton)
@@ -559,7 +511,25 @@ struct HomeView: View {
                 .foregroundStyle(expense.category.color)
                 .frame(width: 22, alignment: .center)
             Text(expense.displayTitle)
+                .font(.system(.body, design: .rounded).weight(.medium))
         }
+    }
+}
+
+private struct AddExpenseFAB: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Color(.systemBackground))
+                .frame(width: 56, height: 56)
+                .background(Circle().fill(Color.primary))
+                .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add expense")
     }
 }
 

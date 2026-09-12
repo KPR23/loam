@@ -89,7 +89,7 @@ struct HouseholdView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(expense.displayTitle)
-                    .font(.body.weight(.medium))
+                    .font(.system(.body, design: .rounded).weight(.medium))
                     .foregroundStyle(HomeTheme.text)
                 Text(expense.spentAt, format: .dateTime.month(.abbreviated).day())
                     .font(.caption)

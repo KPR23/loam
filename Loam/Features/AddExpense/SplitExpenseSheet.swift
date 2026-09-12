@@ -65,10 +65,12 @@ struct SplitExpenseSheet: View {
                     if expense.hasCustomTitle {
                         LabeledContent("Title") {
                             Text(expense.displayTitle)
+                                .font(.system(.body, design: .rounded))
                         }
                     }
                     LabeledContent("Category") {
                         Text(expense.category.displayName)
+                            .font(.system(.body, design: .rounded))
                     }
                     LabeledContent("Date") {
                         Text(expense.spentAt.formatted(date: .abbreviated, time: .omitted))
