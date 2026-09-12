@@ -95,12 +95,14 @@ struct ProfileView: View {
         return SupabaseConfig.isConfigured ? "Apple account · Synced with Supabase" : "Demo mode"
     }
 
+    #if DEBUG
     private var returnToMainAccountTitle: String {
         if let name = authSession.savedMainAccountDisplayName, !name.isEmpty {
             return "Back to \(name)"
         }
         return "Back to my account"
     }
+    #endif
 }
 
 #Preview {
