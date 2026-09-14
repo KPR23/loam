@@ -149,6 +149,17 @@ struct MonthPickerSheet: View {
         .month(year: selectedYear, month: selectedMonth)
     }
 
+    private var isCurrentMonthSelected: Bool {
+        selectedPeriod == .currentMonth
+    }
+
+    private func selectCurrentMonth() {
+        let calendar = Calendar.current
+        let now = Date()
+        selectedYear = calendar.component(.year, from: now)
+        selectedMonth = calendar.component(.month, from: now)
+    }
+
     var body: some View {
         NavigationStack {
             HStack(spacing: 0) {
@@ -175,6 +186,12 @@ struct MonthPickerSheet: View {
             .navigationTitle("Choose month")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("This month") {
+                        selectCurrentMonth()
+                    }
+                    .disabled(isCurrentMonthSelected)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         onSelect(selectedPeriod)

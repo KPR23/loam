@@ -87,8 +87,8 @@ struct SplitExpenseSheet: View {
                     myUserId: myUserId,
                     myDisplayName: authSession.displayName ?? "You",
                     availablePartners: splitPartners,
+                    requiresPartner: true,
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
-                    isSplit: .constant(true),
                     splitMode: $formState.splitMode,
                     paidByUserId: $formState.paidByUserId,
                     myPercentage: $formState.myPercentage,
@@ -130,8 +130,8 @@ struct SplitExpenseSheet: View {
 
         if let validationError = SplitExpenseSection.validationError(
             totalMinor: expense.amountMinor,
-            isSplit: true,
             selectedPartnerCount: formState.selectedPartnerUserIds.count,
+            requiresPartner: true,
             splitMode: effectiveMode,
             myPercentage: formState.myPercentage,
             myExactAmountText: formState.myExactAmountText

@@ -11,75 +11,21 @@ struct PendingExpenseRow: View {
     let onProposeEdit: () -> Void
     let onShowDetails: () -> Void
 
-    private var myShare: Money {
-        expense.share(for: myUserId)
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button(action: onShowDetails) {
-                HStack(alignment: .center, spacing: 12) {
-                    categoryBadge
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(expense.displayTitle)
-                            .font(.system(.body, design: .rounded).weight(.medium))
-                            .foregroundStyle(HomeTheme.text)
-                            .multilineTextAlignment(.leading)
-
-                        if let note = expense.note, !note.isEmpty {
-                            Text(note)
-                                .font(.caption)
-                                .foregroundStyle(HomeTheme.secondary)
-                                .lineLimit(2)
-                        }
-
-                        if showsCreatorLabel {
-                            Text("Added by \(creatorName)")
-                                .font(.caption)
-                                .foregroundStyle(HomeTheme.tertiary)
-                        }
-                    }
-
-                    Spacer(minLength: 8)
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(MoneyFormatter.string(from: myShare))
-                            .font(.body.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(HomeTheme.text)
-                        Text("of \(MoneyFormatter.string(from: expense.money))")
-                            .font(.caption)
-                            .foregroundStyle(HomeTheme.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Shows expense details")
-
-            PendingExpenseActions(
+        HomeExpenseRow(
+            expense: expense,
+            myUserId: myUserId,
+            showsCreatorLabel: showsCreatorLabel,
+            creatorName: creatorName,
+            acceptance: .init(
                 creatorName: creatorName,
                 onAccept: onAccept,
                 onAcceptWithTrust: onAcceptWithTrust,
                 onReject: onReject,
                 onProposeEdit: onProposeEdit
-            )
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    private var categoryBadge: some View {
-        Image(systemName: expense.category.systemImage)
-            .font(.body.weight(.semibold))
-            .symbolRenderingMode(.monochrome)
-            .foregroundStyle(expense.category.color)
-            .frame(width: 40, height: 40)
-            .background(expense.category.color.opacity(0.14))
-            .clipShape(Circle())
-            .accessibilityHidden(true)
+            ),
+            onTap: onShowDetails
+        )
     }
 }
 
@@ -159,7 +105,7 @@ enum PendingAcceptanceFormatting {
                 .foregroundStyle(HomeTheme.secondary)
             Spacer()
             Text(MoneyFormatter.string(from: total(for: expenses, userId: userId)))
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .fontWeight(.regular)
                 .foregroundStyle(HomeTheme.secondary)
                 .monospacedDigit()

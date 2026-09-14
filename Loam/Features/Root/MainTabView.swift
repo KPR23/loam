@@ -35,7 +35,7 @@ struct MainTabView: View {
                 ProfileView()
             }
         }
-        .tint(.blue)
+        .tint(HomeTheme.accent)
         .onChange(of: selection) { _, newValue in
             if newValue == .expenses {
                 expensesReloadToken += 1
@@ -63,7 +63,7 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.profile)
         }
-        .tint(.blue)
+        .tint(HomeTheme.accent)
         .onChange(of: selection) { _, newValue in
             if newValue == .expenses {
                 expensesReloadToken += 1

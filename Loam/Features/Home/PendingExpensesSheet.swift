@@ -172,7 +172,7 @@ struct PendingExpensesSheet: View {
                 .textCase(nil)
             Spacer()
             Text(MoneyFormatter.string(from: PendingAcceptanceFormatting.total(for: expenses, userId: myUserId)))
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(HomeTheme.tertiary)
                 .monospacedDigit()
                 .textCase(nil)
@@ -207,7 +207,7 @@ struct PendingExpensesSheet: View {
                 )
             }
         } label: {
-            Image(systemName: "ellipsis.circle")
+            Image(systemName: "ellipsis")
         }
         .disabled(isProcessingBulk || expenses.isEmpty)
         .accessibilityLabel("Bulk approval actions")

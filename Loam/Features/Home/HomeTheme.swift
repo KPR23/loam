@@ -8,7 +8,7 @@ enum HomeTheme {
     static let secondary = Color.secondary
     static let tertiary = Color(.tertiaryLabel)
 
-    /// Monochrome brand accent — neutral chrome; color lives in charts & categories.
+    /// Monochrome brand accent (replaces system blue tint).
     static let accent = Color.primary
 
     /// Unfilled arc tiles.

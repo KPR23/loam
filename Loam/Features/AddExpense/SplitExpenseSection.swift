@@ -5,15 +5,18 @@ struct SplitExpenseSection: View {
     let myUserId: UUID
     let myDisplayName: String
     let availablePartners: [SplitPartnerOption]
+    /// When false, at least one partner must stay selected (edit-split / propose-edit flows).
+    var requiresPartner: Bool = false
 
     @Binding var selectedPartnerUserIds: Set<UUID>
-    @Binding var isSplit: Bool
     @Binding var splitMode: SplitExpenseMode
     @Binding var paidByUserId: UUID
     @Binding var myPercentage: Int
     @Binding var myExactAmountText: String
 
     private var currencyCode: String { "PLN" }
+
+    private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
 
     private var selectedPartners: [SplitPartnerOption] {
         availablePartners.filter { selectedPartnerUserIds.contains($0.userId) }
@@ -24,51 +27,74 @@ struct SplitExpenseSection: View {
             + selectedPartners.map { SplitParticipantOption(userId: $0.userId, displayName: $0.displayName) }
     }
 
+    /// Paid by may only be someone currently in the split (you + checked Split with partners).
+    private var paidBySelection: Binding<UUID> {
+        Binding(
+            get: {
+                let allowed = Set(splitParticipants.map(\.userId))
+                return allowed.contains(paidByUserId) ? paidByUserId : myUserId
+            },
+            set: { newValue in
+                let allowed = Set(splitParticipants.map(\.userId))
+                paidByUserId = allowed.contains(newValue) ? newValue : myUserId
+            }
+        )
+    }
+
+    private var paidByOptionsID: String {
+        splitParticipants.map(\.userId.uuidString).sorted().joined(separator: ",")
+    }
+
     private var supportsAdvancedSplitModes: Bool {
         selectedPartnerUserIds.count == 1
     }
 
     var body: some View {
         Section {
-            Toggle("Split expense", isOn: $isSplit)
-
             if isSplit {
-                ForEach(availablePartners) { partner in
-                    Toggle(partner.displayName, isOn: partnerSelectionBinding(for: partner.userId))
-                }
+                meSplitRow
             }
+            ForEach(availablePartners) { partner in
+                partnerRow(partner)
+            }
+        } header: {
+            Text("Split with")
         } footer: {
-            if isSplit {
-                if selectedPartnerUserIds.isEmpty {
-                    Text("Select at least one person to split with.")
-                } else {
-                    Text("Only your share counts toward your monthly total.")
-                }
+            if requiresPartner {
+                Text("Select at least one person to share this expense with.")
+            } else if selectedPartnerUserIds.isEmpty {
+                Text("Leave empty for a personal expense.")
+            } else {
+                Text("Only your share counts toward your monthly total.")
             }
         }
 
-        if isSplit, !selectedPartnerUserIds.isEmpty {
+        if isSplit {
             Section("Split method") {
                 if supportsAdvancedSplitModes {
+                    // Avoid `.menu` — it often fails to present inside nested sheets
+                    // (e.g. Suggest changes opened from Pending expenses).
                     Picker("Method", selection: $splitMode) {
                         ForEach(SplitExpenseMode.allCases) { mode in
-                            Label(mode.displayName, systemImage: mode.systemImage)
-                                .tag(mode)
+                            Text(mode.displayName).tag(mode)
                         }
                     }
-                    .pickerStyle(.menu)
                 } else {
                     LabeledContent("Method", value: SplitExpenseMode.equal.displayName)
                 }
             }
 
             Section("Paid by") {
-                Picker("Paid by", selection: $paidByUserId) {
+                Picker("Paid by", selection: paidBySelection) {
                     ForEach(splitParticipants) { participant in
                         Text(participant.displayName).tag(participant.userId)
                     }
                 }
-                .pickerStyle(.menu)
+                .id(paidByOptionsID)
+            }
+            .onAppear(perform: clampPaidByToSplitParticipants)
+            .onChange(of: paidByOptionsID) { _, _ in
+                clampPaidByToSplitParticipants()
             }
 
             switch effectiveSplitMode {
@@ -92,6 +118,48 @@ struct SplitExpenseSection: View {
                 }
             }
         }
+    }
+
+    private var meSplitRow: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.title3)
+                .foregroundStyle(Color.accentColor)
+                .symbolRenderingMode(.hierarchical)
+
+            Text(myDisplayName)
+                .foregroundStyle(.primary)
+
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(myDisplayName)
+        .accessibilityValue("Selected for split")
+        .accessibilityAddTraits(.isSelected)
+    }
+
+    private func partnerRow(_ partner: SplitPartnerOption) -> some View {
+        let isSelected = selectedPartnerUserIds.contains(partner.userId)
+        return Button {
+            togglePartner(partner.userId)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.55))
+                    .symbolRenderingMode(.hierarchical)
+
+                Text(partner.displayName)
+                    .foregroundStyle(.primary)
+
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityLabel(partner.displayName)
+        .accessibilityHint(isSelected ? "Selected for split" : "Select to split")
     }
 
     private var effectiveSplitMode: SplitExpenseMode {
@@ -140,7 +208,7 @@ struct SplitExpenseSection: View {
                     HStack {
                         Text("Your share")
                         Spacer()
-                        TextField("0.00", text: $myExactAmountText)
+                        TextField("0,00", text: sanitizedExactAmountBinding)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                             .monospacedDigit()
@@ -163,20 +231,28 @@ struct SplitExpenseSection: View {
         }
     }
 
-    private func partnerSelectionBinding(for userId: UUID) -> Binding<Bool> {
+    private var sanitizedExactAmountBinding: Binding<String> {
         Binding(
-            get: { selectedPartnerUserIds.contains(userId) },
-            set: { isSelected in
-                if isSelected {
-                    selectedPartnerUserIds.insert(userId)
-                } else {
-                    selectedPartnerUserIds.remove(userId)
-                    if paidByUserId == userId {
-                        paidByUserId = myUserId
-                    }
-                }
-            }
+            get: { myExactAmountText },
+            set: { myExactAmountText = Money.sanitizeTypingInput($0) }
         )
+    }
+
+    private func togglePartner(_ userId: UUID) {
+        if selectedPartnerUserIds.contains(userId) {
+            if requiresPartner, selectedPartnerUserIds.count == 1 { return }
+            selectedPartnerUserIds.remove(userId)
+            clampPaidByToSplitParticipants()
+        } else {
+            selectedPartnerUserIds.insert(userId)
+        }
+    }
+
+    private func clampPaidByToSplitParticipants() {
+        let allowed = Set(splitParticipants.map(\.userId))
+        if !allowed.contains(paidByUserId) {
+            paidByUserId = myUserId
+        }
     }
 
     private func displayName(for userId: UUID) -> String {
@@ -189,7 +265,7 @@ struct SplitExpenseSection: View {
     }
 
     private var computedShares: [SplitCalculator.Share]? {
-        guard isSplit, totalMinor > 0, !selectedPartnerUserIds.isEmpty else { return nil }
+        guard isSplit, totalMinor > 0 else { return nil }
 
         switch effectiveSplitMode {
         case .equal, .percentage:
@@ -217,8 +293,8 @@ struct SplitExpenseSection: View {
     var validationError: String? {
         Self.validationError(
             totalMinor: totalMinor,
-            isSplit: isSplit,
             selectedPartnerCount: selectedPartnerUserIds.count,
+            requiresPartner: requiresPartner,
             splitMode: effectiveSplitMode,
             myPercentage: myPercentage,
             myExactAmountText: myExactAmountText
@@ -227,15 +303,16 @@ struct SplitExpenseSection: View {
 
     static func validationError(
         totalMinor: Int,
-        isSplit: Bool,
         selectedPartnerCount: Int,
+        requiresPartner: Bool = false,
         splitMode: SplitExpenseMode,
         myPercentage: Int,
         myExactAmountText: String
     ) -> String? {
-        guard isSplit else { return nil }
+        if selectedPartnerCount == 0 {
+            return requiresPartner ? "Select at least one person to split with." : nil
+        }
         guard totalMinor > 0 else { return "Enter a valid amount." }
-        guard selectedPartnerCount > 0 else { return "Select at least one person to split with." }
 
         switch splitMode {
         case .equal, .percentage:
@@ -250,6 +327,26 @@ struct SplitExpenseSection: View {
             }
             return nil
         }
+    }
+
+    /// Compatibility wrapper for call sites that still pass `isSplit`.
+    static func validationError(
+        totalMinor: Int,
+        isSplit: Bool,
+        selectedPartnerCount: Int,
+        splitMode: SplitExpenseMode,
+        myPercentage: Int,
+        myExactAmountText: String
+    ) -> String? {
+        guard isSplit else { return nil }
+        return validationError(
+            totalMinor: totalMinor,
+            selectedPartnerCount: selectedPartnerCount,
+            requiresPartner: true,
+            splitMode: splitMode,
+            myPercentage: myPercentage,
+            myExactAmountText: myExactAmountText
+        )
     }
 }
 

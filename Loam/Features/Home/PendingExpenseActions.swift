@@ -2,6 +2,9 @@ import SwiftUI
 
 struct PendingExpenseActions: View {
     let creatorName: String
+    /// When true, menu content is declared in reverse so the visual top-to-bottom
+    /// order matches downward menus (iOS flips upward menus relative to the anchor).
+    var menuOpensUpward: Bool = false
     let onAccept: () -> Void
     let onAcceptWithTrust: () -> Void
     let onReject: () -> Void
@@ -17,15 +20,20 @@ struct PendingExpenseActions: View {
                     .padding(.vertical, actionVerticalPadding)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.blue)
+            .tint(HomeTheme.accent)
             .controlSize(.small)
 
             Menu {
-                Button("Accept & always trust \(creatorName)", systemImage: "hand.thumbsup", action: onAcceptWithTrust)
-                Button("Suggest changes", systemImage: "square.and.pencil", action: onProposeEdit)
-                Divider()
-                Button(role: .destructive, action: onReject) {
-                    DestructiveMenuLabel(title: "Decline", systemImage: "xmark")
+                if menuOpensUpward {
+                    declineButton
+                    Divider()
+                    proposeEditButton
+                    acceptWithTrustButton
+                } else {
+                    acceptWithTrustButton
+                    proposeEditButton
+                    Divider()
+                    declineButton
                 }
             } label: {
                 ZStack {
@@ -51,5 +59,19 @@ struct PendingExpenseActions: View {
     private var acceptLabel: some View {
         Text("Accept")
             .font(.system(.subheadline, design: .rounded).weight(.semibold))
+    }
+
+    private var acceptWithTrustButton: some View {
+        Button("Accept & always trust \(creatorName)", systemImage: "hand.thumbsup", action: onAcceptWithTrust)
+    }
+
+    private var proposeEditButton: some View {
+        Button("Suggest changes", systemImage: "square.and.pencil", action: onProposeEdit)
+    }
+
+    private var declineButton: some View {
+        Button(role: .destructive, action: onReject) {
+            DestructiveMenuLabel(title: "Decline", systemImage: "xmark")
+        }
     }
 }

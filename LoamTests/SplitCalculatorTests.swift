@@ -16,6 +16,23 @@ final class MoneyTests: XCTestCase {
         XCTAssertNil(Money(majorString: "1.234"))
     }
 
+    func testRejectsLettersAndSymbols() {
+        XCTAssertNil(Money(majorString: "12a"))
+        XCTAssertNil(Money(majorString: "12 zł"))
+        XCTAssertNil(Money(majorString: "-12"))
+        XCTAssertNil(Money(majorString: "12;34"))
+    }
+
+    func testParsesTrailingCommaAsWholeUnits() {
+        XCTAssertEqual(Money(majorString: "12,")?.amountMinor, 1200)
+    }
+
+    func testSanitizeTypingInput() {
+        XCTAssertEqual(Money.sanitizeTypingInput("12a.3b4c5"), "12,34")
+        XCTAssertEqual(Money.sanitizeTypingInput("..,,5"), "0,5")
+        XCTAssertEqual(Money.sanitizeTypingInput("1,2,3"), "1,23")
+    }
+
     func testAddition() {
         let a = Money(amountMinor: 100, currencyCode: "PLN")
         let b = Money(amountMinor: 50, currencyCode: "PLN")
