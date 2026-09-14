@@ -11,7 +11,7 @@ struct EditProposalReviewCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Label("\(proposerName) suggested changes", systemImage: "square.and.pencil")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.blue)
+                .foregroundStyle(HomeTheme.accent)
                 .labelStyle(.titleAndIcon)
 
             if let message = proposal.message, !message.isEmpty {
@@ -56,6 +56,13 @@ struct EditProposalReviewCard: View {
                         label: "Note",
                         from: displayNote(expense.note),
                         to: displayNote(proposal.note)
+                    )
+                }
+                if expense.location != proposal.location {
+                    changeRow(
+                        label: "Location",
+                        from: expense.location?.name ?? "None",
+                        to: proposal.location?.name ?? "None"
                     )
                 }
                 if expense.paidBy != proposal.paidBy {

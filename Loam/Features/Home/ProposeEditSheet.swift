@@ -5,6 +5,7 @@ private struct ProposeEditFormState: Equatable {
     var category: ExpenseCategory
     var title: String
     var note: String
+    var location: ExpenseLocation?
     var spentAt: Date
     var selectedPartnerUserIds: Set<UUID>
     var splitMode: SplitExpenseMode
@@ -17,10 +18,11 @@ private struct ProposeEditFormState: Equatable {
         let partnerUserIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId)
         let splitSeed = SplitFormSeed.from(expense: expense, myUserId: myUserId)
         return ProposeEditFormState(
-            amountText: MoneyFormatter.typingAmount(from: expense.money),
+            amountText: Money.sanitizeTypingInput(MoneyFormatter.typingAmount(from: expense.money)),
             category: expense.category,
             title: expense.title ?? "",
             note: expense.note ?? "",
+            location: expense.location,
             spentAt: expense.spentAt,
             selectedPartnerUserIds: partnerUserIds,
             splitMode: splitSeed.splitMode,
@@ -71,43 +73,46 @@ struct ProposeEditSheet: View {
                 }
 
                 Section("Amount") {
-                    TextField("0,00", text: $formState.amountText)
-                        .keyboardType(.decimalPad)
-                        .monospacedDigit()
+                    HStack {
+                        TextField("0,00", text: sanitizedAmountBinding)
+                            .keyboardType(.decimalPad)
+                            .monospacedDigit()
+                        Text(expense.currency)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("Details") {
                     TextField("Title (optional)", text: $formState.title)
                         .textInputAutocapitalization(.sentences)
-                    Picker("Category", selection: $formState.category) {
-                        ForEach(ExpenseCategory.allCases, id: \.self) { category in
-                            Label(category.displayName, systemImage: category.systemImage)
-                                .tag(category)
-                        }
-                    }
+                    ExpenseCategoryPicker(category: $formState.category)
                     DatePicker("Date", selection: $formState.spentAt, displayedComponents: .date)
+                    ExpenseLocationPicker(location: $formState.location)
                     TextField("Note", text: $formState.note, axis: .vertical)
                         .lineLimit(2...4)
                 }
 
-                if let amountMinor = Money(majorString: formState.amountText)?.amountMinor {
-                    SplitExpenseSection(
-                        totalMinor: amountMinor,
-                        myUserId: myUserId,
-                        myDisplayName: authSession.displayName ?? "You",
-                        availablePartners: splitPartners,
-                        selectedPartnerUserIds: $formState.selectedPartnerUserIds,
-                        isSplit: .constant(true),
-                        splitMode: $formState.splitMode,
-                        paidByUserId: $formState.paidByUserId,
-                        myPercentage: $formState.myPercentage,
-                        myExactAmountText: $formState.myExactAmountText
-                    )
-                }
+                SplitExpenseSection(
+                    totalMinor: Money(majorString: formState.amountText)?.amountMinor ?? 0,
+                    myUserId: myUserId,
+                    myDisplayName: authSession.displayName ?? "You",
+                    availablePartners: splitPartners,
+                    requiresPartner: true,
+                    selectedPartnerUserIds: $formState.selectedPartnerUserIds,
+                    splitMode: $formState.splitMode,
+                    paidByUserId: $formState.paidByUserId,
+                    myPercentage: $formState.myPercentage,
+                    myExactAmountText: $formState.myExactAmountText
+                )
 
                 Section("Message to owner") {
                     TextField("Optional note explaining your changes", text: $formState.message, axis: .vertical)
                         .lineLimit(2...4)
+                }
+            }
+            .onChange(of: formState.selectedPartnerUserIds) { _, newValue in
+                if newValue.count != 1, formState.splitMode != .equal {
+                    formState.splitMode = .equal
                 }
             }
             .navigationTitle("Suggest changes")
@@ -135,6 +140,13 @@ struct ProposeEditSheet: View {
         }
     }
 
+    private var sanitizedAmountBinding: Binding<String> {
+        Binding(
+            get: { formState.amountText },
+            set: { formState.amountText = Money.sanitizeTypingInput($0) }
+        )
+    }
+
     private func submit() async {
         guard let amountMinor = Money(majorString: formState.amountText)?.amountMinor, amountMinor > 0 else {
             errorMessage = "Enter a valid amount."
@@ -144,8 +156,8 @@ struct ProposeEditSheet: View {
         let effectiveMode = formState.selectedPartnerUserIds.count == 1 ? formState.splitMode : .equal
         if let validationError = SplitExpenseSection.validationError(
             totalMinor: amountMinor,
-            isSplit: true,
             selectedPartnerCount: formState.selectedPartnerUserIds.count,
+            requiresPartner: true,
             splitMode: effectiveMode,
             myPercentage: formState.myPercentage,
             myExactAmountText: formState.myExactAmountText
@@ -178,6 +190,7 @@ struct ProposeEditSheet: View {
                 category: formState.category,
                 title: trimmedTitle.isEmpty ? nil : trimmedTitle,
                 note: trimmedNote.isEmpty ? nil : trimmedNote,
+                location: formState.location,
                 spentAt: formState.spentAt,
                 paidBy: formState.paidByUserId,
                 shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) },

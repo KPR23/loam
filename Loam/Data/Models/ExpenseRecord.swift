@@ -53,6 +53,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
     var category: ExpenseCategory
     var title: String?
     var note: String?
+    var location: ExpenseLocation?
     /// Calendar day only — time component ignored for month aggregation.
     var spentAt: Date
     var paidBy: UUID
@@ -70,6 +71,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         category: ExpenseCategory,
         title: String? = nil,
         note: String? = nil,
+        location: ExpenseLocation? = nil,
         spentAt: Date = Date(),
         paidBy: UUID,
         createdBy: UUID,
@@ -85,6 +87,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         self.category = category
         self.title = title
         self.note = note
+        self.location = location
         self.spentAt = Calendar.current.startOfDay(for: spentAt)
         self.paidBy = paidBy
         self.createdBy = createdBy
@@ -115,6 +118,8 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
     }
 
     var isShared: Bool { householdId != nil }
+
+    var isRecurring: Bool { recurringId != nil }
 
     func shareRecord(for userId: UUID) -> ExpenseShareRecord? {
         shares.first(where: { $0.userId == userId })

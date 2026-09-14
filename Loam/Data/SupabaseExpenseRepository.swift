@@ -39,6 +39,67 @@ actor SupabaseExpenseRepository: ExpenseRepository {
         return rule
     }
 
+    func updateRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
+        _ = try await client
+            .from("recurring_rule")
+            .update(RecurringRuleUpdateDTO(from: rule))
+            .eq("id", value: rule.id)
+            .execute()
+        return rule
+    }
+
+    func fetchActiveRecurringRules(for userId: UUID) async throws -> [RecurringRuleRecord] {
+        let rows: [RecurringRuleDTO] = try await client
+            .from("recurring_rule")
+            .select()
+            .eq("owner_user_id", value: userId)
+            .eq("is_active", value: true)
+            .execute()
+            .value
+        return rows.compactMap { $0.toRecord() }
+    }
+
+    func fetchRecurringRule(id: UUID) async throws -> RecurringRuleRecord? {
+        let rows: [RecurringRuleDTO] = try await client
+            .from("recurring_rule")
+            .select()
+            .eq("id", value: id)
+            .limit(1)
+            .execute()
+            .value
+        return rows.compactMap { $0.toRecord() }.first
+    }
+
+    func fetchLatestExpense(forRecurringId recurringId: UUID) async throws -> ExpenseRecord? {
+        let rows: [ExpenseDTO] = try await client
+            .from("expense")
+            .select("*, expense_share(*)")
+            .eq("recurring_id", value: recurringId)
+            .order("spent_at", ascending: false)
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return rows.compactMap { $0.toRecord() }.first
+    }
+
+    func hasExpense(recurringId: UUID, spentAt: Date) async throws -> Bool {
+        struct IdRow: Decodable {
+            let id: UUID
+        }
+
+        let day = CalendarDateCodec.string(from: spentAt)
+        let rows: [IdRow] = try await client
+            .from("expense")
+            .select("id")
+            .eq("recurring_id", value: recurringId)
+            .eq("spent_at", value: day)
+            .limit(1)
+            .execute()
+            .value
+        return !rows.isEmpty
+    }
+
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
 
@@ -99,6 +160,16 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             .from("expense")
             .delete()
             .eq("id", value: id)
+            .execute()
+    }
+
+    func deleteFutureRecurringExpenses(recurringId: UUID, after date: Date) async throws {
+        let day = CalendarDateCodec.string(from: date)
+        try await client
+            .from("expense")
+            .delete()
+            .eq("recurring_id", value: recurringId)
+            .gt("spent_at", value: day)
             .execute()
     }
 
@@ -246,6 +317,7 @@ private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
     let pCategory: ExpenseCategory
     let pTitle: String?
     let pNote: String?
+    let pLocation: ExpenseLocation?
     let pSpentAt: String
     let pPaidBy: UUID
     let pHouseholdId: UUID?
@@ -259,6 +331,7 @@ private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
         case pCategory = "p_category"
         case pTitle = "p_title"
         case pNote = "p_note"
+        case pLocation = "p_location"
         case pSpentAt = "p_spent_at"
         case pPaidBy = "p_paid_by"
         case pHouseholdId = "p_household_id"
@@ -273,6 +346,7 @@ private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
         pCategory = expense.category
         pTitle = expense.title
         pNote = expense.note
+        pLocation = expense.location
         pSpentAt = CalendarDateCodec.string(from: expense.spentAt)
         pPaidBy = expense.paidBy
         pHouseholdId = expense.householdId
@@ -295,6 +369,11 @@ private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
             try container.encode(pNote, forKey: .pNote)
         } else {
             try container.encodeNil(forKey: .pNote)
+        }
+        if let pLocation {
+            try container.encode(pLocation, forKey: .pLocation)
+        } else {
+            try container.encodeNil(forKey: .pLocation)
         }
         try container.encode(pSpentAt, forKey: .pSpentAt)
         try container.encode(pPaidBy, forKey: .pPaidBy)
@@ -348,6 +427,7 @@ private struct CreateEditProposalParams: Encodable, Sendable {
     let category: ExpenseCategory
     let title: String?
     let note: String?
+    let location: ExpenseLocation?
     let spentAt: String
     let paidBy: UUID
     let shares: [ShareParam]
@@ -359,6 +439,7 @@ private struct CreateEditProposalParams: Encodable, Sendable {
         case category = "p_category"
         case title = "p_title"
         case note = "p_note"
+        case location = "p_location"
         case spentAt = "p_spent_at"
         case paidBy = "p_paid_by"
         case shares = "p_shares"
@@ -371,6 +452,7 @@ private struct CreateEditProposalParams: Encodable, Sendable {
         category = proposal.category
         title = proposal.title
         note = proposal.note
+        location = proposal.location
         spentAt = CalendarDateCodec.string(from: proposal.spentAt)
         paidBy = proposal.paidBy
         shares = proposal.shares.map { ShareParam(userId: $0.userId, amountMinor: $0.amountMinor) }
@@ -391,6 +473,11 @@ private struct CreateEditProposalParams: Encodable, Sendable {
             try container.encode(note, forKey: .note)
         } else {
             try container.encodeNil(forKey: .note)
+        }
+        if let location {
+            try container.encode(location, forKey: .location)
+        } else {
+            try container.encodeNil(forKey: .location)
         }
         try container.encode(spentAt, forKey: .spentAt)
         try container.encode(paidBy, forKey: .paidBy)

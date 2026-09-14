@@ -45,6 +45,40 @@ actor LocalExpenseRepository: ExpenseRepository {
         return rule
     }
 
+    func updateRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
+        var all = try loadRecurring()
+        guard let index = all.firstIndex(where: { $0.id == rule.id }) else {
+            throw ExpenseRepositoryError.notFound
+        }
+        all[index] = rule
+        try saveRecurring(all)
+        return rule
+    }
+
+    func fetchActiveRecurringRules(for userId: UUID) async throws -> [RecurringRuleRecord] {
+        try loadRecurring().filter { $0.ownerUserId == userId && $0.isActive }
+    }
+
+    func fetchRecurringRule(id: UUID) async throws -> RecurringRuleRecord? {
+        try loadRecurring().first { $0.id == id }
+    }
+
+    func fetchLatestExpense(forRecurringId recurringId: UUID) async throws -> ExpenseRecord? {
+        try load()
+            .filter { $0.recurringId == recurringId }
+            .sorted {
+                $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt)
+            }
+            .first
+    }
+
+    func hasExpense(recurringId: UUID, spentAt: Date) async throws -> Bool {
+        let day = Calendar.current.startOfDay(for: spentAt)
+        return try load().contains {
+            $0.recurringId == recurringId && Calendar.current.isDate($0.spentAt, inSameDayAs: day)
+        }
+    }
+
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
         var all = try load()
@@ -67,6 +101,24 @@ actor LocalExpenseRepository: ExpenseRepository {
 
         var proposals = try loadProposals()
         proposals.removeAll { $0.expenseId == id }
+        try saveProposals(proposals)
+    }
+
+    func deleteFutureRecurringExpenses(recurringId: UUID, after date: Date) async throws {
+        let calendar = Calendar.current
+        let cutoff = calendar.startOfDay(for: date)
+        var all = try load()
+        let removedIds = Set(all.filter {
+            $0.recurringId == recurringId
+                && calendar.startOfDay(for: $0.spentAt) > cutoff
+        }.map(\.id))
+        guard !removedIds.isEmpty else { return }
+
+        all.removeAll { removedIds.contains($0.id) }
+        try save(all)
+
+        var proposals = try loadProposals()
+        proposals.removeAll { removedIds.contains($0.expenseId) }
         try saveProposals(proposals)
     }
 
@@ -162,6 +214,7 @@ actor LocalExpenseRepository: ExpenseRepository {
             all[expenseIndex].category = proposal.category
             all[expenseIndex].title = proposal.title
             all[expenseIndex].note = proposal.note
+            all[expenseIndex].location = proposal.location
             all[expenseIndex].spentAt = proposal.spentAt
             all[expenseIndex].paidBy = proposal.paidBy
             all[expenseIndex].shares = proposal.shares.map { share in

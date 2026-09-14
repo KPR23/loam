@@ -126,7 +126,7 @@ struct HomeView: View {
                 onDelete: isPendingAcceptance ? nil : {
                     let target = expense
                     selectedExpense = nil
-                    expensePendingDelete = target
+                    presentDeleteConfirmation(for: target)
                 },
                 pendingActions: pendingDetailActions(for: expense)
             )
@@ -134,7 +134,7 @@ struct HomeView: View {
         .alert(
             "Delete this expense?",
             isPresented: Binding(
-                get: { expensePendingDelete != nil },
+                get: { expensePendingDelete?.isRecurring == false },
                 set: { if !$0 { expensePendingDelete = nil } }
             )
         ) {
@@ -155,6 +155,27 @@ struct HomeView: View {
         } message: {
             if let expense = expensePendingDelete {
                 Text(deleteConfirmationMessage(for: expense))
+            }
+        }
+        .alert(
+            "Delete recurring expense?",
+            isPresented: Binding(
+                get: { expensePendingDelete?.isRecurring == true },
+                set: { if !$0 { expensePendingDelete = nil } }
+            )
+        ) {
+            Button("Delete this occurrence only") {
+                deletePendingRecurringExpense(mode: .occurrenceOnly)
+            }
+            Button("Delete and stop repeating", role: .destructive) {
+                deletePendingRecurringExpense(mode: .stopRecurring)
+            }
+            Button("Cancel", role: .cancel) {
+                expensePendingDelete = nil
+            }
+        } message: {
+            if let expense = expensePendingDelete {
+                Text(recurringDeleteConfirmationMessage(for: expense))
             }
         }
     }
@@ -271,8 +292,10 @@ struct HomeView: View {
                     ForEach(section.expenses) { expense in
                         expenseRow(expense)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    expensePendingDelete = expense
+                                // Avoid `role: .destructive` — it triggers immediate row removal
+                                // before the confirmation alert; tint keeps the delete styling.
+                                Button {
+                                    presentDeleteConfirmation(for: expense)
                                 } label: {
                                     Label {
                                         Text("Delete")
@@ -341,7 +364,7 @@ struct HomeView: View {
                 .foregroundStyle(HomeTheme.secondary)
             Spacer()
             Text(MoneyFormatter.string(from: dayTotal(for: expenses)))
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .fontWeight(.regular)
                 .foregroundStyle(HomeTheme.secondary)
                 .monospacedDigit()
@@ -377,71 +400,33 @@ struct HomeView: View {
     }
 
     private func expenseRow(_ expense: ExpenseRecord) -> some View {
-        expenseRowContent(expense)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                selectedExpense = expense
-            }
-            .contextMenu {
-                if canSplit(expense) {
-                    Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
-                        presentSplit(for: expense)
-                    }
-                }
-                Button(role: .destructive) {
-                    expensePendingDelete = expense
-                } label: {
-                    DestructiveMenuLabel(title: "Delete", systemImage: "trash")
+        HomeExpenseRow(
+            expense: expense,
+            myUserId: authSession.userId
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            selectedExpense = expense
+        }
+        .contextMenu {
+            if canSplit(expense) {
+                Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
+                    presentSplit(for: expense)
                 }
             }
-            .accessibilityAddTraits(.isButton)
-            .accessibilityHint("Shows expense details")
-    }
-
-    private func expenseRowContent(_ expense: ExpenseRecord) -> some View {
-        let userId = authSession.userId
-        let mine = userId.map { expense.share(for: $0) } ?? expense.money
-
-        return LabeledContent {
-            VStack(alignment: .trailing, spacing: 2) {
-                HStack(spacing: 5) {
-                    if expense.isShared {
-                        Image(systemName: "person.2.fill")
-                            .font(.caption)
-                            .foregroundStyle(HomeTheme.secondary)
-                            .accessibilityHidden(true)
-                    }
-                    Text(MoneyFormatter.string(from: mine))
-                        .monospacedDigit()
-                }
-                if expense.isShared {
-                    Text("of \(MoneyFormatter.string(from: expense.money))")
-                        .font(.caption2)
-                        .foregroundStyle(HomeTheme.secondary)
-                }
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(
-                expense.isShared
-                    ? "Your share \(MoneyFormatter.string(from: mine)), shared expense"
-                    : MoneyFormatter.string(from: mine)
-            )
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                titleLabel(expense)
-                if let note = expense.note, !note.isEmpty {
-                    Text(note)
-                        .font(.caption)
-                        .foregroundStyle(HomeTheme.secondary)
-                }
+            Button(role: .destructive) {
+                presentDeleteConfirmation(for: expense)
+            } label: {
+                DestructiveMenuLabel(title: "Delete", systemImage: "trash")
             }
         }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Shows expense details")
     }
 
     private func canSplit(_ expense: ExpenseRecord) -> Bool {
-        expense.recurringId == nil
-            && SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+        SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
     }
 
     private func pendingDetailActions(for expense: ExpenseRecord) -> ExpenseDetailPendingActions? {
@@ -493,6 +478,13 @@ struct HomeView: View {
         expensePendingSplit = SplitExpensePresentation(expense: expense, myUserId: userId)
     }
 
+    private func presentDeleteConfirmation(for expense: ExpenseRecord) {
+        // Defer until swipe actions finish dismissing so the row stays put until confirmed.
+        Task { @MainActor in
+            expensePendingDelete = expense
+        }
+    }
+
     private func deleteConfirmationMessage(for expense: ExpenseRecord) -> String {
         var message = "\(expense.displayTitle) · \(MoneyFormatter.string(from: expense.money))"
         if expense.isShared, let userId = authSession.userId {
@@ -503,16 +495,23 @@ struct HomeView: View {
         return message
     }
 
-    private func titleLabel(_ expense: ExpenseRecord) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: expense.category.systemImage)
-                .font(.callout)
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(expense.category.color)
-                .frame(width: 22, alignment: .center)
-            Text(expense.displayTitle)
-                .font(.system(.body, design: .rounded).weight(.medium))
+    private func recurringDeleteConfirmationMessage(for expense: ExpenseRecord) -> String {
+        var message = "\(expense.displayTitle) · \(MoneyFormatter.string(from: expense.money))"
+        message += "\n\nChoose whether to remove only this month's charge or stop the recurring expense entirely."
+        if expense.isShared, let userId = authSession.userId {
+            let partnerIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: userId)
+            let partnerNames = SplitPartnerOption.displayNames(for: partnerIds)
+            message += "\n\nEither option removes this occurrence for \(partnerNames)."
         }
+        return message
+    }
+
+    private func deletePendingRecurringExpense(mode: RecurringDeletionMode) {
+        guard let expense = expensePendingDelete, let userId = authSession.userId else { return }
+        Task {
+            await expenseStore.delete(id: expense.id, userId: userId, recurringMode: mode)
+        }
+        expensePendingDelete = nil
     }
 }
 

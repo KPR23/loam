@@ -15,7 +15,10 @@ struct ExpenseDetailSheet: View {
     var pendingActions: ExpenseDetailPendingActions?
 
     @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var expenseStore: ExpenseStore
     @Environment(\.dismiss) private var dismiss
+
+    @State private var recurringRule: RecurringRuleRecord?
 
     private var myUserId: UUID? { authSession.userId }
 
@@ -27,7 +30,6 @@ struct ExpenseDetailSheet: View {
     private var canSplit: Bool {
         pendingActions == nil
             && onSplit != nil
-            && expense.recurringId == nil
             && SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
     }
 
@@ -77,15 +79,29 @@ struct ExpenseDetailSheet: View {
                             Text(expense.displayTitle)
                                 .font(.system(.body, design: .rounded))
                         }
+
+                        LabeledContent("Category") {
+                            HStack(spacing: 6) {
+                                Image(systemName: expense.category.systemImage)
+                                Text(expense.category.displayName)
+                                    .font(.system(.body, design: .rounded))
+                            }
+                            .foregroundStyle(expense.category.color)
+                        }
                     }
 
-                    LabeledContent("Category") {
-                        HStack(spacing: 6) {
-                            Image(systemName: expense.category.systemImage)
-                            Text(expense.category.displayName)
-                                .font(.system(.body, design: .rounded))
+                    if let location = expense.location {
+                        LabeledContent("Location") {
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(location.name)
+                                    .font(.system(.body, design: .rounded))
+                                if let subtitle = location.displaySubtitle {
+                                    Text(subtitle)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
-                        .foregroundStyle(expense.category.color)
                     }
 
                     LabeledContent("Date") {
@@ -98,16 +114,43 @@ struct ExpenseDetailSheet: View {
                         }
                     }
 
-                    if expense.recurringId != nil {
-                        LabeledContent("Type") {
-                            Label("Recurring", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
-                        }
-                    }
-
                     if let note = expense.note, !note.isEmpty {
                         LabeledContent("Note") {
                             Text(note)
                                 .multilineTextAlignment(.trailing)
+                        }
+                    }
+                }
+
+                if let recurringRule {
+                    Section("Recurring") {
+                        LabeledContent("Frequency") {
+                            Text(recurringRule.scheduleDescription)
+                        }
+
+                        LabeledContent("Started") {
+                            Text(recurringRule.startDate.formatted(date: .complete, time: .omitted))
+                        }
+
+                        LabeledContent("Ends") {
+                            Text(recurringRule.endDateDisplay)
+                        }
+
+                        if recurringRule.isActive, !recurringRule.hasEnded {
+                            LabeledContent("Next charge") {
+                                Text(recurringRule.nextOccurrence.formatted(date: .complete, time: .omitted))
+                            }
+                        }
+
+                        LabeledContent("Status") {
+                            Text(recurringStatus(for: recurringRule))
+                                .foregroundStyle(recurringRule.isActive && !recurringRule.hasEnded ? .primary : .secondary)
+                        }
+                    }
+                } else if expense.isRecurring {
+                    Section("Recurring") {
+                        LabeledContent("Type") {
+                            Label("Recurring", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
                         }
                     }
                 }
@@ -144,7 +187,7 @@ struct ExpenseDetailSheet: View {
                                 }
                             }
                         } label: {
-                            Image(systemName: "ellipsis.circle")
+                            Image(systemName: "ellipsis")
                         }
                         .accessibilityLabel("Expense actions")
                     }
@@ -158,9 +201,26 @@ struct ExpenseDetailSheet: View {
                     pendingActionsBar(pendingActions)
                 }
             }
+            .task(id: expense.recurringId) {
+                guard expense.isRecurring else {
+                    recurringRule = nil
+                    return
+                }
+                recurringRule = await expenseStore.fetchRecurringRule(for: expense)
+            }
         }
-        .presentationDetents(pendingActions == nil ? [.medium, .large] : [.large])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+
+    private func recurringStatus(for rule: RecurringRuleRecord) -> String {
+        if !rule.isActive {
+            return "Stopped"
+        }
+        if rule.hasEnded {
+            return "Ended"
+        }
+        return "Active"
     }
 
     private func pendingActionsBar(_ actions: ExpenseDetailPendingActions) -> some View {
@@ -168,6 +228,7 @@ struct ExpenseDetailSheet: View {
             Divider()
             PendingExpenseActions(
                 creatorName: actions.creatorName,
+                menuOpensUpward: true,
                 onAccept: actions.onAccept,
                 onAcceptWithTrust: actions.onAcceptWithTrust,
                 onReject: actions.onReject,
@@ -222,6 +283,7 @@ struct ExpenseDetailSheet: View {
         shares: [ExpenseShareRecord(userId: userId, amountMinor: 4200)]
     ))
     .environmentObject(AuthSession())
+    .environmentObject(ExpenseStore())
 }
 
 #Preview("Shared") {
@@ -240,4 +302,5 @@ struct ExpenseDetailSheet: View {
         ]
     ))
     .environmentObject(AuthSession())
+    .environmentObject(ExpenseStore())
 }

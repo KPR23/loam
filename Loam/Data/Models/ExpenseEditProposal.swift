@@ -9,6 +9,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
     var category: ExpenseCategory
     var title: String?
     var note: String?
+    var location: ExpenseLocation?
     var spentAt: Date
     var paidBy: UUID
     var shares: [ExpenseShareRecord]
@@ -25,6 +26,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         category: ExpenseCategory,
         title: String? = nil,
         note: String? = nil,
+        location: ExpenseLocation? = nil,
         spentAt: Date,
         paidBy: UUID,
         shares: [ExpenseShareRecord],
@@ -40,6 +42,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         self.category = category
         self.title = title
         self.note = note
+        self.location = location
         self.spentAt = Calendar.current.startOfDay(for: spentAt)
         self.paidBy = paidBy
         self.shares = shares
@@ -56,6 +59,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
             category: category,
             title: title,
             note: note,
+            location: location,
             spentAt: spentAt,
             paidBy: paidBy,
             createdBy: createdBy,
@@ -79,6 +83,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
     var category: ExpenseCategory
     var title: String?
     var note: String?
+    var location: ExpenseLocation?
     var spentAt: String
     var paidBy: UUID
     var shares: [ProposalShareDTO]
@@ -95,6 +100,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
         case category
         case title
         case note
+        case location
         case spentAt = "spent_at"
         case paidBy = "paid_by"
         case shares
@@ -114,6 +120,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
             category: category,
             title: title,
             note: note,
+            location: location,
             spentAt: spent,
             paidBy: paidBy,
             shares: shares.map {

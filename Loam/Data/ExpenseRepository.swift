@@ -5,8 +5,14 @@ protocol ExpenseRepository: Sendable {
     func fetchExpenses(ids: [UUID]) async throws -> [ExpenseRecord]
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord
+    func updateRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord
+    func fetchActiveRecurringRules(for userId: UUID) async throws -> [RecurringRuleRecord]
+    func fetchRecurringRule(id: UUID) async throws -> RecurringRuleRecord?
+    func fetchLatestExpense(forRecurringId recurringId: UUID) async throws -> ExpenseRecord?
+    func hasExpense(recurringId: UUID, spentAt: Date) async throws -> Bool
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     func delete(id: UUID) async throws
+    func deleteFutureRecurringExpenses(recurringId: UUID, after date: Date) async throws
     func respondToShare(expenseId: UUID, userId: UUID, action: ExpenseShareResponseAction) async throws
     func fetchPendingProposals(for userId: UUID) async throws -> [ExpenseEditProposal]
     func createEditProposal(_ proposal: ExpenseEditProposal, expenseId: UUID) async throws -> ExpenseEditProposal

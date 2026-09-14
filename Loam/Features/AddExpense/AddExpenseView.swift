@@ -17,10 +17,14 @@ struct AddExpenseView: View {
     @State private var category: ExpenseCategory = .groceries
     @State private var title = ""
     @State private var note = ""
+    @State private var location: ExpenseLocation?
     @State private var spentAt = Date()
     @State private var isRepeating = false
+    @State private var repeatPreset: RecurringPreset = .monthly
     @State private var repeatInterval: RecurringIntervalUnit = .month
-    @State private var isSplit = false
+    @State private var repeatIntervalCount = 1
+    @State private var repeatHasEndDate = false
+    @State private var repeatEndDate = Date()
     @State private var selectedPartnerUserIds: Set<UUID> = []
     @State private var splitMode: SplitExpenseMode = .equal
     @State private var paidByUserId: UUID?
@@ -33,6 +37,8 @@ struct AddExpenseView: View {
     @FocusState private var amountFocused: Bool
     @FocusState private var titleFocused: Bool
     @FocusState private var noteFocused: Bool
+
+    private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
 
     var body: some View {
         NavigationStack {
@@ -70,36 +76,36 @@ struct AddExpenseView: View {
             Spacer(minLength: 0)
 
             amountDisplay
-                .padding(.horizontal, 28)
 
             Spacer(minLength: 0)
 
-            HStack(spacing: 12) {
-                Button {
-                    cancelTapCount += 1
-                    dismiss()
-                } label: {
-                    Text("Cancel")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.65), trigger: cancelTapCount)
+            GeometryReader { proxy in
+                let spacing: CGFloat = 10
+                let contentWidth = proxy.size.width - spacing
+                HStack(spacing: spacing) {
+                    ExpenseCategoryPicker(category: $category, style: .chip)
+                        .frame(width: contentWidth * 0.75, height: proxy.size.height, alignment: .leading)
 
-                Button {
-                    continueTapCount += 1
-                    step = .details
-                    amountFocused = false
-                } label: {
-                    Text("Continue")
-                        .frame(maxWidth: .infinity)
+                    Button {
+                        continueTapCount += 1
+                        step = .details
+                        amountFocused = false
+                        titleFocused = false
+                    } label: {
+                        Image(systemName: "arrow.right")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .disabled(!canContinue)
+                    .accessibilityLabel("Continue")
+                    .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.75), trigger: continueTapCount)
+                    .frame(width: contentWidth * 0.25, height: proxy.size.height)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(!canContinue)
-                .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.75), trigger: continueTapCount)
             }
-            .padding(.horizontal, 28)
+            .frame(height: 44)
+            .padding(.horizontal, 16)
             .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -111,7 +117,7 @@ struct AddExpenseView: View {
     }
 
     private var amountDisplay: some View {
-        ZStack(alignment: .leading) {
+        ZStack {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(amountDisplayText)
                     .font(.system(size: 64, weight: .bold, design: .rounded))
@@ -125,14 +131,24 @@ struct AddExpenseView: View {
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity)
             .animation(reduceMotion ? nil : .smooth(duration: 0.42), value: amountDisplayValue)
 
-            TextField("", text: $amountText)
+            TextField("", text: sanitizedAmountBinding)
                 .keyboardType(.decimalPad)
                 .focused($amountFocused)
                 .opacity(0.015)
                 .accessibilityLabel("Amount")
+                .multilineTextAlignment(.center)
         }
+        .padding(.horizontal, 28)
+    }
+
+    private var sanitizedAmountBinding: Binding<String> {
+        Binding(
+            get: { amountText },
+            set: { amountText = Money.sanitizeTypingInput($0) }
+        )
     }
 
     // MARK: - Details step
@@ -140,42 +156,65 @@ struct AddExpenseView: View {
     private var detailsStep: some View {
         Form {
             Section {
-                DatePicker("Date", selection: $spentAt, displayedComponents: .date)
-            }
-
-            Section {
                 TextField("Title (optional)", text: $title)
                     .textInputAutocapitalization(.sentences)
                     .focused($titleFocused)
-                Picker("Category", selection: $category) {
-                    ForEach(ExpenseCategory.allCases) { item in
-                        HStack(spacing: 12) {
-                            Image(systemName: item.systemImage)
-                                .font(.body)
-                                .foregroundStyle(item.color)
-                                .frame(width: 22, alignment: .center)
-                            Text(item.displayName)
-                        }
-                        .tag(item)
-                    }
-                }
+
+                DatePicker("Date", selection: $spentAt, displayedComponents: .date)
+                ExpenseLocationPicker(location: $location)
             } footer: {
-                Text("If you leave the title empty, the category name is shown instead.")
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("No title set — the category name will be shown instead.")
+                }
             }
 
             Section {
                 Toggle("Repeat", isOn: $isRepeating)
 
                 if isRepeating {
-                    Picker("Frequency", selection: $repeatInterval) {
-                        ForEach(RecurringIntervalUnit.allCases) { interval in
-                            Text(interval.displayName).tag(interval)
+                    Picker("Frequency", selection: $repeatPreset) {
+                        ForEach(RecurringPreset.allCases) { preset in
+                            Text(preset.displayName).tag(preset)
                         }
+                    }
+
+                    if repeatPreset == .custom {
+                        Stepper(value: $repeatIntervalCount, in: 1...365, step: 1) {
+                            Text("Every \(repeatIntervalCount)")
+                        }
+                        Picker("Unit", selection: $repeatInterval) {
+                            ForEach(RecurringIntervalUnit.allCases) { unit in
+                                Text(repeatIntervalCount == 1 ? unit.singularName : unit.pluralName)
+                                    .tag(unit)
+                            }
+                        }
+                    }
+
+                    Toggle("Ends", isOn: $repeatHasEndDate)
+
+                    if repeatHasEndDate {
+                        DatePicker(
+                            "End date",
+                            selection: $repeatEndDate,
+                            in: spentAt...,
+                            displayedComponents: .date
+                        )
                     }
                 }
             } footer: {
                 if isRepeating {
-                    Text("Creates a recurring expense like a subscription. The next charge is scheduled from the date above.")
+                    Text(repeatFooterText)
+                }
+            }
+            .onChange(of: repeatPreset) { _, newValue in
+                if let interval = newValue.interval {
+                    repeatInterval = interval.unit
+                    repeatIntervalCount = interval.count
+                }
+            }
+            .onChange(of: spentAt) { _, newValue in
+                if repeatEndDate < newValue {
+                    repeatEndDate = newValue
                 }
             }
 
@@ -192,8 +231,8 @@ struct AddExpenseView: View {
                     myUserId: userId,
                     myDisplayName: authSession.displayName ?? "You",
                     availablePartners: splitPartners,
+                    requiresPartner: false,
                     selectedPartnerUserIds: $selectedPartnerUserIds,
-                    isSplit: $isSplit,
                     splitMode: $splitMode,
                     paidByUserId: Binding(
                         get: { paidByUserId ?? userId },
@@ -214,14 +253,24 @@ struct AddExpenseView: View {
                 paidByUserId = authSession.userId
             }
             if isSplit, !SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) {
-                isSplit = false
+                selectedPartnerUserIds = []
             }
         }
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        if step == .details {
+        switch step {
+        case .amount:
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    cancelTapCount += 1
+                    dismiss()
+                }
+                .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.65), trigger: cancelTapCount)
+            }
+
+        case .details:
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     step = .amount
@@ -274,10 +323,25 @@ struct AddExpenseView: View {
         if amountText.isEmpty {
             return "0"
         }
+        if amountText.hasSuffix(","), let money = Money(majorString: amountText) {
+            return MoneyFormatter.typingAmount(from: money) + ","
+        }
         if let money = parsedMoney {
             return MoneyFormatter.typingAmount(from: money)
         }
         return amountText
+    }
+
+    private var repeatScheduleDescription: String {
+        repeatInterval.scheduleDescription(intervalCount: repeatIntervalCount).lowercased()
+    }
+
+    private var repeatFooterText: String {
+        var text = "Creates a recurring expense like a subscription. Repeats \(repeatScheduleDescription), starting from the date above."
+        if repeatHasEndDate {
+            text += " Ends on \(repeatEndDate.formatted(date: .abbreviated, time: .omitted))."
+        }
+        return text
     }
 
     private func focusAmountField() async {
@@ -300,15 +364,10 @@ struct AddExpenseView: View {
         isSaving = true
         defer { isSaving = false }
 
-        if isSplit && isRepeating {
-            errorMessage = "Recurring expenses cannot be split yet."
-            return
-        }
-
         if isSplit, let validationError = SplitExpenseSection.validationError(
             totalMinor: money.amountMinor,
-            isSplit: isSplit,
             selectedPartnerCount: selectedPartnerUserIds.count,
+            requiresPartner: true,
             splitMode: selectedPartnerUserIds.count == 1 ? splitMode : .equal,
             myPercentage: myPercentage,
             myExactAmountText: myExactAmountText
@@ -318,6 +377,24 @@ struct AddExpenseView: View {
         }
 
         do {
+            let recurring: RecurringRuleRecord?
+            if isRepeating {
+                recurring = RecurringRuleRecord(
+                    ownerUserId: userId,
+                    amountMinor: money.amountMinor,
+                    category: category,
+                    title: title.nilIfBlank,
+                    note: note.nilIfBlank,
+                    location: location,
+                    intervalUnit: repeatInterval,
+                    intervalCount: max(1, repeatIntervalCount),
+                    startDate: spentAt,
+                    endDate: repeatHasEndDate ? repeatEndDate : nil
+                )
+            } else {
+                recurring = nil
+            }
+
             if isSplit {
                 let partners = selectedSplitPartners
                 let household = try await householdStore.ensureSplitHousehold(
@@ -330,6 +407,7 @@ struct AddExpenseView: View {
                     category: category,
                     title: title.nilIfBlank,
                     note: note,
+                    location: location,
                     spentAt: spentAt,
                     userId: userId,
                     householdId: household.id,
@@ -337,29 +415,16 @@ struct AddExpenseView: View {
                     paidBy: paidByUserId ?? userId,
                     partnerUserIds: partners.map(\.userId),
                     myPercentage: myPercentage,
-                    myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor
+                    myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor,
+                    recurring: recurring
                 )
             } else {
-                let recurring: RecurringRuleRecord?
-                if isRepeating {
-                    recurring = RecurringRuleRecord(
-                        ownerUserId: userId,
-                        amountMinor: money.amountMinor,
-                        category: category,
-                        title: title.nilIfBlank,
-                        note: note.nilIfBlank,
-                        intervalUnit: repeatInterval,
-                        nextOccurrence: spentAt
-                    )
-                } else {
-                    recurring = nil
-                }
-
                 try await expenseStore.addPersonal(
                     amountMinor: money.amountMinor,
                     category: category,
                     title: title.nilIfBlank,
                     note: note,
+                    location: location,
                     spentAt: spentAt,
                     userId: userId,
                     recurring: recurring
