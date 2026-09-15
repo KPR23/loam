@@ -16,6 +16,8 @@ struct HomeExpenseRow: View {
     var creatorName: String? = nil
     var acceptance: AcceptanceActions? = nil
     var onTap: (() -> Void)? = nil
+    /// When true, the recurring glyph uses `HomeTheme.recurringHighlight` (first Home list row only).
+    var highlightsRecurringIcon: Bool = false
 
     private var myShare: Money {
         guard let myUserId else { return expense.money }
@@ -93,7 +95,11 @@ struct HomeExpenseRow: View {
                         if expense.isRecurring {
                             Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
                                 .font(.caption)
-                                .foregroundStyle(HomeTheme.secondary)
+                                .foregroundStyle(
+                                    highlightsRecurringIcon
+                                        ? HomeTheme.recurringHighlight
+                                        : HomeTheme.secondary
+                                )
                                 .accessibilityHidden(true)
                         }
                         if expense.isShared {

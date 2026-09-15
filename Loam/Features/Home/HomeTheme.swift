@@ -11,6 +11,9 @@ enum HomeTheme {
     /// Monochrome brand accent (replaces system blue tint).
     static let accent = Color.primary
 
+    /// Blue tint for the first recurring expense indicator on Home.
+    static let recurringHighlight = Color(red: 0.15, green: 0.50, blue: 0.98)
+
     /// Unfilled arc tiles.
     static let tileEmpty = Color(.quaternaryLabel).opacity(0.45)
 
