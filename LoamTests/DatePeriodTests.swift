@@ -21,4 +21,15 @@ final class DatePeriodTests: XCTestCase {
         let period = DatePeriod.month(year: 2026, month: 3)
         XCTAssertEqual(period.shiftedByMonths(0), period)
     }
+
+    func testDefaultAddExpenseDateUsesTodayForCurrentMonth() {
+        let today = Calendar.current.startOfDay(for: Date())
+        XCTAssertEqual(DatePeriod.currentMonth.defaultAddExpenseDate, today)
+    }
+
+    func testDefaultAddExpenseDateUsesFirstDayForOtherMonths() {
+        let other = DatePeriod.currentMonth.shiftedByMonths(-2)
+        XCTAssertEqual(other.defaultAddExpenseDate, other.anchorDate)
+        XCTAssertNotEqual(other.defaultAddExpenseDate, Calendar.current.startOfDay(for: Date()))
+    }
 }

@@ -13,6 +13,8 @@
 		095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */; };
 		1F773CF0A1FB5908D798406C /* ExpenseRepositoryFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */; };
 		20488F784A448D5470EF4707 /* HomeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76BB6915492C01E2E6B51959 /* HomeTheme.swift */; };
+		20B4E8F1A92C4D6E8F0A1B2C /* HomeMonthSwipeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30B4E8F1A92C4D6E8F0A1B2C /* HomeMonthSwipeBridge.swift */; };
+		20C5F9A2B03D5E7F9A1B2C3D /* DatePeriodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30C5F9A2B03D5E7F9A1B2C3D /* DatePeriodTests.swift */; };
 		20A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4B /* ExpenseShareStatus.swift */; };
 		20A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift */; };
 		20A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A1B2C3D4E5F60718293A4D /* ExpenseShareAcceptance.swift */; };
@@ -124,6 +126,8 @@
 		6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDTO.swift; sourceTree = "<group>"; };
 		7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseExpenseRepository.swift; sourceTree = "<group>"; };
 		76BB6915492C01E2E6B51959 /* HomeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTheme.swift; sourceTree = "<group>"; };
+		30B4E8F1A92C4D6E8F0A1B2C /* HomeMonthSwipeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeMonthSwipeBridge.swift; sourceTree = "<group>"; };
+		30C5F9A2B03D5E7F9A1B2C3D /* DatePeriodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePeriodTests.swift; sourceTree = "<group>"; };
 		7FCB2D37CB3148229B212824 /* StoreKitStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitStub.swift; sourceTree = "<group>"; };
 		8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySpendHero.swift; sourceTree = "<group>"; };
 		8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepository.swift; sourceTree = "<group>"; };
@@ -180,6 +184,7 @@
 				A1B2C3D4E5F6789012345678 /* ExpenseDetailSheet.swift */,
 				30A1B2C3D4E5F60718293A4F0 /* EditProposalReviewCard.swift */,
 				B73CC2C0E31AA168F61ABFED /* HomeCollapsingTopBar.swift */,
+				30B4E8F1A92C4D6E8F0A1B2C /* HomeMonthSwipeBridge.swift */,
 				76BB6915492C01E2E6B51959 /* HomeTheme.swift */,
 				D5950FD4B0A003B32224F60B /* HomeView.swift */,
 				30A1B2C3D4E5F60718293A53 /* HomeExpenseRow.swift */,
@@ -336,6 +341,7 @@
 			children = (
 				38B664DBA46BD536B44E5F73 /* BudgetArcLayoutTests.swift */,
 				BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */,
+				30C5F9A2B03D5E7F9A1B2C3D /* DatePeriodTests.swift */,
 				36A1B2C3D4E5F60718293A60 /* RecurringMaterializerTests.swift */,
 				F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */,
 				D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */,
@@ -518,6 +524,7 @@
 			files = (
 				654413FF7956D9DB29DD830D /* BudgetArcLayoutTests.swift in Sources */,
 				269663C225006F0D994C1708 /* CalendarDateCodecTests.swift in Sources */,
+				20C5F9A2B03D5E7F9A1B2C3D /* DatePeriodTests.swift in Sources */,
 				26A1B2C3D4E5F60718293A60 /* RecurringMaterializerTests.swift in Sources */,
 				699C700B7D9C668D32D611EB /* ExpenseStoreTests.swift in Sources */,
 				88525ED016C8B7513D39C6DE /* SplitCalculatorTests.swift in Sources */,
@@ -550,6 +557,7 @@
 				E9A1B2C3D4E5F67890123456 /* ExpenseDetailSheet.swift in Sources */,
 				20A1B2C3D4E5F60718293A50 /* EditProposalReviewCard.swift in Sources */,
 				D5198E9063F112C1765093E2 /* HomeCollapsingTopBar.swift in Sources */,
+				20B4E8F1A92C4D6E8F0A1B2C /* HomeMonthSwipeBridge.swift in Sources */,
 				20488F784A448D5470EF4707 /* HomeTheme.swift in Sources */,
 				FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */,
 				20A1B2C3D4E5F60718293A51 /* PendingExpenseActions.swift in Sources */,

@@ -40,7 +40,7 @@ struct AddExpenseView: View {
 
     private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
 
-    /// - Parameter initialSpentAt: Default expense date (Home passes the first day of the viewed month).
+    /// - Parameter initialSpentAt: Seed date for the expense (Home uses `DatePeriod.defaultAddExpenseDate`).
     init(initialSpentAt: Date = Date()) {
         _spentAt = State(initialValue: Calendar.current.startOfDay(for: initialSpentAt))
     }

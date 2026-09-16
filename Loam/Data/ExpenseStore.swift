@@ -15,6 +15,9 @@ final class ExpenseStore: ObservableObject {
     /// `recurringId` → rule `startDate` for expenses in the active period (drives first-occurrence highlight).
     private var recurringStartDatesById: [UUID: Date] = [:]
 
+    /// Bumped on period change and each refresh start so stale in-flight fetches cannot overwrite newer results.
+    private var refreshGeneration = 0
+
     var pendingAcceptanceExpenses: [ExpenseRecord] {
         expenses.filter { expense in
             guard let userId = currentUserId else { return false }
@@ -34,6 +37,7 @@ final class ExpenseStore: ObservableObject {
     func applyPeriod(_ newPeriod: DatePeriod) -> Bool {
         guard period != newPeriod else { return false }
         period = newPeriod
+        refreshGeneration &+= 1
         return true
     }
 
@@ -48,22 +52,35 @@ final class ExpenseStore: ObservableObject {
             return
         }
 
+        refreshGeneration &+= 1
+        let generation = refreshGeneration
+        let periodForFetch = period
+
         isLoading = true
         lastError = nil
-        defer { isLoading = false }
+        defer {
+            if generation == refreshGeneration {
+                isLoading = false
+            }
+        }
 
         do {
             try await materializeDueRecurring(userId: userId, repository: primaryRepository)
+            guard generation == refreshGeneration else { return }
+
             #if DEBUG
             if !ExpenseRepositoryFactory.usesLocalStorage {
                 try? await materializeDueRecurring(userId: userId, repository: LocalExpenseRepository())
             }
             #endif
+            guard generation == refreshGeneration else { return }
 
-            var fetched = try await primaryRepository.fetchExpenses(for: userId, in: period)
+            var fetched = try await primaryRepository.fetchExpenses(for: userId, in: periodForFetch)
+            guard generation == refreshGeneration else { return }
+
             #if DEBUG
             if !ExpenseRepositoryFactory.usesLocalStorage {
-                if let localExpenses = try? await LocalExpenseRepository().fetchExpenses(for: userId, in: period) {
+                if let localExpenses = try? await LocalExpenseRepository().fetchExpenses(for: userId, in: periodForFetch) {
                     let existingIds = Set(fetched.map(\.id))
                     fetched.append(contentsOf: localExpenses.filter { !existingIds.contains($0.id) })
                     fetched.sort {
@@ -72,15 +89,22 @@ final class ExpenseStore: ObservableObject {
                 }
             }
             #endif
+            guard generation == refreshGeneration else { return }
+
             expenses = fetched
             summary = Self.makeSummary(expenses: fetched, userId: userId)
             recurringStartDatesById = await loadRecurringStartDates(for: fetched)
+            guard generation == refreshGeneration else { return }
             lastError = nil
         } catch {
+            guard generation == refreshGeneration else { return }
             lastError = error.localizedDescription
         }
 
+        guard generation == refreshGeneration else { return }
+
         let proposals = (try? await primaryRepository.fetchPendingProposals(for: userId)) ?? []
+        guard generation == refreshGeneration else { return }
         pendingProposals = proposals
         proposalExpenses = await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses)
     }

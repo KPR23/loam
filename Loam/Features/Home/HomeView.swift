@@ -35,7 +35,7 @@ struct HomeView: View {
     @State private var monthSlideDirection = 0
 
     private let homePendingPreviewLimit = 2
-    /// Horizontal distance before a drag counts as a month change (avoids fighting vertical scroll / row swipeActions).
+    /// Horizontal distance before a drag counts as a month change.
     private let monthSwipeThreshold: CGFloat = 80
     private let monthChangeAnimation = Animation.smooth(duration: 0.3)
 
@@ -53,8 +53,6 @@ struct HomeView: View {
                     )
                     .id(expenseStore.period)
                     .transition(monthContentTransition)
-                    // Month swipe lives on the hero only so expense-row swipeActions stay free.
-                    .simultaneousGesture(monthSwipeGesture)
                     .reportHomeHeroScrollOffset()
                     .listRowInsets(EdgeInsets(top: -2, leading: 0, bottom: 4, trailing: 0))
                     .listRowSeparator(.hidden)
@@ -71,6 +69,15 @@ struct HomeView: View {
             .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
+            .background {
+                // UIKit pan on the List scroll view: works where SwiftUI List gestures fail,
+                // and yields to row swipeActions via shouldBeRequiredToFailBy.
+                HomeMonthSwipeBridge(
+                    threshold: monthSwipeThreshold,
+                    onSwipeToNext: { shiftMonth(by: 1) },
+                    onSwipeToPrevious: { shiftMonth(by: -1) }
+                )
+            }
             .animation(reduceMotion ? nil : monthChangeAnimation, value: expenseStore.period)
             .sensoryFeedback(.selection, trigger: monthSwipeTick)
             .navigationBarTitleDisplayMode(.inline)
@@ -109,7 +116,7 @@ struct HomeView: View {
             }
         }
         .sheet(isPresented: $showAddExpense) {
-            AddExpenseView(initialSpentAt: expenseStore.period.anchorDate)
+            AddExpenseView(initialSpentAt: expenseStore.period.defaultAddExpenseDate)
         }
         .sheet(isPresented: $showMonthPicker) {
             MonthPickerSheet(period: expenseStore.period) { newPeriod in
@@ -487,19 +494,7 @@ struct HomeView: View {
         )
     }
 
-    /// Swipe left → next month; swipe right → previous (Calendar / iOS convention).
-    private var monthSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 24)
-            .onEnded { value in
-                let horizontal = value.translation.width
-                let vertical = value.translation.height
-                guard abs(horizontal) >= monthSwipeThreshold,
-                      abs(horizontal) > abs(vertical) * 1.5 else { return }
-                // Negative width = finger moved left → next month.
-                shiftMonth(by: horizontal < 0 ? 1 : -1)
-            }
-    }
-
+    /// Swipe left → next month; swipe right → previous (installed via `HomeMonthSwipeBridge`).
     private var monthContentTransition: AnyTransition {
         guard !reduceMotion, monthSlideDirection != 0 else {
             return .opacity

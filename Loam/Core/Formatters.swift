@@ -87,6 +87,14 @@ enum DatePeriod: Equatable, Hashable {
         return DatePeriod(from: date)
     }
 
+    /// Home add-expense default: today when viewing the current month, otherwise the 1st of the viewed month.
+    var defaultAddExpenseDate: Date {
+        if self == .currentMonth {
+            return Calendar.current.startOfDay(for: Date())
+        }
+        return anchorDate
+    }
+
     static func startOfMonth(for date: Date) -> Date {
         DatePeriod(from: date).anchorDate
     }
