@@ -8,6 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		03D450B1F293CE7B1F650960 /* Money.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6CD835D39E131CEAA0B24E8 /* Money.swift */; };
+		A10000000000000000000001 /* BalanceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* BalanceRecord.swift */; };
+		A10000000000000000000002 /* BalanceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* BalanceRepository.swift */; };
+		A10000000000000000000003 /* LocalBalanceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* LocalBalanceRepository.swift */; };
+		A10000000000000000000004 /* SupabaseBalanceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* SupabaseBalanceRepository.swift */; };
+		A10000000000000000000005 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* BalanceStore.swift */; };
+		A10000000000000000000006 /* BalancesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* BalancesView.swift */; };
+		A10000000000000000000008 /* LegacyDemoFixtureCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* LegacyDemoFixtureCleanup.swift */; };
 		06541C7DADA4433C65A6EEB6 /* HouseholdView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 495BB77A0F2788E50B0DD08B /* HouseholdView.swift */; };
 		094C1BE9805A819C5B7384FE /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31EC9FEA936CD6D772BB91A9 /* ProfileView.swift */; };
 		095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */; };
@@ -88,6 +95,13 @@
 /* Begin PBXFileReference section */
 		03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculator.swift; sourceTree = "<group>"; };
 		05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExpenseRepository.swift; sourceTree = "<group>"; };
+		A20000000000000000000001 /* BalanceRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceRecord.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* BalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceRepository.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* LocalBalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBalanceRepository.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* SupabaseBalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBalanceRepository.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* BalanceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* BalancesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalancesView.swift; sourceTree = "<group>"; };
+		A20000000000000000000009 /* LegacyDemoFixtureCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDemoFixtureCleanup.swift; sourceTree = "<group>"; };
 		0A3D412D891B98D11462EB02 /* Loam.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Loam.entitlements; sourceTree = "<group>"; };
 		0C15AD0F34F080CB70FB979F /* LoamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamApp.swift; sourceTree = "<group>"; };
 		0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepositoryFactory.swift; sourceTree = "<group>"; };
@@ -308,6 +322,7 @@
 				30A1B2C3D4E5F60718293A4C /* ExpenseEditProposal.swift */,
 				5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */,
 				352DDC9EA03E70A678D9AABF /* HouseholdRecord.swift */,
+				A20000000000000000000001 /* BalanceRecord.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -381,6 +396,11 @@
 				C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */,
 				7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */,
 				E6AF7E99F1E669A42B08FB2D /* SupabaseHouseholdRepository.swift */,
+				A20000000000000000000002 /* BalanceRepository.swift */,
+				A20000000000000000000005 /* BalanceStore.swift */,
+				A20000000000000000000003 /* LocalBalanceRepository.swift */,
+				A20000000000000000000004 /* SupabaseBalanceRepository.swift */,
+				A20000000000000000000009 /* LegacyDemoFixtureCleanup.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -392,10 +412,19 @@
 				486DA699C34AF42E12AB88E7 /* Auth */,
 				00C5FC9B4ADC4F1ADA441288 /* Home */,
 				A3851E41452DB5FF962E6CFD /* Household */,
+				A20000000000000000000007 /* Balances */,
 				C52490EC258E788E4090D312 /* Profile */,
 				368706140AA70A6F0620FF3F /* Root */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		A20000000000000000000007 /* Balances */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000006 /* BalancesView.swift */,
+			);
+			path = Balances;
 			sourceTree = "<group>";
 		};
 		FA6BD4D92C1A7DFA164C33E7 /* brand */ = {
@@ -522,6 +551,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000008 /* LegacyDemoFixtureCleanup.swift in Sources */,
+				A10000000000000000000001 /* BalanceRecord.swift in Sources */,
+				A10000000000000000000002 /* BalanceRepository.swift in Sources */,
+				A10000000000000000000003 /* LocalBalanceRepository.swift in Sources */,
+				A10000000000000000000004 /* SupabaseBalanceRepository.swift in Sources */,
+				A10000000000000000000005 /* BalanceStore.swift in Sources */,
+				A10000000000000000000006 /* BalancesView.swift in Sources */,
 				A385DC89F56B32C668A7375C /* AddExpenseView.swift in Sources */,
 				D02FC6D36FA2D65A11C60DBA /* AuthSession.swift in Sources */,
 				3B0879A3E31BDEB3E9BB33AE /* AuthView.swift in Sources */,

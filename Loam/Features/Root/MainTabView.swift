@@ -3,7 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     enum AppTab: Hashable {
         case expenses
-        case household
+        case balances
         case profile
     }
 
@@ -27,8 +27,8 @@ struct MainTabView: View {
                 HomeView(arcReloadToken: expensesReloadToken)
             }
 
-            Tab("Household", systemImage: "house", value: AppTab.household) {
-                HouseholdView()
+            Tab("Balances", systemImage: "scale.3d", value: AppTab.balances) {
+                BalancesView()
             }
 
             Tab("Profile", systemImage: "person", value: AppTab.profile) {
@@ -51,11 +51,11 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.expenses)
 
-            HouseholdView()
+            BalancesView()
                 .tabItem {
-                    Label("Household", systemImage: "house")
+                    Label("Balances", systemImage: "scale.3d")
                 }
-                .tag(AppTab.household)
+                .tag(AppTab.balances)
 
             ProfileView()
                 .tabItem {
@@ -77,4 +77,5 @@ struct MainTabView: View {
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
         .environmentObject(HouseholdStore())
+        .environmentObject(BalanceStore())
 }
