@@ -71,7 +71,7 @@ struct ProfileView: View {
                 }
 
                 Section("Developer") {
-                    Button("Clear all expenses", role: .destructive) {
+                    Button("Clear expenses I created", role: .destructive) {
                         showClearAllExpensesConfirm = true
                     }
                 }
@@ -92,16 +92,16 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             #if DEBUG
             .alert(
-                "Clear all expenses?",
+                "Clear expenses you created?",
                 isPresented: $showClearAllExpensesConfirm
             ) {
-                Button("Clear all", role: .destructive) {
+                Button("Clear mine", role: .destructive) {
                     guard let userId = authSession.userId else { return }
                     Task { await expenseStore.clearAllExpenses(userId: userId) }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This permanently deletes every expense on this device (and synced data when using Supabase). This can’t be undone.")
+                Text("Deletes expenses and recurring rules you created (local and synced). Shared expenses created by others stay. This can’t be undone.")
             }
             #endif
         }

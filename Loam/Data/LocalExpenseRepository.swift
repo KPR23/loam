@@ -104,11 +104,22 @@ actor LocalExpenseRepository: ExpenseRepository {
         try saveProposals(proposals)
     }
 
-    func deleteAll() async throws {
-        try save([])
-        try saveRecurring([])
-        try saveProposals([])
+    #if DEBUG
+    func deleteAllCreatedBy(_ userId: UUID) async throws {
+        var all = try load()
+        let removedIds = Set(all.filter { $0.createdBy == userId }.map(\.id))
+        all.removeAll { $0.createdBy == userId }
+        try save(all)
+
+        var recurring = try loadRecurring()
+        recurring.removeAll { $0.ownerUserId == userId }
+        try saveRecurring(recurring)
+
+        var proposals = try loadProposals()
+        proposals.removeAll { removedIds.contains($0.expenseId) }
+        try saveProposals(proposals)
     }
+    #endif
 
     func deleteFutureRecurringExpenses(recurringId: UUID, after date: Date) async throws {
         let calendar = Calendar.current
