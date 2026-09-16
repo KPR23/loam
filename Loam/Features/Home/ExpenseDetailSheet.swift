@@ -10,6 +10,7 @@ struct ExpenseDetailPendingActions {
 
 struct ExpenseDetailSheet: View {
     let expense: ExpenseRecord
+    var onEdit: (() -> Void)?
     var onSplit: (() -> Void)?
     var onDelete: (() -> Void)?
     var pendingActions: ExpenseDetailPendingActions?
@@ -27,6 +28,10 @@ struct ExpenseDetailSheet: View {
         return expense.share(for: myUserId)
     }
 
+    private var canEdit: Bool {
+        pendingActions == nil && onEdit != nil
+    }
+
     private var canSplit: Bool {
         pendingActions == nil
             && onSplit != nil
@@ -34,7 +39,7 @@ struct ExpenseDetailSheet: View {
     }
 
     private var hasOwnerActions: Bool {
-        canSplit || onDelete != nil
+        canEdit || canSplit || onDelete != nil
     }
 
     var body: some View {
@@ -172,6 +177,9 @@ struct ExpenseDetailSheet: View {
                 if hasOwnerActions {
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {
+                            if canEdit, let onEdit {
+                                Button("Edit", systemImage: "pencil", action: onEdit)
+                            }
                             if canSplit, let onSplit {
                                 Button(
                                     expense.isShared ? "Edit split" : "Split expense",
