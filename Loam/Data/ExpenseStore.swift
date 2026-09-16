@@ -238,14 +238,17 @@ final class ExpenseStore: ObservableObject {
     }
 
     #if DEBUG
-    /// Wipes every expense (and local recurring/proposals) for developer testing.
+    /// Deletes expenses (and recurring rules) this user created. Shared rows created by others remain.
     func clearAllExpenses(userId: UUID) async {
         do {
-            try await primaryRepository.deleteAll()
+            try await primaryRepository.deleteAllCreatedBy(userId)
             if !ExpenseRepositoryFactory.usesLocalStorage {
-                try await LocalExpenseRepository().deleteAll()
+                try await LocalExpenseRepository().deleteAllCreatedBy(userId)
             }
             await refresh(userId: userId)
+            if !expenses.isEmpty {
+                lastError = "Cleared expenses you created. \(expenses.count) shared expense(s) from others remain."
+            }
         } catch {
             lastError = error.localizedDescription
         }
