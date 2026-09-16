@@ -69,8 +69,12 @@ struct SplitExpenseSheet: View {
                         }
                     }
                     LabeledContent("Category") {
-                        Text(expense.category.displayName)
-                            .font(.system(.body, design: .rounded))
+                        HStack(spacing: 6) {
+                            Image(systemName: expense.category.systemImage)
+                            Text(expense.category.displayName)
+                                .font(.system(.body, design: .rounded))
+                        }
+                        .foregroundStyle(expense.category.color)
                     }
                     LabeledContent("Date") {
                         Text(expense.spentAt.formatted(date: .abbreviated, time: .omitted))
