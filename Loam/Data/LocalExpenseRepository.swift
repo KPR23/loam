@@ -104,6 +104,12 @@ actor LocalExpenseRepository: ExpenseRepository {
         try saveProposals(proposals)
     }
 
+    func deleteAll() async throws {
+        try save([])
+        try saveRecurring([])
+        try saveProposals([])
+    }
+
     func deleteFutureRecurringExpenses(recurringId: UUID, after date: Date) async throws {
         let calendar = Calendar.current
         let cutoff = calendar.startOfDay(for: date)

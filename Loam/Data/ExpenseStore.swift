@@ -237,6 +237,21 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// Wipes every expense (and local recurring/proposals) for developer testing.
+    func clearAllExpenses(userId: UUID) async {
+        do {
+            try await primaryRepository.deleteAll()
+            if !ExpenseRepositoryFactory.usesLocalStorage {
+                try await LocalExpenseRepository().deleteAll()
+            }
+            await refresh(userId: userId)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+    #endif
+
     func fetchRecurringRule(for expense: ExpenseRecord) async -> RecurringRuleRecord? {
         guard let recurringId = expense.recurringId else { return nil }
         let activeRepository = repository(for: expense)

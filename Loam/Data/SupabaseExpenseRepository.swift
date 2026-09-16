@@ -163,6 +163,21 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             .execute()
     }
 
+    func deleteAll() async throws {
+        // PostgREST requires a filter; RLS still limits rows to what the caller may delete.
+        let anyId = "00000000-0000-0000-0000-000000000000"
+        try await client
+            .from("expense")
+            .delete()
+            .neq("id", value: anyId)
+            .execute()
+        try await client
+            .from("recurring_rule")
+            .delete()
+            .neq("id", value: anyId)
+            .execute()
+    }
+
     func deleteFutureRecurringExpenses(recurringId: UUID, after date: Date) async throws {
         let day = CalendarDateCodec.string(from: date)
         try await client

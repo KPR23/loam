@@ -2,6 +2,10 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var expenseStore: ExpenseStore
+    #if DEBUG
+    @State private var showClearAllExpensesConfirm = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -65,6 +69,12 @@ struct ProfileView: View {
                             .foregroundStyle(HomeTheme.secondary)
                     }
                 }
+
+                Section("Developer") {
+                    Button("Clear all expenses", role: .destructive) {
+                        showClearAllExpensesConfirm = true
+                    }
+                }
                 #endif
 
                 Section("Budget") {
@@ -80,6 +90,20 @@ struct ProfileView: View {
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            #if DEBUG
+            .alert(
+                "Clear all expenses?",
+                isPresented: $showClearAllExpensesConfirm
+            ) {
+                Button("Clear all", role: .destructive) {
+                    guard let userId = authSession.userId else { return }
+                    Task { await expenseStore.clearAllExpenses(userId: userId) }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This permanently deletes every expense on this device (and synced data when using Supabase). This can’t be undone.")
+            }
+            #endif
         }
     }
 
@@ -108,4 +132,5 @@ struct ProfileView: View {
 #Preview {
     ProfileView()
         .environmentObject(AuthSession())
+        .environmentObject(ExpenseStore())
 }
