@@ -345,7 +345,7 @@ struct HomeView: View {
                                             Text(expense.isShared ? "Edit split" : "Split")
                                                 .fontWeight(.semibold)
                                         } icon: {
-                                            Image(systemName: "person.2")
+                                            Image(systemName: expense.sharedSplitSystemImage(for: authSession.userId))
                                         }
                                     }
                                     .tint(HomeTheme.accent)
@@ -447,7 +447,10 @@ struct HomeView: View {
                 }
             }
             if canSplit(expense) {
-                Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
+                Button(
+                    expense.isShared ? "Edit split" : "Split",
+                    systemImage: expense.sharedSplitSystemImage(for: authSession.userId)
+                ) {
                     presentSplit(for: expense)
                 }
             }

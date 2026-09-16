@@ -121,6 +121,15 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
 
     var isRecurring: Bool { recurringId != nil }
 
+    /// You paid (`paidBy`) → branch; otherwise you were added as a participant → pull.
+    /// Matches Home amount-accessory shared icons.
+    func sharedSplitSystemImage(for userId: UUID?) -> String {
+        if let userId, paidBy == userId {
+            return "arrow.trianglehead.branch"
+        }
+        return "arrow.trianglehead.pull"
+    }
+
     func shareRecord(for userId: UUID) -> ExpenseShareRecord? {
         shares.first(where: { $0.userId == userId })
     }
