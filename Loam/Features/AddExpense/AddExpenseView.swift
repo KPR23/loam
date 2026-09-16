@@ -18,7 +18,7 @@ struct AddExpenseView: View {
     @State private var title = ""
     @State private var note = ""
     @State private var location: ExpenseLocation?
-    @State private var spentAt = Date()
+    @State private var spentAt: Date
     @State private var isRepeating = false
     @State private var repeatPreset: RecurringPreset = .monthly
     @State private var repeatInterval: RecurringIntervalUnit = .month
@@ -39,6 +39,11 @@ struct AddExpenseView: View {
     @FocusState private var noteFocused: Bool
 
     private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
+
+    /// - Parameter initialSpentAt: Default expense date (Home passes the first day of the viewed month).
+    init(initialSpentAt: Date = Date()) {
+        _spentAt = State(initialValue: Calendar.current.startOfDay(for: initialSpentAt))
+    }
 
     var body: some View {
         NavigationStack {

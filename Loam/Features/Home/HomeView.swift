@@ -100,7 +100,7 @@ struct HomeView: View {
             }
         }
         .sheet(isPresented: $showAddExpense) {
-            AddExpenseView()
+            AddExpenseView(initialSpentAt: expenseStore.period.anchorDate)
         }
         .sheet(isPresented: $showMonthPicker) {
             MonthPickerSheet(period: expenseStore.period) { newPeriod in
