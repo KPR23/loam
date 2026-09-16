@@ -13,8 +13,8 @@ struct SplitExpenseSection: View {
     @Binding var selectedPartnerUserIds: Set<UUID>
     @Binding var splitMode: SplitExpenseMode
     @Binding var paidByUserId: UUID
-    @Binding var myPercentage: Int
-    @Binding var myExactAmountText: String
+    @Binding var participantPercentages: [UUID: Int]
+    @Binding var participantAmountTexts: [UUID: String]
 
     @State private var partnerSearchText = ""
 
@@ -80,13 +80,13 @@ struct SplitExpenseSection: View {
         splitParticipants.map(\.userId.uuidString).sorted().joined(separator: ",")
     }
 
-    private var supportsAdvancedSplitModes: Bool {
-        selectedPartnerUserIds.count == 1
-    }
-
     var body: some View {
         Section {
             partnerSearchField
+        } header: {
+            Text("People")
+        } footer: {
+            Text("Search for people to include in this expense.")
         }
 
         if isSearching {
@@ -142,23 +142,16 @@ struct SplitExpenseSection: View {
 
         if isSplit {
             Section("Split method") {
-                if supportsAdvancedSplitModes {
-                    // Avoid `.menu` — it often fails to present inside nested sheets
-                    // (e.g. Suggest changes opened from Pending expenses).
-                    Picker("Method", selection: $splitMode) {
-                        ForEach(SplitExpenseMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
+                // Avoid `.menu` — it often fails to present inside nested sheets
+                // (e.g. Suggest changes opened from Pending expenses).
+                Picker("Method", selection: $splitMode) {
+                    ForEach(SplitExpenseMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
                     }
-                } else {
-                    LabeledContent("Method", value: SplitExpenseMode.equal.displayName)
                 }
-            }
-
-            Section("Paid by") {
                 Picker("Paid by", selection: paidBySelection) {
                     ForEach(splitParticipants) { participant in
-                        Text(participant.displayName).tag(participant.userId)
+                        Text(displayName(for: participant.userId)).tag(participant.userId)
                     }
                 }
                 .id(paidByOptionsID)
@@ -166,39 +159,92 @@ struct SplitExpenseSection: View {
             .onAppear(perform: clampPaidByToSplitParticipants)
             .onChange(of: paidByOptionsID) { _, _ in
                 clampPaidByToSplitParticipants()
+                resetShareInputs()
             }
-
-            switch effectiveSplitMode {
-            case .equal:
-                equalSplitPreview
-            case .percentage:
-                percentageSplitControls
-            case .exactAmount:
-                exactAmountControls
+            .onChange(of: splitMode) { _, _ in
+                prepareShareInputsIfNeeded()
             }
-
-            if let shares = computedShares, !shares.isEmpty {
-                Section("Shares") {
-                    ForEach(shares, id: \.userId) { share in
-                        LabeledContent(displayName(for: share.userId)) {
-                            Text(MoneyFormatter.string(from: Money(amountMinor: share.amountMinor, currencyCode: currencyCode)))
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+            .onChange(of: totalMinor) { _, _ in
+                if splitMode == .exactAmount {
+                    resetShareInputs()
                 }
             }
+
+            if !splitParticipants.isEmpty {
+                Section(content: {
+                    ForEach(splitParticipants) { participant in
+                        shareEditor(participant)
+                    }
+                }, header: {
+                    Text("Shares")
+                }, footer: {
+                    sharesFooter
+                })
+            }
         }
+    }
+
+    @ViewBuilder
+    private func shareEditor(_ participant: SplitParticipantOption) -> some View {
+        switch effectiveSplitMode {
+        case .equal:
+            HStack {
+                Text(displayName(for: participant.userId))
+                Spacer()
+                if let share = computedShare(for: participant.userId) {
+                    Text(formattedAmount(share.amountMinor))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+        case .percentage:
+            HStack {
+                Text(displayName(for: participant.userId))
+                Spacer()
+                TextField("0", text: percentageBinding(for: participant.userId))
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .monospacedDigit()
+                    .frame(maxWidth: 72)
+                Text("%")
+                    .foregroundStyle(.secondary)
+            }
+        case .exactAmount:
+            HStack {
+                Text(displayName(for: participant.userId))
+                Spacer()
+                TextField("0,00", text: amountBinding(for: participant.userId))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .monospacedDigit()
+                    .frame(maxWidth: 120)
+                Text(currencyCode)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func percentageBinding(for userId: UUID) -> Binding<String> {
+        Binding(
+            get: { participantPercentages[userId].map(String.init) ?? "" },
+            set: { newValue in
+                let digits = newValue.filter(\.isNumber)
+                participantPercentages[userId] = digits.isEmpty ? nil : Int(digits)
+            }
+        )
+    }
+
+    private func amountBinding(for userId: UUID) -> Binding<String> {
+        Binding(
+            get: { participantAmountTexts[userId] ?? "" },
+            set: { participantAmountTexts[userId] = Money.sanitizeTypingInput($0) }
+        )
     }
 
     @ViewBuilder
     private var peopleFooter: some View {
         if requiresPartner {
             Text("Select at least one person to share this expense with.")
-        } else if selectedPartnerUserIds.isEmpty {
-            Text("Leave empty for a personal expense.")
-        } else {
-            Text("Only your share counts toward your monthly total.")
         }
     }
 
@@ -250,79 +296,35 @@ struct SplitExpenseSection: View {
     }
 
     private var effectiveSplitMode: SplitExpenseMode {
-        supportsAdvancedSplitModes ? splitMode : .equal
+        splitMode
     }
 
-    private var equalSplitPreview: some View {
-        Section {
+    @ViewBuilder
+    private var sharesFooter: some View {
+        switch effectiveSplitMode {
+        case .equal:
             if selectedPartnerUserIds.count == 1 {
                 Text("Split 50/50 automatically.")
             } else {
                 Text("Split equally among \(splitParticipants.count) people.")
             }
-        }
-        .foregroundStyle(.secondary)
-    }
-
-    private var percentageSplitControls: some View {
-        Group {
-            if let partner = selectedPartners.first {
-                Section {
-                    Stepper(value: $myPercentage, in: 1...99, step: 1) {
-                        HStack {
-                            Text("Your share")
-                            Spacer()
-                            Text("\(myPercentage)%")
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    LabeledContent("\(partner.displayName)'s share") {
-                        Text("\(100 - myPercentage)%")
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                }
+        case .percentage:
+            if remainingPercentage == 0 {
+                Text("All 100% of this expense is distributed across \(splitParticipants.count) people.")
+            } else if remainingPercentage > 0 {
+                Text("\(remainingPercentage)% of this expense is still unassigned. Add it to one or more shares before continuing.")
+            } else {
+                Text("Shares are \(-remainingPercentage)% over 100%. Reduce one or more shares before continuing.")
+            }
+        case .exactAmount:
+            if remainingAmountMinor == 0 {
+                Text("The full expense amount of \(formattedAmount(totalMinor)) is distributed across \(splitParticipants.count) people.")
+            } else if remainingAmountMinor > 0 {
+                Text("\(formattedAmount(remainingAmountMinor)) of this expense is still unassigned. Add it to one or more shares before continuing.")
+            } else {
+                Text("Shares exceed the expense total by \(formattedAmount(-remainingAmountMinor)). Reduce one or more shares before continuing.")
             }
         }
-    }
-
-    private var exactAmountControls: some View {
-        Group {
-            if let partner = selectedPartners.first {
-                Section {
-                    HStack {
-                        Text("Your share")
-                        Spacer()
-                        TextField("0,00", text: sanitizedExactAmountBinding)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .monospacedDigit()
-                            .frame(maxWidth: 120)
-                        Text("PLN")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if let mine = parsedExactAmount {
-                        LabeledContent(partner.displayName) {
-                            Text(MoneyFormatter.string(from: Money(amountMinor: max(0, totalMinor - mine), currencyCode: currencyCode)))
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } footer: {
-                    Text("Your amount plus \(partner.displayName)'s share must equal the total.")
-                }
-            }
-        }
-    }
-
-    private var sanitizedExactAmountBinding: Binding<String> {
-        Binding(
-            get: { myExactAmountText },
-            set: { myExactAmountText = Money.sanitizeTypingInput($0) }
-        )
     }
 
     private func togglePartner(_ userId: UUID) {
@@ -348,34 +350,130 @@ struct SplitExpenseSection: View {
         return selectedPartners.first(where: { $0.userId == userId })?.displayName ?? "Partner"
     }
 
-    private var parsedExactAmount: Int? {
-        Money(majorString: myExactAmountText)?.amountMinor
+    private var participantIds: [UUID] {
+        splitParticipants.map(\.userId)
+    }
+
+    private var selectedPercentages: [UUID: Int] {
+        Dictionary(uniqueKeysWithValues: participantIds.compactMap { userId in
+            participantPercentages[userId].map { (userId, $0) }
+        })
+    }
+
+    private var selectedAmountMinors: [UUID: Int] {
+        Dictionary(uniqueKeysWithValues: participantIds.compactMap { userId in
+            guard let text = participantAmountTexts[userId],
+                  let amount = Money(majorString: text)?.amountMinor else { return nil }
+            return (userId, amount)
+        })
+    }
+
+    private var remainingPercentage: Int {
+        100 - selectedPercentages.values.reduce(0, +)
+    }
+
+    private var remainingAmountMinor: Int {
+        totalMinor - selectedAmountMinors.values.reduce(0, +)
+    }
+
+    private func formattedAmount(_ amountMinor: Int) -> String {
+        MoneyFormatter.string(from: Money(amountMinor: amountMinor, currencyCode: currencyCode))
+    }
+
+    private func computedShare(for userId: UUID) -> SplitCalculator.Share? {
+        computedShares?.first(where: { $0.userId == userId })
     }
 
     private var computedShares: [SplitCalculator.Share]? {
-        guard isSplit, totalMinor > 0 else { return nil }
+        guard isSplit, totalMinor > 0, validationError == nil else { return nil }
 
         switch effectiveSplitMode {
-        case .equal, .percentage:
+        case .equal:
             return SplitCalculator.split(
                 totalMinor: totalMinor,
-                mode: effectiveSplitMode,
+                mode: .equal,
+                myUserId: myUserId,
+                partnerUserIds: Array(selectedPartnerUserIds),
+                paidByUserId: paidByUserId
+            )
+        case .percentage:
+            return SplitCalculator.split(
+                totalMinor: totalMinor,
+                mode: .percentage,
                 myUserId: myUserId,
                 partnerUserIds: Array(selectedPartnerUserIds),
                 paidByUserId: paidByUserId,
-                myPercentage: myPercentage
+                participantPercentages: participantPercentages
             )
         case .exactAmount:
-            guard let mine = parsedExactAmount, mine >= 0, mine <= totalMinor else { return nil }
             return SplitCalculator.split(
                 totalMinor: totalMinor,
                 mode: .exactAmount,
                 myUserId: myUserId,
                 partnerUserIds: Array(selectedPartnerUserIds),
                 paidByUserId: paidByUserId,
-                myExactAmountMinor: mine
+                participantExactAmountMinors: selectedAmountMinors
             )
         }
+    }
+
+    private func prepareShareInputsIfNeeded() {
+        let ids = Set(participantIds)
+        participantPercentages = participantPercentages.filter { ids.contains($0.key) }
+        participantAmountTexts = participantAmountTexts.filter { ids.contains($0.key) }
+
+        switch effectiveSplitMode {
+        case .equal:
+            break
+        case .percentage:
+            // Initialize only when participant fields are missing. An entered total
+            // above or below 100% is valid editing state and must not be replaced.
+            if participantPercentages.count != ids.count {
+                setEqualPercentages()
+            }
+        case .exactAmount:
+            // Preserve incomplete and over-allocated values while the user edits.
+            if participantAmountTexts.count != ids.count {
+                setEqualAmounts()
+            }
+        }
+    }
+
+    private func resetShareInputs() {
+        switch effectiveSplitMode {
+        case .equal:
+            break
+        case .percentage:
+            setEqualPercentages()
+        case .exactAmount:
+            setEqualAmounts()
+        }
+    }
+
+    private func setEqualPercentages() {
+        guard !participantIds.isEmpty else {
+            participantPercentages = [:]
+            return
+        }
+        let base = 100 / participantIds.count
+        participantPercentages = Dictionary(uniqueKeysWithValues: participantIds.map { ($0, base) })
+        let remainderRecipient = participantIds.contains(paidByUserId) ? paidByUserId : participantIds[0]
+        participantPercentages[remainderRecipient, default: 0] += 100 - (base * participantIds.count)
+    }
+
+    private func setEqualAmounts() {
+        guard totalMinor > 0, !participantIds.isEmpty else {
+            participantAmountTexts = [:]
+            return
+        }
+        let shares = SplitCalculator.equal(
+            totalMinor: totalMinor,
+            participants: participantIds,
+            paidByUserId: paidByUserId
+        )
+        participantAmountTexts = Dictionary(uniqueKeysWithValues: shares.map {
+            ($0.userId, MoneyFormatter.typingAmount(from: Money(amountMinor: $0.amountMinor, currencyCode: currencyCode)))
+        })
     }
 
     var validationError: String? {
@@ -384,8 +482,9 @@ struct SplitExpenseSection: View {
             selectedPartnerCount: selectedPartnerUserIds.count,
             requiresPartner: requiresPartner,
             splitMode: effectiveSplitMode,
-            myPercentage: myPercentage,
-            myExactAmountText: myExactAmountText
+            participantUserIds: participantIds,
+            participantPercentages: participantPercentages,
+            participantAmountTexts: participantAmountTexts
         )
     }
 
@@ -394,8 +493,9 @@ struct SplitExpenseSection: View {
         selectedPartnerCount: Int,
         requiresPartner: Bool = false,
         splitMode: SplitExpenseMode,
-        myPercentage: Int,
-        myExactAmountText: String
+        participantUserIds: [UUID],
+        participantPercentages: [UUID: Int],
+        participantAmountTexts: [UUID: String]
     ) -> String? {
         if selectedPartnerCount == 0 {
             return requiresPartner ? "Select at least one person to split with." : nil
@@ -403,38 +503,30 @@ struct SplitExpenseSection: View {
         guard totalMinor > 0 else { return "Enter a valid amount." }
 
         switch splitMode {
-        case .equal, .percentage:
+        case .equal:
+            return nil
+        case .percentage:
+            let percentages = participantUserIds.compactMap { participantPercentages[$0] }
+            guard percentages.count == participantUserIds.count,
+                  percentages.allSatisfy({ $0 > 0 }) else {
+                return "Enter a percentage for every person."
+            }
+            guard percentages.reduce(0, +) == 100 else {
+                return "Percentage shares must total 100%."
+            }
             return nil
         case .exactAmount:
-            guard selectedPartnerCount == 1 else { return nil }
-            guard let mine = Money(majorString: myExactAmountText)?.amountMinor else {
-                return "Enter your share amount."
+            let amounts = participantUserIds.compactMap { userId in
+                participantAmountTexts[userId].flatMap { Money(majorString: $0)?.amountMinor }
             }
-            if mine < 0 || mine > totalMinor {
-                return "Your share must be between 0 and the total."
+            guard amounts.count == participantUserIds.count else {
+                return "Enter an amount for every person."
+            }
+            guard amounts.reduce(0, +) == totalMinor else {
+                return "Exact shares must total the expense amount."
             }
             return nil
         }
-    }
-
-    /// Compatibility wrapper for call sites that still pass `isSplit`.
-    static func validationError(
-        totalMinor: Int,
-        isSplit: Bool,
-        selectedPartnerCount: Int,
-        splitMode: SplitExpenseMode,
-        myPercentage: Int,
-        myExactAmountText: String
-    ) -> String? {
-        guard isSplit else { return nil }
-        return validationError(
-            totalMinor: totalMinor,
-            selectedPartnerCount: selectedPartnerCount,
-            requiresPartner: true,
-            splitMode: splitMode,
-            myPercentage: myPercentage,
-            myExactAmountText: myExactAmountText
-        )
     }
 }
 

@@ -33,8 +33,11 @@ struct AddExpenseView: View {
     @State private var paidByUserId: UUID?
     @State private var myPercentage = 50
     @State private var myExactAmountText = ""
+    @State private var participantPercentages: [UUID: Int] = [:]
+    @State private var participantAmountTexts: [UUID: String] = [:]
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var isSplitSheetPresented = false
     @State private var cancelTapCount = 0
     @State private var continueTapCount = 0
     @FocusState private var amountFocused: Bool
@@ -65,6 +68,8 @@ struct AddExpenseView: View {
         _paidByUserId = State(initialValue: expense.paidBy)
         _myPercentage = State(initialValue: splitSeed.myPercentage)
         _myExactAmountText = State(initialValue: splitSeed.myExactAmountText)
+        _participantPercentages = State(initialValue: splitSeed.participantPercentages)
+        _participantAmountTexts = State(initialValue: splitSeed.participantAmountTexts)
     }
 
     var body: some View {
@@ -92,6 +97,9 @@ struct AddExpenseView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+        }
+        .sheet(isPresented: $isSplitSheetPresented) {
+            splitConfigurationSheet
         }
         .sensoryFeedback(.selection, trigger: amountText)
     }
@@ -146,10 +154,6 @@ struct AddExpenseView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
-        .contentShape(Rectangle())
-        .onTapGesture {
-            amountFocused = true
-        }
     }
 
     private var amountDisplay: some View {
@@ -197,11 +201,49 @@ struct AddExpenseView: View {
                     .focused($titleFocused)
 
                 DatePicker("Date", selection: $spentAt, displayedComponents: .date)
-                ExpenseLocationPicker(location: $location)
-            } footer: {
-                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("No title set — the category name will be shown instead.")
+
+                TextField("Note (optional)", text: $note, axis: .vertical)
+                    .lineLimit(1...3)
+                    .focused($noteFocused)
+            } header: {
+                Text("Details")
+            }
+
+            if canShowSplitRow {
+                Section {
+                    Button {
+                        isSplitSheetPresented = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: splitRowSystemImage)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 22)
+
+                            Text("Split")
+                                .foregroundStyle(.primary)
+
+                            Spacer(minLength: 12)
+
+                            Text(splitSummaryText)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.trailing)
+
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                } header: {
+                    Text("Split")
                 }
+            }
+
+            Section {
+                ExpenseLocationPicker(location: $location)
+            } header: {
+                Text("Merchant")
             }
 
             if !isEditing {
@@ -238,6 +280,8 @@ struct AddExpenseView: View {
                             )
                         }
                     }
+                } header: {
+                    Text("Repeat")
                 } footer: {
                     if isRepeating {
                         Text(repeatFooterText)
@@ -254,37 +298,6 @@ struct AddExpenseView: View {
                         repeatEndDate = newValue
                     }
                 }
-            }
-
-            Section {
-                TextField("Note (optional)", text: $note, axis: .vertical)
-                    .lineLimit(1...3)
-                    .focused($noteFocused)
-            }
-
-            if let userId = authSession.userId,
-               !splitPartners.isEmpty {
-                SplitExpenseSection(
-                    totalMinor: parsedMoney?.amountMinor ?? 0,
-                    myUserId: userId,
-                    myDisplayName: authSession.displayName ?? "You",
-                    availablePartners: splitPartners,
-                    recentPartners: recentSplitPartners,
-                    requiresPartner: false,
-                    selectedPartnerUserIds: $selectedPartnerUserIds,
-                    splitMode: $splitMode,
-                    paidByUserId: Binding(
-                        get: { paidByUserId ?? userId },
-                        set: { paidByUserId = $0 }
-                    ),
-                    myPercentage: $myPercentage,
-                    myExactAmountText: $myExactAmountText
-                )
-            }
-        }
-        .onChange(of: selectedPartnerUserIds) { _, newValue in
-            if newValue.count != 1, splitMode != .equal {
-                splitMode = .equal
             }
         }
         .onAppear {
@@ -359,6 +372,29 @@ struct AddExpenseView: View {
         splitPartners.filter { selectedPartnerUserIds.contains($0.userId) }
     }
 
+    private var canShowSplitRow: Bool {
+        authSession.userId != nil && !splitPartners.isEmpty
+    }
+
+    private var splitSummaryText: String {
+        let partners = selectedSplitPartners
+        guard !partners.isEmpty else { return "Not split" }
+        if partners.count == 1, let partner = partners.first {
+            return "With \(partner.displayName)"
+        }
+        return "\(partners.count) people"
+    }
+
+    private var splitRowSystemImage: String {
+        guard let userId = authSession.userId else {
+            return "arrow.trianglehead.branch"
+        }
+        if let paidByUserId, paidByUserId != userId {
+            return "arrow.trianglehead.pull"
+        }
+        return "arrow.trianglehead.branch"
+    }
+
     /// When split UI/partners aren't available, keep existing membership instead of clearing it.
     private var canChangeSplitMembership: Bool {
         SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
@@ -407,6 +443,60 @@ struct AddExpenseView: View {
         amountFocused = true
     }
 
+    @ViewBuilder
+    private var splitConfigurationSheet: some View {
+        if let userId = authSession.userId {
+            splitConfigurationForm(userId: userId)
+        }
+    }
+
+    private func splitConfigurationForm(userId: UUID) -> some View {
+        NavigationStack {
+            Form {
+                SplitExpenseSection(
+                    totalMinor: parsedMoney?.amountMinor ?? 0,
+                    myUserId: userId,
+                    myDisplayName: authSession.displayName ?? "You",
+                    availablePartners: splitPartners,
+                    recentPartners: recentSplitPartners,
+                    requiresPartner: false,
+                    selectedPartnerUserIds: $selectedPartnerUserIds,
+                    splitMode: $splitMode,
+                    paidByUserId: Binding(
+                        get: { paidByUserId ?? userId },
+                        set: { paidByUserId = $0 }
+                    ),
+                    participantPercentages: $participantPercentages,
+                    participantAmountTexts: $participantAmountTexts
+                )
+            }
+            .navigationTitle("Split expense")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        isSplitSheetPresented = false
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(splitValidationError(userId: userId) != nil)
+                }
+            }
+        }
+    }
+
+    private func splitValidationError(userId: UUID) -> String? {
+        guard isSplit else { return nil }
+        return SplitExpenseSection.validationError(
+            totalMinor: parsedMoney?.amountMinor ?? 0,
+            selectedPartnerCount: selectedPartnerUserIds.count,
+            requiresPartner: true,
+            splitMode: splitMode,
+            participantUserIds: [userId] + Array(selectedPartnerUserIds),
+            participantPercentages: participantPercentages,
+            participantAmountTexts: participantAmountTexts
+        )
+    }
+
     private func save() async {
         guard let userId = authSession.userId else {
             errorMessage = ExpenseRepositoryError.notSignedIn.localizedDescription
@@ -422,14 +512,7 @@ struct AddExpenseView: View {
         isSaving = true
         defer { isSaving = false }
 
-        if isSplit, let validationError = SplitExpenseSection.validationError(
-            totalMinor: money.amountMinor,
-            selectedPartnerCount: selectedPartnerUserIds.count,
-            requiresPartner: true,
-            splitMode: selectedPartnerUserIds.count == 1 ? splitMode : .equal,
-            myPercentage: myPercentage,
-            myExactAmountText: myExactAmountText
-        ) {
+        if let validationError = splitValidationError(userId: userId) {
             errorMessage = validationError
             return
         }
@@ -485,11 +568,13 @@ struct AddExpenseView: View {
                 spentAt: spentAt,
                 userId: userId,
                 householdId: household.id,
-                splitMode: partners.count == 1 ? splitMode : .equal,
+                splitMode: splitMode,
                 paidBy: paidByUserId ?? userId,
                 partnerUserIds: partners.map(\.userId),
                 myPercentage: myPercentage,
                 myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor,
+                participantPercentages: participantPercentages,
+                participantExactAmountMinors: participantExactAmountMinors,
                 recurring: recurring
             )
         } else {
@@ -529,11 +614,13 @@ struct AddExpenseView: View {
                 spentAt: spentAt,
                 userId: userId,
                 householdId: household.id,
-                splitMode: partners.count == 1 ? splitMode : .equal,
+                splitMode: splitMode,
                 paidBy: paidByUserId ?? userId,
                 partnerUserIds: partners.map(\.userId),
                 myPercentage: myPercentage,
-                myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor
+                myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor,
+                participantPercentages: participantPercentages,
+                participantExactAmountMinors: participantExactAmountMinors
             )
         } else {
             try await expenseStore.update(
@@ -576,12 +663,18 @@ struct AddExpenseView: View {
             spentAt: spentAt,
             userId: userId,
             householdId: householdId,
-            splitMode: partnerIds.count == 1 ? splitMode : .equal,
+            splitMode: splitMode,
             paidBy: paidByUserId ?? expense.paidBy,
             partnerUserIds: partnerIds,
             myPercentage: myPercentage,
-            myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor
+            myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor,
+            participantPercentages: participantPercentages,
+            participantExactAmountMinors: participantExactAmountMinors
         )
+    }
+
+    private var participantExactAmountMinors: [UUID: Int] {
+        participantAmountTexts.compactMapValues { Money(majorString: $0)?.amountMinor }
     }
 }
 

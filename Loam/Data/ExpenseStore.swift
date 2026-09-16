@@ -97,6 +97,8 @@ final class ExpenseStore: ObservableObject {
         partnerUserIds: [UUID],
         myPercentage: Int = 50,
         myExactAmountMinor: Int? = nil,
+        participantPercentages: [UUID: Int] = [:],
+        participantExactAmountMinors: [UUID: Int] = [:],
         recurring: RecurringRuleRecord? = nil
     ) async throws {
         let trimmedTitle = title.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -109,7 +111,9 @@ final class ExpenseStore: ObservableObject {
             partnerUserIds: partnerUserIds,
             paidByUserId: paidBy,
             myPercentage: myPercentage,
-            myExactAmountMinor: myExactAmountMinor
+            myExactAmountMinor: myExactAmountMinor,
+            participantPercentages: participantPercentages,
+            participantExactAmountMinors: participantExactAmountMinors
         )
 
         let draft = ExpenseRecord(
@@ -230,7 +234,9 @@ final class ExpenseStore: ObservableObject {
         paidBy: UUID,
         partnerUserIds: [UUID],
         myPercentage: Int = 50,
-        myExactAmountMinor: Int? = nil
+        myExactAmountMinor: Int? = nil,
+        participantPercentages: [UUID: Int] = [:],
+        participantExactAmountMinors: [UUID: Int] = [:]
     ) async throws {
         guard var expense = expenses.first(where: { $0.id == expenseId }) else {
             throw ExpenseRepositoryError.notFound
@@ -273,7 +279,9 @@ final class ExpenseStore: ObservableObject {
                 partnerUserIds: partnerUserIds,
                 paidByUserId: paidBy,
                 myPercentage: myPercentage,
-                myExactAmountMinor: myExactAmountMinor
+                myExactAmountMinor: myExactAmountMinor,
+                participantPercentages: participantPercentages,
+                participantExactAmountMinors: participantExactAmountMinors
             )
             expense.householdId = householdId
             let usersTrustingCreator = await usersTrusting(
@@ -377,7 +385,9 @@ final class ExpenseStore: ObservableObject {
         paidBy: UUID,
         partnerUserIds: [UUID],
         myPercentage: Int = 50,
-        myExactAmountMinor: Int? = nil
+        myExactAmountMinor: Int? = nil,
+        participantPercentages: [UUID: Int] = [:],
+        participantExactAmountMinors: [UUID: Int] = [:]
     ) async throws {
         guard var expense = expenses.first(where: { $0.id == expenseId }) else {
             throw ExpenseRepositoryError.notFound
@@ -390,7 +400,9 @@ final class ExpenseStore: ObservableObject {
             partnerUserIds: partnerUserIds,
             paidByUserId: paidBy,
             myPercentage: myPercentage,
-            myExactAmountMinor: myExactAmountMinor
+            myExactAmountMinor: myExactAmountMinor,
+            participantPercentages: participantPercentages,
+            participantExactAmountMinors: participantExactAmountMinors
         )
 
         expense.householdId = householdId

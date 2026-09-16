@@ -103,6 +103,111 @@ final class SplitCalculatorTests: XCTestCase {
         XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 599)
     }
 
+    func testMultiPersonPercentageSplitGivesMineAndSplitsRemainder() {
+        let shares = SplitCalculator.split(
+            totalMinor: 1000,
+            mode: .percentage,
+            myUserId: alice,
+            partnerUserIds: [bob, carol],
+            paidByUserId: bob,
+            myPercentage: 40
+        )
+
+        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1000))
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 400)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 300)
+        XCTAssertEqual(shares.first { $0.userId == carol }?.amountMinor, 300)
+    }
+
+    func testMultiPersonExactSplitGivesMineAndSplitsRemainder() {
+        let shares = SplitCalculator.split(
+            totalMinor: 1001,
+            mode: .exactAmount,
+            myUserId: alice,
+            partnerUserIds: [bob, carol],
+            paidByUserId: bob,
+            myExactAmountMinor: 401
+        )
+
+        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1001))
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 401)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 300)
+        XCTAssertEqual(shares.first { $0.userId == carol }?.amountMinor, 300)
+    }
+
+    func testMultiPersonPercentageSplitUsesEveryParticipantInput() {
+        let shares = SplitCalculator.split(
+            totalMinor: 1000,
+            mode: .percentage,
+            myUserId: alice,
+            partnerUserIds: [bob, carol],
+            paidByUserId: alice,
+            participantPercentages: [alice: 20, bob: 30, carol: 50]
+        )
+
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 200)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 300)
+        XCTAssertEqual(shares.first { $0.userId == carol }?.amountMinor, 500)
+        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1000))
+    }
+
+    func testTwoPersonPercentageSplitUsesEditableParticipantInputs() {
+        let shares = SplitCalculator.split(
+            totalMinor: 1000,
+            mode: .percentage,
+            myUserId: alice,
+            partnerUserIds: [bob],
+            paidByUserId: alice,
+            myPercentage: 50,
+            participantPercentages: [alice: 25, bob: 75]
+        )
+
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 250)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 750)
+    }
+
+    func testMultiPersonExactSplitUsesEveryParticipantInput() {
+        let shares = SplitCalculator.split(
+            totalMinor: 1001,
+            mode: .exactAmount,
+            myUserId: alice,
+            partnerUserIds: [bob, carol],
+            paidByUserId: bob,
+            participantExactAmountMinors: [alice: 101, bob: 400, carol: 500]
+        )
+
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 101)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 400)
+        XCTAssertEqual(shares.first { $0.userId == carol }?.amountMinor, 500)
+        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1001))
+    }
+
+    func testOverAllocatedPercentageKeepsFormInvalid() {
+        let error = SplitExpenseSection.validationError(
+            totalMinor: 1000,
+            selectedPartnerCount: 1,
+            splitMode: .percentage,
+            participantUserIds: [alice, bob],
+            participantPercentages: [alice: 80, bob: 40],
+            participantAmountTexts: [:]
+        )
+
+        XCTAssertEqual(error, "Percentage shares must total 100%.")
+    }
+
+    func testOverAllocatedExactAmountsKeepFormInvalid() {
+        let error = SplitExpenseSection.validationError(
+            totalMinor: 1000,
+            selectedPartnerCount: 1,
+            splitMode: .exactAmount,
+            participantUserIds: [alice, bob],
+            participantPercentages: [:],
+            participantAmountTexts: [alice: "8,00", bob: "4,00"]
+        )
+
+        XCTAssertEqual(error, "Exact shares must total the expense amount.")
+    }
+
     func testTwoPersonEqualSplit() {
         let shares = SplitCalculator.twoPersonSplit(
             totalMinor: 1001,
@@ -252,4 +357,3 @@ final class RecentSplitPartnersTests: XCTestCase {
         XCTAssertEqual(recent.map(\.userId), [julia, philip])
     }
 }
-
