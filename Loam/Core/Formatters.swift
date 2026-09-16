@@ -81,6 +81,12 @@ enum DatePeriod: Equatable {
         }
     }
 
+    /// Returns the period shifted by `delta` calendar months (e.g. `1` = next, `-1` = previous).
+    func shiftedByMonths(_ delta: Int) -> DatePeriod {
+        let date = Calendar.current.date(byAdding: .month, value: delta, to: anchorDate) ?? anchorDate
+        return DatePeriod(from: date)
+    }
+
     static func startOfMonth(for date: Date) -> Date {
         DatePeriod(from: date).anchorDate
     }

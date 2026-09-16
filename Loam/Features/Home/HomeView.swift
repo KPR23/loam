@@ -29,8 +29,11 @@ struct HomeView: View {
     @State private var expensePendingProposeEdit: ProposeEditPresentation?
     @State private var selectedExpense: ExpenseRecord?
     @State private var showAllPendingExpenses = false
+    @State private var monthSwipeTick = 0
 
     private let homePendingPreviewLimit = 2
+    /// Horizontal distance before a drag counts as a month change (avoids fighting vertical scroll / row swipeActions).
+    private let monthSwipeThreshold: CGFloat = 80
 
     var body: some View {
         NavigationStack {
@@ -60,6 +63,8 @@ struct HomeView: View {
             .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
+            .simultaneousGesture(monthSwipeGesture)
+            .sensoryFeedback(.selection, trigger: monthSwipeTick)
             .navigationBarTitleDisplayMode(.inline)
             .homeTranslucentNavigationBar(collapseProgress: collapseProgress)
             .toolbar {
@@ -472,6 +477,27 @@ struct HomeView: View {
                 expensePendingProposeEdit = ProposeEditPresentation(expense: expense, myUserId: userId)
             }
         )
+    }
+
+    /// Swipe left → next month; swipe right → previous (Calendar / iOS convention).
+    private var monthSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 24)
+            .onEnded { value in
+                let horizontal = value.translation.width
+                let vertical = value.translation.height
+                guard abs(horizontal) >= monthSwipeThreshold,
+                      abs(horizontal) > abs(vertical) * 1.5 else { return }
+                // Negative width = finger moved left → next month.
+                shiftMonth(by: horizontal < 0 ? 1 : -1)
+            }
+    }
+
+    private func shiftMonth(by delta: Int) {
+        guard let userId = authSession.userId else { return }
+        let newPeriod = expenseStore.period.shiftedByMonths(delta)
+        guard newPeriod != expenseStore.period else { return }
+        monthSwipeTick &+= 1
+        Task { await expenseStore.setPeriod(newPeriod, userId: userId) }
     }
 
     private func presentSplit(for expense: ExpenseRecord) {
