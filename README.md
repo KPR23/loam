@@ -61,11 +61,7 @@ Optional: set `SUPABASE_URL` / `SUPABASE_ANON_KEY` in the Xcode Run scheme to ov
 
 Supabase URL + publishable key come from committed `Config.xcconfig` — no ASC env vars required for the backend.
 
-`ci_scripts/ci_post_clone.sh` only writes `Loam/Config/Secrets.xcconfig` with:
-
-- `CURRENT_PROJECT_VERSION` — from Xcode Cloud `CI_BUILD_NUMBER` so each upload gets a unique build number (avoids TestFlight duplicate-tuple stalls)
-
-Local builds keep the committed fallback in `project.yml` (`CURRENT_PROJECT_VERSION = 6`). `Config.xcconfig` includes Secrets **before** the committed Supabase keys, so a stale local Secrets file cannot override them.
+Local builds use the committed `CURRENT_PROJECT_VERSION` in `project.yml`.
 
 **Export compliance:** `Info.plist` sets `ITSAppUsesNonExemptEncryption = false` (HTTPS/Supabase only — no custom crypto). That skips the manual “App Encryption Documentation” step in App Store Connect and prevents TestFlight post-actions from hanging while waiting for compliance.
 
