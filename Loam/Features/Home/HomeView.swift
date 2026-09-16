@@ -58,6 +58,8 @@ struct HomeView: View {
             .coordinateSpace(name: "homeScroll")
             .trackHomeScrollCollapse($collapseProgress)
             .contentMargins(.top, 2, for: .scrollContent)
+            // Keep the last expense row scrollable above the floating + button.
+            .contentMargins(.bottom, AddExpenseFABLayout.listBottomContentInset, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
@@ -90,8 +92,8 @@ struct HomeView: View {
                 AddExpenseFAB {
                     showAddExpense = true
                 }
-                .padding(.trailing, 20)
-                .padding(.bottom, 12)
+                .padding(.trailing, AddExpenseFABLayout.trailingPadding)
+                .padding(.bottom, AddExpenseFABLayout.bottomPadding)
             }
         }
         .sheet(isPresented: $showAddExpense) {
@@ -516,6 +518,18 @@ struct HomeView: View {
     }
 }
 
+private enum AddExpenseFABLayout {
+    static let diameter: CGFloat = 56
+    static let trailingPadding: CGFloat = 20
+    static let bottomPadding: CGFloat = 12
+    /// Extra gap so the last row isn’t tucked under the FAB when scrolled to the end.
+    static let listClearance: CGFloat = 20
+
+    static var listBottomContentInset: CGFloat {
+        diameter + bottomPadding + listClearance
+    }
+}
+
 private struct AddExpenseFAB: View {
     let action: () -> Void
 
@@ -524,7 +538,7 @@ private struct AddExpenseFAB: View {
             Image(systemName: "plus")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(Color(.systemBackground))
-                .frame(width: 56, height: 56)
+                .frame(width: AddExpenseFABLayout.diameter, height: AddExpenseFABLayout.diameter)
                 .background(Circle().fill(Color.primary))
                 .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
         }
