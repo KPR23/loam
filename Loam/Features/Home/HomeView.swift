@@ -17,6 +17,7 @@ private struct ProposeEditPresentation: Identifiable {
 struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var arcReloadToken: Int = 0
 
@@ -30,10 +31,13 @@ struct HomeView: View {
     @State private var selectedExpense: ExpenseRecord?
     @State private var showAllPendingExpenses = false
     @State private var monthSwipeTick = 0
+    /// Swipe direction for month content transition: `-1` previous, `1` next, `0` fade (picker).
+    @State private var monthSlideDirection = 0
 
     private let homePendingPreviewLimit = 2
     /// Horizontal distance before a drag counts as a month change (avoids fighting vertical scroll / row swipeActions).
     private let monthSwipeThreshold: CGFloat = 80
+    private let monthChangeAnimation = Animation.smooth(duration: 0.3)
 
     var body: some View {
         NavigationStack {
@@ -47,6 +51,8 @@ struct HomeView: View {
                         collapseProgress: collapseProgress,
                         displayedReveal: $arcReveal
                     )
+                    .id(expenseStore.period)
+                    .transition(monthContentTransition)
                     .reportHomeHeroScrollOffset()
                     .listRowInsets(EdgeInsets(top: -2, leading: 0, bottom: 4, trailing: 0))
                     .listRowSeparator(.hidden)
@@ -63,6 +69,7 @@ struct HomeView: View {
             .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
+            .animation(reduceMotion ? nil : monthChangeAnimation, value: expenseStore.period)
             .simultaneousGesture(monthSwipeGesture)
             .sensoryFeedback(.selection, trigger: monthSwipeTick)
             .navigationBarTitleDisplayMode(.inline)
@@ -104,8 +111,7 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showMonthPicker) {
             MonthPickerSheet(period: expenseStore.period) { newPeriod in
-                guard let userId = authSession.userId else { return }
-                Task { await expenseStore.setPeriod(newPeriod, userId: userId) }
+                changePeriod(to: newPeriod, direction: 0, playHaptic: false)
             }
         }
         .sheet(item: $expensePendingSplit) { presentation in
@@ -492,12 +498,38 @@ struct HomeView: View {
             }
     }
 
+    private var monthContentTransition: AnyTransition {
+        guard !reduceMotion, monthSlideDirection != 0 else {
+            return .opacity
+        }
+        // Subtle nudge in the swipe direction (not a full-page slide).
+        let insertX = CGFloat(monthSlideDirection) * 28
+        let removeX = CGFloat(monthSlideDirection) * -28
+        return .asymmetric(
+            insertion: .opacity.combined(with: .offset(x: insertX)),
+            removal: .opacity.combined(with: .offset(x: removeX))
+        )
+    }
+
     private func shiftMonth(by delta: Int) {
+        changePeriod(
+            to: expenseStore.period.shiftedByMonths(delta),
+            direction: delta,
+            playHaptic: true
+        )
+    }
+
+    private func changePeriod(to newPeriod: DatePeriod, direction: Int, playHaptic: Bool) {
         guard let userId = authSession.userId else { return }
-        let newPeriod = expenseStore.period.shiftedByMonths(delta)
         guard newPeriod != expenseStore.period else { return }
-        monthSwipeTick &+= 1
-        Task { await expenseStore.setPeriod(newPeriod, userId: userId) }
+        monthSlideDirection = direction
+        if playHaptic {
+            monthSwipeTick &+= 1
+        }
+        withAnimation(reduceMotion ? nil : monthChangeAnimation) {
+            _ = expenseStore.applyPeriod(newPeriod)
+        }
+        Task { await expenseStore.refresh(userId: userId) }
     }
 
     private func presentSplit(for expense: ExpenseRecord) {

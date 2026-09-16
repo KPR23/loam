@@ -61,6 +61,8 @@ struct HomeCollapsingTopBar: View {
                 .foregroundStyle(HomeTheme.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
+                .contentTransition(.opacity)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: period)
 
             Image(systemName: "chevron.down")
                 .font(.caption.weight(.bold))

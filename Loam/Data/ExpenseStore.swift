@@ -25,9 +25,16 @@ final class ExpenseStore: ObservableObject {
     private var currentUserId: UUID?
 
     func setPeriod(_ newPeriod: DatePeriod, userId: UUID?) async {
-        guard period != newPeriod else { return }
-        period = newPeriod
+        guard applyPeriod(newPeriod) else { return }
         await refresh(userId: userId)
+    }
+
+    /// Updates `period` synchronously so callers can wrap the change in `withAnimation`.
+    @discardableResult
+    func applyPeriod(_ newPeriod: DatePeriod) -> Bool {
+        guard period != newPeriod else { return false }
+        period = newPeriod
+        return true
     }
 
     func refresh(userId: UUID?) async {

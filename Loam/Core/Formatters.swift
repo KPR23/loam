@@ -50,7 +50,7 @@ enum MoneyFormatter {
     }
 }
 
-enum DatePeriod: Equatable {
+enum DatePeriod: Equatable, Hashable {
     case month(year: Int, month: Int)
 
     static var currentMonth: DatePeriod {
