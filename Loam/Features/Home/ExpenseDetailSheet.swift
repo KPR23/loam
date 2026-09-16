@@ -68,11 +68,6 @@ struct ExpenseDetailSheet: View {
                                 .foregroundStyle(HomeTheme.secondary)
                                 .padding(.top, 4)
                         }
-
-                        Text(expense.category.displayName)
-                            .font(.system(.headline, design: .rounded))
-                            .foregroundStyle(HomeTheme.secondary)
-                            .padding(.top, expense.isShared ? 10 : 8)
                     }
                     .frame(maxWidth: .infinity)
                     .listRowBackground(Color.clear)
@@ -84,6 +79,15 @@ struct ExpenseDetailSheet: View {
                             Text(expense.displayTitle)
                                 .font(.system(.body, design: .rounded))
                         }
+                    }
+
+                    LabeledContent("Category") {
+                        HStack(spacing: 6) {
+                            Image(systemName: expense.category.systemImage)
+                            Text(expense.category.displayName)
+                                .font(.system(.body, design: .rounded))
+                        }
+                        .foregroundStyle(expense.category.color)
                     }
 
                     if let location = expense.location {
@@ -173,7 +177,7 @@ struct ExpenseDetailSheet: View {
                             if canSplit, let onSplit {
                                 Button(
                                     expense.isShared ? "Edit split" : "Split expense",
-                                    systemImage: "person.2",
+                                    systemImage: expense.sharedSplitSystemImage(for: myUserId),
                                     action: onSplit
                                 )
                             }

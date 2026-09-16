@@ -102,7 +102,7 @@ struct HomeExpenseRow: View {
                         }
                         if expense.isShared {
                             amountAccessoryIcon(
-                                sharedExpenseSystemImage,
+                                expense.sharedSplitSystemImage(for: myUserId),
                                 color: HomeTheme.secondary
                             )
                         }
@@ -124,14 +124,6 @@ struct HomeExpenseRow: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel(amountAccessibilityLabel)
         }
-    }
-
-    /// You paid (`paidBy`) → branch; otherwise you were added as a participant → pull.
-    private var sharedExpenseSystemImage: String {
-        if let myUserId, expense.paidBy == myUserId {
-            return "arrow.trianglehead.branch"
-        }
-        return "arrow.trianglehead.pull"
     }
 
     private var categoryIcon: some View {
