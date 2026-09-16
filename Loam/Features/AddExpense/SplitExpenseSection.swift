@@ -108,10 +108,14 @@ struct SplitExpenseSection: View {
                     ForEach(displayedRecent) { partner in
                         partnerRow(partner)
                     }
+                } footer: {
+                    if displayedPeople.isEmpty {
+                        peopleFooter
+                    }
                 }
             }
 
-            if !displayedPeople.isEmpty || displayedRecent.isEmpty {
+            if !displayedPeople.isEmpty {
                 Section {
                     ForEach(displayedPeople) { partner in
                         partnerRow(partner)
@@ -121,9 +125,8 @@ struct SplitExpenseSection: View {
                 } footer: {
                     peopleFooter
                 }
-            } else {
-                // Everyone available is listed under Recent; keep the split footer visible.
-                Section {
+            } else if displayedRecent.isEmpty {
+                Section("Split with") {
                     EmptyView()
                 } footer: {
                     peopleFooter
