@@ -356,10 +356,10 @@ struct HomeView: View {
             .sorted { $0.date > $1.date }
     }
 
-    /// Topmost recurring row in Home list order (newest day first, then newest `createdAt`).
+    /// Chronologically earliest recurring row (initial occurrence), not the newest at the top of the list.
     private var firstRecurringExpenseId: UUID? {
-        for section in expensesByDay {
-            if let match = section.expenses.first(where: \.isRecurring) {
+        for section in expensesByDay.reversed() {
+            if let match = section.expenses.reversed().first(where: \.isRecurring) {
                 return match.id
             }
         }
