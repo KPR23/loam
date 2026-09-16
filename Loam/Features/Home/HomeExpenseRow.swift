@@ -100,6 +100,9 @@ struct HomeExpenseRow: View {
                                         ? HomeTheme.recurringHighlight
                                         : HomeTheme.secondary
                                 )
+                                // Recurring SF Symbol sits tighter in its bounds than `person.2.fill`;
+                                // when it sits next to the amount, pad so the gap matches split/shared.
+                                .padding(.trailing, expense.isShared ? 0 : 2)
                                 .accessibilityHidden(true)
                         }
                         if expense.isShared {
