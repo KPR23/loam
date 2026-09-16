@@ -93,23 +93,18 @@ struct HomeExpenseRow: View {
                 HStack(spacing: 5) {
                     if acceptance == nil {
                         if expense.isRecurring {
-                            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                                .font(.caption)
-                                .foregroundStyle(
-                                    highlightsRecurringIcon
-                                        ? HomeTheme.recurringHighlight
-                                        : HomeTheme.secondary
-                                )
-                                // Recurring SF Symbol sits tighter in its bounds than `person.2.fill`;
-                                // when it sits next to the amount, pad so the gap matches split/shared.
-                                .padding(.trailing, expense.isShared ? 0 : 2)
-                                .accessibilityHidden(true)
+                            amountAccessoryIcon(
+                                "arrow.trianglehead.counterclockwise",
+                                color: highlightsRecurringIcon
+                                    ? HomeTheme.recurringHighlight
+                                    : HomeTheme.secondary
+                            )
                         }
                         if expense.isShared {
-                            Image(systemName: "person.2.fill")
-                                .font(.caption)
-                                .foregroundStyle(HomeTheme.secondary)
-                                .accessibilityHidden(true)
+                            amountAccessoryIcon(
+                                sharedExpenseSystemImage,
+                                color: HomeTheme.secondary
+                            )
                         }
                     }
 
@@ -131,6 +126,14 @@ struct HomeExpenseRow: View {
         }
     }
 
+    /// You paid (`paidBy`) → branch; otherwise you were added as a participant → pull.
+    private var sharedExpenseSystemImage: String {
+        if let myUserId, expense.paidBy == myUserId {
+            return "arrow.trianglehead.branch"
+        }
+        return "arrow.trianglehead.pull"
+    }
+
     private var categoryIcon: some View {
         Image(systemName: expense.category.systemImage)
             .font(.system(size: 20, weight: .semibold))
@@ -140,10 +143,23 @@ struct HomeExpenseRow: View {
             .accessibilityHidden(true)
     }
 
+    /// Shared size/weight/spacing chrome for every glyph beside the amount.
+    private func amountAccessoryIcon(_ systemName: String, color: Color) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 14, weight: .semibold))
+            .symbolRenderingMode(.monochrome)
+            .foregroundStyle(color)
+            .accessibilityHidden(true)
+    }
+
     private var amountAccessibilityLabel: String {
         var parts: [String] = []
         if showsShareBreakdown {
-            parts.append("Your share \(MoneyFormatter.string(from: myShare)), shared expense")
+            if let myUserId, expense.paidBy == myUserId {
+                parts.append("Your share \(MoneyFormatter.string(from: myShare)), you paid shared expense")
+            } else {
+                parts.append("Your share \(MoneyFormatter.string(from: myShare)), shared expense")
+            }
         } else {
             parts.append(MoneyFormatter.string(from: myShare))
         }
