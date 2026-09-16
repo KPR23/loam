@@ -309,19 +309,6 @@ struct HomeView: View {
                     ForEach(section.expenses) { expense in
                         expenseRow(expense)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                if canEdit(expense) {
-                                    Button {
-                                        presentEdit(for: expense)
-                                    } label: {
-                                        Label {
-                                            Text("Edit")
-                                                .fontWeight(.semibold)
-                                        } icon: {
-                                            Image(systemName: "pencil")
-                                        }
-                                    }
-                                    .tint(HomeTheme.recurringHighlight)
-                                }
                                 // Avoid `role: .destructive` — it triggers immediate row removal
                                 // before the confirmation alert; tint keeps the delete styling.
                                 Button {
@@ -337,6 +324,19 @@ struct HomeView: View {
                                 .tint(.red)
                             }
                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                if canEdit(expense) {
+                                    Button {
+                                        presentEdit(for: expense)
+                                    } label: {
+                                        Label {
+                                            Text("Edit")
+                                                .fontWeight(.semibold)
+                                        } icon: {
+                                            Image(systemName: "pencil")
+                                        }
+                                    }
+                                    .tint(HomeTheme.recurringHighlight)
+                                }
                                 if canSplit(expense) {
                                     Button {
                                         presentSplit(for: expense)
