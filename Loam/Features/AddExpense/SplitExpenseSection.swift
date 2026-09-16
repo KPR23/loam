@@ -90,7 +90,7 @@ struct SplitExpenseSection: View {
         }
 
         if isSearching {
-            Section("Results") {
+            Section {
                 if searchResults.isEmpty {
                     Text("No people match “\(normalizedSearch)”.")
                         .foregroundStyle(.secondary)
@@ -99,15 +99,19 @@ struct SplitExpenseSection: View {
                         partnerRow(partner)
                     }
                 }
+            } header: {
+                Text("Results")
             } footer: {
                 peopleFooter
             }
         } else {
             if !displayedRecent.isEmpty {
-                Section("Recent") {
+                Section {
                     ForEach(displayedRecent) { partner in
                         partnerRow(partner)
                     }
+                } header: {
+                    Text("Recent")
                 } footer: {
                     if displayedPeople.isEmpty {
                         peopleFooter
@@ -126,8 +130,10 @@ struct SplitExpenseSection: View {
                     peopleFooter
                 }
             } else if displayedRecent.isEmpty {
-                Section("Split with") {
+                Section {
                     EmptyView()
+                } header: {
+                    Text("Split with")
                 } footer: {
                     peopleFooter
                 }
