@@ -12,6 +12,9 @@ struct AddExpenseView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// When set, the form edits this expense instead of creating a new one.
+    private let existingExpense: ExpenseRecord?
+
     @State private var step: AddExpenseStep = .amount
     @State private var amountText = ""
     @State private var category: ExpenseCategory = .groceries
@@ -38,7 +41,31 @@ struct AddExpenseView: View {
     @FocusState private var titleFocused: Bool
     @FocusState private var noteFocused: Bool
 
+    private var isEditing: Bool { existingExpense != nil }
     private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
+
+    init(existingExpense: ExpenseRecord? = nil) {
+        self.existingExpense = existingExpense
+        guard let expense = existingExpense else { return }
+
+        let myUserId = expense.createdBy
+        let partnerUserIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId)
+        let splitSeed = SplitFormSeed.from(expense: expense, myUserId: myUserId)
+
+        _amountText = State(
+            initialValue: Money.sanitizeTypingInput(MoneyFormatter.typingAmount(from: expense.money))
+        )
+        _category = State(initialValue: expense.category)
+        _title = State(initialValue: expense.title ?? "")
+        _note = State(initialValue: expense.note ?? "")
+        _location = State(initialValue: expense.location)
+        _spentAt = State(initialValue: expense.spentAt)
+        _selectedPartnerUserIds = State(initialValue: partnerUserIds)
+        _splitMode = State(initialValue: splitSeed.splitMode)
+        _paidByUserId = State(initialValue: expense.paidBy)
+        _myPercentage = State(initialValue: splitSeed.myPercentage)
+        _myExactAmountText = State(initialValue: splitSeed.myExactAmountText)
+    }
 
     var body: some View {
         NavigationStack {
@@ -50,7 +77,7 @@ struct AddExpenseView: View {
                     detailsStep
                 }
             }
-            .navigationTitle(step == .amount ? "Add expense" : "Details")
+            .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .task(id: step) {
@@ -67,6 +94,15 @@ struct AddExpenseView: View {
             }
         }
         .sensoryFeedback(.selection, trigger: amountText)
+    }
+
+    private var navigationTitle: String {
+        switch step {
+        case .amount:
+            return isEditing ? "Edit expense" : "Add expense"
+        case .details:
+            return "Details"
+        }
     }
 
     // MARK: - Amount step
@@ -168,53 +204,55 @@ struct AddExpenseView: View {
                 }
             }
 
-            Section {
-                Toggle("Repeat", isOn: $isRepeating)
+            if !isEditing {
+                Section {
+                    Toggle("Repeat", isOn: $isRepeating)
 
-                if isRepeating {
-                    Picker("Frequency", selection: $repeatPreset) {
-                        ForEach(RecurringPreset.allCases) { preset in
-                            Text(preset.displayName).tag(preset)
-                        }
-                    }
-
-                    if repeatPreset == .custom {
-                        Stepper(value: $repeatIntervalCount, in: 1...365, step: 1) {
-                            Text("Every \(repeatIntervalCount)")
-                        }
-                        Picker("Unit", selection: $repeatInterval) {
-                            ForEach(RecurringIntervalUnit.allCases) { unit in
-                                Text(repeatIntervalCount == 1 ? unit.singularName : unit.pluralName)
-                                    .tag(unit)
+                    if isRepeating {
+                        Picker("Frequency", selection: $repeatPreset) {
+                            ForEach(RecurringPreset.allCases) { preset in
+                                Text(preset.displayName).tag(preset)
                             }
                         }
-                    }
 
-                    Toggle("Ends", isOn: $repeatHasEndDate)
+                        if repeatPreset == .custom {
+                            Stepper(value: $repeatIntervalCount, in: 1...365, step: 1) {
+                                Text("Every \(repeatIntervalCount)")
+                            }
+                            Picker("Unit", selection: $repeatInterval) {
+                                ForEach(RecurringIntervalUnit.allCases) { unit in
+                                    Text(repeatIntervalCount == 1 ? unit.singularName : unit.pluralName)
+                                        .tag(unit)
+                                }
+                            }
+                        }
 
-                    if repeatHasEndDate {
-                        DatePicker(
-                            "End date",
-                            selection: $repeatEndDate,
-                            in: spentAt...,
-                            displayedComponents: .date
-                        )
+                        Toggle("Ends", isOn: $repeatHasEndDate)
+
+                        if repeatHasEndDate {
+                            DatePicker(
+                                "End date",
+                                selection: $repeatEndDate,
+                                in: spentAt...,
+                                displayedComponents: .date
+                            )
+                        }
+                    }
+                } footer: {
+                    if isRepeating {
+                        Text(repeatFooterText)
                     }
                 }
-            } footer: {
-                if isRepeating {
-                    Text(repeatFooterText)
+                .onChange(of: repeatPreset) { _, newValue in
+                    if let interval = newValue.interval {
+                        repeatInterval = interval.unit
+                        repeatIntervalCount = interval.count
+                    }
                 }
-            }
-            .onChange(of: repeatPreset) { _, newValue in
-                if let interval = newValue.interval {
-                    repeatInterval = interval.unit
-                    repeatIntervalCount = interval.count
-                }
-            }
-            .onChange(of: spentAt) { _, newValue in
-                if repeatEndDate < newValue {
-                    repeatEndDate = newValue
+                .onChange(of: spentAt) { _, newValue in
+                    if repeatEndDate < newValue {
+                        repeatEndDate = newValue
+                    }
                 }
             }
 
@@ -377,62 +415,116 @@ struct AddExpenseView: View {
         }
 
         do {
-            let recurring: RecurringRuleRecord?
-            if isRepeating {
-                recurring = RecurringRuleRecord(
-                    ownerUserId: userId,
-                    amountMinor: money.amountMinor,
-                    category: category,
-                    title: title.nilIfBlank,
-                    note: note.nilIfBlank,
-                    location: location,
-                    intervalUnit: repeatInterval,
-                    intervalCount: max(1, repeatIntervalCount),
-                    startDate: spentAt,
-                    endDate: repeatHasEndDate ? repeatEndDate : nil
+            if let existingExpense {
+                try await saveEdit(
+                    expense: existingExpense,
+                    money: money,
+                    userId: userId
                 )
             } else {
-                recurring = nil
-            }
-
-            if isSplit {
-                let partners = selectedSplitPartners
-                let household = try await householdStore.ensureSplitHousehold(
-                    userId: userId,
-                    userDisplayName: authSession.displayName ?? "You",
-                    partners: partners
-                )
-                try await expenseStore.addSplit(
-                    amountMinor: money.amountMinor,
-                    category: category,
-                    title: title.nilIfBlank,
-                    note: note,
-                    location: location,
-                    spentAt: spentAt,
-                    userId: userId,
-                    householdId: household.id,
-                    splitMode: partners.count == 1 ? splitMode : .equal,
-                    paidBy: paidByUserId ?? userId,
-                    partnerUserIds: partners.map(\.userId),
-                    myPercentage: myPercentage,
-                    myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor,
-                    recurring: recurring
-                )
-            } else {
-                try await expenseStore.addPersonal(
-                    amountMinor: money.amountMinor,
-                    category: category,
-                    title: title.nilIfBlank,
-                    note: note,
-                    location: location,
-                    spentAt: spentAt,
-                    userId: userId,
-                    recurring: recurring
-                )
+                try await saveCreate(money: money, userId: userId)
             }
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func saveCreate(money: Money, userId: UUID) async throws {
+        let recurring: RecurringRuleRecord?
+        if isRepeating {
+            recurring = RecurringRuleRecord(
+                ownerUserId: userId,
+                amountMinor: money.amountMinor,
+                category: category,
+                title: title.nilIfBlank,
+                note: note.nilIfBlank,
+                location: location,
+                intervalUnit: repeatInterval,
+                intervalCount: max(1, repeatIntervalCount),
+                startDate: spentAt,
+                endDate: repeatHasEndDate ? repeatEndDate : nil
+            )
+        } else {
+            recurring = nil
+        }
+
+        if isSplit {
+            let partners = selectedSplitPartners
+            let household = try await householdStore.ensureSplitHousehold(
+                userId: userId,
+                userDisplayName: authSession.displayName ?? "You",
+                partners: partners
+            )
+            try await expenseStore.addSplit(
+                amountMinor: money.amountMinor,
+                category: category,
+                title: title.nilIfBlank,
+                note: note,
+                location: location,
+                spentAt: spentAt,
+                userId: userId,
+                householdId: household.id,
+                splitMode: partners.count == 1 ? splitMode : .equal,
+                paidBy: paidByUserId ?? userId,
+                partnerUserIds: partners.map(\.userId),
+                myPercentage: myPercentage,
+                myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor,
+                recurring: recurring
+            )
+        } else {
+            try await expenseStore.addPersonal(
+                amountMinor: money.amountMinor,
+                category: category,
+                title: title.nilIfBlank,
+                note: note,
+                location: location,
+                spentAt: spentAt,
+                userId: userId,
+                recurring: recurring
+            )
+        }
+    }
+
+    private func saveEdit(expense: ExpenseRecord, money: Money, userId: UUID) async throws {
+        if isSplit {
+            let partners = selectedSplitPartners
+            let household = try await householdStore.ensureSplitHousehold(
+                userId: userId,
+                userDisplayName: authSession.displayName ?? "You",
+                partners: partners
+            )
+            try await expenseStore.update(
+                expenseId: expense.id,
+                amountMinor: money.amountMinor,
+                category: category,
+                title: title.nilIfBlank,
+                note: note,
+                location: location,
+                spentAt: spentAt,
+                userId: userId,
+                householdId: household.id,
+                splitMode: partners.count == 1 ? splitMode : .equal,
+                paidBy: paidByUserId ?? userId,
+                partnerUserIds: partners.map(\.userId),
+                myPercentage: myPercentage,
+                myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor
+            )
+        } else {
+            try await expenseStore.update(
+                expenseId: expense.id,
+                amountMinor: money.amountMinor,
+                category: category,
+                title: title.nilIfBlank,
+                note: note,
+                location: location,
+                spentAt: spentAt,
+                userId: userId,
+                householdId: nil,
+                splitMode: .equal,
+                paidBy: userId,
+                partnerUserIds: []
+            )
         }
     }
 }

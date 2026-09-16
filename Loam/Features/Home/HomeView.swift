@@ -14,6 +14,12 @@ private struct ProposeEditPresentation: Identifiable {
     var id: UUID { expense.id }
 }
 
+private struct EditExpensePresentation: Identifiable {
+    let expense: ExpenseRecord
+
+    var id: UUID { expense.id }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
@@ -27,6 +33,7 @@ struct HomeView: View {
     @State private var expensePendingDelete: ExpenseRecord?
     @State private var expensePendingSplit: SplitExpensePresentation?
     @State private var expensePendingProposeEdit: ProposeEditPresentation?
+    @State private var expensePendingEdit: EditExpensePresentation?
     @State private var selectedExpense: ExpenseRecord?
     @State private var showAllPendingExpenses = false
 
@@ -111,6 +118,9 @@ struct HomeView: View {
         .sheet(item: $expensePendingProposeEdit) { presentation in
             ProposeEditSheet(expense: presentation.expense, myUserId: presentation.myUserId)
         }
+        .sheet(item: $expensePendingEdit) { presentation in
+            AddExpenseView(existingExpense: presentation.expense)
+        }
         .sheet(isPresented: $showAllPendingExpenses) {
             if let userId = authSession.userId {
                 PendingExpensesSheet(myUserId: userId)
@@ -120,6 +130,11 @@ struct HomeView: View {
             let isPendingAcceptance = authSession.userId.map { expense.isPendingAcceptance(for: $0) } ?? false
             ExpenseDetailSheet(
                 expense: expense,
+                onEdit: (!isPendingAcceptance && canEdit(expense)) ? {
+                    let target = expense
+                    selectedExpense = nil
+                    presentEdit(for: target)
+                } : nil,
                 onSplit: (!isPendingAcceptance && canSplit(expense)) ? {
                     let target = expense
                     selectedExpense = nil
@@ -294,6 +309,19 @@ struct HomeView: View {
                     ForEach(section.expenses) { expense in
                         expenseRow(expense)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                if canEdit(expense) {
+                                    Button {
+                                        presentEdit(for: expense)
+                                    } label: {
+                                        Label {
+                                            Text("Edit")
+                                                .fontWeight(.semibold)
+                                        } icon: {
+                                            Image(systemName: "pencil")
+                                        }
+                                    }
+                                    .tint(HomeTheme.recurringHighlight)
+                                }
                                 // Avoid `role: .destructive` — it triggers immediate row removal
                                 // before the confirmation alert; tint keeps the delete styling.
                                 Button {
@@ -413,6 +441,11 @@ struct HomeView: View {
             selectedExpense = expense
         }
         .contextMenu {
+            if canEdit(expense) {
+                Button("Edit", systemImage: "pencil") {
+                    presentEdit(for: expense)
+                }
+            }
             if canSplit(expense) {
                 Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
                     presentSplit(for: expense)
@@ -430,6 +463,11 @@ struct HomeView: View {
 
     private func canSplit(_ expense: ExpenseRecord) -> Bool {
         SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+    }
+
+    private func canEdit(_ expense: ExpenseRecord) -> Bool {
+        guard let userId = authSession.userId else { return false }
+        return expense.createdBy == userId
     }
 
     private func pendingDetailActions(for expense: ExpenseRecord) -> ExpenseDetailPendingActions? {
@@ -479,6 +517,10 @@ struct HomeView: View {
     private func presentSplit(for expense: ExpenseRecord) {
         guard let userId = authSession.userId else { return }
         expensePendingSplit = SplitExpensePresentation(expense: expense, myUserId: userId)
+    }
+
+    private func presentEdit(for expense: ExpenseRecord) {
+        expensePendingEdit = EditExpensePresentation(expense: expense)
     }
 
     private func presentDeleteConfirmation(for expense: ExpenseRecord) {

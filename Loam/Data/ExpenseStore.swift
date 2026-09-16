@@ -215,6 +215,81 @@ final class ExpenseStore: ObservableObject {
         await refresh(userId: userId)
     }
 
+    func update(
+        expenseId: UUID,
+        amountMinor: Int,
+        category: ExpenseCategory,
+        title: String? = nil,
+        note: String?,
+        location: ExpenseLocation? = nil,
+        spentAt: Date,
+        userId: UUID,
+        householdId: UUID?,
+        splitMode: SplitExpenseMode,
+        paidBy: UUID,
+        partnerUserIds: [UUID],
+        myPercentage: Int = 50,
+        myExactAmountMinor: Int? = nil
+    ) async throws {
+        guard var expense = expenses.first(where: { $0.id == expenseId }) else {
+            throw ExpenseRepositoryError.notFound
+        }
+        guard expense.createdBy == userId else {
+            throw ExpenseRepositoryError.notFound
+        }
+
+        let trimmedTitle = title.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+
+        expense.amountMinor = amountMinor
+        expense.category = category
+        expense.title = trimmedTitle
+        expense.note = trimmedNote
+        expense.location = location
+        expense.spentAt = Calendar.current.startOfDay(for: spentAt)
+        expense.paidBy = paidBy
+        expense.updatedAt = Date()
+
+        if partnerUserIds.isEmpty {
+            expense.householdId = nil
+            expense.paidBy = userId
+            expense.shares = SplitCalculator.personal(totalMinor: amountMinor, userId: userId).map {
+                ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor)
+            }
+            let activeRepository = repository(for: expense)
+            _ = try await activeRepository.update(expense)
+        } else {
+            guard let householdId else {
+                throw ExpenseRepositoryError.invalidShares
+            }
+            let calculatedShares = SplitCalculator.split(
+                totalMinor: amountMinor,
+                mode: splitMode,
+                myUserId: userId,
+                partnerUserIds: partnerUserIds,
+                paidByUserId: paidBy,
+                myPercentage: myPercentage,
+                myExactAmountMinor: myExactAmountMinor
+            )
+            expense.householdId = householdId
+            let activeRepository = repository(forSplitWith: partnerUserIds)
+            let usersTrustingCreator = await usersTrusting(
+                creatorId: userId,
+                partnerUserIds: partnerUserIds,
+                householdId: householdId,
+                repository: activeRepository
+            )
+            expense.shares = ExpenseShareAcceptance.sharesWithAcceptance(
+                calculatedShares: calculatedShares,
+                expense: expense,
+                usersTrustingCreator: usersTrustingCreator
+            )
+            _ = try await activeRepository.update(expense)
+        }
+
+        await refresh(userId: userId)
+    }
+
     func delete(id: UUID, userId: UUID, recurringMode: RecurringDeletionMode? = nil) async {
         do {
             if let expense = expenses.first(where: { $0.id == id }) {
