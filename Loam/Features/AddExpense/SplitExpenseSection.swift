@@ -5,6 +5,8 @@ struct SplitExpenseSection: View {
     let myUserId: UUID
     let myDisplayName: String
     let availablePartners: [SplitPartnerOption]
+    /// Recent split partners for quick-select (must already exclude the current user).
+    var recentPartners: [SplitPartnerOption] = []
     /// When false, at least one partner must stay selected (edit-split / propose-edit flows).
     var requiresPartner: Bool = false
 
@@ -14,12 +16,45 @@ struct SplitExpenseSection: View {
     @Binding var myPercentage: Int
     @Binding var myExactAmountText: String
 
+    @State private var partnerSearchText = ""
+
     private var currencyCode: String { "PLN" }
 
     private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
 
+    /// Current user is never selectable in the picker UI.
+    private var selectablePartners: [SplitPartnerOption] {
+        availablePartners.filter { $0.userId != myUserId }
+    }
+
+    private var normalizedSearch: String {
+        partnerSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isSearching: Bool { !normalizedSearch.isEmpty }
+
+    private var searchResults: [SplitPartnerOption] {
+        selectablePartners.filter {
+            $0.displayName.localizedCaseInsensitiveContains(normalizedSearch)
+        }
+    }
+
+    private var displayedRecent: [SplitPartnerOption] {
+        guard !isSearching else { return [] }
+        let selectableIds = Set(selectablePartners.map(\.userId))
+        return recentPartners.filter { selectableIds.contains($0.userId) }
+    }
+
+    private var displayedPeople: [SplitPartnerOption] {
+        if isSearching {
+            return searchResults
+        }
+        let recentIds = Set(displayedRecent.map(\.userId))
+        return selectablePartners.filter { !recentIds.contains($0.userId) }
+    }
+
     private var selectedPartners: [SplitPartnerOption] {
-        availablePartners.filter { selectedPartnerUserIds.contains($0.userId) }
+        selectablePartners.filter { selectedPartnerUserIds.contains($0.userId) }
     }
 
     private var splitParticipants: [SplitParticipantOption] {
@@ -51,21 +86,48 @@ struct SplitExpenseSection: View {
 
     var body: some View {
         Section {
-            if isSplit {
-                meSplitRow
+            partnerSearchField
+        }
+
+        if isSearching {
+            Section("Results") {
+                if searchResults.isEmpty {
+                    Text("No people match “\(normalizedSearch)”.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(searchResults) { partner in
+                        partnerRow(partner)
+                    }
+                }
+            } footer: {
+                peopleFooter
             }
-            ForEach(availablePartners) { partner in
-                partnerRow(partner)
+        } else {
+            if !displayedRecent.isEmpty {
+                Section("Recent") {
+                    ForEach(displayedRecent) { partner in
+                        partnerRow(partner)
+                    }
+                }
             }
-        } header: {
-            Text("Split with")
-        } footer: {
-            if requiresPartner {
-                Text("Select at least one person to share this expense with.")
-            } else if selectedPartnerUserIds.isEmpty {
-                Text("Leave empty for a personal expense.")
+
+            if !displayedPeople.isEmpty || displayedRecent.isEmpty {
+                Section {
+                    ForEach(displayedPeople) { partner in
+                        partnerRow(partner)
+                    }
+                } header: {
+                    Text(displayedRecent.isEmpty ? "Split with" : "People")
+                } footer: {
+                    peopleFooter
+                }
             } else {
-                Text("Only your share counts toward your monthly total.")
+                // Everyone available is listed under Recent; keep the split footer visible.
+                Section {
+                    EmptyView()
+                } footer: {
+                    peopleFooter
+                }
             }
         }
 
@@ -120,22 +182,38 @@ struct SplitExpenseSection: View {
         }
     }
 
-    private var meSplitRow: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.title3)
-                .foregroundStyle(Color.accentColor)
-                .symbolRenderingMode(.hierarchical)
-
-            Text(myDisplayName)
-                .foregroundStyle(.primary)
-
-            Spacer(minLength: 0)
+    @ViewBuilder
+    private var peopleFooter: some View {
+        if requiresPartner {
+            Text("Select at least one person to share this expense with.")
+        } else if selectedPartnerUserIds.isEmpty {
+            Text("Leave empty for a personal expense.")
+        } else {
+            Text("Only your share counts toward your monthly total.")
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(myDisplayName)
-        .accessibilityValue("Selected for split")
-        .accessibilityAddTraits(.isSelected)
+    }
+
+    private var partnerSearchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField("Search people", text: $partnerSearchText)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+
+            if !partnerSearchText.isEmpty {
+                Button {
+                    partnerSearchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
     }
 
     private func partnerRow(_ partner: SplitPartnerOption) -> some View {
@@ -239,6 +317,7 @@ struct SplitExpenseSection: View {
     }
 
     private func togglePartner(_ userId: UUID) {
+        guard userId != myUserId else { return }
         if selectedPartnerUserIds.contains(userId) {
             if requiresPartner, selectedPartnerUserIds.count == 1 { return }
             selectedPartnerUserIds.remove(userId)

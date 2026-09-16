@@ -161,6 +161,7 @@ final class ExpenseStore: ObservableObject {
             shares: shareRecords
         )
         _ = try await activeRepository.create(expense)
+        RecentSplitPartners.record(partnerUserIds)
         if var rule = recurringRule {
             rule.nextOccurrence = rule.nextOccurrence(after: spentAt)
             _ = try await activeRepository.updateRecurringRule(rule)
@@ -409,6 +410,7 @@ final class ExpenseStore: ObservableObject {
         expense.updatedAt = Date()
 
         _ = try await activeRepository.update(expense)
+        RecentSplitPartners.record(partnerUserIds)
         await refresh(userId: userId)
     }
 
@@ -521,6 +523,8 @@ final class ExpenseStore: ObservableObject {
         )
         let activeRepository = repository(for: expense)
         _ = try await activeRepository.createEditProposal(proposal, expenseId: expense.id)
+        let partnerIds = shares.map(\.userId).filter { $0 != userId }
+        RecentSplitPartners.record(partnerIds)
         await refresh(userId: userId)
     }
 

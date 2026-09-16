@@ -57,6 +57,14 @@ struct ProposeEditSheet: View {
         #endif
     }
 
+    private var recentSplitPartners: [SplitPartnerOption] {
+        SplitPartnerOption.recent(
+            available: splitPartners,
+            myUserId: myUserId,
+            seedingFrom: expenseStore.expenses
+        )
+    }
+
     init(expense: ExpenseRecord, myUserId: UUID) {
         self.expense = expense
         self.myUserId = myUserId
@@ -97,6 +105,7 @@ struct ProposeEditSheet: View {
                     myUserId: myUserId,
                     myDisplayName: authSession.displayName ?? "You",
                     availablePartners: splitPartners,
+                    recentPartners: recentSplitPartners,
                     requiresPartner: true,
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
                     splitMode: $formState.splitMode,
