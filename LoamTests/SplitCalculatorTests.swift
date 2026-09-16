@@ -173,6 +173,7 @@ final class BalanceSimplifierTests: XCTestCase {
 
 final class RecentSplitPartnersTests: XCTestCase {
     let me = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    let otherAccount = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
     let julia = UUID(uuidString: "00000000-0000-0000-0000-000000000010")!
     let philip = UUID(uuidString: "00000000-0000-0000-0000-000000000011")!
 
@@ -187,13 +188,13 @@ final class RecentSplitPartnersTests: XCTestCase {
     }
 
     func testRecordOrdersMostRecentFirstAndDedupes() {
-        RecentSplitPartners.record([julia])
-        RecentSplitPartners.record([philip, julia])
-        XCTAssertEqual(RecentSplitPartners.loadIDs(), [philip, julia])
+        RecentSplitPartners.record([julia], for: me)
+        RecentSplitPartners.record([philip, julia], for: me)
+        XCTAssertEqual(RecentSplitPartners.loadIDs(for: me), [philip, julia])
     }
 
     func testRecentExcludesCurrentUserAndMapsAvailable() {
-        RecentSplitPartners.record([me, julia, philip])
+        RecentSplitPartners.record([me, julia, philip], for: me)
         let available = [
             SplitPartnerOption(userId: julia, displayName: "Julia"),
             SplitPartnerOption(userId: philip, displayName: "Philip"),
@@ -202,6 +203,13 @@ final class RecentSplitPartnersTests: XCTestCase {
         let recent = SplitPartnerOption.recent(available: available, myUserId: me, limit: 5)
         XCTAssertEqual(recent.map(\.userId), [julia, philip])
         XCTAssertFalse(recent.contains(where: { $0.userId == me }))
+    }
+
+    func testRecentIsScopedPerAccount() {
+        RecentSplitPartners.record([julia], for: me)
+        RecentSplitPartners.record([philip], for: otherAccount)
+        XCTAssertEqual(RecentSplitPartners.loadIDs(for: me), [julia])
+        XCTAssertEqual(RecentSplitPartners.loadIDs(for: otherAccount), [philip])
     }
 
     func testRecentSeedsFromSharedExpenseHistory() {
