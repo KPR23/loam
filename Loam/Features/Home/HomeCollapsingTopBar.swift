@@ -21,6 +21,8 @@ struct HomeCollapsingTopBar: View {
     let period: DatePeriod
     let amount: Money
     let collapseProgress: CGFloat
+    /// `-1` previous, `1` next, `0` fade (picker / unknown). Drives month-title push direction.
+    var monthSlideDirection: Int = 0
     let onPickMonth: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -61,13 +63,22 @@ struct HomeCollapsingTopBar: View {
                 .foregroundStyle(HomeTheme.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
-                .contentTransition(.opacity)
-                .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: period)
+                .id(period)
+                .transition(monthTitleTransition)
 
             Image(systemName: "chevron.down")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(HomeTheme.secondary)
         }
+        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: period)
+    }
+
+    private var monthTitleTransition: AnyTransition {
+        guard !reduceMotion, monthSlideDirection != 0 else {
+            return .opacity
+        }
+        let edge: Edge = monthSlideDirection > 0 ? .trailing : .leading
+        return .push(from: edge)
     }
 
     private var collapsedAmount: some View {

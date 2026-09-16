@@ -53,6 +53,8 @@ struct HomeView: View {
                     )
                     .id(expenseStore.period)
                     .transition(monthContentTransition)
+                    // Month swipe lives on the hero only so expense-row swipeActions stay free.
+                    .simultaneousGesture(monthSwipeGesture)
                     .reportHomeHeroScrollOffset()
                     .listRowInsets(EdgeInsets(top: -2, leading: 0, bottom: 4, trailing: 0))
                     .listRowSeparator(.hidden)
@@ -70,7 +72,6 @@ struct HomeView: View {
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .animation(reduceMotion ? nil : monthChangeAnimation, value: expenseStore.period)
-            .simultaneousGesture(monthSwipeGesture)
             .sensoryFeedback(.selection, trigger: monthSwipeTick)
             .navigationBarTitleDisplayMode(.inline)
             .homeTranslucentNavigationBar(collapseProgress: collapseProgress)
@@ -80,6 +81,7 @@ struct HomeView: View {
                         period: expenseStore.period,
                         amount: expenseStore.summary.totalMine,
                         collapseProgress: collapseProgress,
+                        monthSlideDirection: monthSlideDirection,
                         onPickMonth: { showMonthPicker = true }
                     )
                 }
