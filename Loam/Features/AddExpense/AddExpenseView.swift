@@ -290,7 +290,11 @@ struct AddExpenseView: View {
             if paidByUserId == nil {
                 paidByUserId = authSession.userId
             }
-            if isSplit, !SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) {
+            // Never wipe partners while editing — Release has no partner picker, and clearing
+            // would demote shared expenses to personal on Save.
+            if !isEditing,
+               isSplit,
+               !SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) {
                 selectedPartnerUserIds = []
             }
         }
@@ -343,6 +347,12 @@ struct AddExpenseView: View {
 
     private var selectedSplitPartners: [SplitPartnerOption] {
         splitPartners.filter { selectedPartnerUserIds.contains($0.userId) }
+    }
+
+    /// When split UI/partners aren't available, keep existing membership instead of clearing it.
+    private var canChangeSplitMembership: Bool {
+        SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+            && !splitPartners.isEmpty
     }
 
     private var parsedMoney: Money? {
@@ -487,6 +497,11 @@ struct AddExpenseView: View {
     }
 
     private func saveEdit(expense: ExpenseRecord, money: Money, userId: UUID) async throws {
+        if shouldPreserveExistingSplit(for: expense) {
+            try await saveEditPreservingSplit(expense: expense, money: money, userId: userId)
+            return
+        }
+
         if isSplit {
             let partners = selectedSplitPartners
             let household = try await householdStore.ensureSplitHousehold(
@@ -526,6 +541,37 @@ struct AddExpenseView: View {
                 partnerUserIds: []
             )
         }
+    }
+
+    private func shouldPreserveExistingSplit(for expense: ExpenseRecord) -> Bool {
+        expense.isShared && !canChangeSplitMembership
+    }
+
+    private func saveEditPreservingSplit(expense: ExpenseRecord, money: Money, userId: UUID) async throws {
+        guard let householdId = expense.householdId else {
+            throw ExpenseRepositoryError.invalidShares
+        }
+        let partnerIds = Array(SplitPartnerOption.partnerUserIds(in: expense, myUserId: userId))
+        guard !partnerIds.isEmpty else {
+            throw ExpenseRepositoryError.invalidShares
+        }
+
+        try await expenseStore.update(
+            expenseId: expense.id,
+            amountMinor: money.amountMinor,
+            category: category,
+            title: title.nilIfBlank,
+            note: note,
+            location: location,
+            spentAt: spentAt,
+            userId: userId,
+            householdId: householdId,
+            splitMode: partnerIds.count == 1 ? splitMode : .equal,
+            paidBy: paidByUserId ?? expense.paidBy,
+            partnerUserIds: partnerIds,
+            myPercentage: myPercentage,
+            myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor
+        )
     }
 }
 

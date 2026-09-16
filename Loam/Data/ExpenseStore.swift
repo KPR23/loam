@@ -238,6 +238,10 @@ final class ExpenseStore: ObservableObject {
             throw ExpenseRepositoryError.notFound
         }
 
+        // Resolve storage from the original expense before mutating shares/partners,
+        // so DEBUG local-vs-Supabase routing cannot flip mid-update.
+        let activeRepository = repository(for: expense)
+
         let trimmedTitle = title.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
 
@@ -256,7 +260,6 @@ final class ExpenseStore: ObservableObject {
             expense.shares = SplitCalculator.personal(totalMinor: amountMinor, userId: userId).map {
                 ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor)
             }
-            let activeRepository = repository(for: expense)
             _ = try await activeRepository.update(expense)
         } else {
             guard let householdId else {
@@ -272,7 +275,6 @@ final class ExpenseStore: ObservableObject {
                 myExactAmountMinor: myExactAmountMinor
             )
             expense.householdId = householdId
-            let activeRepository = repository(forSplitWith: partnerUserIds)
             let usersTrustingCreator = await usersTrusting(
                 creatorId: userId,
                 partnerUserIds: partnerUserIds,
