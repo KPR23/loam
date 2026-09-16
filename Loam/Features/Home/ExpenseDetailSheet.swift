@@ -46,52 +46,43 @@ struct ExpenseDetailSheet: View {
         NavigationStack {
             List {
                 Section {
-                    VStack(spacing: 12) {
-                        Image(systemName: expense.category.systemImage)
-                            .font(.system(size: 36))
-                            .symbolRenderingMode(.monochrome)
-                            .foregroundStyle(expense.category.color)
-                            .frame(width: 64, height: 64)
-                            .background(expense.category.color.opacity(0.12))
-                            .clipShape(Circle())
+                    VStack(spacing: 0) {
+                        ZStack {
+                            Circle()
+                                .fill(expense.category.color.opacity(0.12))
+                            Image(systemName: expense.category.systemImage)
+                                .font(.system(size: 28, weight: .medium))
+                                .symbolRenderingMode(.monochrome)
+                                .foregroundStyle(expense.category.color)
+                        }
+                        .frame(width: 64, height: 64)
 
                         Text(MoneyFormatter.string(from: expense.isShared ? myShare : expense.money))
                             .font(.system(size: 34, weight: .semibold, design: .rounded))
                             .monospacedDigit()
+                            .padding(.top, 16)
 
                         if expense.isShared {
                             Text("Your share of \(MoneyFormatter.string(from: expense.money))")
                                 .font(.subheadline)
                                 .foregroundStyle(HomeTheme.secondary)
+                                .padding(.top, 4)
                         }
 
-                        Text(expense.displayTitle)
+                        Text(expense.category.displayName)
                             .font(.system(.headline, design: .rounded))
                             .foregroundStyle(HomeTheme.secondary)
+                            .padding(.top, expense.isShared ? 10 : 8)
                     }
                     .frame(maxWidth: .infinity)
                     .listRowBackground(Color.clear)
                 }
 
                 Section("Details") {
-                    LabeledContent("Total") {
-                        Text(MoneyFormatter.string(from: expense.money))
-                            .monospacedDigit()
-                    }
-
                     if expense.hasCustomTitle {
                         LabeledContent("Title") {
                             Text(expense.displayTitle)
                                 .font(.system(.body, design: .rounded))
-                        }
-
-                        LabeledContent("Category") {
-                            HStack(spacing: 6) {
-                                Image(systemName: expense.category.systemImage)
-                                Text(expense.category.displayName)
-                                    .font(.system(.body, design: .rounded))
-                            }
-                            .foregroundStyle(expense.category.color)
                         }
                     }
 
@@ -148,8 +139,7 @@ struct ExpenseDetailSheet: View {
                         }
 
                         LabeledContent("Status") {
-                            Text(recurringStatus(for: recurringRule))
-                                .foregroundStyle(recurringRule.isActive && !recurringRule.hasEnded ? .primary : .secondary)
+                            recurringStatusLabel(for: recurringRule)
                         }
                     }
                 } else if expense.isRecurring {
@@ -221,14 +211,17 @@ struct ExpenseDetailSheet: View {
         .presentationDragIndicator(.visible)
     }
 
-    private func recurringStatus(for rule: RecurringRuleRecord) -> String {
-        if !rule.isActive {
-            return "Stopped"
+    @ViewBuilder
+    private func recurringStatusLabel(for rule: RecurringRuleRecord) -> some View {
+        let isActive = rule.isActive && !rule.hasEnded
+        Label {
+            Text(isActive ? "Active" : "Inactive")
+        } icon: {
+            Image(systemName: isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
         }
-        if rule.hasEnded {
-            return "Ended"
-        }
-        return "Active"
+        .font(.body.weight(.medium))
+        .foregroundStyle(isActive ? Color.green : Color.red)
+        .labelStyle(.titleAndIcon)
     }
 
     private func pendingActionsBar(_ actions: ExpenseDetailPendingActions) -> some View {
