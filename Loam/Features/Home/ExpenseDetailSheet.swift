@@ -79,11 +79,6 @@ struct ExpenseDetailSheet: View {
                 }
 
                 Section("Details") {
-                    LabeledContent("Total") {
-                        Text(MoneyFormatter.string(from: expense.money))
-                            .monospacedDigit()
-                    }
-
                     if expense.hasCustomTitle {
                         LabeledContent("Title") {
                             Text(expense.displayTitle)
@@ -116,6 +111,11 @@ struct ExpenseDetailSheet: View {
 
                     LabeledContent("Date") {
                         Text(expense.spentAt.formatted(date: .complete, time: .omitted))
+                    }
+
+                    LabeledContent("Total") {
+                        Text(MoneyFormatter.string(from: expense.money))
+                            .monospacedDigit()
                     }
 
                     if expense.isShared {

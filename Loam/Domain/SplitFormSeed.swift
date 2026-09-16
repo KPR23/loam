@@ -9,7 +9,6 @@ struct SplitFormSeed: Equatable, Sendable {
     var participantAmountTexts: [UUID: String]
 
     static func from(expense: ExpenseRecord, myUserId: UUID) -> SplitFormSeed {
-        let partnerUserIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId)
         let myShare = expense.shares.first(where: { $0.userId == myUserId })?.amountMinor ?? expense.amountMinor
         let amountTexts = Dictionary(uniqueKeysWithValues: expense.shares.map {
             (
@@ -19,51 +18,40 @@ struct SplitFormSeed: Equatable, Sendable {
         })
         let equalPercentages = equalPercentages(for: expense.shares.map(\.userId))
 
-        if expense.isShared, partnerUserIds.count != 1 {
-            return SplitFormSeed(
-                splitMode: .equal,
-                myPercentage: equalPercentages[myUserId] ?? 50,
-                myExactAmountText: amountTexts[myUserId] ?? "",
-                participantPercentages: equalPercentages,
-                participantAmountTexts: amountTexts
-            )
-        }
-
-        let partnerUserId = partnerUserIds.first ?? TestPartner.userId
-        let partnerShare = expense.shares.first(where: { $0.userId == partnerUserId })?.amountMinor
-
-        if expense.isShared,
-           let partnerShare,
-           myShare * 2 == expense.amountMinor,
-           partnerShare * 2 == expense.amountMinor {
-            return SplitFormSeed(
-                splitMode: .equal,
-                myPercentage: 50,
-                myExactAmountText: "",
-                participantPercentages: equalPercentages,
-                participantAmountTexts: amountTexts
-            )
-        }
-
-        if expense.isShared, expense.amountMinor > 0 {
+        if expense.isShared, expense.amountMinor > 0, !expense.shares.isEmpty {
             let storedShares = expense.shares.map {
                 SplitCalculator.Share(userId: $0.userId, amountMinor: $0.amountMinor)
             }
-            if let pct = SplitCalculator.matchingTwoPersonPercentage(
+            let equalShares = SplitCalculator.equal(
                 totalMinor: expense.amountMinor,
-                myUserId: myUserId,
-                partnerUserId: partnerUserId,
+                participants: expense.shares.map(\.userId),
+                paidByUserId: expense.paidBy
+            )
+
+            if SplitCalculator.sharesMatch(storedShares, equalShares) {
+                return SplitFormSeed(
+                    splitMode: .equal,
+                    myPercentage: equalPercentages[myUserId] ?? 50,
+                    myExactAmountText: "",
+                    participantPercentages: equalPercentages,
+                    participantAmountTexts: amountTexts
+                )
+            }
+
+            if let percentages = SplitCalculator.matchingPercentages(
+                totalMinor: expense.amountMinor,
                 paidByUserId: expense.paidBy,
                 storedShares: storedShares
             ) {
                 return SplitFormSeed(
                     splitMode: .percentage,
-                    myPercentage: pct,
+                    myPercentage: percentages[myUserId] ?? 50,
                     myExactAmountText: "",
-                    participantPercentages: [myUserId: pct, partnerUserId: 100 - pct],
+                    participantPercentages: percentages,
                     participantAmountTexts: amountTexts
                 )
             }
+
             return SplitFormSeed(
                 splitMode: .exactAmount,
                 myPercentage: 50,
