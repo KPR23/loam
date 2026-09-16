@@ -12,6 +12,9 @@ final class ExpenseStore: ObservableObject {
 
     @Published private(set) var period: DatePeriod = .currentMonth
 
+    /// `recurringId` → rule `startDate` for expenses in the active period (drives first-occurrence highlight).
+    private var recurringStartDatesById: [UUID: Date] = [:]
+
     var pendingAcceptanceExpenses: [ExpenseRecord] {
         expenses.filter { expense in
             guard let userId = currentUserId else { return false }
@@ -33,6 +36,7 @@ final class ExpenseStore: ObservableObject {
             expenses = []
             pendingProposals = []
             proposalExpenses = []
+            recurringStartDatesById = [:]
             summary = .zero()
             return
         }
@@ -63,6 +67,7 @@ final class ExpenseStore: ObservableObject {
             #endif
             expenses = fetched
             summary = Self.makeSummary(expenses: fetched, userId: userId)
+            recurringStartDatesById = await loadRecurringStartDates(for: fetched)
             lastError = nil
         } catch {
             lastError = error.localizedDescription
@@ -236,6 +241,15 @@ final class ExpenseStore: ObservableObject {
         guard let recurringId = expense.recurringId else { return nil }
         let activeRepository = repository(for: expense)
         return try? await activeRepository.fetchRecurringRule(id: recurringId)
+    }
+
+    /// True only for the seed occurrence of a recurring series (`spentAt` on the rule's `startDate`).
+    func isInitialRecurringOccurrence(_ expense: ExpenseRecord) -> Bool {
+        guard let recurringId = expense.recurringId,
+              let startDate = recurringStartDatesById[recurringId] else {
+            return false
+        }
+        return Calendar.current.isDate(expense.spentAt, inSameDayAs: startDate)
     }
 
     private func applyRecurringDeletion(
@@ -597,6 +611,26 @@ final class ExpenseStore: ObservableObject {
         #else
         return false
         #endif
+    }
+
+    private func loadRecurringStartDates(for expenses: [ExpenseRecord]) async -> [UUID: Date] {
+        let recurringIds = Set(expenses.compactMap(\.recurringId))
+        guard !recurringIds.isEmpty else { return [:] }
+
+        var startDates: [UUID: Date] = [:]
+        for id in recurringIds {
+            if let rule = try? await primaryRepository.fetchRecurringRule(id: id) {
+                startDates[id] = rule.startDate
+                continue
+            }
+            #if DEBUG
+            if !ExpenseRepositoryFactory.usesLocalStorage,
+               let rule = try? await LocalExpenseRepository().fetchRecurringRule(id: id) {
+                startDates[id] = rule.startDate
+            }
+            #endif
+        }
+        return startDates
     }
 
     nonisolated static func makeSummary(
