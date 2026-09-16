@@ -68,6 +68,11 @@ struct ExpenseDetailSheet: View {
                                 .foregroundStyle(HomeTheme.secondary)
                                 .padding(.top, 4)
                         }
+
+                        Text(expense.category.displayName)
+                            .font(.system(.headline, design: .rounded))
+                            .foregroundStyle(HomeTheme.secondary)
+                            .padding(.top, expense.isShared ? 10 : 8)
                     }
                     .frame(maxWidth: .infinity)
                     .listRowBackground(Color.clear)
