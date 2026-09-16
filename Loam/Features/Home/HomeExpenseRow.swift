@@ -16,7 +16,7 @@ struct HomeExpenseRow: View {
     var creatorName: String? = nil
     var acceptance: AcceptanceActions? = nil
     var onTap: (() -> Void)? = nil
-    /// When true, the recurring glyph uses `HomeTheme.recurringHighlight` (earliest/initial Home recurring row).
+    /// When true, the recurring glyph uses `HomeTheme.recurringHighlight` (seed occurrence of that series only).
     var highlightsRecurringIcon: Bool = false
 
     private var myShare: Money {

@@ -356,16 +356,6 @@ struct HomeView: View {
             .sorted { $0.date > $1.date }
     }
 
-    /// Chronologically earliest recurring row (initial occurrence), not the newest at the top of the list.
-    private var firstRecurringExpenseId: UUID? {
-        for section in expensesByDay.reversed() {
-            if let match = section.expenses.reversed().first(where: \.isRecurring) {
-                return match.id
-            }
-        }
-        return nil
-    }
-
     private func daySectionHeader(date: Date, expenses: [ExpenseRecord]) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(daySectionTitle(for: date))
@@ -413,7 +403,7 @@ struct HomeView: View {
         HomeExpenseRow(
             expense: expense,
             myUserId: authSession.userId,
-            highlightsRecurringIcon: expense.id == firstRecurringExpenseId
+            highlightsRecurringIcon: expenseStore.isInitialRecurringOccurrence(expense)
         )
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
