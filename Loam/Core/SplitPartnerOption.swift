@@ -51,7 +51,7 @@ struct SplitPartnerOption: Identifiable, Equatable, Hashable {
         let selectable = available.filter { $0.userId != myUserId }
         let byId = Dictionary(uniqueKeysWithValues: selectable.map { ($0.userId, $0) })
 
-        var orderedIds = RecentSplitPartners.loadIDs().filter { byId[$0] != nil }
+        var orderedIds = RecentSplitPartners.loadIDs(for: myUserId).filter { byId[$0] != nil }
         if orderedIds.count < limit {
             for id in partnerUserIdsByRecency(in: expenses, myUserId: myUserId) where byId[id] != nil {
                 if !orderedIds.contains(id) {
@@ -134,13 +134,17 @@ struct SplitPartnerOption: Identifiable, Equatable, Hashable {
 }
 
 /// Lightweight persistence for recent split-partner quick picks (most-recent first).
+/// Keys are scoped per signed-in / active user so DEBUG account switches do not bleed.
 enum RecentSplitPartners {
-    private static let defaultsKey = "loam.recentSplitPartnerUserIds"
     private static let maxCount = 8
 
-    static func record(_ userIds: [UUID]) {
+    private static func defaultsKey(for userId: UUID) -> String {
+        "loam.recentSplitPartnerUserIds.\(userId.uuidString)"
+    }
+
+    static func record(_ userIds: [UUID], for userId: UUID) {
         guard !userIds.isEmpty else { return }
-        var ordered = loadIDs()
+        var ordered = loadIDs(for: userId)
         for id in userIds.reversed() {
             ordered.removeAll { $0 == id }
             ordered.insert(id, at: 0)
@@ -148,19 +152,29 @@ enum RecentSplitPartners {
         if ordered.count > maxCount {
             ordered = Array(ordered.prefix(maxCount))
         }
-        UserDefaults.standard.set(ordered.map(\.uuidString), forKey: defaultsKey)
+        UserDefaults.standard.set(ordered.map(\.uuidString), forKey: defaultsKey(for: userId))
     }
 
-    static func loadIDs() -> [UUID] {
-        guard let raw = UserDefaults.standard.array(forKey: defaultsKey) as? [String] else {
+    static func loadIDs(for userId: UUID) -> [UUID] {
+        guard let raw = UserDefaults.standard.array(forKey: defaultsKey(for: userId)) as? [String] else {
             return []
         }
         return raw.compactMap(UUID.init(uuidString:))
     }
 
     #if DEBUG
-    static func resetForTesting() {
-        UserDefaults.standard.removeObject(forKey: defaultsKey)
+    static func resetForTesting(userId: UUID? = nil) {
+        if let userId {
+            UserDefaults.standard.removeObject(forKey: defaultsKey(for: userId))
+            return
+        }
+        // Clear any keys written by tests (legacy global + per-user).
+        UserDefaults.standard.removeObject(forKey: "loam.recentSplitPartnerUserIds")
+        for key in UserDefaults.standard.dictionaryRepresentation().keys
+            where key.hasPrefix("loam.recentSplitPartnerUserIds.")
+        {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
     #endif
 }
