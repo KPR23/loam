@@ -20,7 +20,7 @@ Native iOS expense tracker for personal + household spending. Home answers **how
 - Sign in with Apple (+ demo mode when Supabase is not configured)
 - Home led by personal month total + expense list
 - `SupabaseExpenseRepository` when configured; `LocalExpenseRepository` demo fallback
-- Secrets via `Loam/Config/Secrets.xcconfig` (gitignored, optional override of `Config.xcconfig`)
+- Backend URL + anon key in committed `Loam/Config/Config.xcconfig` (shipped via Info.plist)
 
 ## Setup
 
@@ -38,55 +38,41 @@ Set your **Development Team** in the Loam target signing settings. Enable **Sign
 1. Create a project at [supabase.com](https://supabase.com)
 2. Run `supabase/migrations/20260907000000_init.sql` in the SQL editor
 3. Auth → Providers → enable **Apple** (Services ID, key, etc.)
-4. Copy project URL + anon key into `Loam/Config/Secrets.xcconfig` (see example)
+4. Put the project URL + **anon / publishable** key in `Loam/Config/Config.xcconfig`
 
-Without secrets, the app still runs in **demo mode** (Continue without account) so UI work is unblocked.
+Without a real anon key, the app runs in **demo mode** (Continue without account).
 
-### 3. Secrets
+### 3. Config.xcconfig
 
-```bash
-cp Loam/Config/Secrets.xcconfig.example Loam/Config/Secrets.xcconfig
-# edit URL + anon key
-```
-
-**xcconfig gotcha:** `//` starts a comment, so never write `https://…` literally. Use:
+Edit `Loam/Config/Config.xcconfig`:
 
 ```
 SUPABASE_URL = https:/$()/abcdxyz.supabase.co
-SUPABASE_ANON_KEY = eyJhbGciOi...
+SUPABASE_ANON_KEY = eyJhbGciOi...   # or sb_publishable_…
 ```
 
-Then in Xcode: Project → Info → Configurations → based on `Config.xcconfig`, **or** set env vars `SUPABASE_URL` / `SUPABASE_ANON_KEY` in the Run scheme.
+**xcconfig gotcha:** `//` starts a comment, so never write `https://…` literally — use `https:/$()/…`.
 
-### 4. Xcode Cloud
+Use the anon / publishable key only. Never commit `service_role` / `sb_secret_…` (RLS protects data; the anon key is meant to live in the client).
 
-The project references committed `Loam/Config/Config.xcconfig` (placeholders). Builds no longer require a local-only `Secrets.xcconfig`.
+Optional: set `SUPABASE_URL` / `SUPABASE_ANON_KEY` in the Xcode Run scheme to override Info.plist while debugging.
 
-To enable Supabase in CI/TestFlight builds, add environment variables in App Store Connect → Xcode Cloud → your workflow → **Environment**:
+### 4. Xcode Cloud / TestFlight
 
-- `SUPABASE_URL` — e.g. `https://your-project.supabase.co`
-- `SUPABASE_ANON_KEY` — anon / publishable key
+Supabase URL + publishable key come from committed `Config.xcconfig` — no ASC env vars required for the backend.
 
-`ci_scripts/ci_post_clone.sh` writes `Loam/Config/Secrets.xcconfig` before the build:
+`ci_scripts/ci_post_clone.sh` only writes `Loam/Config/Secrets.xcconfig` with:
 
-- `CURRENT_PROJECT_VERSION` — set from Xcode Cloud `CI_BUILD_NUMBER` so each upload gets a unique build number (avoids TestFlight duplicate-tuple stalls).
-- `SUPABASE_URL` / `SUPABASE_ANON_KEY` — from workflow environment variables when set. Without them, the app still builds and runs in demo mode.
+- `CURRENT_PROJECT_VERSION` — from Xcode Cloud `CI_BUILD_NUMBER` so each upload gets a unique build number (avoids TestFlight duplicate-tuple stalls)
 
-Local builds keep the committed fallback in `project.yml` (`CURRENT_PROJECT_VERSION = 6`).
+Local builds keep the committed fallback in `project.yml` (`CURRENT_PROJECT_VERSION = 6`). `Config.xcconfig` includes Secrets **before** the committed Supabase keys, so a stale local Secrets file cannot override them.
 
 **Export compliance:** `Info.plist` sets `ITSAppUsesNonExemptEncryption = false` (HTTPS/Supabase only — no custom crypto). That skips the manual “App Encryption Documentation” step in App Store Connect and prevents TestFlight post-actions from hanging while waiting for compliance.
 
-Info.plist keys expected (via build settings):
+Info.plist keys (via build settings from xcconfig):
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
-
-Add to the target build settings if not using xcconfig yet:
-
-```
-INFOPLIST_KEY_SUPABASE_URL = $(SUPABASE_URL)
-INFOPLIST_KEY_SUPABASE_ANON_KEY = $(SUPABASE_ANON_KEY)
-```
 
 ## Architecture
 

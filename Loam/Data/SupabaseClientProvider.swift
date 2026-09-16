@@ -23,10 +23,10 @@ enum SupabaseConfig {
     /// Human-readable reason when the backend client is off (debug / setup).
     static var configurationIssue: String? {
         if url.isEmpty || anonKey.isEmpty || url == "https:" {
-            return "Missing SUPABASE_URL / SUPABASE_ANON_KEY in the app bundle. Clean build after fixing Secrets.xcconfig."
+            return "Missing SUPABASE_URL / SUPABASE_ANON_KEY in the app bundle. Set them in Loam/Config/Config.xcconfig and clean build."
         }
         if url.contains("YOUR_PROJECT") || anonKey == "your-anon-key" {
-            return "Replace placeholders in Loam/Config/Secrets.xcconfig with Project URL + anon/publishable key."
+            return "Replace placeholders in Loam/Config/Config.xcconfig with Project URL + anon/publishable key."
         }
         if anonKey.hasPrefix("sb_secret") {
             return "You pasted the secret key. Use the anon / publishable key instead (Settings → API)."

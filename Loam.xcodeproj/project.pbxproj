@@ -53,7 +53,6 @@
 		A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */; };
 		A7C4E91F2B8D4061A3E5C0D2 /* SplitFormSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D5F02A3C9E5172B4F6D1E3 /* SplitFormSeed.swift */; };
 		B835F5A9BE1424211EE6FDDF /* SupabaseHouseholdRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AF7E99F1E669A42B08FB2D /* SupabaseHouseholdRepository.swift */; };
-		C58A45A8DD071F63B9661499 /* Secrets.xcconfig.example in Resources */ = {isa = PBXBuildFile; fileRef = F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
 		CF1A3CBDC16DCE533EE59653 /* SplitExpenseSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87AE244F130211B61887F30 /* SplitExpenseSection.swift */; };
 		E0C4A7E9B2F15D3A8C1D9042 /* ExpenseCategoryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0C4A7E9B2F15D3A8C1D9041 /* ExpenseCategoryPicker.swift */; };
@@ -143,7 +142,6 @@
 		BA8FD22752CACE19C604B0FD /* SplitExpenseMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseMode.swift; sourceTree = "<group>"; };
 		BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDateCodecTests.swift; sourceTree = "<group>"; };
 		36A1B2C3D4E5F60718293A60 /* RecurringMaterializerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringMaterializerTests.swift; sourceTree = "<group>"; };
-		BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
 		D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D533C1F5574D7B7BE0F546AC /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -157,7 +155,6 @@
 		F29555C57CD09B0685F9ACEA /* HouseholdStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdStore.swift; sourceTree = "<group>"; };
 		F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseStoreTests.swift; sourceTree = "<group>"; };
 		F6CD835D39E131CEAA0B24E8 /* Money.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Money.swift; sourceTree = "<group>"; };
-		F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
 		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -413,8 +410,6 @@
 			isa = PBXGroup;
 			children = (
 				DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */,
-				BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */,
-				F956F6F9897306571B08BA22 /* Secrets.xcconfig.example */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -504,7 +499,6 @@
 			files = (
 				689897107294EC9BB89E3DBA /* AppIcon.icon in Resources */,
 				2740165736ACD1860265CAD9 /* Assets.xcassets in Resources */,
-				C58A45A8DD071F63B9661499 /* Secrets.xcconfig.example in Resources */,
 				C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
