@@ -74,6 +74,11 @@ struct ExpenseDetailSheet: View {
                 }
 
                 Section("Details") {
+                    LabeledContent("Total") {
+                        Text(MoneyFormatter.string(from: expense.money))
+                            .monospacedDigit()
+                    }
+
                     if expense.hasCustomTitle {
                         LabeledContent("Title") {
                             Text(expense.displayTitle)
