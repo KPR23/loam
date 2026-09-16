@@ -12,6 +12,7 @@ protocol ExpenseRepository: Sendable {
     func hasExpense(recurringId: UUID, spentAt: Date) async throws -> Bool
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     func delete(id: UUID) async throws
+    func deleteAll() async throws
     func deleteFutureRecurringExpenses(recurringId: UUID, after date: Date) async throws
     func respondToShare(expenseId: UUID, userId: UUID, action: ExpenseShareResponseAction) async throws
     func fetchPendingProposals(for userId: UUID) async throws -> [ExpenseEditProposal]
