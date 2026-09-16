@@ -269,6 +269,7 @@ struct AddExpenseView: View {
                     myUserId: userId,
                     myDisplayName: authSession.displayName ?? "You",
                     availablePartners: splitPartners,
+                    recentPartners: recentSplitPartners,
                     requiresPartner: false,
                     selectedPartnerUserIds: $selectedPartnerUserIds,
                     splitMode: $splitMode,
@@ -343,6 +344,15 @@ struct AddExpenseView: View {
         #else
         return SplitPartnerOption.available(for: userId)
         #endif
+    }
+
+    private var recentSplitPartners: [SplitPartnerOption] {
+        guard let userId = authSession.userId else { return [] }
+        return SplitPartnerOption.recent(
+            available: splitPartners,
+            myUserId: userId,
+            seedingFrom: expenseStore.expenses
+        )
     }
 
     private var selectedSplitPartners: [SplitPartnerOption] {

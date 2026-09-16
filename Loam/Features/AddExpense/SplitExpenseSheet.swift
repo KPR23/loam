@@ -48,6 +48,14 @@ struct SplitExpenseSheet: View {
         splitPartners.filter { formState.selectedPartnerUserIds.contains($0.userId) }
     }
 
+    private var recentSplitPartners: [SplitPartnerOption] {
+        SplitPartnerOption.recent(
+            available: splitPartners,
+            myUserId: myUserId,
+            seedingFrom: expenseStore.expenses
+        )
+    }
+
     init(expense: ExpenseRecord, myUserId: UUID) {
         self.expense = expense
         self.myUserId = myUserId
@@ -91,6 +99,7 @@ struct SplitExpenseSheet: View {
                     myUserId: myUserId,
                     myDisplayName: authSession.displayName ?? "You",
                     availablePartners: splitPartners,
+                    recentPartners: recentSplitPartners,
                     requiresPartner: true,
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
                     splitMode: $formState.splitMode,
