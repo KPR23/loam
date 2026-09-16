@@ -36,7 +36,8 @@ enum SplitCalculator {
     /// Custom amounts must already sum to total. Use when UI collects exact minor amounts.
     static func custom(shares: [Share]) -> [Share] {
         precondition(!shares.isEmpty, "Need at least one share")
-        precondition(sharesSumEqualsTotal(shares, totalMinor: shares.reduce(0) { $0 + $1.amountMinor }))
+        precondition(shares.allSatisfy { $0.amountMinor >= 0 }, "Shares must be non-negative")
+        precondition(Set(shares.map(\.userId)).count == shares.count, "Participants must be unique")
         return shares
     }
 
@@ -93,10 +94,35 @@ enum SplitCalculator {
         partnerUserIds: [UUID],
         paidByUserId: UUID,
         myPercentage: Int = 50,
-        myExactAmountMinor: Int? = nil
+        myExactAmountMinor: Int? = nil,
+        participantPercentages: [UUID: Int] = [:],
+        participantExactAmountMinors: [UUID: Int] = [:]
     ) -> [Share] {
         let partners = Array(Set(partnerUserIds))
         precondition(!partners.isEmpty, "Need at least one partner")
+        let participantIds = Set([myUserId] + partners)
+
+        if mode == .percentage {
+            let percentages = participantPercentages.filter { participantIds.contains($0.key) }
+            if percentages.count == participantIds.count,
+               percentages.values.allSatisfy({ $0 > 0 }),
+               percentages.values.reduce(0, +) == 100 {
+                return percentage(
+                    totalMinor: totalMinor,
+                    userPercentages: percentages.map { ($0.key, $0.value) },
+                    paidByUserId: paidByUserId
+                )
+            }
+        }
+
+        if mode == .exactAmount {
+            let amounts = participantExactAmountMinors.filter { participantIds.contains($0.key) }
+            if amounts.count == participantIds.count,
+               amounts.values.allSatisfy({ $0 >= 0 }),
+               amounts.values.reduce(0, +) == totalMinor {
+                return custom(shares: amounts.map { Share(userId: $0.key, amountMinor: $0.value) })
+            }
+        }
 
         if partners.count == 1 {
             return twoPersonSplit(
@@ -117,8 +143,25 @@ enum SplitCalculator {
                 participants: [myUserId] + partners,
                 paidByUserId: paidByUserId
             )
-        case .percentage, .exactAmount:
-            preconditionFailure("Percentage and exact amount splits require exactly one partner")
+        case .percentage:
+            let myShare = (totalMinor * myPercentage) / 100
+            let partnerShares = equal(
+                totalMinor: totalMinor - myShare,
+                participants: partners,
+                paidByUserId: paidByUserId
+            )
+            return [Share(userId: myUserId, amountMinor: myShare)] + partnerShares
+        case .exactAmount:
+            guard let mine = myExactAmountMinor else {
+                preconditionFailure("Exact amount mode requires myExactAmountMinor")
+            }
+            precondition(mine >= 0 && mine <= totalMinor, "Exact shares must be non-negative")
+            let partnerShares = equal(
+                totalMinor: totalMinor - mine,
+                participants: partners,
+                paidByUserId: paidByUserId
+            )
+            return [Share(userId: myUserId, amountMinor: mine)] + partnerShares
         }
     }
 

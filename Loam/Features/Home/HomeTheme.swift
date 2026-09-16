@@ -8,8 +8,8 @@ enum HomeTheme {
     static let secondary = Color.secondary
     static let tertiary = Color(.tertiaryLabel)
 
-    /// Monochrome brand accent (replaces system blue tint).
-    static let accent = Color.primary
+    /// Native iOS system blue accent, shared by tabs, actions, and controls.
+    static let accent = Color.accentColor
 
     /// Blue tint for the first recurring expense indicator on Home.
     static let recurringHighlight = Color(red: 0.15, green: 0.50, blue: 0.98)

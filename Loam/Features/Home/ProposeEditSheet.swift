@@ -12,6 +12,8 @@ private struct ProposeEditFormState: Equatable {
     var paidByUserId: UUID
     var myPercentage: Int
     var myExactAmountText: String
+    var participantPercentages: [UUID: Int]
+    var participantAmountTexts: [UUID: String]
     var message: String
 
     static func from(expense: ExpenseRecord, myUserId: UUID) -> ProposeEditFormState {
@@ -29,6 +31,8 @@ private struct ProposeEditFormState: Equatable {
             paidByUserId: expense.paidBy,
             myPercentage: splitSeed.myPercentage,
             myExactAmountText: splitSeed.myExactAmountText,
+            participantPercentages: splitSeed.participantPercentages,
+            participantAmountTexts: splitSeed.participantAmountTexts,
             message: ""
         )
     }
@@ -110,18 +114,13 @@ struct ProposeEditSheet: View {
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
                     splitMode: $formState.splitMode,
                     paidByUserId: $formState.paidByUserId,
-                    myPercentage: $formState.myPercentage,
-                    myExactAmountText: $formState.myExactAmountText
+                    participantPercentages: $formState.participantPercentages,
+                    participantAmountTexts: $formState.participantAmountTexts
                 )
 
                 Section("Message to owner") {
                     TextField("Optional note explaining your changes", text: $formState.message, axis: .vertical)
                         .lineLimit(2...4)
-                }
-            }
-            .onChange(of: formState.selectedPartnerUserIds) { _, newValue in
-                if newValue.count != 1, formState.splitMode != .equal {
-                    formState.splitMode = .equal
                 }
             }
             .navigationTitle("Suggest changes")
@@ -135,7 +134,7 @@ struct ProposeEditSheet: View {
                         Task { await submit() }
                     }
                     .fontWeight(.semibold)
-                    .disabled(isSaving)
+                    .disabled(isSaving || validationError != nil)
                 }
             }
             .alert("Couldn't send proposal", isPresented: Binding(
@@ -162,15 +161,7 @@ struct ProposeEditSheet: View {
             return
         }
 
-        let effectiveMode = formState.selectedPartnerUserIds.count == 1 ? formState.splitMode : .equal
-        if let validationError = SplitExpenseSection.validationError(
-            totalMinor: amountMinor,
-            selectedPartnerCount: formState.selectedPartnerUserIds.count,
-            requiresPartner: true,
-            splitMode: effectiveMode,
-            myPercentage: formState.myPercentage,
-            myExactAmountText: formState.myExactAmountText
-        ) {
+        if let validationError {
             errorMessage = validationError
             return
         }
@@ -178,12 +169,14 @@ struct ProposeEditSheet: View {
         let partnerIds = Array(formState.selectedPartnerUserIds)
         let shares = SplitCalculator.split(
             totalMinor: amountMinor,
-            mode: effectiveMode,
+            mode: formState.splitMode,
             myUserId: myUserId,
             partnerUserIds: partnerIds,
             paidByUserId: formState.paidByUserId,
             myPercentage: formState.myPercentage,
-            myExactAmountMinor: Money(majorString: formState.myExactAmountText)?.amountMinor
+            myExactAmountMinor: Money(majorString: formState.myExactAmountText)?.amountMinor,
+            participantPercentages: formState.participantPercentages,
+            participantExactAmountMinors: participantExactAmountMinors
         )
 
         isSaving = true
@@ -209,6 +202,26 @@ struct ProposeEditSheet: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private var validationError: String? {
+        guard let amountMinor = Money(majorString: formState.amountText)?.amountMinor,
+              amountMinor > 0 else {
+            return "Enter a valid amount."
+        }
+        return SplitExpenseSection.validationError(
+            totalMinor: amountMinor,
+            selectedPartnerCount: formState.selectedPartnerUserIds.count,
+            requiresPartner: true,
+            splitMode: formState.splitMode,
+            participantUserIds: [myUserId] + Array(formState.selectedPartnerUserIds),
+            participantPercentages: formState.participantPercentages,
+            participantAmountTexts: formState.participantAmountTexts
+        )
+    }
+
+    private var participantExactAmountMinors: [UUID: Int] {
+        formState.participantAmountTexts.compactMapValues { Money(majorString: $0)?.amountMinor }
     }
 }
 

@@ -6,6 +6,8 @@ private struct SplitFormState: Equatable {
     var paidByUserId: UUID
     var myPercentage: Int
     var myExactAmountText: String
+    var participantPercentages: [UUID: Int]
+    var participantAmountTexts: [UUID: String]
 
     static func from(expense: ExpenseRecord, myUserId: UUID) -> SplitFormState {
         let partnerUserIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId)
@@ -15,7 +17,9 @@ private struct SplitFormState: Equatable {
             splitMode: seed.splitMode,
             paidByUserId: expense.paidBy,
             myPercentage: seed.myPercentage,
-            myExactAmountText: seed.myExactAmountText
+            myExactAmountText: seed.myExactAmountText,
+            participantPercentages: seed.participantPercentages,
+            participantAmountTexts: seed.participantAmountTexts
         )
     }
 }
@@ -65,29 +69,8 @@ struct SplitExpenseSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    LabeledContent("Amount") {
-                        Text(MoneyFormatter.string(from: expense.money))
-                            .monospacedDigit()
-                    }
-                    if expense.hasCustomTitle {
-                        LabeledContent("Title") {
-                            Text(expense.displayTitle)
-                                .font(.system(.body, design: .rounded))
-                        }
-                    }
-                    LabeledContent("Category") {
-                        HStack(spacing: 6) {
-                            Image(systemName: expense.category.systemImage)
-                            Text(expense.category.displayName)
-                                .font(.system(.body, design: .rounded))
-                        }
-                        .foregroundStyle(expense.category.color)
-                    }
-                    LabeledContent("Date") {
-                        Text(expense.spentAt.formatted(date: .abbreviated, time: .omitted))
-                    }
-                    if let note = expense.note, !note.isEmpty {
+                if let note = expense.note, !note.isEmpty {
+                    Section {
                         LabeledContent("Note") {
                             Text(note)
                         }
@@ -104,14 +87,9 @@ struct SplitExpenseSheet: View {
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
                     splitMode: $formState.splitMode,
                     paidByUserId: $formState.paidByUserId,
-                    myPercentage: $formState.myPercentage,
-                    myExactAmountText: $formState.myExactAmountText
+                    participantPercentages: $formState.participantPercentages,
+                    participantAmountTexts: $formState.participantAmountTexts
                 )
-            }
-            .onChange(of: formState.selectedPartnerUserIds) { _, newValue in
-                if newValue.count != 1, formState.splitMode != .equal {
-                    formState.splitMode = .equal
-                }
             }
             .navigationTitle(expense.isShared ? "Edit split" : "Split expense")
             .navigationBarTitleDisplayMode(.inline)
@@ -124,7 +102,7 @@ struct SplitExpenseSheet: View {
                         Task { await save() }
                     }
                     .fontWeight(.semibold)
-                    .disabled(isSaving)
+                    .disabled(isSaving || validationError != nil)
                 }
             }
             .alert("Couldn’t save split", isPresented: Binding(
@@ -139,16 +117,7 @@ struct SplitExpenseSheet: View {
     }
 
     private func save() async {
-        let effectiveMode = formState.selectedPartnerUserIds.count == 1 ? formState.splitMode : .equal
-
-        if let validationError = SplitExpenseSection.validationError(
-            totalMinor: expense.amountMinor,
-            selectedPartnerCount: formState.selectedPartnerUserIds.count,
-            requiresPartner: true,
-            splitMode: effectiveMode,
-            myPercentage: formState.myPercentage,
-            myExactAmountText: formState.myExactAmountText
-        ) {
+        if let validationError {
             errorMessage = validationError
             return
         }
@@ -167,16 +136,34 @@ struct SplitExpenseSheet: View {
                 to: expense.id,
                 userId: myUserId,
                 householdId: household.id,
-                splitMode: effectiveMode,
+                splitMode: formState.splitMode,
                 paidBy: formState.paidByUserId,
                 partnerUserIds: partners.map(\.userId),
                 myPercentage: formState.myPercentage,
-                myExactAmountMinor: Money(majorString: formState.myExactAmountText)?.amountMinor
+                myExactAmountMinor: Money(majorString: formState.myExactAmountText)?.amountMinor,
+                participantPercentages: formState.participantPercentages,
+                participantExactAmountMinors: participantExactAmountMinors
             )
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private var validationError: String? {
+        SplitExpenseSection.validationError(
+            totalMinor: expense.amountMinor,
+            selectedPartnerCount: formState.selectedPartnerUserIds.count,
+            requiresPartner: true,
+            splitMode: formState.splitMode,
+            participantUserIds: [myUserId] + Array(formState.selectedPartnerUserIds),
+            participantPercentages: formState.participantPercentages,
+            participantAmountTexts: formState.participantAmountTexts
+        )
+    }
+
+    private var participantExactAmountMinors: [UUID: Int] {
+        formState.participantAmountTexts.compactMapValues { Money(majorString: $0)?.amountMinor }
     }
 }
 
