@@ -212,6 +212,46 @@ enum SplitCalculator {
         shares.reduce(0) { $0 + $1.amountMinor } == totalMinor
     }
 
+    static func sharesMatch(_ lhs: [Share], _ rhs: [Share]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        let lhsByUser = Dictionary(uniqueKeysWithValues: lhs.map { ($0.userId, $0.amountMinor) })
+        let rhsByUser = Dictionary(uniqueKeysWithValues: rhs.map { ($0.userId, $0.amountMinor) })
+        return lhsByUser == rhsByUser
+    }
+
+    /// Returns integer percentages only when they recreate every stored share exactly.
+    /// Split mode is not persisted, so allocations that cannot round-trip as percentages
+    /// must be reopened as exact amounts.
+    static func matchingPercentages(
+        totalMinor: Int,
+        paidByUserId: UUID,
+        storedShares: [Share]
+    ) -> [UUID: Int]? {
+        guard totalMinor > 0,
+              !storedShares.isEmpty,
+              Set(storedShares.map(\.userId)).count == storedShares.count,
+              storedShares.allSatisfy({ $0.amountMinor >= 0 }),
+              sharesSumEqualsTotal(storedShares, totalMinor: totalMinor) else {
+            return nil
+        }
+
+        let percentages = Dictionary(uniqueKeysWithValues: storedShares.map { share in
+            let percentage = Int(round(Double(share.amountMinor) / Double(totalMinor) * 100))
+            return (share.userId, percentage)
+        })
+        guard percentages.values.allSatisfy({ $0 > 0 }),
+              percentages.values.reduce(0, +) == 100 else {
+            return nil
+        }
+
+        let recomputed = percentage(
+            totalMinor: totalMinor,
+            userPercentages: percentages.map { ($0.key, $0.value) },
+            paidByUserId: paidByUserId
+        )
+        return sharesMatch(recomputed, storedShares) ? percentages : nil
+    }
+
     /// Returns my percentage only when stored shares round-trip through percentage mode.
     static func matchingTwoPersonPercentage(
         totalMinor: Int,
@@ -220,27 +260,13 @@ enum SplitCalculator {
         paidByUserId: UUID,
         storedShares: [Share]
     ) -> Int? {
-        guard totalMinor > 0 else { return nil }
-        guard let myShare = storedShares.first(where: { $0.userId == myUserId })?.amountMinor else {
-            return nil
-        }
-
-        let pct = Int(round(Double(myShare) / Double(totalMinor) * 100))
-        guard pct > 0, pct < 100 else { return nil }
-
-        let recomputed = twoPersonSplit(
+        guard storedShares.count == 2,
+              storedShares.contains(where: { $0.userId == partnerUserId }),
+              let percentages = matchingPercentages(
             totalMinor: totalMinor,
-            mode: .percentage,
-            myUserId: myUserId,
-            partnerUserId: partnerUserId,
             paidByUserId: paidByUserId,
-            myPercentage: pct
-        )
-
-        let storedByUser = Dictionary(uniqueKeysWithValues: storedShares.map { ($0.userId, $0.amountMinor) })
-        let matches = recomputed.allSatisfy { storedByUser[$0.userId] == $0.amountMinor }
-            && storedByUser.count == recomputed.count
-
-        return matches ? pct : nil
+            storedShares: storedShares
+        ) else { return nil }
+        return percentages[myUserId]
     }
 }
