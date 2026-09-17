@@ -49,6 +49,14 @@ struct BalancesView: View {
             .refreshable { await balanceStore.refresh(userId: authSession.userId) }
         }
         .sheet(item: $repaymentTarget) { target in repaymentSheet(target) }
+        .alert("Couldn’t record repayment", isPresented: Binding(
+            get: { balanceStore.lastError != nil },
+            set: { if !$0 { balanceStore.lastError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(balanceStore.lastError ?? "")
+        }
     }
 
     private func total(_ title: String, amount: Int, tint: Color) -> some View {
