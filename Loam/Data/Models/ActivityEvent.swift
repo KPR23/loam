@@ -1,7 +1,17 @@
 import Foundation
 
 enum ActivityEventKind: String, Codable, Sendable {
-    case shared, accepted, rejected, edited, participantRemoved, deleted, proposalCreated, proposalAccepted, proposalRejected, autoAccepted, proposalSuperseded
+    case shared = "shared"
+    case accepted = "accepted"
+    case rejected = "rejected"
+    case edited = "edited"
+    case participantRemoved = "participant_removed"
+    case deleted = "deleted"
+    case proposalCreated = "proposal_created"
+    case proposalAccepted = "proposal_accepted"
+    case proposalRejected = "proposal_rejected"
+    case autoAccepted = "auto_accepted"
+    case proposalSuperseded = "proposal_superseded"
 }
 
 struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {

@@ -651,9 +651,6 @@ final class ExpenseStore: ObservableObject {
 
             var createdAny = false
             for date in dueDates {
-                if try await repository.hasExpense(recurringId: rule.id, spentAt: date) {
-                    continue
-                }
                 var occurrence = RecurringMaterializer.occurrenceExpense(
                     rule: rule,
                     spentAt: date,
@@ -669,8 +666,8 @@ final class ExpenseStore: ObservableObject {
                         usersTrustingCreator: trusting
                     )
                 }
-                _ = try await repository.create(occurrence)
-                createdAny = true
+                let materialized = try await repository.createRecurringOccurrence(occurrence)
+                createdAny = materialized.id == occurrence.id
             }
 
             if let last = dueDates.last {

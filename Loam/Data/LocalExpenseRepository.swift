@@ -79,6 +79,16 @@ actor LocalExpenseRepository: ExpenseRepository {
         }
     }
 
+    func createRecurringOccurrence(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
+        if let recurringId = expense.recurringId,
+           try await hasExpense(recurringId: recurringId, spentAt: expense.spentAt),
+           let existing = try await fetchLatestExpense(forRecurringId: recurringId),
+           Calendar.current.isDate(existing.spentAt, inSameDayAs: expense.spentAt) {
+            return existing
+        }
+        return try await create(expense)
+    }
+
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
         var all = try load()
