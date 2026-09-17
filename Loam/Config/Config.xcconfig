@@ -4,5 +4,5 @@
 //
 // xcconfig treats // as a comment — write https:/$()/host not https://host
 //
-SUPABASE_URL = https:/$()/iazyvupjvtuiezugurvo.supabase.co
-SUPABASE_ANON_KEY = sb_publishable_EDBOAPJzAaWIO566_-3W5A_vMKI0JXd
+// Environment-specific values live in Staging.xcconfig and
+// Production.xcconfig. Keep this file free of deployment credentials.

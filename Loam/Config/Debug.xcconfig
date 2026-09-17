@@ -1,4 +1,4 @@
-#include "Config.xcconfig"
+#include "Staging.xcconfig"
 
 // Account switching is available only when all three guards agree:
 // a DEBUG build, testing environment, and this exact allowlisted project URL.

@@ -42,9 +42,14 @@ Set your **Development Team** in the Loam target signing settings. Enable **Sign
 
 Without a real anon key, the app runs in **demo mode** (Continue without account).
 
-### 3. Config.xcconfig
+### 3. Environment configuration
 
-Edit `Loam/Config/Config.xcconfig`:
+Use the environment-specific files:
+
+- `Loam/Config/Staging.xcconfig` for Debug and TestFlight.
+- `Loam/Config/Production.xcconfig` for App Store distribution.
+
+Each file contains the corresponding project's URL and publishable key:
 
 ```
 SUPABASE_URL = https:/$()/abcdxyz.supabase.co
@@ -55,7 +60,7 @@ SUPABASE_ANON_KEY = eyJhbGciOi...   # or sb_publishable_…
 
 Use the anon / publishable key only. Never commit `service_role` / `sb_secret_…` (RLS protects data; the anon key is meant to live in the client).
 
-`Debug.xcconfig` and `Release.xcconfig` deliberately select different feature environments even while both builds use the development backend. Point `Release.xcconfig` at the production backend when that project exists.
+`Debug.xcconfig` and `TestFlight` deliberately use the staging Supabase project. `Release.xcconfig` and the `Production` configuration use the production project. The staging and production URLs and publishable keys are kept in the committed `Staging.xcconfig` and `Production.xcconfig` files; never put a service-role or secret key there.
 
 ### Real test-account switching (non-production only)
 
@@ -83,7 +88,15 @@ Only publishable keys belong in the app. Use a secret/service-role key only in a
 
 ### 4. Xcode Cloud / TestFlight
 
-Supabase URL + publishable key come from committed `Config.xcconfig` — no ASC env vars required for the backend.
+The shared `Loam` scheme archives with the `Production` configuration. The `Loam-TestFlight` scheme archives with the `TestFlight` configuration, so TestFlight builds use staging while App Store distribution builds use production.
+
+Database migrations are deployed by `.github/workflows/supabase.yml`: pushes to `dev` apply pending migrations to staging, and pushes to `main` apply pending migrations to production. Configure these GitHub Actions secrets before enabling the workflow:
+
+- `SUPABASE_ACCESS_TOKEN`
+- `SUPABASE_STAGING_DB_PASSWORD`
+- `SUPABASE_PRODUCTION_DB_PASSWORD`
+
+Keep production migration deployment behind a required GitHub `production` environment approval if you want a manual gate. Apply and test migrations on staging before merging them to `main`.
 
 Local builds use the committed `CURRENT_PROJECT_VERSION` in `project.yml`.
 
