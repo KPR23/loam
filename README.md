@@ -1,6 +1,6 @@
 # Loam
 
-Native iOS expense tracker for personal + household spending. Home answers **how much I spent this month** — not who owes whom.
+Native iOS expense tracker for personal spending and pairwise shared balances. Spending answers **how much I spent this month**; balances answer **who owes whom**.
 
 ## Stack
 
@@ -36,7 +36,7 @@ Set your **Development Team** in the Loam target signing settings. Enable **Sign
 ### 2. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run `supabase/migrations/20260907000000_init.sql` in the SQL editor
+2. Apply the complete, ordered `supabase/migrations/` chain (for example, `supabase db push`). Do not run only the initial migration: connections, approvals, and repayments are introduced by later migrations.
 3. Auth → Providers → enable **Apple** (Services ID, key, etc.)
 4. Put the project URL + **anon / publishable** key in `Loam/Config/Config.xcconfig`
 
@@ -55,7 +55,31 @@ SUPABASE_ANON_KEY = eyJhbGciOi...   # or sb_publishable_…
 
 Use the anon / publishable key only. Never commit `service_role` / `sb_secret_…` (RLS protects data; the anon key is meant to live in the client).
 
-Optional: set `SUPABASE_URL` / `SUPABASE_ANON_KEY` in the Xcode Run scheme to override Info.plist while debugging.
+`Debug.xcconfig` and `Release.xcconfig` deliberately select different feature environments even while both builds use the development backend. Point `Release.xcconfig` at the production backend when that project exists.
+
+### Real test-account switching (non-production only)
+
+The debug account switcher uses real Supabase Auth users and real RLS-protected rows. It never routes test-persona expenses, households, proposals, or balances through `UserDefaults`. Each persona has a separate Supabase auth storage key, which is equivalent to keeping Julia, Philip, and the main account signed in on separate devices.
+
+Keep this away from production with a separate Supabase project:
+
+1. Create a dedicated staging/test Supabase project and apply the same ordered migrations.
+2. Create confirmed email/password users for Julia and Philip in that project's Auth dashboard. Never create these users in production.
+3. Add accepted `user_connection` rows between the identities that should split expenses. `ensure_split_household` rejects unknown or unconnected UUIDs.
+4. Copy `Loam/Config/Secrets.example.xcconfig` to gitignored `Loam/Config/Secrets.xcconfig`, then put only the local persona credentials there:
+
+   ```text
+   LOAM_TEST_JULIA_USER_ID=<Julia auth.users UUID>
+   LOAM_TEST_JULIA_EMAIL=<Julia email>
+   LOAM_TEST_JULIA_PASSWORD=<Julia password>
+   LOAM_TEST_PHILIP_USER_ID=<Philip auth.users UUID>
+   LOAM_TEST_PHILIP_EMAIL=<Philip email>
+   LOAM_TEST_PHILIP_PASSWORD=<Philip password>
+   ```
+
+`Debug.xcconfig` contains the non-secret project allowlist. The switcher is hidden unless all of the following are true: the app is compiled with `DEBUG`, `LOAM_ENVIRONMENT` is exactly `testing`, the active Supabase URL exactly matches `LOAM_TEST_SUPABASE_URL`, and the persona has a complete ID/email/password configuration. `Release.xcconfig` does not include local secrets, and Release builds compile the test-account code out.
+
+Only publishable keys belong in the app. Use a secret/service-role key only in a trusted provisioning script or the Supabase dashboard; never add it to an Xcode setting, plist, scheme, or repository.
 
 ### 4. Xcode Cloud / TestFlight
 
@@ -77,7 +101,7 @@ Loam/
 ├─ Core/       Money, Category, Formatters, SettlementMode
 ├─ Data/       Models, ExpenseStore, LocalExpenseRepository, Supabase client
 ├─ Domain/     SplitCalculator, BalanceSimplifier
-├─ Features/   Auth, Home, AddExpense, Root (+ Household, Profile)
+├─ Features/   Auth, Home, AddExpense, Balances, Root (+ Profile)
 └─ System/     Auth, DeepLinks, StoreKit stub
 
 Design/        App icon source (.icon bundle + exports → AppIcon.appiconset)
@@ -90,8 +114,8 @@ Home must read as a tracker:
 
 1. You spent X this month  
 2. of which Y is your share of shared expenses  
-3. balances only below (ledger mode)
+3. balances are independent pairwise debts; repayments never change spending
 
 ## Next
 
-**Phase 2** — household + invite + split in Add expense.
+**Phase 2** — connections, split approvals, balances, and repayment history.

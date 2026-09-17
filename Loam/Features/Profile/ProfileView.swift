@@ -28,27 +28,7 @@ struct ProfileView: View {
                 }
 
                 #if DEBUG
-                if !authSession.isTestAccountActive {
-                    Section("Test accounts") {
-                        ForEach(TestAccount.allCases) { account in
-                            Button {
-                                Task { await authSession.switchToTestAccount(account) }
-                            } label: {
-                                HStack {
-                                    Text(account.displayName)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
-                                    Image(systemName: "arrow.left.arrow.right")
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-
-                        Text("Switch to Julia or Philip to simulate their device. You can split with your Apple account while viewing as a test persona, and return anytime with Back to my account.")
-                            .font(.footnote)
-                            .foregroundStyle(HomeTheme.secondary)
-                    }
-                } else {
+                if authSession.isTestAccountActive {
                     Section("Test account active") {
                         if authSession.canReturnToMainAccount {
                             Button {
@@ -64,9 +44,58 @@ struct ProfileView: View {
                             }
                         }
 
+                        ForEach(TestAccount.configured.filter { $0 != authSession.activeTestAccount }) { account in
+                            Button {
+                                Task { await authSession.switchToTestAccount(account) }
+                            } label: {
+                                HStack {
+                                    Text("Switch to \(account.displayName)")
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Image(systemName: "arrow.left.arrow.right")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+
                         Text("You are viewing the app as a test persona.")
                             .font(.footnote)
                             .foregroundStyle(HomeTheme.secondary)
+                    }
+                } else if SupabaseConfig.allowsTestAccounts,
+                          !TestAccount.configured.isEmpty {
+                    Section("Test accounts") {
+                        ForEach(TestAccount.configured) { account in
+                            Button {
+                                Task { await authSession.switchToTestAccount(account) }
+                            } label: {
+                                HStack {
+                                    Text(account.displayName)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Image(systemName: "arrow.left.arrow.right")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+
+                        Text("Each persona uses its own real Supabase Auth session and backend data, like a separate device.")
+                            .font(.footnote)
+                            .foregroundStyle(HomeTheme.secondary)
+                    }
+                } else {
+                    Section("Test accounts") {
+                        Text(testAccountsUnavailableMessage)
+                            .font(.footnote)
+                            .foregroundStyle(HomeTheme.secondary)
+                    }
+                }
+
+                if let error = authSession.lastError {
+                    Section("Account switching") {
+                        Text(error)
+                            .foregroundStyle(.red)
+                        Button("Dismiss") { authSession.lastError = nil }
                     }
                 }
 
@@ -101,7 +130,7 @@ struct ProfileView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Deletes expenses and recurring rules you created (local and synced). Shared expenses created by others stay. This can’t be undone.")
+                Text(clearExpensesConfirmationMessage)
             }
             #endif
         }
@@ -110,7 +139,7 @@ struct ProfileView: View {
     private var accountSubtitle: String {
         #if DEBUG
         if authSession.isTestAccountActive {
-            return "Test account"
+            return "Test account · Synced with Supabase"
         }
         #endif
         if authSession.usesDemoMode {
@@ -125,6 +154,23 @@ struct ProfileView: View {
             return "Back to \(name)"
         }
         return "Back to my account"
+    }
+
+    private var testAccountsUnavailableMessage: String {
+        if SupabaseConfig.environment != .testing {
+            return "Disabled outside the Debug testing configuration."
+        }
+        if !SupabaseConfig.allowsTestAccounts {
+            return "The active Supabase URL does not match the allowlisted test project."
+        }
+        return "Add the Julia and Philip ID, email, and password variables to Secrets.xcconfig."
+    }
+
+    private var clearExpensesConfirmationMessage: String {
+        if SupabaseConfig.isConfigured {
+            return "Deletes synced expenses and recurring rules you created. Shared expenses created by others stay. This can’t be undone."
+        }
+        return "Deletes local demo expenses and recurring rules you created. This can’t be undone."
     }
     #endif
 }

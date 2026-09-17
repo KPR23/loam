@@ -2,6 +2,11 @@ import Foundation
 import Supabase
 
 enum SupabaseConfig {
+    enum Environment: String {
+        case production
+        case testing
+    }
+
     static let url: String = {
         let raw = ProcessInfo.processInfo.environment["SUPABASE_URL"]
             ?? Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String
@@ -18,6 +23,32 @@ enum SupabaseConfig {
 
     static var isConfigured: Bool {
         configurationIssue == nil
+    }
+
+    static var environment: Environment {
+        let raw = (ProcessInfo.processInfo.environment["LOAM_ENVIRONMENT"]
+            ?? Bundle.main.object(forInfoDictionaryKey: "LOAM_ENVIRONMENT") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return Environment(rawValue: raw ?? "") ?? .production
+    }
+
+    static var testProjectURL: String {
+        ((Bundle.main.object(forInfoDictionaryKey: "LOAM_TEST_SUPABASE_URL") as? String) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Test personas are deliberately fail-closed: a debug build must explicitly
+    /// identify itself as testing and match the allowlisted test project exactly.
+    static var allowsTestAccounts: Bool {
+        #if DEBUG
+        return isConfigured
+            && environment == .testing
+            && !testProjectURL.isEmpty
+            && normalizedProjectURL(url) == normalizedProjectURL(testProjectURL)
+        #else
+        return false
+        #endif
     }
 
     /// Human-readable reason when the backend client is off (debug / setup).
@@ -41,20 +72,79 @@ enum SupabaseConfig {
         }
         return nil
     }
+
+    private static func normalizedProjectURL(_ value: String) -> String {
+        value.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased()
+    }
 }
 
 enum SupabaseClientProvider {
-    static let shared: SupabaseClient? = {
+    enum Device: String, CaseIterable {
+        case main
+        #if DEBUG
+        case julia
+        case philip
+        #endif
+    }
+
+    private static let lock = NSLock()
+    private static var selectedDevice: Device = .main
+
+    static var activeDevice: Device {
+        lock.lock()
+        defer { lock.unlock() }
+        return selectedDevice
+    }
+
+    static var shared: SupabaseClient? {
+        client(for: activeDevice)
+    }
+
+    static func activate(_ device: Device) {
+        lock.lock()
+        selectedDevice = device
+        lock.unlock()
+    }
+
+    static func client(for device: Device) -> SupabaseClient? {
+        switch device {
+        case .main:
+            return mainClient
+        #if DEBUG
+        case .julia:
+            return juliaClient
+        case .philip:
+            return philipClient
+        #endif
+        }
+    }
+
+    private static let mainClient = makeClient(storageSuffix: nil)
+    #if DEBUG
+    private static let juliaClient = makeClient(storageSuffix: "loam-testing-julia")
+    private static let philipClient = makeClient(storageSuffix: "loam-testing-philip")
+    #endif
+
+    private static func makeClient(storageSuffix: String?) -> SupabaseClient? {
         guard SupabaseConfig.isConfigured,
               let url = URL(string: SupabaseConfig.url) else {
             return nil
         }
+
+        let storageKey = storageSuffix.map { suffix in
+            let projectRef = url.host?.split(separator: ".").first.map(String.init) ?? "project"
+            return "sb-\(projectRef)-auth-token-\(suffix)"
+        }
+
         return SupabaseClient(
             supabaseURL: url,
             supabaseKey: SupabaseConfig.anonKey,
             options: SupabaseClientOptions(
-                auth: .init(emitLocalSessionAsInitialSession: true)
+                auth: .init(
+                    storageKey: storageKey,
+                    emitLocalSessionAsInitialSession: true
+                )
             )
         )
-    }()
+    }
 }

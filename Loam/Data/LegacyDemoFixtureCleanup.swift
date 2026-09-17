@@ -6,6 +6,9 @@ enum LegacyDemoFixtureCleanup {
     private static let didRunKey = "loam.demo.fixtures.removed"
 
     static func removeIfNeeded() {
+        // Synced builds never touch the local demo repository. Cleanup remains
+        // available only for the explicit no-backend demo configuration.
+        guard !SupabaseConfig.isConfigured else { return }
         guard !UserDefaults.standard.bool(forKey: didRunKey) else { return }
         let expenseIDs = Set((301...312).compactMap { UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", $0)) })
         let recurringID = UUID(uuidString: "00000000-0000-0000-0000-000000000201")!

@@ -12,19 +12,13 @@ actor SupabaseHouseholdRepository: HouseholdRepository {
         let rows: [HouseholdDTO] = try await client
             .from("household")
             .select()
-            .eq("name", value: TestPartner.householdName)
             .order("created_at", ascending: false)
             .execute()
             .value
 
         for household in rows {
-            guard try await isAuthorizedTestHousehold(household: household, userId: userId) else {
-                continue
-            }
-
             let members = try await fetchMembers(householdId: household.id)
-            guard members.contains(where: { $0.userId == userId }),
-                  members.contains(where: { $0.userId == TestPartner.userId }) else {
+            guard members.contains(where: { $0.userId == userId }) else {
                 continue
             }
 
@@ -45,21 +39,27 @@ actor SupabaseHouseholdRepository: HouseholdRepository {
         userDisplayName: String,
         partners: [SplitPartnerOption]
     ) async throws -> HouseholdRecord {
-        guard partners.count == 1, partners[0].userId == TestPartner.userId else {
+        guard !partners.isEmpty else {
             throw HouseholdRepositoryError.incompleteSetup
         }
 
         let household: HouseholdDTO = try await client
             .rpc(
-                "ensure_test_household",
-                params: ["p_display_name": userDisplayName]
+                "ensure_split_household",
+                params: EnsureSplitHouseholdParams(
+                    displayName: userDisplayName,
+                    partnerIds: partners.map(\.userId)
+                )
             )
             .single()
             .execute()
             .value
 
         let members = try await fetchMembers(householdId: household.id)
-        try validateCompleteTestHousehold(members: members, userId: userId)
+        try validateCompleteHousehold(
+            members: members,
+            expectedUserIds: Set([userId] + partners.map(\.userId))
+        )
 
         return HouseholdRecord(
             id: household.id,
@@ -68,28 +68,6 @@ actor SupabaseHouseholdRepository: HouseholdRepository {
             createdBy: household.createdBy,
             members: members
         )
-    }
-
-    private func isAuthorizedTestHousehold(household: HouseholdDTO, userId: UUID) async throws -> Bool {
-        if household.createdBy == userId {
-            return true
-        }
-
-        struct OwnerRow: Decodable {
-            let id: UUID
-        }
-
-        let ownerRows: [OwnerRow] = try await client
-            .from("household_member")
-            .select("id")
-            .eq("household_id", value: household.id)
-            .eq("user_id", value: userId)
-            .eq("role", value: "owner")
-            .limit(1)
-            .execute()
-            .value
-
-        return !ownerRows.isEmpty
     }
 
     private func fetchMembers(householdId: UUID) async throws -> [HouseholdMemberRecord] {
@@ -103,16 +81,23 @@ actor SupabaseHouseholdRepository: HouseholdRepository {
         return rows.map { $0.toRecord() }
     }
 
-    private func validateCompleteTestHousehold(
+    private func validateCompleteHousehold(
         members: [HouseholdMemberRecord],
-        userId: UUID
+        expectedUserIds: Set<UUID>
     ) throws {
-        let hasUser = members.contains(where: { $0.userId == userId })
-        let hasPartner = members.contains(where: { $0.userId == TestPartner.userId })
-
-        guard hasUser, hasPartner else {
+        guard Set(members.map(\.userId)) == expectedUserIds else {
             throw HouseholdRepositoryError.incompleteSetup
         }
+    }
+}
+
+private struct EnsureSplitHouseholdParams: Encodable {
+    let displayName: String
+    let partnerIds: [UUID]
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "p_display_name"
+        case partnerIds = "p_partner_ids"
     }
 }
 

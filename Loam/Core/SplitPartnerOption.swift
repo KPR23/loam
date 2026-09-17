@@ -20,9 +20,10 @@ struct SplitPartnerOption: Identifiable, Equatable, Hashable {
         savedMainAccount: SplitPartnerOption? = nil
     ) -> [SplitPartnerOption] {
         #if DEBUG
-        var options = TestAccount.allCases
-            .filter { $0.userId != currentUserId }
-            .map { SplitPartnerOption(userId: $0.userId, displayName: $0.displayName) }
+        var options = TestAccount.configured.compactMap { account -> SplitPartnerOption? in
+            guard let userId = account.userId, userId != currentUserId else { return nil }
+            return SplitPartnerOption(userId: userId, displayName: account.displayName)
+        }
 
         if let savedMainAccount, savedMainAccount.userId != currentUserId {
             options.append(savedMainAccount)
@@ -90,11 +91,8 @@ struct SplitPartnerOption: Identifiable, Equatable, Hashable {
 
     static func displayName(for userId: UUID, fallback: String = "Partner") -> String {
         #if DEBUG
-        if let account = TestAccount.allCases.first(where: { $0.userId == userId }) {
+        if let account = TestAccount.configured.first(where: { $0.userId == userId }) {
             return account.displayName
-        }
-        if let savedName = savedMainDisplayName(for: userId) {
-            return savedName
         }
         #endif
         return fallback
@@ -112,25 +110,6 @@ struct SplitPartnerOption: Identifiable, Equatable, Hashable {
         }
     }
 
-    #if DEBUG
-    static func shouldUseLocalSimulation(for partnerUserIds: [UUID]) -> Bool {
-        !partnerUserIds.isEmpty && partnerUserIds.allSatisfy(isSimulatedAccount)
-    }
-
-    static func isSimulatedAccount(_ userId: UUID) -> Bool {
-        TestAccount.contains(userId: userId) || savedMainDisplayName(for: userId) != nil
-    }
-
-    private static func savedMainDisplayName(for userId: UUID) -> String? {
-        guard
-            let idString = UserDefaults.standard.string(forKey: "loam.debug.savedMain.userId"),
-            idString == userId.uuidString
-        else {
-            return nil
-        }
-        return UserDefaults.standard.string(forKey: "loam.debug.savedMain.displayName")
-    }
-    #endif
 }
 
 /// Lightweight persistence for recent split-partner quick picks (most-recent first).

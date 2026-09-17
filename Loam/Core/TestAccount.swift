@@ -6,14 +6,28 @@ enum TestAccount: String, CaseIterable, Identifiable {
     case julia
     case philip
 
-    var id: UUID { userId }
+    var id: String { rawValue }
 
-    var userId: UUID {
+    var userId: UUID? {
+        UUID(uuidString: configurationValue(named: userIdKey))
+    }
+
+    var email: String {
+        configurationValue(named: emailKey)
+    }
+
+    var password: String {
+        configurationValue(named: passwordKey)
+    }
+
+    var isConfigured: Bool {
+        userId != nil && !email.isEmpty && !password.isEmpty
+    }
+
+    var device: SupabaseClientProvider.Device {
         switch self {
-        case .julia:
-            UUID(uuidString: "00000000-0000-0000-0000-000000000010")!
-        case .philip:
-            UUID(uuidString: "00000000-0000-0000-0000-000000000011")!
+        case .julia: .julia
+        case .philip: .philip
         }
     }
 
@@ -25,7 +39,31 @@ enum TestAccount: String, CaseIterable, Identifiable {
     }
 
     static func contains(userId: UUID) -> Bool {
-        allCases.contains { $0.userId == userId }
+        configured.contains { $0.userId == userId }
+    }
+
+    static var configured: [TestAccount] {
+        guard SupabaseConfig.allowsTestAccounts else { return [] }
+        return allCases.filter(\.isConfigured)
+    }
+
+    private var userIdKey: String {
+        "LOAM_TEST_\(rawValue.uppercased())_USER_ID"
+    }
+
+    private var emailKey: String {
+        "LOAM_TEST_\(rawValue.uppercased())_EMAIL"
+    }
+
+    private var passwordKey: String {
+        "LOAM_TEST_\(rawValue.uppercased())_PASSWORD"
+    }
+
+    private func configurationValue(named key: String) -> String {
+        (ProcessInfo.processInfo.environment[key]
+            ?? Bundle.main.object(forInfoDictionaryKey: key) as? String
+            ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 #endif

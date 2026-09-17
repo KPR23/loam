@@ -1,11 +1,13 @@
 import Foundation
 
 enum ExpenseRepositoryFactory {
-    private static let demoModeKey = "loam.demo.active"
+    private static let lock = NSLock()
+    private static var demoModeEnabled = false
 
     static var usesLocalStorage: Bool {
-        UserDefaults.standard.bool(forKey: demoModeKey)
-            || SupabaseClientProvider.shared == nil
+        lock.lock()
+        defer { lock.unlock() }
+        return demoModeEnabled || SupabaseClientProvider.shared == nil
     }
 
     static func make() -> any ExpenseRepository {
@@ -16,6 +18,8 @@ enum ExpenseRepositoryFactory {
     }
 
     static func setUsesLocalStorage(_ value: Bool) {
-        UserDefaults.standard.set(value, forKey: demoModeKey)
+        lock.lock()
+        demoModeEnabled = value
+        lock.unlock()
     }
 }

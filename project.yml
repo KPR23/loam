@@ -16,8 +16,8 @@ settings:
     CURRENT_PROJECT_VERSION: "6"
     DEVELOPMENT_TEAM: ""
 configFiles:
-  Debug: Loam/Config/Config.xcconfig
-  Release: Loam/Config/Config.xcconfig
+  Debug: Loam/Config/Debug.xcconfig
+  Release: Loam/Config/Release.xcconfig
 packages:
   supabase-swift:
     url: https://github.com/supabase/supabase-swift

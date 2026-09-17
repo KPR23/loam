@@ -47,24 +47,7 @@ final class ExpenseStore: ObservableObject {
 
         do {
             try await materializeDueRecurring(userId: userId, repository: primaryRepository)
-            #if DEBUG
-            if !ExpenseRepositoryFactory.usesLocalStorage {
-                try? await materializeDueRecurring(userId: userId, repository: LocalExpenseRepository())
-            }
-            #endif
-
-            var fetched = try await primaryRepository.fetchExpenses(for: userId, in: period)
-            #if DEBUG
-            if !ExpenseRepositoryFactory.usesLocalStorage {
-                if let localExpenses = try? await LocalExpenseRepository().fetchExpenses(for: userId, in: period) {
-                    let existingIds = Set(fetched.map(\.id))
-                    fetched.append(contentsOf: localExpenses.filter { !existingIds.contains($0.id) })
-                    fetched.sort {
-                        $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt)
-                    }
-                }
-            }
-            #endif
+            let fetched = try await primaryRepository.fetchExpenses(for: userId, in: period)
             expenses = fetched
             summary = Self.makeSummary(expenses: fetched, userId: userId)
             recurringStartDatesById = await loadRecurringStartDates(for: fetched)
@@ -328,9 +311,6 @@ final class ExpenseStore: ObservableObject {
     func clearAllExpenses(userId: UUID) async {
         do {
             try await primaryRepository.deleteAllCreatedBy(userId)
-            if !ExpenseRepositoryFactory.usesLocalStorage {
-                try await LocalExpenseRepository().deleteAllCreatedBy(userId)
-            }
             await refresh(userId: userId)
             if !expenses.isEmpty {
                 lastError = "Cleared expenses you created. \(expenses.count) shared expense(s) from others remain."
@@ -580,15 +560,7 @@ final class ExpenseStore: ObservableObject {
         let missingIds = Array(Set(proposals.map(\.expenseId)).subtracting(knownIds))
         guard !missingIds.isEmpty else { return [] }
 
-        var resolved = (try? await primaryRepository.fetchExpenses(ids: missingIds)) ?? []
-        #if DEBUG
-        if !ExpenseRepositoryFactory.usesLocalStorage {
-            let localMissing = (try? await LocalExpenseRepository().fetchExpenses(ids: missingIds)) ?? []
-            let existingIds = Set(resolved.map(\.id))
-            resolved.append(contentsOf: localMissing.filter { !existingIds.contains($0.id) })
-        }
-        #endif
-        return resolved
+        return (try? await primaryRepository.fetchExpenses(ids: missingIds)) ?? []
     }
 
     private func persistRecurringRule(
@@ -687,14 +659,7 @@ final class ExpenseStore: ObservableObject {
     }
 
     private func repository(forSplitWith partnerUserIds: [UUID]) -> ExpenseRepository {
-        #if DEBUG
-        if ExpenseRepositoryFactory.usesLocalStorage
-            || partnerUserIds.contains(where: TestAccount.contains(userId:))
-            || SplitPartnerOption.shouldUseLocalSimulation(for: partnerUserIds)
-        {
-            return LocalExpenseRepository()
-        }
-        #endif
+        _ = partnerUserIds
         return primaryRepository
     }
 
@@ -706,22 +671,8 @@ final class ExpenseStore: ObservableObject {
     }
 
     private func usesLocalRepository(for expense: ExpenseRecord) -> Bool {
-        #if DEBUG
-        if ExpenseRepositoryFactory.usesLocalStorage {
-            return true
-        }
-        // Test personas (Philip/Julia) are not in Supabase auth — any expense that
-        // includes them must use local simulation storage, including when the other
-        // participant is the real Apple account (saved-main detection can miss).
-        let participants = Set(expense.shares.map(\.userId)).union([expense.createdBy])
-        if participants.contains(where: TestAccount.contains(userId:)) {
-            return true
-        }
-        let partnerIds = Array(participants.subtracting([expense.createdBy]))
-        return SplitPartnerOption.shouldUseLocalSimulation(for: partnerIds)
-        #else
-        return false
-        #endif
+        _ = expense
+        return ExpenseRepositoryFactory.usesLocalStorage
     }
 
     private func loadRecurringStartDates(for expenses: [ExpenseRecord]) async -> [UUID: Date] {
@@ -734,12 +685,6 @@ final class ExpenseStore: ObservableObject {
                 startDates[id] = rule.startDate
                 continue
             }
-            #if DEBUG
-            if !ExpenseRepositoryFactory.usesLocalStorage,
-               let rule = try? await LocalExpenseRepository().fetchRecurringRule(id: id) {
-                startDates[id] = rule.startDate
-            }
-            #endif
         }
         return startDates
     }

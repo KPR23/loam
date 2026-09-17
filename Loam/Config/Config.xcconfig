@@ -4,10 +4,5 @@
 //
 // xcconfig treats // as a comment — write https:/$()/host not https://host
 //
-// Optional Secrets.xcconfig (gitignored): Xcode Cloud may set CURRENT_PROJECT_VERSION.
-// Included first so committed Supabase keys below always win over a stale local file.
-
-#include? "Secrets.xcconfig"
-
 SUPABASE_URL = https:/$()/iazyvupjvtuiezugurvo.supabase.co
 SUPABASE_ANON_KEY = sb_publishable_EDBOAPJzAaWIO566_-3W5A_vMKI0JXd

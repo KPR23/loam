@@ -162,6 +162,9 @@
 		D5950FD4B0A003B32224F60B /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculatorTests.swift; sourceTree = "<group>"; };
 		DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		DA9B2CD9C6E4B235D42813F1 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		DA9B2CD9C6E4B235D42813F2 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		DA9B2CD9C6E4B235D42813F3 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
 		E6AF7E99F1E669A42B08FB2D /* SupabaseHouseholdRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseHouseholdRepository.swift; sourceTree = "<group>"; };
 		EB1B6414E2E7130E9A77AE36 /* HouseholdRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdRepository.swift; sourceTree = "<group>"; };
 		ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetArcLayout.swift; sourceTree = "<group>"; };
@@ -439,6 +442,9 @@
 			isa = PBXGroup;
 			children = (
 				DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */,
+				DA9B2CD9C6E4B235D42813F1 /* Debug.xcconfig */,
+				DA9B2CD9C6E4B235D42813F2 /* Release.xcconfig */,
+				DA9B2CD9C6E4B235D42813F3 /* Secrets.example.xcconfig */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -654,7 +660,7 @@
 		};
 		613D70E58E34291B9DAA4780 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */;
+			baseConfigurationReference = DA9B2CD9C6E4B235D42813F2 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -734,7 +740,7 @@
 		};
 		93C860893498F866A000C69E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */;
+			baseConfigurationReference = DA9B2CD9C6E4B235D42813F1 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
