@@ -175,7 +175,6 @@
 		D533C1F5574D7B7BE0F546AC /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		D5950FD4B0A003B32224F60B /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculatorTests.swift; sourceTree = "<group>"; };
-		DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		E6AF7E99F1E669A42B08FB2D /* SupabaseHouseholdRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseHouseholdRepository.swift; sourceTree = "<group>"; };
 		E80E6F1581E3843A2C844271 /* SplitFormSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitFormSeed.swift; sourceTree = "<group>"; };
 		EB06FE891FB3F1266DC71601 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
@@ -470,7 +469,6 @@
 		FD3573B8123A2A6AE8155091 /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				DA9B2CD9C6E4B235D42813F0 /* Config.xcconfig */,
 				4EA6A778794AE887AAF81BA6 /* Debug.xcconfig */,
 				63C47899F6ED4E7E4BA92DE9 /* Production.xcconfig */,
 				EB06FE891FB3F1266DC71601 /* Release.xcconfig */,
