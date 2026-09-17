@@ -39,9 +39,10 @@ begin
     from unnest(v_partner_ids) partner_id
     where public.is_placeholder_partner(partner_id)
       or not exists (select 1 from auth.users u where u.id = partner_id)
+      or not exists (select 1 from public.profile p where p.id = partner_id)
       or not public.are_connected(v_user_id, partner_id)
   ) then
-    raise exception 'Every split participant must be a connected user';
+    raise exception 'Every split participant must be a connected user with a profile';
   end if;
 
   perform pg_advisory_xact_lock(
@@ -93,6 +94,12 @@ begin
     where p.id = v_partner_id
     on conflict (household_id, user_id) do update
       set display_name = excluded.display_name;
+
+    -- Defend against a profile being removed after the preflight check. Raising
+    -- inside the RPC rolls back the household and every member written above.
+    if not found then
+      raise exception 'Split participant % is missing a profile', v_partner_id;
+    end if;
   end loop;
 
   return query
