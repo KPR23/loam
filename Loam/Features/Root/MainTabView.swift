@@ -4,6 +4,7 @@ struct MainTabView: View {
     enum AppTab: Hashable {
         case expenses
         case balances
+        case activity
         case profile
     }
 
@@ -29,6 +30,10 @@ struct MainTabView: View {
 
             Tab("Balances", systemImage: "scale.3d", value: AppTab.balances) {
                 BalancesView()
+            }
+
+            Tab("Activity", systemImage: "clock.arrow.circlepath", value: AppTab.activity) {
+                ActivityView()
             }
 
             Tab("Profile", systemImage: "person", value: AppTab.profile) {
@@ -57,6 +62,12 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.balances)
 
+            ActivityView()
+                .tabItem {
+                    Label("Activity", systemImage: "clock.arrow.circlepath")
+                }
+                .tag(AppTab.activity)
+
             ProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person")
@@ -78,4 +89,5 @@ struct MainTabView: View {
         .environmentObject(ExpenseStore())
         .environmentObject(HouseholdStore())
         .environmentObject(BalanceStore())
+        .environmentObject(ActivityStore())
 }

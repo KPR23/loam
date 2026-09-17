@@ -55,6 +55,12 @@
 		A10000000000000000000006 /* BalancesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* BalancesView.swift */; };
 		A10000000000000000000008 /* LegacyDemoFixtureCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* LegacyDemoFixtureCleanup.swift */; };
 		A155F15886F6FED9D59F1145 /* TestAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D15723F1C7A5EE473CA2889 /* TestAccount.swift */; };
+		A30000000000000000000001 /* ActivityEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000001 /* ActivityEvent.swift */; };
+		A30000000000000000000002 /* ActivityRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000002 /* ActivityRepository.swift */; };
+		A30000000000000000000003 /* ActivityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000003 /* ActivityStore.swift */; };
+		A30000000000000000000004 /* LocalActivityRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000004 /* LocalActivityRepository.swift */; };
+		A30000000000000000000005 /* SupabaseActivityRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000005 /* SupabaseActivityRepository.swift */; };
+		A30000000000000000000006 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000006 /* ActivityView.swift */; };
 		A385DC89F56B32C668A7375C /* AddExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD805CDE31A24AD630A9703 /* AddExpenseView.swift */; };
 		A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C15AD0F34F080CB70FB979F /* LoamApp.swift */; };
 		A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */; };
@@ -145,6 +151,12 @@
 		A20000000000000000000005 /* BalanceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceStore.swift; sourceTree = "<group>"; };
 		A20000000000000000000006 /* BalancesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalancesView.swift; sourceTree = "<group>"; };
 		A20000000000000000000009 /* LegacyDemoFixtureCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDemoFixtureCleanup.swift; sourceTree = "<group>"; };
+		A40000000000000000000001 /* ActivityEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityEvent.swift; sourceTree = "<group>"; };
+		A40000000000000000000002 /* ActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRepository.swift; sourceTree = "<group>"; };
+		A40000000000000000000003 /* ActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityStore.swift; sourceTree = "<group>"; };
+		A40000000000000000000004 /* LocalActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalActivityRepository.swift; sourceTree = "<group>"; };
+		A40000000000000000000005 /* SupabaseActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseActivityRepository.swift; sourceTree = "<group>"; };
+		A40000000000000000000006 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		A74E2AB24186B00FD500CE4D /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		A87AE244F130211B61887F30 /* SplitExpenseSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseSection.swift; sourceTree = "<group>"; };
 		A97EB25D9F1644021698E45B /* SettlementMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMode.swift; sourceTree = "<group>"; };
@@ -326,6 +338,7 @@
 				5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */,
 				352DDC9EA03E70A678D9AABF /* HouseholdRecord.swift */,
 				A20000000000000000000001 /* BalanceRecord.swift */,
+				A40000000000000000000001 /* ActivityEvent.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -344,6 +357,14 @@
 				495BB77A0F2788E50B0DD08B /* HouseholdView.swift */,
 			);
 			path = Household;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000001 /* Activity */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000006 /* ActivityView.swift */,
+			);
+			path = Activity;
 			sourceTree = "<group>";
 		};
 		A64F5718641EC616AD4D43F7 /* DeepLinks */ = {
@@ -412,6 +433,10 @@
 				A20000000000000000000003 /* LocalBalanceRepository.swift */,
 				A20000000000000000000004 /* SupabaseBalanceRepository.swift */,
 				A20000000000000000000009 /* LegacyDemoFixtureCleanup.swift */,
+				A40000000000000000000002 /* ActivityRepository.swift */,
+				A40000000000000000000003 /* ActivityStore.swift */,
+				A40000000000000000000004 /* LocalActivityRepository.swift */,
+				A40000000000000000000005 /* SupabaseActivityRepository.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -424,6 +449,7 @@
 				00C5FC9B4ADC4F1ADA441288 /* Home */,
 				A3851E41452DB5FF962E6CFD /* Household */,
 				A20000000000000000000007 /* Balances */,
+				A50000000000000000000001 /* Activity */,
 				C52490EC258E788E4090D312 /* Profile */,
 				368706140AA70A6F0620FF3F /* Root */,
 			);
@@ -558,6 +584,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000008 /* LegacyDemoFixtureCleanup.swift in Sources */,
+				A30000000000000000000001 /* ActivityEvent.swift in Sources */,
+				A30000000000000000000002 /* ActivityRepository.swift in Sources */,
+				A30000000000000000000003 /* ActivityStore.swift in Sources */,
+				A30000000000000000000004 /* LocalActivityRepository.swift in Sources */,
+				A30000000000000000000005 /* SupabaseActivityRepository.swift in Sources */,
+				A30000000000000000000006 /* ActivityView.swift in Sources */,
 				A10000000000000000000001 /* BalanceRecord.swift in Sources */,
 				A10000000000000000000002 /* BalanceRepository.swift in Sources */,
 				A10000000000000000000003 /* LocalBalanceRepository.swift in Sources */,

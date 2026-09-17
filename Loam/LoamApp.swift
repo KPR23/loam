@@ -6,6 +6,7 @@ struct LoamApp: App {
     @StateObject private var expenseStore = ExpenseStore()
     @StateObject private var householdStore = HouseholdStore()
     @StateObject private var balanceStore = BalanceStore()
+    @StateObject private var activityStore = ActivityStore()
 
     var body: some Scene {
         WindowGroup {
@@ -14,6 +15,7 @@ struct LoamApp: App {
                 .environmentObject(expenseStore)
                 .environmentObject(householdStore)
                 .environmentObject(balanceStore)
+                .environmentObject(activityStore)
                 .task {
                     LegacyDemoFixtureCleanup.removeIfNeeded()
                     await authSession.bootstrap()
