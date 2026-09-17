@@ -100,6 +100,24 @@ actor SupabaseExpenseRepository: ExpenseRepository {
         return !rows.isEmpty
     }
 
+    func createRecurringOccurrence(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
+        do {
+            return try await create(expense)
+        } catch {
+            // The unique index makes the insert the arbiter. If another device
+            // inserted this occurrence first, use its row and keep refreshes
+            // idempotent; propagate all unrelated failures.
+            guard expense.recurringId != nil,
+                  error.localizedDescription.localizedCaseInsensitiveContains("duplicate")
+                    || error.localizedDescription.localizedCaseInsensitiveContains("unique")
+            else { throw error }
+            if let existing = try await fetchExpense(recurringId: expense.recurringId!, spentAt: expense.spentAt) {
+                return existing
+            }
+            throw error
+        }
+    }
+
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
 
@@ -316,6 +334,18 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             throw ExpenseRepositoryError.notFound
         }
         return record
+    }
+
+    private func fetchExpense(recurringId: UUID, spentAt: Date) async throws -> ExpenseRecord? {
+        let rows: [ExpenseDTO] = try await client
+            .from("expense")
+            .select("*, expense_share(*)")
+            .eq("recurring_id", value: recurringId)
+            .eq("spent_at", value: CalendarDateCodec.string(from: spentAt))
+            .limit(1)
+            .execute()
+            .value
+        return rows.compactMap { $0.toRecord() }.first
     }
 
     private func validate(_ expense: ExpenseRecord) throws {

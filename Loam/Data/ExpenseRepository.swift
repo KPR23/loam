@@ -10,6 +10,9 @@ protocol ExpenseRepository: Sendable {
     func fetchRecurringRule(id: UUID) async throws -> RecurringRuleRecord?
     func fetchLatestExpense(forRecurringId recurringId: UUID) async throws -> ExpenseRecord?
     func hasExpense(recurringId: UUID, spentAt: Date) async throws -> Bool
+    /// Inserts one recurring occurrence, returning the already-created row when
+    /// another client won the same (rule, date) race.
+    func createRecurringOccurrence(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     func delete(id: UUID) async throws
     #if DEBUG
