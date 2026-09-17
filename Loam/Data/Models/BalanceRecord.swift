@@ -42,4 +42,10 @@ struct BalanceHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     let amountMinor: Int
     let occurredAt: Date
     let status: ExpenseShareStatus?
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind, title, status
+        case amountMinor = "amount_minor"
+        case occurredAt = "occurred_at"
+    }
 }
