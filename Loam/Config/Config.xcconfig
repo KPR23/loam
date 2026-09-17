@@ -1,8 +1,0 @@
-// Supabase client config (baked into Info.plist at build time).
-// Anon / publishable key is safe to ship in the app when RLS is enabled.
-// Never put service_role / sb_secret_… here.
-//
-// xcconfig treats // as a comment — write https:/$()/host not https://host
-//
-// Environment-specific values live in Staging.xcconfig and
-// Production.xcconfig. Keep this file free of deployment credentials.
