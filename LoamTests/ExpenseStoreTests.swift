@@ -1,6 +1,25 @@
 import XCTest
 @testable import Loam
 
+final class CreateRepaymentParamsTests: XCTestCase {
+    func testNilNoteIsEncodedAsExplicitNullForPostgRESTFunctionResolution() throws {
+        let params = CreateRepaymentParams(
+            toUserId: UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!,
+            amountMinor: 100,
+            note: nil,
+            paidAt: "2026-09-17",
+            operationId: UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
+        )
+
+        let data = try JSONEncoder().encode(params)
+        let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertTrue(payload.keys.contains("p_note"))
+        XCTAssertTrue(payload["p_note"] is NSNull)
+        XCTAssertEqual(payload["p_amount_minor"] as? Int, 100)
+    }
+}
+
 final class ExpenseStoreSummaryTests: XCTestCase {
     let user = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
     let other = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
