@@ -28,6 +28,22 @@
 	<string>Loam uses your location to suggest nearby stores when adding an expense.</string>
 	<key>SUPABASE_URL</key>
 	<string>$(SUPABASE_URL)</string>
+	<key>LOAM_ENVIRONMENT</key>
+	<string>$(LOAM_ENVIRONMENT)</string>
+	<key>LOAM_TEST_SUPABASE_URL</key>
+	<string>$(LOAM_TEST_SUPABASE_URL)</string>
+	<key>LOAM_TEST_JULIA_USER_ID</key>
+	<string>$(LOAM_TEST_JULIA_USER_ID)</string>
+	<key>LOAM_TEST_JULIA_EMAIL</key>
+	<string>$(LOAM_TEST_JULIA_EMAIL)</string>
+	<key>LOAM_TEST_JULIA_PASSWORD</key>
+	<string>$(LOAM_TEST_JULIA_PASSWORD)</string>
+	<key>LOAM_TEST_PHILIP_USER_ID</key>
+	<string>$(LOAM_TEST_PHILIP_USER_ID)</string>
+	<key>LOAM_TEST_PHILIP_EMAIL</key>
+	<string>$(LOAM_TEST_PHILIP_EMAIL)</string>
+	<key>LOAM_TEST_PHILIP_PASSWORD</key>
+	<string>$(LOAM_TEST_PHILIP_PASSWORD)</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>UIApplicationSceneManifest</key>

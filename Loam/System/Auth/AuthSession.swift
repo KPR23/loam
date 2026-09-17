@@ -12,57 +12,51 @@ final class AuthSession: ObservableObject {
 
     private static let demoUserIdKey = "loam.demo.userId"
     private static let demoDisplayNameKey = "loam.demo.displayName"
-    private static let demoModeKey = "loam.demo.active"
 
     @Published private(set) var state: State = .loading
     @Published private(set) var userId: UUID?
     @Published private(set) var displayName: String?
     @Published var lastError: String?
 
-    /// Local-only session when Supabase is not configured or a dev persona is active.
+    /// Local-only session used only when Supabase is not configured.
     private(set) var usesDemoMode = false
+
+    private var authChangesTask: Task<Void, Never>?
 
     #if DEBUG
     private struct SavedMainAccount: Equatable {
         let userId: UUID
         let displayName: String
-        let usesLocalStorage: Bool
     }
 
-    private static let savedMainUserIdKey = "loam.debug.savedMain.userId"
-    private static let savedMainDisplayNameKey = "loam.debug.savedMain.displayName"
-    private static let savedMainUsesLocalStorageKey = "loam.debug.savedMain.usesLocalStorage"
-
     private var savedMainAccount: SavedMainAccount?
+    @Published private(set) var activeTestAccount: TestAccount?
 
     var canReturnToMainAccount: Bool {
-        savedMainAccount != nil || Self.loadPersistedMainAccount() != nil
+        savedMainAccount != nil
     }
 
     var savedMainAccountDisplayName: String? {
-        savedMainAccount?.displayName ?? Self.loadPersistedMainAccount()?.displayName
+        savedMainAccount?.displayName
     }
 
     var savedMainAccountPartnerOption: SplitPartnerOption? {
-        guard let saved = savedMainAccount ?? Self.loadPersistedMainAccount() else { return nil }
+        guard let saved = savedMainAccount else { return nil }
         return SplitPartnerOption(userId: saved.userId, displayName: saved.displayName)
     }
     #endif
 
     func bootstrap() async {
+        #if DEBUG
+        activeTestAccount = nil
+        #endif
+        SupabaseClientProvider.activate(.main)
         guard let client = SupabaseClientProvider.shared else {
             usesDemoMode = true
             ExpenseRepositoryFactory.setUsesLocalStorage(true)
             state = .signedOut
             return
         }
-
-        #if DEBUG
-        if restoreTestAccountOverlayIfNeeded() {
-            listenForAuthChanges(client: client)
-            return
-        }
-        #endif
 
         do {
             let session = try await client.auth.session
@@ -80,9 +74,13 @@ final class AuthSession: ObservableObject {
     }
 
     private func listenForAuthChanges(client: SupabaseClient) {
-        Task { [weak self] in
+        authChangesTask?.cancel()
+        let observedDevice = SupabaseClientProvider.activeDevice
+        authChangesTask = Task { [weak self] in
             for await (event, session) in client.auth.authStateChanges {
-                guard let self else { return }
+                guard !Task.isCancelled,
+                      let self,
+                      SupabaseClientProvider.activeDevice == observedDevice else { return }
                 switch event {
                 case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:
                     if let session, !session.isExpired {
@@ -151,58 +149,69 @@ final class AuthSession: ObservableObject {
 
     #if DEBUG
     var isTestAccountActive: Bool {
-        guard let userId else { return false }
-        return TestAccount.contains(userId: userId)
+        activeTestAccount != nil
     }
 
     func switchToTestAccount(_ account: TestAccount) async {
         lastError = nil
+        guard SupabaseConfig.allowsTestAccounts, account.isConfigured,
+              let expectedUserId = account.userId,
+              let client = SupabaseClientProvider.client(for: account.device) else {
+            lastError = "Test accounts require a configured non-production Supabase project."
+            return
+        }
 
-        if !isTestAccountActive {
+        if SupabaseClientProvider.activeDevice == .main {
             stashMainAccountForReturn()
         }
 
-        activateDemoSession(displayName: account.displayName, userId: account.userId)
+        state = .loading
+        SupabaseClientProvider.activate(account.device)
+        listenForAuthChanges(client: client)
+
+        do {
+            let session: Session
+            if let cached = try? await client.auth.session,
+               !cached.isExpired,
+               cached.user.id == expectedUserId {
+                session = cached
+            } else {
+                session = try await client.auth.signIn(email: account.email, password: account.password)
+            }
+
+            guard session.user.id == expectedUserId else {
+                throw TestAccountSwitchError.unexpectedUser
+            }
+            activeTestAccount = account
+            apply(user: session.user)
+            displayName = account.displayName
+        } catch {
+            lastError = error.localizedDescription
+            await restoreMainAccountAfterFailedSwitch()
+        }
     }
 
     func switchBackToMainAccount() async {
         lastError = nil
-
-        guard let saved = savedMainAccount ?? Self.loadPersistedMainAccount() else {
-            return
-        }
-
-        clearSavedMainAccount()
-
-        if let client = SupabaseClientProvider.shared {
-            do {
-                let session = try await client.auth.session
-                if !session.isExpired {
-                    apply(user: session.user)
-                    if !saved.displayName.isEmpty {
-                        displayName = saved.displayName
-                    }
-                    return
-                }
-            } catch {
-                lastError = error.localizedDescription
-            }
-        }
-
-        usesDemoMode = saved.usesLocalStorage
-        ExpenseRepositoryFactory.setUsesLocalStorage(saved.usesLocalStorage)
-        userId = saved.userId
-        displayName = saved.displayName
-        state = .signedIn
+        await restoreMainAccountAfterFailedSwitch()
     }
     #endif
 
     func signOut() async {
+        #if DEBUG
+        let signedOutTestDevice = isTestAccountActive
+        #endif
         if let client = SupabaseClientProvider.shared, !usesDemoMode {
             try? await client.auth.signOut()
         }
         #if DEBUG
-        clearSavedMainAccount()
+        if signedOutTestDevice {
+            await restoreMainAccountAfterFailedSwitch()
+            return
+        }
+        if SupabaseClientProvider.activeDevice == .main {
+            savedMainAccount = nil
+        }
         #endif
         clearSession()
     }
@@ -244,12 +253,6 @@ final class AuthSession: ObservableObject {
     }
 
     private func apply(user: User) {
-        #if DEBUG
-        if savedMainAccount != nil {
-            return
-        }
-        #endif
-
         usesDemoMode = false
         ExpenseRepositoryFactory.setUsesLocalStorage(SupabaseClientProvider.shared == nil)
         userId = user.id
@@ -261,66 +264,52 @@ final class AuthSession: ObservableObject {
         } else {
             displayName = "You"
         }
+        #if DEBUG
+        if SupabaseClientProvider.activeDevice == .main {
+            savedMainAccount = SavedMainAccount(
+                userId: user.id,
+                displayName: displayName ?? "You"
+            )
+        }
+        #endif
         state = .signedIn
     }
 
     #if DEBUG
     private func stashMainAccountForReturn() {
         guard let userId, let displayName else { return }
-
-        let saved = SavedMainAccount(
-            userId: userId,
-            displayName: displayName,
-            usesLocalStorage: ExpenseRepositoryFactory.usesLocalStorage
-        )
-        savedMainAccount = saved
-        Self.persistMainAccount(saved)
+        savedMainAccount = SavedMainAccount(userId: userId, displayName: displayName)
     }
 
-    private func restoreTestAccountOverlayIfNeeded() -> Bool {
-        guard
-            let saved = Self.loadPersistedMainAccount(),
-            let storedId = UserDefaults.standard.string(forKey: Self.demoUserIdKey),
-            let demoUserId = UUID(uuidString: storedId),
-            TestAccount.contains(userId: demoUserId)
-        else {
-            return false
+    private func restoreMainAccountAfterFailedSwitch() async {
+        activeTestAccount = nil
+        SupabaseClientProvider.activate(.main)
+        guard let client = SupabaseClientProvider.client(for: .main) else {
+            clearSession()
+            return
         }
 
-        savedMainAccount = saved
-        let displayName = UserDefaults.standard.string(forKey: Self.demoDisplayNameKey) ?? "You"
-        activateDemoSession(displayName: displayName, userId: demoUserId)
-        return true
-    }
-
-    private func clearSavedMainAccount() {
-        savedMainAccount = nil
-        UserDefaults.standard.removeObject(forKey: Self.savedMainUserIdKey)
-        UserDefaults.standard.removeObject(forKey: Self.savedMainDisplayNameKey)
-        UserDefaults.standard.removeObject(forKey: Self.savedMainUsesLocalStorageKey)
-    }
-
-    private static func persistMainAccount(_ account: SavedMainAccount) {
-        UserDefaults.standard.set(account.userId.uuidString, forKey: savedMainUserIdKey)
-        UserDefaults.standard.set(account.displayName, forKey: savedMainDisplayNameKey)
-        UserDefaults.standard.set(account.usesLocalStorage, forKey: savedMainUsesLocalStorageKey)
-    }
-
-    private static func loadPersistedMainAccount() -> SavedMainAccount? {
-        guard
-            let idString = UserDefaults.standard.string(forKey: savedMainUserIdKey),
-            let userId = UUID(uuidString: idString)
-        else {
-            return nil
+        listenForAuthChanges(client: client)
+        do {
+            let session = try await client.auth.session
+            guard !session.isExpired else {
+                clearSession()
+                return
+            }
+            apply(user: session.user)
+        } catch {
+            clearSession()
         }
-
-        let displayName = UserDefaults.standard.string(forKey: savedMainDisplayNameKey) ?? "You"
-        let usesLocalStorage = UserDefaults.standard.bool(forKey: savedMainUsesLocalStorageKey)
-        return SavedMainAccount(
-            userId: userId,
-            displayName: displayName,
-            usesLocalStorage: usesLocalStorage
-        )
     }
     #endif
 }
+
+#if DEBUG
+private enum TestAccountSwitchError: LocalizedError {
+    case unexpectedUser
+
+    var errorDescription: String? {
+        "The signed-in Supabase user does not match the configured test account ID."
+    }
+}
+#endif

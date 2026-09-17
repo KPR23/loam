@@ -36,13 +36,7 @@ final class HouseholdStore: ObservableObject {
         defer { isLoading = false }
 
         do {
-            var household = try await activeRepository.fetchTestHousehold(for: userId)
-            #if DEBUG
-            if !ExpenseRepositoryFactory.usesLocalStorage {
-                household = try await LocalHouseholdRepository().fetchTestHousehold(for: userId) ?? household
-            }
-            #endif
-            testHousehold = household
+            testHousehold = try await activeRepository.fetchTestHousehold(for: userId)
         } catch {
             lastError = error.localizedDescription
         }
@@ -58,21 +52,7 @@ final class HouseholdStore: ObservableObject {
     }
 
     private func repository(for partners: [SplitPartnerOption]) -> HouseholdRepository {
-        #if DEBUG
-        if ExpenseRepositoryFactory.usesLocalStorage || shouldUseLocalStorage(for: partners) {
-            return LocalHouseholdRepository()
-        }
-        #endif
-        return HouseholdRepositoryFactory.make()
-    }
-
-    private func shouldUseLocalStorage(for partners: [SplitPartnerOption]) -> Bool {
-        #if DEBUG
-        let partnerIds = partners.map(\.userId)
-        return SplitPartnerOption.shouldUseLocalSimulation(for: partnerIds)
-        #else
         _ = partners
-        return false
-        #endif
+        return HouseholdRepositoryFactory.make()
     }
 }
