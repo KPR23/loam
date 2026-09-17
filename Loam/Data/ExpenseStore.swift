@@ -66,6 +66,12 @@ final class ExpenseStore: ObservableObject {
             ?? proposalExpenses.first(where: { $0.id == proposal.expenseId })
     }
 
+    /// Used by Activity after an event is selected; a missing row is expected for deleted/inaccessible history.
+    func fetchExpense(id: UUID, userId: UUID) async -> ExpenseRecord? {
+        if let cached = expenses.first(where: { $0.id == id }) { return cached }
+        return try? await primaryRepository.fetchExpenses(ids: [id]).first(where: { $0.shareRecord(for: userId) != nil })
+    }
+
     func addSplit(
         amountMinor: Int,
         category: ExpenseCategory,
@@ -148,6 +154,7 @@ final class ExpenseStore: ObservableObject {
             shares: shareRecords
         )
         _ = try await activeRepository.create(expense)
+        await recordActivity(kind: .shared, actorId: userId, expense: expense, recipients: partnerUserIds)
         RecentSplitPartners.record(partnerUserIds, for: userId)
         if var rule = recurringRule {
             rule.nextOccurrence = rule.nextOccurrence(after: spentAt)
@@ -224,6 +231,7 @@ final class ExpenseStore: ObservableObject {
         guard var expense = expenses.first(where: { $0.id == expenseId }) else {
             throw ExpenseRepositoryError.notFound
         }
+        let originalExpense = expense
         guard expense.createdBy == userId else {
             throw ExpenseRepositoryError.notFound
         }
@@ -281,6 +289,14 @@ final class ExpenseStore: ObservableObject {
             _ = try await activeRepository.update(expense)
         }
 
+        if expense.isShared || originalExpense.isShared {
+            let removed = Set(originalExpense.shares.map(\.userId)).subtracting(expense.shares.map(\.userId))
+            await recordActivity(kind: .edited, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId })
+            for participant in removed {
+                await recordActivity(kind: .participantRemoved, actorId: userId, expense: originalExpense, recipients: [participant])
+            }
+        }
+
         await refresh(userId: userId)
     }
 
@@ -289,6 +305,7 @@ final class ExpenseStore: ObservableObject {
             if let expense = expenses.first(where: { $0.id == id }) {
                 let activeRepository = repository(for: expense)
                 try await activeRepository.delete(id: id)
+                if expense.isShared { await recordActivity(kind: .deleted, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId }) }
                 if let recurringId = expense.recurringId, let mode = recurringMode {
                     try await applyRecurringDeletion(
                         recurringId: recurringId,
@@ -402,6 +419,7 @@ final class ExpenseStore: ObservableObject {
         expense.updatedAt = Date()
 
         _ = try await activeRepository.update(expense)
+        await recordActivity(kind: .edited, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId })
         RecentSplitPartners.record(partnerUserIds, for: userId)
         await refresh(userId: userId)
     }
@@ -457,6 +475,7 @@ final class ExpenseStore: ObservableObject {
                     userId: userId,
                     action: itemAction
                 )
+                await recordActivity(kind: itemAction == .reject ? .rejected : .accepted, actorId: userId, expense: target.expense, recipients: [target.expense.createdBy])
             }
             await refresh(userId: userId)
         } catch {
@@ -515,6 +534,7 @@ final class ExpenseStore: ObservableObject {
         )
         let activeRepository = repository(for: expense)
         _ = try await activeRepository.createEditProposal(proposal, expenseId: expense.id)
+        await recordActivity(kind: .proposalCreated, actorId: userId, expense: expense, recipients: [expense.createdBy])
         let partnerIds = shares.map(\.userId).filter { $0 != userId }
         RecentSplitPartners.record(partnerIds, for: userId)
         await refresh(userId: userId)
@@ -529,6 +549,10 @@ final class ExpenseStore: ObservableObject {
             }
             let activeRepository = expense.map { repository(for: $0) } ?? primaryRepository
             try await activeRepository.respondToProposal(proposalId: proposalId, accept: accept)
+            if let expense {
+                let proposer = pendingProposals.first(where: { $0.id == proposalId })?.proposedBy
+                await recordActivity(kind: accept ? .proposalAccepted : .proposalRejected, actorId: userId, expense: expense, recipients: proposer.map { [$0] } ?? [])
+            }
             await refresh(userId: userId)
         } catch {
             lastError = error.localizedDescription
@@ -561,6 +585,27 @@ final class ExpenseStore: ObservableObject {
         guard !missingIds.isEmpty else { return [] }
 
         return (try? await primaryRepository.fetchExpenses(ids: missingIds)) ?? []
+    }
+
+    private func recordActivity(kind: ActivityEventKind, actorId: UUID, expense: ExpenseRecord, recipients: [UUID]) async {
+        guard ExpenseRepositoryFactory.usesLocalStorage else { return }
+        let audience = Array(Set(recipients + [actorId]))
+        guard !recipients.isEmpty else { return }
+        let event = ActivityEvent(
+            kind: kind,
+            actorId: actorId,
+            actorName: SplitPartnerOption.displayName(for: actorId, fallback: "You"),
+            recipientId: recipients.count == 1 ? recipients[0] : nil,
+            recipientName: recipients.count == 1 ? SplitPartnerOption.displayName(for: recipients[0]) : nil,
+            recipientNames: recipients.map { SplitPartnerOption.displayName(for: $0) },
+            expenseId: expense.id,
+            expenseTitle: expense.displayTitle,
+            category: expense.category,
+            affectedShareMinor: recipients.reduce(0) { $0 + (expense.shareRecord(for: $1)?.amountMinor ?? 0) },
+            expenseTotalMinor: expense.amountMinor,
+            currency: expense.currency
+        )
+        try? await ActivityRepositoryFactory.make().record(event, audience: audience)
     }
 
     private func persistRecurringRule(
