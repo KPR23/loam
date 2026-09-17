@@ -73,7 +73,7 @@ final class AuthSession: ObservableObject {
         listenForAuthChanges(client: client)
     }
 
-    private func listenForAuthChanges(client: SupabaseClient) {
+    private func listenForAuthChanges(client: SupabaseClient, expectedUserId: UUID? = nil) {
         authChangesTask?.cancel()
         let observedDevice = SupabaseClientProvider.activeDevice
         authChangesTask = Task { [weak self] in
@@ -84,6 +84,13 @@ final class AuthSession: ObservableObject {
                 switch event {
                 case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:
                     if let session, !session.isExpired {
+                        guard expectedUserId == nil || session.user.id == expectedUserId else {
+                            #if DEBUG
+                            self.lastError = TestAccountSwitchError.unexpectedUser.localizedDescription
+                            await self.restoreMainAccountAfterFailedSwitch()
+                            #endif
+                            return
+                        }
                         self.apply(user: session.user)
                     } else if !self.usesDemoMode {
                         self.clearSession()
@@ -166,8 +173,8 @@ final class AuthSession: ObservableObject {
         }
 
         state = .loading
+        authChangesTask?.cancel()
         SupabaseClientProvider.activate(account.device)
-        listenForAuthChanges(client: client)
 
         do {
             let session: Session
@@ -185,6 +192,7 @@ final class AuthSession: ObservableObject {
             activeTestAccount = account
             apply(user: session.user)
             displayName = account.displayName
+            listenForAuthChanges(client: client, expectedUserId: expectedUserId)
         } catch {
             lastError = error.localizedDescription
             await restoreMainAccountAfterFailedSwitch()
