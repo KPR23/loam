@@ -15,9 +15,16 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "6"
     DEVELOPMENT_TEAM: ""
+configs:
+  Debug: debug
+  Release: release
+  TestFlight: release
+  Production: release
 configFiles:
   Debug: Loam/Config/Debug.xcconfig
   Release: Loam/Config/Release.xcconfig
+  TestFlight: Loam/Config/Staging.xcconfig
+  Production: Loam/Config/Production.xcconfig
 packages:
   supabase-swift:
     url: https://github.com/supabase/supabase-swift
@@ -69,3 +76,15 @@ schemes:
         - LoamTests
     run:
       config: Debug
+    archive:
+      config: Production
+  Loam-TestFlight:
+    build:
+      targets:
+        Loam: all
+        LoamTests: [test]
+    test:
+      targets:
+        - LoamTests
+    archive:
+      config: TestFlight

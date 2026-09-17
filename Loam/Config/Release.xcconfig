@@ -1,4 +1,4 @@
-#include "Config.xcconfig"
+#include "Production.xcconfig"
 
 // Release builds compile test-account code out and never load local secrets.
 LOAM_ENVIRONMENT = production

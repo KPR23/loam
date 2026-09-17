@@ -1,0 +1,3 @@
+// Production Supabase project used only by App Store distribution builds.
+SUPABASE_URL = https:/$()/nffogbutnyevhhwnpgip.supabase.co
+SUPABASE_ANON_KEY = sb_publishable_aqRL55vWyTCfBG6KckShpg_z6hlZYD_
