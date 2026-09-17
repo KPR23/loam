@@ -21,14 +21,50 @@ actor SupabaseBalanceRepository: BalanceRepository {
 
     func createRepayment(from userId: UUID, to personId: UUID, amountMinor: Int, note: String?, paidAt: Date, operationId: UUID) async throws {
         _ = userId
-        struct Params: Encodable { let pToUserId: UUID; let pAmountMinor: Int; let pNote: String?; let pPaidAt: String; let pOperationId: UUID
-            enum CodingKeys: String, CodingKey { case pToUserId = "p_to_user_id", pAmountMinor = "p_amount_minor", pNote = "p_note", pPaidAt = "p_paid_at", pOperationId = "p_operation_id" } }
-        _ = try await client.rpc("create_repayment", params: Params(pToUserId: personId, pAmountMinor: amountMinor, pNote: note, pPaidAt: CalendarDateCodec.string(from: paidAt), pOperationId: operationId)).execute()
+        let params = CreateRepaymentParams(
+            toUserId: personId,
+            amountMinor: amountMinor,
+            note: note,
+            paidAt: CalendarDateCodec.string(from: paidAt),
+            operationId: operationId
+        )
+        _ = try await client.rpc("create_repayment", params: params).execute()
     }
 
     func reverseRepayment(id: UUID, operationId: UUID) async throws {
         struct Params: Encodable { let pRepaymentId: UUID; let pOperationId: UUID
             enum CodingKeys: String, CodingKey { case pRepaymentId = "p_repayment_id", pOperationId = "p_operation_id" } }
         _ = try await client.rpc("reverse_repayment", params: Params(pRepaymentId: id, pOperationId: operationId)).execute()
+    }
+}
+
+struct CreateRepaymentParams: Encodable, Sendable {
+    let toUserId: UUID
+    let amountMinor: Int
+    let note: String?
+    let paidAt: String
+    let operationId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case toUserId = "p_to_user_id"
+        case amountMinor = "p_amount_minor"
+        case note = "p_note"
+        case paidAt = "p_paid_at"
+        case operationId = "p_operation_id"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(toUserId, forKey: .toUserId)
+        try container.encode(amountMinor, forKey: .amountMinor)
+        if let note {
+            try container.encode(note, forKey: .note)
+        } else {
+            // PostgREST resolves RPC overloads from the JSON key set. Omitting
+            // this optional key makes it search for a four-argument function.
+            try container.encodeNil(forKey: .note)
+        }
+        try container.encode(paidAt, forKey: .paidAt)
+        try container.encode(operationId, forKey: .operationId)
     }
 }
