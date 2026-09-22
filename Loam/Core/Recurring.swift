@@ -145,18 +145,19 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         self.isActive = isActive
     }
 
-    func isSkipped(_ date: Date, calendar: Calendar = .current) -> Bool {
+    func isSkipped(_ date: Date, calendar: Calendar = AppPreferences.calendar) -> Bool {
         skippedDates.contains { calendar.isDate($0, inSameDayAs: date) }
     }
 
-    mutating func skipOccurrence(on date: Date, calendar: Calendar = .current) {
+    mutating func skipOccurrence(on date: Date, calendar: Calendar = AppPreferences.calendar) {
         let day = calendar.startOfDay(for: date)
         guard !isSkipped(day, calendar: calendar) else { return }
         skippedDates.append(day)
     }
 
     var hasEnded: Bool {
-        !isActive || (endDate.map { Calendar.current.startOfDay(for: $0) < Calendar.current.startOfDay(for: Date()) } ?? false)
+        let calendar = AppPreferences.calendar
+        return !isActive || (endDate.map { calendar.startOfDay(for: $0) < calendar.startOfDay(for: Date()) } ?? false)
     }
 
     var endDateDisplay: String {
@@ -164,7 +165,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         return endDate.formatted(date: .abbreviated, time: .omitted)
     }
 
-    func nextOccurrence(after date: Date, calendar: Calendar = .current) -> Date {
+    func nextOccurrence(after date: Date, calendar: Calendar = AppPreferences.calendar) -> Date {
         let component: Calendar.Component
         switch intervalUnit {
         case .day: component = .day
@@ -216,13 +217,14 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         intervalUnit = try container.decode(RecurringIntervalUnit.self, forKey: .intervalUnit)
         intervalCount = try container.decode(Int.self, forKey: .intervalCount)
         let decodedNext = try container.decode(Date.self, forKey: .nextOccurrence)
-        nextOccurrence = Calendar.current.startOfDay(for: decodedNext)
+        let calendar = AppPreferences.calendar
+        nextOccurrence = calendar.startOfDay(for: decodedNext)
         startDate = try container.decodeIfPresent(Date.self, forKey: .startDate)
-            .map { Calendar.current.startOfDay(for: $0) } ?? nextOccurrence
+            .map { calendar.startOfDay(for: $0) } ?? nextOccurrence
         endDate = try container.decodeIfPresent(Date.self, forKey: .endDate)
-            .map { Calendar.current.startOfDay(for: $0) }
+            .map { calendar.startOfDay(for: $0) }
         skippedDates = (try container.decodeIfPresent([Date].self, forKey: .skippedDates) ?? [])
-            .map { Calendar.current.startOfDay(for: $0) }
+            .map { calendar.startOfDay(for: $0) }
         isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
     }
 }
@@ -236,7 +238,7 @@ enum RecurringMaterializer {
     static func dueDates(
         for rule: RecurringRuleRecord,
         through throughDate: Date,
-        calendar: Calendar = .current
+        calendar: Calendar = AppPreferences.calendar
     ) -> [Date] {
         guard rule.isActive else { return [] }
 
