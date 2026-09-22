@@ -111,6 +111,12 @@ begin
   if v_updated = 1 and p_success and p_next_stage = 'complete' then
     update private.account_deletion_operation set completed_at = now(), encrypted_revocation_credential = '' where id = p_operation_id;
   end if;
+  -- A permanent provider failure is explicit and removes the credential rather
+  -- than retaining it forever. Monitoring alerts on failed_at / last_error.
+  if v_updated = 1 and not p_success and exists (select 1 from private.account_deletion_job where operation_id = p_operation_id and attempts >= 10) then
+    update private.account_deletion_job set stage = 'complete' where operation_id = p_operation_id;
+    update private.account_deletion_operation set failed_at = now(), failure_reason = coalesce(p_detail, 'Deletion worker permanently failed'), encrypted_revocation_credential = '' where id = p_operation_id;
+  end if;
   return v_updated = 1;
 end $$;
 revoke all on function public.advance_account_deletion_job(uuid,text,uuid,text,boolean,text) from public, anon, authenticated;
