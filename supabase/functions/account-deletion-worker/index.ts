@@ -12,11 +12,21 @@ async function decryptCredential(value: string): Promise<string> {
   return new TextDecoder().decode(plaintext);
 }
 
-const advance = (admin: ReturnType<typeof createClient>, job: Record<string, unknown>, nextStage: string, success: boolean, detail?: string) =>
-  admin.rpc("advance_account_deletion_job", {
+async function advance(
+  admin: ReturnType<typeof createClient>,
+  job: { operation_id: string; stage: string; lease_token: string },
+  nextStage: string,
+  success: boolean,
+  detail?: string,
+): Promise<void> {
+  const { data, error } = await admin.rpc("advance_account_deletion_job", {
     p_operation_id: job.operation_id, p_expected_stage: job.stage, p_lease_token: job.lease_token,
     p_next_stage: nextStage, p_success: success, p_detail: detail ?? null,
   });
+  if (error || data !== true) {
+    throw new Error(`Deletion job transition was not applied: ${error?.message ?? "lease expired or stage changed"}`);
+  }
+}
 
 // Invoke this from a protected scheduler once a minute.  The database lease
 // means concurrent invocations and worker crashes are safe.
@@ -45,6 +55,8 @@ Deno.serve(async (request) => {
     }
     return Response.json({ processed: true });
   } catch (error) {
+    // If this compare-and-swap also fails, let the invocation fail. Reporting
+    // success would conceal an RPC outage or an expired lease from the scheduler.
     await advance(admin, job, job.stage, false, String(error));
     return Response.json({ processed: true, retrying: true }, { status: 202 });
   }
