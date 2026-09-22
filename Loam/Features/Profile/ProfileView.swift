@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import SafariServices
 import Supabase
 import UIKit
 
@@ -121,6 +122,22 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 }
 
 struct ProfileView: View {
+    private enum FeaturebaseDestination: String, Identifiable {
+        case changelog
+        case feedback
+
+        var id: String { rawValue }
+
+        var url: URL {
+            switch self {
+            case .changelog:
+                URL(string: "https://kprslab.featurebase.app/changelog")!
+            case .feedback:
+                URL(string: "https://kprslab.featurebase.app")!
+            }
+        }
+    }
+
     @EnvironmentObject private var authSession: AuthSession
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isUploadingPhoto = false
@@ -131,6 +148,7 @@ struct ProfileView: View {
     @AppStorage(AppPreferences.timeZoneKey) private var timeZoneIdentifier = ""
     @State private var showsSignOut = false
     @State private var isSigningOut = false
+    @State private var featurebaseDestination: FeaturebaseDestination?
 
     var body: some View {
         NavigationStack {
@@ -193,21 +211,22 @@ struct ProfileView: View {
                 preferencesSection
 
                 Section {
-                    NavigationLink {
-                        ProfileInfoView(title: "Changelog", symbol: "newspaper", message: "A little better, every update.", detail: "What’s new in Loam will appear here soon.")
+                    Button {
+                        featurebaseDestination = .changelog
                     } label: {
                         ProfileRow("Changelog", symbol: "newspaper", color: .purple)
                     }
-                    NavigationLink {
-                        ProfileInfoView(title: "Give feedback", symbol: "star", message: "Help shape Loam.", detail: "A place to share ideas and vote on what comes next. Coming soon.")
+                    .accessibilityHint("Opens Loam's changelog")
+                    Button {
+                        featurebaseDestination = .feedback
                     } label: {
                         ProfileRow("Give feedback", symbol: "star", color: .orange)
                     }
-                    NavigationLink {
-                        ProfileInfoView(title: "Contact support", symbol: "envelope", message: "A little help, when you need it.", detail: "Support isn’t available in this build yet.")
-                    } label: {
+                    .accessibilityHint("Opens Loam's feedback board")
+                    Link(destination: URL(string: "mailto:kprcode@icloud.com")!) {
                         ProfileRow("Contact support", symbol: "envelope", color: .blue)
                     }
+                    .accessibilityHint("Opens an email addressed to Loam support")
                     NavigationLink {
                         ProfileInfoView(title: "About the app", symbol: "app.badge", message: "A little clarity. Every day.", detail: "A calmer place for your expenses, shared moments, and everything in between.\n\n\(Self.version)")
                     } label: {
@@ -276,6 +295,10 @@ struct ProfileView: View {
                 }
             } message: {
                 Text("You can sign back in whenever you’re ready.")
+            }
+            .sheet(item: $featurebaseDestination) { destination in
+                SafariView(url: destination.url)
+                    .ignoresSafeArea()
             }
             .alert("Account", isPresented: Binding(get: { authSession.lastError != nil }, set: { if !$0 { authSession.lastError = nil } })) {
                 Button("OK") { authSession.lastError = nil }
@@ -362,6 +385,18 @@ struct ProfileView: View {
         }
         return cropped.jpegData(compressionQuality: 0.8)
     }
+}
+
+private struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let configuration = SFSafariViewController.Configuration()
+        configuration.entersReaderIfAvailable = false
+        return SFSafariViewController(url: url, configuration: configuration)
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }
 
 private struct CompactProfileLabelStyle: LabelStyle {
