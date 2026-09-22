@@ -453,6 +453,7 @@ private struct PersonalDetailsView: View {
     @State private var isDeletingAccount = false
     @State private var showsDeleteConfirmation = false
     @State private var error: String?
+    @State private var deletionAuthorization = AppleDeletionAuthorization()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -495,7 +496,9 @@ private struct PersonalDetailsView: View {
                 error = nil
                 Task {
                     do {
-                        try await authSession.deleteAccount()
+                        // Cancelling this system prompt exits without touching the account.
+                        let credential = try await deletionAuthorization.request()
+                        try await authSession.deleteAccount(credential: credential)
                     } catch {
                         self.error = error.localizedDescription
                     }

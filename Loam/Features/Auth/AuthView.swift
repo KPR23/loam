@@ -65,6 +65,14 @@ struct AuthView: View {
                     .foregroundStyle(.secondary)
             }
 
+            if authSession.deletionPending {
+                Text("Your account has been closed. Deletion is being completed.")
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
+            }
+
             if let error = authSession.lastError {
                 Text(error)
                     .font(.footnote)

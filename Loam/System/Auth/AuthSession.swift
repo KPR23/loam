@@ -19,6 +19,7 @@ final class AuthSession: ObservableObject {
     @Published private(set) var email: String?
     @Published private(set) var connectedProviders: Set<String> = []
     @Published var lastError: String?
+    @Published private(set) var deletionPending = UserDefaults.standard.object(forKey: "loam.accountDeletionReceipt") != nil
 
     /// Local-only session used only when Supabase is not configured.
     private(set) var usesDemoMode = false
@@ -236,7 +237,7 @@ final class AuthSession: ObservableObject {
         }
     }
 
-    func deleteAccount() async throws {
+    func deleteAccount(credential: ASAuthorizationAppleIDCredential? = nil) async throws {
         guard userId != nil else {
             throw NSError(domain: "LoamAccount", code: 1, userInfo: [NSLocalizedDescriptionKey: "No account is signed in."])
         }
@@ -265,9 +266,20 @@ final class AuthSession: ObservableObject {
             throw NSError(domain: "LoamAccount", code: 3, userInfo: [NSLocalizedDescriptionKey: "Account deletion is unavailable right now."])
         }
 
-        try await client.functions.invoke("delete-account")
-        // Auth soft deletion has already revoked the server session. The SDK
-        // clears its local session before sending this best-effort sign-out.
+        guard let credential,
+              let identityToken = credential.identityToken.flatMap({ String(data: $0, encoding: .utf8) }),
+              let authorizationCode = credential.authorizationCode.flatMap({ String(data: $0, encoding: .utf8) }) else {
+            throw NSError(domain: "LoamAccount", code: 4, userInfo: [NSLocalizedDescriptionKey: "Confirm with Apple before deleting your account."])
+        }
+        let receipt = DeletionReceipt.create()
+        try await client.functions.invoke("delete-account", options: FunctionInvokeOptions(body: AccountDeletionRequest(
+            operationId: receipt.operationId.uuidString,
+            receiptSecret: receipt.secret,
+            authorizationCode: authorizationCode,
+            identityToken: identityToken
+        )))
+        // Acceptance revokes application access immediately; the service worker
+        // then revokes Apple, deletes Auth, and removes every avatar path.
         try? await client.auth.signOut(scope: .local)
         #if DEBUG
         savedMainAccount = nil
@@ -392,6 +404,28 @@ final class AuthSession: ObservableObject {
         }
     }
     #endif
+}
+
+private struct AccountDeletionRequest: Encodable {
+    let operationId: String
+    let receiptSecret: String
+    let authorizationCode: String
+    let identityToken: String
+}
+
+private enum DeletionReceipt {
+    private static let key = "loam.accountDeletionReceipt"
+    static func create() -> (operationId: UUID, secret: String) {
+        if let saved = UserDefaults.standard.dictionary(forKey: key),
+           let operationId = saved["operationId"] as? String,
+           let id = UUID(uuidString: operationId),
+           let secret = saved["secret"] as? String, secret.count >= 32 {
+            return (id, secret)
+        }
+        let value = (UUID(), UUID().uuidString + UUID().uuidString)
+        UserDefaults.standard.set(["operationId": value.0.uuidString, "secret": value.1], forKey: key)
+        return value
+    }
 }
 
 private struct DisplayNameParams: Encodable {
