@@ -105,10 +105,11 @@ struct ProposeEditSheet: View {
                 }
 
                 SplitExpenseSection(
-                    totalMinor: Money(majorString: formState.amountText)?.amountMinor ?? 0,
+                    totalMinor: Money(majorString: formState.amountText, currencyCode: expense.currency)?.amountMinor ?? 0,
                     myUserId: myUserId,
                     myDisplayName: authSession.displayName ?? "You",
                     availablePartners: splitPartners,
+                    currencyCode: expense.currency,
                     recentPartners: recentSplitPartners,
                     requiresPartner: true,
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
@@ -123,20 +124,26 @@ struct ProposeEditSheet: View {
                         .lineLimit(2...4)
                 }
             }
+            .disabled(isSaving)
+            .interactiveDismissDisabled(isSaving)
             .navigationTitle("Suggest changes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { LoamFeedback.tap(); dismiss() }
+                        .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Send") {
+                    Button {
                         Task { await submit() }
+                    } label: {
+                        SavingActionLabel(title: "Send", isSaving: isSaving)
                     }
                     .fontWeight(.semibold)
                     .disabled(isSaving || validationError != nil)
                 }
             }
+            .sensoryFeedback(.error, trigger: errorMessage) { _, newValue in newValue != nil }
             .alert("Couldn't send proposal", isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
@@ -156,7 +163,8 @@ struct ProposeEditSheet: View {
     }
 
     private func submit() async {
-        guard let amountMinor = Money(majorString: formState.amountText)?.amountMinor, amountMinor > 0 else {
+        guard !isSaving else { return }
+        guard let amountMinor = Money(majorString: formState.amountText, currencyCode: expense.currency)?.amountMinor, amountMinor > 0 else {
             errorMessage = "Enter a valid amount."
             return
         }
@@ -174,7 +182,7 @@ struct ProposeEditSheet: View {
             partnerUserIds: partnerIds,
             paidByUserId: formState.paidByUserId,
             myPercentage: formState.myPercentage,
-            myExactAmountMinor: Money(majorString: formState.myExactAmountText)?.amountMinor,
+            myExactAmountMinor: Money(majorString: formState.myExactAmountText, currencyCode: expense.currency)?.amountMinor,
             participantPercentages: formState.participantPercentages,
             participantExactAmountMinors: participantExactAmountMinors
         )
@@ -198,6 +206,7 @@ struct ProposeEditSheet: View {
                 shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) },
                 message: formState.message.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
             )
+            LoamFeedback.success()
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -205,7 +214,7 @@ struct ProposeEditSheet: View {
     }
 
     private var validationError: String? {
-        guard let amountMinor = Money(majorString: formState.amountText)?.amountMinor,
+        guard let amountMinor = Money(majorString: formState.amountText, currencyCode: expense.currency)?.amountMinor,
               amountMinor > 0 else {
             return "Enter a valid amount."
         }
@@ -221,7 +230,7 @@ struct ProposeEditSheet: View {
     }
 
     private var participantExactAmountMinors: [UUID: Int] {
-        formState.participantAmountTexts.compactMapValues { Money(majorString: $0)?.amountMinor }
+        formState.participantAmountTexts.compactMapValues { Money(majorString: $0, currencyCode: expense.currency)?.amountMinor }
     }
 }
 

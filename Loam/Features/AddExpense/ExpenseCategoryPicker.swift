@@ -97,6 +97,7 @@ struct ExpenseCategoryPicker: View {
         }
         // Keep closed-state icon colors; Menu would otherwise recolor via accent/tint.
         .buttonStyle(.plain)
+        .sensoryFeedback(.selection, trigger: category)
     }
 }
 

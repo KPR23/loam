@@ -31,12 +31,15 @@ struct HomeExpenseRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let onTap {
-                Button(action: onTap) {
+                Button {
+                    LoamFeedback.tap()
+                    onTap()
+                } label: {
                     rowContent
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(LoamPressStyle())
                 .accessibilityHint("Shows expense details")
             } else {
                 rowContent

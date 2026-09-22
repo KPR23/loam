@@ -579,7 +579,10 @@ private struct AddExpenseFAB: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            LoamFeedback.tap()
+            action()
+        } label: {
             Image(systemName: "plus")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(Color(.systemBackground))
@@ -587,7 +590,7 @@ private struct AddExpenseFAB: View {
                 .background(Circle().fill(Color.primary))
                 .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(LoamPressStyle())
         .accessibilityLabel("Add expense")
     }
 }

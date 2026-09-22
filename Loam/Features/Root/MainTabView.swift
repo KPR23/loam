@@ -10,6 +10,7 @@ struct MainTabView: View {
 
     @State private var selection: AppTab = .expenses
     @State private var expensesReloadToken = 0
+    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
 
     var body: some View {
         Group {
@@ -19,6 +20,7 @@ struct MainTabView: View {
                 legacyTabView
             }
         }
+        .sensoryFeedback(.selection, trigger: selection)
     }
 
     @available(iOS 18.0, *)
@@ -28,7 +30,7 @@ struct MainTabView: View {
                 HomeView(arcReloadToken: expensesReloadToken)
             }
 
-            Tab("Balances", systemImage: "scale.3d", value: AppTab.balances) {
+            Tab("Balances", systemImage: "arrow.left.arrow.right", value: AppTab.balances) {
                 BalancesView()
             }
 
@@ -40,7 +42,7 @@ struct MainTabView: View {
                 ProfileView()
             }
         }
-        .tint(HomeTheme.accent)
+        .tint(accentColor.color)
         .onChange(of: selection) { _, newValue in
             if newValue == .expenses {
                 expensesReloadToken += 1
@@ -58,7 +60,7 @@ struct MainTabView: View {
 
             BalancesView()
                 .tabItem {
-                    Label("Balances", systemImage: "scale.3d")
+                    Label("Balances", systemImage: "arrow.left.arrow.right")
                 }
                 .tag(AppTab.balances)
 
@@ -74,7 +76,7 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.profile)
         }
-        .tint(HomeTheme.accent)
+        .tint(accentColor.color)
         .onChange(of: selection) { _, newValue in
             if newValue == .expenses {
                 expensesReloadToken += 1

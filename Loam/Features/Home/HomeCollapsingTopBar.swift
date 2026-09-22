@@ -46,7 +46,7 @@ struct HomeCollapsingTopBar: View {
     }
 
     private var monthPickerButton: some View {
-        HomeGlassCapsuleButton(action: onPickMonth) {
+        HomeGlassCapsuleButton(action: { LoamFeedback.tap(); onPickMonth() }) {
             monthPickerLabel
         }
         .accessibilityLabel("Selected month, \(period.displayTitle)")
@@ -101,13 +101,13 @@ struct HomeTopBarCalendarButton: View {
 
     var body: some View {
         if #available(iOS 26, *) {
-            Button(action: onPickMonth) {
+            Button(action: { LoamFeedback.tap(); onPickMonth() }) {
                 Image(systemName: "calendar")
             }
             .accessibilityLabel("Selected month, \(period.displayTitle)")
             .accessibilityHint("Opens month picker")
         } else {
-            Button(action: onPickMonth) {
+            Button(action: { LoamFeedback.tap(); onPickMonth() }) {
                 Image(systemName: "calendar")
             }
             .buttonStyle(.bordered)
@@ -201,6 +201,8 @@ struct MonthPickerSheet: View {
                 }
             }
         }
+        .sensoryFeedback(.selection, trigger: selectedMonth)
+        .sensoryFeedback(.selection, trigger: selectedYear)
         .presentationDetents([.height(320)])
         .presentationDragIndicator(.visible)
     }

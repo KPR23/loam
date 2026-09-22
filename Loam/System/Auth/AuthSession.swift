@@ -16,6 +16,8 @@ final class AuthSession: ObservableObject {
     @Published private(set) var state: State = .loading
     @Published private(set) var userId: UUID?
     @Published private(set) var displayName: String?
+    @Published private(set) var email: String?
+    @Published private(set) var connectedProviders: Set<String> = []
     @Published var lastError: String?
 
     /// Local-only session used only when Supabase is not configured.
@@ -205,12 +207,69 @@ final class AuthSession: ObservableObject {
     }
     #endif
 
+    func updateDisplayName(_ name: String) async throws {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        if usesDemoMode, let userId {
+            displayName = name
+            Self.persistDemoSession(userId: userId, displayName: name)
+        } else if let client = SupabaseClientProvider.shared {
+            let user = try await client.auth.update(user: UserAttributes(data: ["full_name": .string(name)]))
+            apply(user: user)
+        }
+    }
+
+    func deleteAccount() async throws {
+        guard userId != nil else {
+            throw NSError(domain: "LoamAccount", code: 1, userInfo: [NSLocalizedDescriptionKey: "No account is signed in."])
+        }
+
+        #if DEBUG
+        guard !isTestAccountActive else {
+            throw NSError(domain: "LoamAccount", code: 2, userInfo: [NSLocalizedDescriptionKey: "Switch back to your main account before deleting it."])
+        }
+        #endif
+
+        if usesDemoMode {
+            let defaults = UserDefaults.standard
+            for key in [
+                Self.demoUserIdKey, Self.demoDisplayNameKey,
+                "loam.local.expenses", "loam.local.recurring", "loam.local.proposals",
+                "loam.local.trust", "loam.local.households", "loam.local.household",
+                "loam.local.repayments", "loam.local.activity.v1",
+            ] {
+                defaults.removeObject(forKey: key)
+            }
+            clearSession()
+            return
+        }
+
+        guard let client = SupabaseClientProvider.shared else {
+            throw NSError(domain: "LoamAccount", code: 3, userInfo: [NSLocalizedDescriptionKey: "Account deletion is unavailable right now."])
+        }
+
+        try await client.functions.invoke("delete-account")
+        // Auth soft deletion has already revoked the server session. The SDK
+        // clears its local session before sending this best-effort sign-out.
+        try? await client.auth.signOut(scope: .local)
+        #if DEBUG
+        savedMainAccount = nil
+        #endif
+        clearSession()
+    }
+
     func signOut() async {
+        lastError = nil
         #if DEBUG
         let signedOutTestDevice = isTestAccountActive
         #endif
         if let client = SupabaseClientProvider.shared, !usesDemoMode {
-            try? await client.auth.signOut()
+            do {
+                try await client.auth.signOut()
+            } catch {
+                lastError = error.localizedDescription
+                return
+            }
         }
         #if DEBUG
         if signedOutTestDevice {
@@ -227,6 +286,8 @@ final class AuthSession: ObservableObject {
     private func clearSession() {
         userId = nil
         displayName = nil
+        email = nil
+        connectedProviders = []
         usesDemoMode = false
         ExpenseRepositoryFactory.setUsesLocalStorage(false)
         state = .signedOut
@@ -238,6 +299,8 @@ final class AuthSession: ObservableObject {
         let id = explicitUserId ?? Self.loadDemoUserId()
         userId = id
         self.displayName = displayName
+        email = nil
+        connectedProviders = []
         Self.persistDemoSession(userId: id, displayName: displayName)
         state = .signedIn
     }
@@ -264,6 +327,8 @@ final class AuthSession: ObservableObject {
         usesDemoMode = false
         ExpenseRepositoryFactory.setUsesLocalStorage(SupabaseClientProvider.shared == nil)
         userId = user.id
+        email = user.email
+        connectedProviders = Set((user.identities ?? []).map(\.provider))
         if let meta = user.userMetadata["full_name"] {
             let value = "\(meta)"
             displayName = value.isEmpty ? (user.email ?? "You") : value
