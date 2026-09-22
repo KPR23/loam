@@ -130,29 +130,52 @@ struct AddExpenseView: View {
 
             GeometryReader { proxy in
                 let spacing: CGFloat = 10
-                let contentWidth = proxy.size.width - spacing
-                HStack(spacing: spacing) {
+                let buttonWidth = (proxy.size.width - spacing) / 2
+                VStack(spacing: spacing) {
                     ExpenseCategoryPicker(category: $category, style: .chip)
-                        .frame(width: contentWidth * 0.75, height: proxy.size.height, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: 44)
 
-                    Button {
-                        LoamFeedback.tap()
-                        step = .details
-                        amountFocused = false
-                        titleFocused = false
-                    } label: {
-                        Image(systemName: "arrow.right")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    HStack(spacing: spacing) {
+                        if !isEditing {
+                            Button {
+                                amountFocused = false
+                                Task { await save() }
+                            } label: {
+                                Label("Quick add", systemImage: "checkmark")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Color.accentColor)
+                            .background(Color.white, in: Capsule())
+                            .disabled(!canContinue)
+                            .accessibilityHint("Saves this expense without opening details")
+                            .frame(width: buttonWidth, height: 44)
+                        }
+
+                        Button {
+                            LoamFeedback.tap()
+                            step = .details
+                            amountFocused = false
+                            titleFocused = false
+                        } label: {
+                            Label("Next", systemImage: "arrow.right")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .disabled(!canContinue)
+                        .accessibilityLabel("Add details")
+                        .frame(
+                            width: isEditing ? proxy.size.width : buttonWidth,
+                            height: 44
+                        )
                     }
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
-                    .disabled(!canContinue)
-                    .accessibilityLabel("Continue")
-                    .frame(width: contentWidth * 0.25, height: proxy.size.height)
                 }
             }
-            .frame(height: 44)
+            .frame(height: 98)
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
         }
@@ -186,6 +209,12 @@ struct AddExpenseView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 28)
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                amountFocused = true
+            }
+        )
     }
 
     private var sanitizedAmountBinding: Binding<String> {
