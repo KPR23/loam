@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct BalancesView: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var balanceStore: BalanceStore
     @State private var repaymentTarget: PersonBalance?
@@ -51,7 +50,7 @@ struct BalancesView: View {
                         .font(.subheadline.weight(.semibold))
                         .textCase(nil)
                 } footer: {
-                    if balanceStore.snapshot.youOweMinor > 0 {
+                    if !balanceStore.snapshot.youOwe.isEmpty {
                         Text("Tap someone you owe to record a repayment.")
                     }
                 }
@@ -80,12 +79,12 @@ struct BalancesView: View {
         VStack(spacing: 20) {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 24) {
-                    total("You owe", amount: balanceStore.snapshot.youOweMinor, symbol: "arrow.up.right")
-                    total("Owed to you", amount: balanceStore.snapshot.owedToYouMinor, symbol: "arrow.down.left")
+                    totals("You owe", monies: balanceStore.snapshot.youOwe, symbol: "arrow.up.right")
+                    totals("Owed to you", monies: balanceStore.snapshot.owedToYou, symbol: "arrow.down.left")
                 }
                 VStack(spacing: 24) {
-                    total("You owe", amount: balanceStore.snapshot.youOweMinor, symbol: "arrow.up.right")
-                    total("Owed to you", amount: balanceStore.snapshot.owedToYouMinor, symbol: "arrow.down.left")
+                    totals("You owe", monies: balanceStore.snapshot.youOwe, symbol: "arrow.up.right")
+                    totals("Owed to you", monies: balanceStore.snapshot.owedToYou, symbol: "arrow.down.left")
                 }
             }
             Text("Shared expenses, settled together.")
@@ -96,26 +95,32 @@ struct BalancesView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func total(_ title: String, amount: Int, symbol: String) -> some View {
-        let money = Money(amountMinor: amount, currencyCode: "PLN")
+    private func totals(_ title: String, monies: [Money], symbol: String) -> some View {
         return VStack(spacing: 8) {
             Label(title, systemImage: symbol)
                 .font(.system(.subheadline, design: .rounded).weight(.medium))
                 .foregroundStyle(HomeTheme.secondary)
-            Text(MoneyFormatter.heroAmount(from: money))
-                .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                .monospacedDigit()
-                .contentTransition(.numericText(value: Double(amount)))
-                .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: amount)
-                .foregroundStyle(HomeTheme.text)
-                .fixedSize(horizontal: true, vertical: false)
-            Text(money.currencyCode)
-                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                .foregroundStyle(HomeTheme.secondary)
+            if monies.isEmpty {
+                Text("—")
+                    .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                    .foregroundStyle(HomeTheme.text)
+            } else {
+                ForEach(monies, id: \.currencyCode) { money in
+                    VStack(spacing: 2) {
+                        Text(MoneyFormatter.heroAmount(from: money))
+                            .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                            .monospacedDigit()
+                            .foregroundStyle(HomeTheme.text)
+                        Text(money.currencyCode)
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(HomeTheme.secondary)
+                    }
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(MoneyFormatter.string(from: money))")
+        .accessibilityLabel("\(title), \(monies.map { MoneyFormatter.string(from: $0) }.joined(separator: ", "))")
     }
 
     private func personRow(_ balance: PersonBalance) -> some View {
@@ -171,7 +176,7 @@ struct BalancesView: View {
     private func repaymentSheet(_ target: PersonBalance) -> some View {
         NavigationStack {
             Form {
-                Section("Payment to \(target.displayName)") {
+                Section("Payment to \(target.displayName) in \(target.currencyCode)") {
                     TextField("Amount", text: $amountText).keyboardType(.decimalPad)
                     DatePicker("Paid on", selection: $paidAt, displayedComponents: .date)
                     TextField("Note (optional)", text: $note)
@@ -184,7 +189,7 @@ struct BalancesView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { LoamFeedback.tap(); repaymentTarget = nil }.disabled(isSaving) }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { Task { await saveRepayment(target) } } label: { SavingActionLabel(title: "Save", isSaving: isSaving) }.disabled(isSaving || (Money(majorString: amountText)?.amountMinor ?? 0) <= 0)
+                    Button { Task { await saveRepayment(target) } } label: { SavingActionLabel(title: "Save", isSaving: isSaving) }.disabled(isSaving || (Money(majorString: amountText, currencyCode: target.currencyCode)?.amountMinor ?? 0) <= 0)
                 }
             }
         }
@@ -192,9 +197,9 @@ struct BalancesView: View {
 
     private func saveRepayment(_ target: PersonBalance) async {
         guard !isSaving else { return }
-        guard let userId = authSession.userId, let money = Money(majorString: amountText) else { return }
+        guard let userId = authSession.userId, let money = Money(majorString: amountText, currencyCode: target.currencyCode) else { return }
         isSaving = true; defer { isSaving = false }
-        do { try await balanceStore.repay(to: target.personId, amountMinor: money.amountMinor, note: note.nilIfBlank, paidAt: paidAt, userId: userId); LoamFeedback.success(); repaymentTarget = nil }
+        do { try await balanceStore.repay(to: target.personId, amountMinor: money.amountMinor, currencyCode: target.currencyCode, note: note.nilIfBlank, paidAt: paidAt, userId: userId); LoamFeedback.success(); repaymentTarget = nil }
         catch { LoamFeedback.error(); balanceStore.lastError = error.localizedDescription }
     }
 }
