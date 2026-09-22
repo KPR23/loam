@@ -6,6 +6,7 @@ import UIKit
 @MainActor
 final class AvatarStore: ObservableObject {
     static let shared = AvatarStore()
+    private static let signedURLLifetime = 5 * 60
 
     @Published private(set) var urls: [UUID: URL] = [:]
     private var loadedAt: [UUID: Date] = [:]
@@ -25,7 +26,10 @@ final class AvatarStore: ObservableObject {
                 .execute().value
             loadedAt[userId] = Date()
             if let path = row.avatarPath {
-                urls[userId] = try client.storage.from("avatars").getPublicURL(path: path)
+                urls[userId] = try await client.storage.from("avatars").createSignedURL(
+                    path: path,
+                    expiresIn: Self.signedURLLifetime
+                )
             } else {
                 urls.removeValue(forKey: userId)
             }
@@ -40,9 +44,9 @@ final class AvatarStore: ObservableObject {
         }
         let path = "\(userId.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
         let storage = client.storage.from("avatars")
-        let url = try storage.getPublicURL(path: path)
         try await storage.upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
         do {
+            let url = try await storage.createSignedURL(path: path, expiresIn: Self.signedURLLifetime)
             struct Change: Codable { let avatar_path: String }
             let _: Change = try await client.from("profile")
                 .update(Change(avatar_path: path))

@@ -10,10 +10,11 @@ create policy "profile_select_self_or_connection" on public.profile
     or public.are_connected((select auth.uid()), id)
   );
 
--- Public downloads let a connected person's avatar render through AsyncImage.
+-- Avatar paths are profile metadata, so the bucket must not turn a path into a
+-- permanent public capability. The client requests short-lived signed URLs.
 -- Upload and deletion remain limited to the signed-in owner's UUID folder.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('avatars', 'avatars', true, 1048576, array['image/jpeg'])
+values ('avatars', 'avatars', false, 1048576, array['image/jpeg'])
 on conflict (id) do update set
   public = excluded.public,
   file_size_limit = excluded.file_size_limit,
@@ -34,11 +35,24 @@ create policy "avatar_delete_own" on storage.objects
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
-create policy "avatar_select_own" on storage.objects
+create policy "avatar_select_self_or_connection" on storage.objects
   for select to authenticated
   using (
-    bucket_id = 'avatars'
-    and (storage.foldername(name))[1] = (select auth.uid())::text
+    (
+      bucket_id = 'avatars'
+      and (storage.foldername(name))[1] = (select auth.uid())::text
+    )
+    or (
+      bucket_id = 'avatars'
+      and public.are_connected(
+        (select auth.uid()),
+        case
+          when (storage.foldername(name))[1] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            then (storage.foldername(name))[1]::uuid
+          else null
+        end
+      )
+    )
   );
 
 grant select, update on public.profile to authenticated;
