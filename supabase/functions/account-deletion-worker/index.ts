@@ -1,5 +1,23 @@
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
 
+async function decryptCredential(value: string): Promise<string> {
+  const encodedKey = Deno.env.get("DELETION_CREDENTIAL_ENCRYPTION_KEY");
+  if (!encodedKey) throw new Error("Deletion credential encryption is not configured");
+  const [encodedIV, encodedCiphertext] = value.split(".");
+  if (!encodedIV || !encodedCiphertext) throw new Error("Malformed encrypted deletion credential");
+  const rawKey = Uint8Array.from(atob(encodedKey), (char) => char.charCodeAt(0));
+  if (rawKey.byteLength !== 32) throw new Error("Deletion credential encryption key is invalid");
+  const key = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["decrypt"]);
+  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: Uint8Array.from(atob(encodedIV), (char) => char.charCodeAt(0)) }, key, Uint8Array.from(atob(encodedCiphertext), (char) => char.charCodeAt(0)));
+  return new TextDecoder().decode(plaintext);
+}
+
+const advance = (admin: ReturnType<typeof createClient>, job: Record<string, unknown>, nextStage: string, success: boolean, detail?: string) =>
+  admin.rpc("advance_account_deletion_job", {
+    p_operation_id: job.operation_id, p_expected_stage: job.stage, p_lease_token: job.lease_token,
+    p_next_stage: nextStage, p_success: success, p_detail: detail ?? null,
+  });
+
 // Invoke this from a protected scheduler once a minute.  The database lease
 // means concurrent invocations and worker crashes are safe.
 Deno.serve(async (request) => {
@@ -12,22 +30,22 @@ Deno.serve(async (request) => {
   if (!job) return Response.json({ processed: false });
   try {
     if (job.stage === "revoke_apple") {
-      const result = await fetch("https://appleid.apple.com/auth/revoke", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: Deno.env.get("APPLE_CLIENT_ID")!, client_secret: Deno.env.get("APPLE_CLIENT_SECRET")!, token: job.credential, token_type_hint: "refresh_token" }) });
+      const result = await fetch("https://appleid.apple.com/auth/revoke", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: Deno.env.get("APPLE_CLIENT_ID")!, client_secret: Deno.env.get("APPLE_CLIENT_SECRET")!, token: await decryptCredential(job.credential), token_type_hint: "refresh_token" }) });
       if (!result.ok && result.status !== 400) throw new Error(`Apple revoke ${result.status}`);
-      await admin.rpc("advance_account_deletion_job", { p_operation_id: job.operation_id, p_stage: "delete_auth", p_success: true });
+      await advance(admin, job, "delete_auth", true);
     } else if (job.stage === "delete_auth") {
       const { error: deleteError } = await admin.auth.admin.deleteUser(job.account_id, true);
       if (deleteError && !/not found|already/i.test(deleteError.message)) throw deleteError;
-      await admin.rpc("advance_account_deletion_job", { p_operation_id: job.operation_id, p_stage: "delete_avatars", p_success: true });
+      await advance(admin, job, "delete_avatars", true);
     } else if (job.stage === "delete_avatars") {
       const storage = admin.storage.from("avatars"), { data: files, error: listError } = await storage.list(job.account_id, { limit: 100 });
       if (listError) throw listError;
       if (files?.length) { const { error: removeError } = await storage.remove(files.map((file) => `${job.account_id}/${file.name}`)); if (removeError) throw removeError; }
-      await admin.rpc("advance_account_deletion_job", { p_operation_id: job.operation_id, p_stage: files?.length ? "delete_avatars" : "complete", p_success: true });
+      await advance(admin, job, files?.length ? "delete_avatars" : "complete", true);
     }
     return Response.json({ processed: true });
   } catch (error) {
-    await admin.rpc("advance_account_deletion_job", { p_operation_id: job.operation_id, p_stage: job.stage, p_success: false, p_detail: String(error) });
+    await advance(admin, job, job.stage, false, String(error));
     return Response.json({ processed: true, retrying: true }, { status: 202 });
   }
 });
