@@ -31,7 +31,7 @@ xcodegen generate
 open Loam.xcodeproj
 ```
 
-Set your **Development Team** in the Loam target signing settings. Enable **Sign in with Apple** capability (entitlement is already present).
+The Development Team is configured in `project.yml`. Enable **Sign in with Apple** capability (the entitlement is already present).
 
 ### 2. Supabase
 
