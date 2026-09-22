@@ -214,8 +214,25 @@ final class AuthSession: ObservableObject {
             displayName = name
             Self.persistDemoSession(userId: userId, displayName: name)
         } else if let client = SupabaseClientProvider.shared {
-            let user = try await client.auth.update(user: UserAttributes(data: ["full_name": .string(name)]))
-            apply(user: user)
+            let previousName = displayName
+            try await client.rpc(
+                "update_display_name",
+                params: DisplayNameParams(displayName: name)
+            ).execute()
+            do {
+                let user = try await client.auth.update(user: UserAttributes(data: ["full_name": .string(name)]))
+                apply(user: user)
+            } catch {
+                // Keep Auth and the shared profile mirrors aligned if Auth rejects
+                // the metadata update after the database transaction succeeded.
+                if let previousName, !previousName.isEmpty {
+                    try? await client.rpc(
+                        "update_display_name",
+                        params: DisplayNameParams(displayName: previousName)
+                    ).execute()
+                }
+                throw error
+            }
         }
     }
 
@@ -375,6 +392,14 @@ final class AuthSession: ObservableObject {
         }
     }
     #endif
+}
+
+private struct DisplayNameParams: Encodable {
+    let displayName: String
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "p_display_name"
+    }
 }
 
 #if DEBUG
