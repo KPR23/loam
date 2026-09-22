@@ -31,7 +31,7 @@ begin
   where name is not null and name <> 'Deleted user';
 
   update public.profile
-  set display_name = 'Deleted user', avatar_path = null, deleted_at = now()
+  set display_name = 'Deleted user', avatar_path = null, deleted_at = coalesce(deleted_at, now())
   where id = p_user_id;
   if not found then
     raise exception 'Profile not found for account deletion';
