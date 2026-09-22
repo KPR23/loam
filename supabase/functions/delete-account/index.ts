@@ -1,8 +1,30 @@
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
+import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.10.0";
 
 const deletionHash = async (value: string) => [...new Uint8Array(
   await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
 )].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+const appleKeys = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
+
+async function verifiedAppleSubject(token: string, clientId: string): Promise<string> {
+  const { payload } = await jwtVerify(token, appleKeys, {
+    issuer: "https://appleid.apple.com",
+    audience: clientId,
+  });
+  if (typeof payload.sub !== "string" || !payload.sub) throw new Error("Apple token has no subject");
+  return payload.sub;
+}
+
+async function encryptCredential(value: string): Promise<string> {
+  const encodedKey = Deno.env.get("DELETION_CREDENTIAL_ENCRYPTION_KEY");
+  if (!encodedKey) throw new Error("Deletion credential encryption is not configured");
+  const rawKey = Uint8Array.from(atob(encodedKey), (char) => char.charCodeAt(0));
+  if (rawKey.byteLength !== 32) throw new Error("Deletion credential encryption key is invalid");
+  const key = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["encrypt"]);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(value)));
+  return `${btoa(String.fromCharCode(...iv))}.${btoa(String.fromCharCode(...encrypted))}`;
+}
 
 // POST session tokens are verified against Auth here (the function also serves
 // receipt-authorized GET status after the client has signed out). No user ID
@@ -56,14 +78,9 @@ Deno.serve(async (request) => {
   }
 
   try {
-    const encodedClaims = payload.identityToken.split(".")[1];
-    const claims = encodedClaims ? JSON.parse(atob(encodedClaims.replace(/-/g, "+").replace(/_/g, "/"))) : {};
     const clientId = Deno.env.get("APPLE_CLIENT_ID");
-    const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
     const appleSubject = user.identities?.find((identity) => identity.provider === "apple")?.id;
-    if (!clientId || !claims.sub || claims.sub !== appleSubject || claims.iss !== "https://appleid.apple.com" || !audience.includes(clientId) || !claims.exp || claims.exp * 1000 < Date.now()) {
-      return Response.json({ error: "Apple confirmation does not match this account" }, { status: 400 });
-    }
+    if (!clientId || !appleSubject) return Response.json({ error: "This account is not linked to Apple" }, { status: 400 });
     const clientSecret = Deno.env.get("APPLE_CLIENT_SECRET");
     if (!clientSecret) return Response.json({ error: "Account deletion is unavailable" }, { status: 503 });
     const exchanged = await fetch("https://appleid.apple.com/auth/token", {
@@ -72,14 +89,21 @@ Deno.serve(async (request) => {
       body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code: payload.authorizationCode, grant_type: "authorization_code" }),
     });
     const appleTokens = await exchanged.json();
-    if (!exchanged.ok || !appleTokens.refresh_token) return Response.json({ error: "Apple confirmation could not be verified" }, { status: 400 });
+    if (!exchanged.ok || !appleTokens.refresh_token || !appleTokens.id_token) return Response.json({ error: "Apple confirmation could not be verified" }, { status: 400 });
+    const exchangedSubject = await verifiedAppleSubject(appleTokens.id_token, clientId);
+    // The returned, signature-verified ID token binds the exchanged one-time
+    // code to the currently authenticated Supabase Apple identity. The client
+    // supplied token is retained only as a second fresh-authorization check.
+    const submittedSubject = await verifiedAppleSubject(payload.identityToken, clientId);
+    if (exchangedSubject !== appleSubject || submittedSubject !== appleSubject || submittedSubject !== exchangedSubject) {
+      return Response.json({ error: "Apple confirmation does not match this account" }, { status: 400 });
+    }
     const { data, error } = await admin.rpc("accept_account_deletion", {
       p_operation_id: payload.operationId,
       p_account_id: user.id,
       p_receipt_secret_hash: await deletionHash(payload.receiptSecret),
-      p_apple_subject: claims.sub,
-      // The worker revokes this short-lived credential before deleting Auth.
-      p_encrypted_credential: appleTokens.refresh_token,
+      p_apple_subject: exchangedSubject,
+      p_encrypted_credential: await encryptCredential(appleTokens.refresh_token),
     });
     if (error) throw error;
     return Response.json({ operationId: data?.[0]?.operation_id ?? payload.operationId, status: data?.[0]?.complete ? "complete" : "processing" }, { status: data?.[0]?.complete ? 200 : 202 });
