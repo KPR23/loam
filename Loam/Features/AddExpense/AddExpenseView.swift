@@ -38,14 +38,13 @@ struct AddExpenseView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var isSplitSheetPresented = false
-    @State private var cancelTapCount = 0
-    @State private var continueTapCount = 0
     @FocusState private var amountFocused: Bool
     @FocusState private var titleFocused: Bool
     @FocusState private var noteFocused: Bool
 
     private var isEditing: Bool { existingExpense != nil }
     private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
+    private var currencyCode: String { existingExpense?.currency ?? AppPreferences.defaultCurrencyCode }
 
     init(existingExpense: ExpenseRecord? = nil) {
         self.existingExpense = existingExpense
@@ -77,11 +76,14 @@ struct AddExpenseView: View {
             Group {
                 switch step {
                 case .amount:
-                    amountStep
+                    amountStep.transition(.opacity)
                 case .details:
-                    detailsStep
+                    detailsStep.transition(.opacity)
                 }
             }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: step)
+            .disabled(isSaving)
+            .interactiveDismissDisabled(isSaving)
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -89,6 +91,7 @@ struct AddExpenseView: View {
                 guard step == .amount else { return }
                 await focusAmountField()
             }
+            .sensoryFeedback(.error, trigger: errorMessage) { _, newValue in newValue != nil }
             .alert("Couldn’t save", isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
@@ -102,6 +105,8 @@ struct AddExpenseView: View {
             splitConfigurationSheet
         }
         .sensoryFeedback(.selection, trigger: amountText)
+        .sensoryFeedback(.selection, trigger: isRepeating)
+        .sensoryFeedback(.selection, trigger: repeatHasEndDate)
     }
 
     private var navigationTitle: String {
@@ -131,7 +136,7 @@ struct AddExpenseView: View {
                         .frame(width: contentWidth * 0.75, height: proxy.size.height, alignment: .leading)
 
                     Button {
-                        continueTapCount += 1
+                        LoamFeedback.tap()
                         step = .details
                         amountFocused = false
                         titleFocused = false
@@ -144,7 +149,6 @@ struct AddExpenseView: View {
                     .buttonBorderShape(.capsule)
                     .disabled(!canContinue)
                     .accessibilityLabel("Continue")
-                    .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.75), trigger: continueTapCount)
                     .frame(width: contentWidth * 0.25, height: proxy.size.height)
                 }
             }
@@ -167,7 +171,7 @@ struct AddExpenseView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
 
-                Text("PLN")
+                Text(currencyCode)
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -212,6 +216,7 @@ struct AddExpenseView: View {
             if canShowSplitRow {
                 Section {
                     Button {
+                        LoamFeedback.tap()
                         isSplitSheetPresented = true
                     } label: {
                         HStack(spacing: 12) {
@@ -320,24 +325,27 @@ struct AddExpenseView: View {
         case .amount:
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
-                    cancelTapCount += 1
+                    LoamFeedback.tap()
                     dismiss()
                 }
-                .sensoryFeedback(.impact(flexibility: .solid, intensity: 0.65), trigger: cancelTapCount)
             }
 
         case .details:
             ToolbarItem(placement: .topBarLeading) {
                 Button {
+                    LoamFeedback.tap()
                     step = .amount
                 } label: {
                     Label("Back", systemImage: "chevron.left")
                 }
+                .disabled(isSaving)
             }
 
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                Button {
                     Task { await save() }
+                } label: {
+                    SavingActionLabel(title: "Save", isSaving: isSaving)
                 }
                 .fontWeight(.semibold)
                 .disabled(isSaving)
@@ -402,7 +410,7 @@ struct AddExpenseView: View {
     }
 
     private var parsedMoney: Money? {
-        Money(majorString: amountText)
+        Money(majorString: amountText, currencyCode: currencyCode)
     }
 
     private var canContinue: Bool {
@@ -440,6 +448,7 @@ struct AddExpenseView: View {
 
     private func focusAmountField() async {
         try? await Task.sleep(for: .milliseconds(400))
+        guard !Task.isCancelled else { return }
         amountFocused = true
     }
 
@@ -458,6 +467,7 @@ struct AddExpenseView: View {
                     myUserId: userId,
                     myDisplayName: authSession.displayName ?? "You",
                     availablePartners: splitPartners,
+                    currencyCode: currencyCode,
                     recentPartners: recentSplitPartners,
                     requiresPartner: false,
                     selectedPartnerUserIds: $selectedPartnerUserIds,
@@ -470,6 +480,8 @@ struct AddExpenseView: View {
                     participantAmountTexts: $participantAmountTexts
                 )
             }
+            .disabled(isSaving)
+            .interactiveDismissDisabled(isSaving)
             .navigationTitle("Split expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -498,6 +510,7 @@ struct AddExpenseView: View {
     }
 
     private func save() async {
+        guard !isSaving else { return }
         guard let userId = authSession.userId else {
             errorMessage = ExpenseRepositoryError.notSignedIn.localizedDescription
             return
@@ -527,6 +540,7 @@ struct AddExpenseView: View {
             } else {
                 try await saveCreate(money: money, userId: userId)
             }
+            LoamFeedback.success()
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -539,6 +553,7 @@ struct AddExpenseView: View {
             recurring = RecurringRuleRecord(
                 ownerUserId: userId,
                 amountMinor: money.amountMinor,
+                currency: currencyCode,
                 category: category,
                 title: title.nilIfBlank,
                 note: note.nilIfBlank,
@@ -561,6 +576,7 @@ struct AddExpenseView: View {
             )
             try await expenseStore.addSplit(
                 amountMinor: money.amountMinor,
+                currency: currencyCode,
                 category: category,
                 title: title.nilIfBlank,
                 note: note,
@@ -580,6 +596,7 @@ struct AddExpenseView: View {
         } else {
             try await expenseStore.addPersonal(
                 amountMinor: money.amountMinor,
+                currency: currencyCode,
                 category: category,
                 title: title.nilIfBlank,
                 note: note,
@@ -618,7 +635,7 @@ struct AddExpenseView: View {
                 paidBy: paidByUserId ?? userId,
                 partnerUserIds: partners.map(\.userId),
                 myPercentage: myPercentage,
-                myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor,
+                myExactAmountMinor: Money(majorString: myExactAmountText, currencyCode: currencyCode)?.amountMinor,
                 participantPercentages: participantPercentages,
                 participantExactAmountMinors: participantExactAmountMinors
             )
@@ -667,14 +684,14 @@ struct AddExpenseView: View {
             paidBy: paidByUserId ?? expense.paidBy,
             partnerUserIds: partnerIds,
             myPercentage: myPercentage,
-            myExactAmountMinor: Money(majorString: myExactAmountText)?.amountMinor,
+            myExactAmountMinor: Money(majorString: myExactAmountText, currencyCode: currencyCode)?.amountMinor,
             participantPercentages: participantPercentages,
             participantExactAmountMinors: participantExactAmountMinors
         )
     }
 
     private var participantExactAmountMinors: [UUID: Int] {
-        participantAmountTexts.compactMapValues { Money(majorString: $0)?.amountMinor }
+        participantAmountTexts.compactMapValues { Money(majorString: $0, currencyCode: currencyCode)?.amountMinor }
     }
 }
 

@@ -82,6 +82,7 @@ struct SplitExpenseSheet: View {
                     myUserId: myUserId,
                     myDisplayName: authSession.displayName ?? "You",
                     availablePartners: splitPartners,
+                    currencyCode: expense.currency,
                     recentPartners: recentSplitPartners,
                     requiresPartner: true,
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
@@ -91,20 +92,26 @@ struct SplitExpenseSheet: View {
                     participantAmountTexts: $formState.participantAmountTexts
                 )
             }
+            .disabled(isSaving)
+            .interactiveDismissDisabled(isSaving)
             .navigationTitle(expense.isShared ? "Edit split" : "Split expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { LoamFeedback.tap(); dismiss() }
+                        .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button {
                         Task { await save() }
+                    } label: {
+                        SavingActionLabel(title: "Save", isSaving: isSaving)
                     }
                     .fontWeight(.semibold)
                     .disabled(isSaving || validationError != nil)
                 }
             }
+            .sensoryFeedback(.error, trigger: errorMessage) { _, newValue in newValue != nil }
             .alert("Couldn’t save split", isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
@@ -117,6 +124,7 @@ struct SplitExpenseSheet: View {
     }
 
     private func save() async {
+        guard !isSaving else { return }
         if let validationError {
             errorMessage = validationError
             return
@@ -144,6 +152,7 @@ struct SplitExpenseSheet: View {
                 participantPercentages: formState.participantPercentages,
                 participantExactAmountMinors: participantExactAmountMinors
             )
+            LoamFeedback.success()
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

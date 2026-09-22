@@ -14,7 +14,7 @@ struct PendingExpenseActions: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Button(action: onAccept) {
+            Button(action: { LoamFeedback.tap(); onAccept() }) {
                 acceptLabel
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, actionVerticalPadding)
@@ -62,15 +62,15 @@ struct PendingExpenseActions: View {
     }
 
     private var acceptWithTrustButton: some View {
-        Button("Accept & always trust \(creatorName)", systemImage: "hand.thumbsup", action: onAcceptWithTrust)
+        Button("Accept & always trust \(creatorName)", systemImage: "hand.thumbsup", action: { LoamFeedback.tap(); onAcceptWithTrust() })
     }
 
     private var proposeEditButton: some View {
-        Button("Suggest changes", systemImage: "square.and.pencil", action: onProposeEdit)
+        Button("Suggest changes", systemImage: "square.and.pencil", action: { LoamFeedback.tap(); onProposeEdit() })
     }
 
     private var declineButton: some View {
-        Button(role: .destructive, action: onReject) {
+        Button(role: .destructive, action: { LoamFeedback.tap(); onReject() }) {
             DestructiveMenuLabel(title: "Decline", systemImage: "xmark")
         }
     }

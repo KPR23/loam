@@ -74,6 +74,7 @@ final class ExpenseStore: ObservableObject {
 
     func addSplit(
         amountMinor: Int,
+        currency: String = AppPreferences.defaultCurrencyCode,
         category: ExpenseCategory,
         title: String? = nil,
         note: String?,
@@ -107,6 +108,7 @@ final class ExpenseStore: ObservableObject {
 
         let draft = ExpenseRecord(
             amountMinor: amountMinor,
+            currency: currency,
             category: category,
             title: trimmedTitle,
             note: trimmedNote,
@@ -142,6 +144,7 @@ final class ExpenseStore: ObservableObject {
 
         let expense = ExpenseRecord(
             amountMinor: amountMinor,
+            currency: currency,
             category: category,
             title: trimmedTitle,
             note: trimmedNote,
@@ -166,6 +169,7 @@ final class ExpenseStore: ObservableObject {
 
     func addPersonal(
         amountMinor: Int,
+        currency: String = AppPreferences.defaultCurrencyCode,
         category: ExpenseCategory,
         title: String? = nil,
         note: String?,
@@ -190,6 +194,7 @@ final class ExpenseStore: ObservableObject {
         let shares = SplitCalculator.personal(totalMinor: amountMinor, userId: userId)
         let expense = ExpenseRecord(
             amountMinor: amountMinor,
+            currency: currency,
             category: category,
             title: trimmedTitle,
             note: trimmedNote,
@@ -248,7 +253,7 @@ final class ExpenseStore: ObservableObject {
         expense.title = trimmedTitle
         expense.note = trimmedNote
         expense.location = location
-        expense.spentAt = Calendar.current.startOfDay(for: spentAt)
+        expense.spentAt = AppPreferences.calendar.startOfDay(for: spentAt)
         expense.paidBy = paidBy
         expense.updatedAt = Date()
 
@@ -629,7 +634,7 @@ final class ExpenseStore: ObservableObject {
         let rules = try await repository.fetchActiveRecurringRules(for: userId)
         guard !rules.isEmpty else { return }
 
-        let today = Calendar.current.startOfDay(for: Date())
+        let today = AppPreferences.calendar.startOfDay(for: Date())
         for var rule in rules {
             let dueDates = RecurringMaterializer.dueDates(for: rule, through: today)
             guard !dueDates.isEmpty else { continue }

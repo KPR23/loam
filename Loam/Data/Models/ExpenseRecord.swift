@@ -88,7 +88,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         self.title = title
         self.note = note
         self.location = location
-        self.spentAt = Calendar.current.startOfDay(for: spentAt)
+        self.spentAt = AppPreferences.calendar.startOfDay(for: spentAt)
         self.paidBy = paidBy
         self.createdBy = createdBy
         self.householdId = householdId

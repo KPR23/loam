@@ -5,6 +5,7 @@ struct SplitExpenseSection: View {
     let myUserId: UUID
     let myDisplayName: String
     let availablePartners: [SplitPartnerOption]
+    let currencyCode: String
     /// Recent split partners for quick-select (must already exclude the current user).
     var recentPartners: [SplitPartnerOption] = []
     /// When false, at least one partner must stay selected (edit-split / propose-edit flows).
@@ -17,8 +18,6 @@ struct SplitExpenseSection: View {
     @Binding var participantAmountTexts: [UUID: String]
 
     @State private var partnerSearchText = ""
-
-    private var currencyCode: String { "PLN" }
 
     private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
 
@@ -71,7 +70,9 @@ struct SplitExpenseSection: View {
             },
             set: { newValue in
                 let allowed = Set(splitParticipants.map(\.userId))
-                paidByUserId = allowed.contains(newValue) ? newValue : myUserId
+                let selection = allowed.contains(newValue) ? newValue : myUserId
+                if selection != paidByUserId { LoamFeedback.selection() }
+                paidByUserId = selection
             }
         )
     }
@@ -156,6 +157,7 @@ struct SplitExpenseSection: View {
                 }
                 .id(paidByOptionsID)
             }
+            .sensoryFeedback(.selection, trigger: splitMode)
             .onAppear(perform: clampPaidByToSplitParticipants)
             .onChange(of: paidByOptionsID) { _, _ in
                 clampPaidByToSplitParticipants()
@@ -282,6 +284,8 @@ struct SplitExpenseSection: View {
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.55))
                     .symbolRenderingMode(.hierarchical)
 
+                AvatarView(userId: partner.userId, size: 30)
+
                 Text(partner.displayName)
                     .foregroundStyle(.primary)
 
@@ -289,7 +293,8 @@ struct SplitExpenseSection: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(LoamPressStyle())
+        .sensoryFeedback(.selection, trigger: isSelected)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityLabel(partner.displayName)
         .accessibilityHint(isSelected ? "Selected for split" : "Select to split")

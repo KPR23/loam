@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BalancesView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var balanceStore: BalanceStore
     @State private var repaymentTarget: PersonBalance?
@@ -13,38 +14,54 @@ struct BalancesView: View {
         NavigationStack {
             List {
                 Section {
-                    HStack {
-                        total("You owe", amount: balanceStore.snapshot.youOweMinor, tint: .red)
-                        Divider()
-                        total("Owed to you", amount: balanceStore.snapshot.owedToYouMinor, tint: .green)
-                    }
-                    .padding(.vertical, 6)
+                    summary
+                        .listRowInsets(EdgeInsets(top: 20, leading: 0, bottom: 20, trailing: 0))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
 
-                Section("People") {
-                    if balanceStore.snapshot.balances.isEmpty {
-                        ContentUnavailableView("No balances", systemImage: "scale.3d", description: Text("Accepted shared purchases and repayments will appear here."))
+                Section {
+                    if balanceStore.isLoading && balanceStore.snapshot.balances.isEmpty {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                    } else if balanceStore.snapshot.balances.isEmpty {
+                        emptyState
                     } else {
                         ForEach(balanceStore.snapshot.balances) { balance in
-                            Button { repaymentTarget = balance; amountText = ""; note = ""; paidAt = Date() } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(balance.displayName).foregroundStyle(.primary)
-                                        Text(balance.direction).font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    Text(MoneyFormatter.string(from: balance.money))
-                                        .font(.body.weight(.semibold).monospacedDigit())
-                                        .foregroundStyle(balance.amountMinor >= 0 ? .green : .red)
+                            if balance.amountMinor < 0 {
+                                Button {
+                                    LoamFeedback.tap()
+                                    repaymentTarget = balance
+                                    amountText = ""
+                                    note = ""
+                                    paidAt = Date()
+                                } label: {
+                                    personRow(balance)
                                 }
+                                .buttonStyle(LoamPressStyle())
+                                .accessibilityHint("Record a repayment to \(balance.displayName)")
+                            } else {
+                                personRow(balance)
                             }
-                            .buttonStyle(.plain)
-                            .disabled(balance.amountMinor >= 0)
                         }
+                    }
+                } header: {
+                    Text("People")
+                        .font(.subheadline.weight(.semibold))
+                        .textCase(nil)
+                } footer: {
+                    if balanceStore.snapshot.youOweMinor > 0 {
+                        Text("Tap someone you owe to record a repayment.")
                     }
                 }
             }
+            .listStyle(.insetGrouped)
+            .contentMargins(.top, 2, for: .scrollContent)
+            .scrollContentBackground(.hidden)
+            .background(HomeTheme.background.ignoresSafeArea())
             .navigationTitle("Balances")
+            .navigationBarTitleDisplayMode(.inline)
             .task(id: authSession.userId) { await balanceStore.refresh(userId: authSession.userId) }
             .refreshable { await balanceStore.refresh(userId: authSession.userId) }
         }
@@ -59,12 +76,96 @@ struct BalancesView: View {
         }
     }
 
-    private func total(_ title: String, amount: Int, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(MoneyFormatter.string(from: Money(amountMinor: amount, currencyCode: "PLN")))
-                .font(.title3.weight(.bold).monospacedDigit()).foregroundStyle(tint)
-        }.frame(maxWidth: .infinity, alignment: .leading)
+    private var summary: some View {
+        VStack(spacing: 20) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 24) {
+                    total("You owe", amount: balanceStore.snapshot.youOweMinor, symbol: "arrow.up.right")
+                    total("Owed to you", amount: balanceStore.snapshot.owedToYouMinor, symbol: "arrow.down.left")
+                }
+                VStack(spacing: 24) {
+                    total("You owe", amount: balanceStore.snapshot.youOweMinor, symbol: "arrow.up.right")
+                    total("Owed to you", amount: balanceStore.snapshot.owedToYouMinor, symbol: "arrow.down.left")
+                }
+            }
+            Text("Shared expenses, settled together.")
+                .font(.footnote)
+                .foregroundStyle(HomeTheme.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func total(_ title: String, amount: Int, symbol: String) -> some View {
+        let money = Money(amountMinor: amount, currencyCode: "PLN")
+        return VStack(spacing: 8) {
+            Label(title, systemImage: symbol)
+                .font(.system(.subheadline, design: .rounded).weight(.medium))
+                .foregroundStyle(HomeTheme.secondary)
+            Text(MoneyFormatter.heroAmount(from: money))
+                .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                .monospacedDigit()
+                .contentTransition(.numericText(value: Double(amount)))
+                .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: amount)
+                .foregroundStyle(HomeTheme.text)
+                .fixedSize(horizontal: true, vertical: false)
+            Text(money.currencyCode)
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(HomeTheme.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title), \(MoneyFormatter.string(from: money))")
+    }
+
+    private func personRow(_ balance: PersonBalance) -> some View {
+        HStack(spacing: 12) {
+            AvatarView(userId: balance.personId, size: 30)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(balance.displayName)
+                    .font(.system(.body, design: .rounded).weight(.medium))
+                    .foregroundStyle(HomeTheme.text)
+                Text(balance.direction)
+                    .font(.caption)
+                    .foregroundStyle(HomeTheme.secondary)
+            }
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(MoneyFormatter.string(from: balance.money))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(HomeTheme.text)
+                if balance.amountMinor < 0 {
+                    Text("Record repayment")
+                        .font(.caption)
+                        .foregroundStyle(HomeTheme.accent)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "person.2")
+                .font(.system(size: 26, weight: .medium))
+                .foregroundStyle(HomeTheme.accent)
+                .padding(.bottom, 4)
+                .accessibilityHidden(true)
+            Text("All settled up")
+                .font(.system(.headline, design: .rounded))
+                .foregroundStyle(HomeTheme.text)
+            Text("Balances appear here once shared expenses are accepted.")
+                .font(.subheadline)
+                .foregroundStyle(HomeTheme.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
     }
 
     private func repaymentSheet(_ target: PersonBalance) -> some View {
@@ -77,21 +178,24 @@ struct BalancesView: View {
                 }
                 Section { Text("This records a payment made outside Loam. It reduces the balance only; it never creates an expense.").font(.footnote).foregroundStyle(.secondary) }
             }
+            .disabled(isSaving)
+            .interactiveDismissDisabled(isSaving)
             .navigationTitle("Record repayment")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { repaymentTarget = nil } }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { LoamFeedback.tap(); repaymentTarget = nil }.disabled(isSaving) }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await saveRepayment(target) } }.disabled(isSaving || (Money(majorString: amountText)?.amountMinor ?? 0) <= 0)
+                    Button { Task { await saveRepayment(target) } } label: { SavingActionLabel(title: "Save", isSaving: isSaving) }.disabled(isSaving || (Money(majorString: amountText)?.amountMinor ?? 0) <= 0)
                 }
             }
         }
     }
 
     private func saveRepayment(_ target: PersonBalance) async {
+        guard !isSaving else { return }
         guard let userId = authSession.userId, let money = Money(majorString: amountText) else { return }
         isSaving = true; defer { isSaving = false }
-        do { try await balanceStore.repay(to: target.personId, amountMinor: money.amountMinor, note: note.nilIfBlank, paidAt: paidAt, userId: userId); repaymentTarget = nil }
-        catch { balanceStore.lastError = error.localizedDescription }
+        do { try await balanceStore.repay(to: target.personId, amountMinor: money.amountMinor, note: note.nilIfBlank, paidAt: paidAt, userId: userId); LoamFeedback.success(); repaymentTarget = nil }
+        catch { LoamFeedback.error(); balanceStore.lastError = error.localizedDescription }
     }
 }
 

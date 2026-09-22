@@ -126,7 +126,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         skippedDates: [Date] = [],
         isActive: Bool = true
     ) {
-        let calendar = Calendar.current
+        let calendar = AppPreferences.calendar
         self.id = id
         self.ownerUserId = ownerUserId
         self.householdId = householdId

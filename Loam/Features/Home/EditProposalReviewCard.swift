@@ -82,14 +82,14 @@ struct EditProposalReviewCard: View {
             }
 
             HStack(spacing: 10) {
-                Button(action: onReject) {
+                Button(action: { LoamFeedback.tap(); onReject() }) {
                     Text("Decline")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
-                Button(action: onAccept) {
+                Button(action: { LoamFeedback.tap(); onAccept() }) {
                     Text("Apply changes")
                         .frame(maxWidth: .infinity)
                 }

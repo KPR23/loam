@@ -71,7 +71,7 @@ struct ActivityView: View {
 
     private func eventContent(_ event: ActivityEvent) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: event.symbolName).foregroundStyle(HomeTheme.accent).font(.title3).frame(width: 24)
+            AvatarView(userId: event.actorId, size: 30)
             VStack(alignment: .leading, spacing: 3) {
                 Text(event.sentence(viewerId: authSession.userId ?? event.actorId)).font(.system(.body, design: .rounded).weight(.medium)).multilineTextAlignment(.leading)
                 Text(event.expenseTitle).font(.system(.subheadline, design: .rounded)).foregroundStyle(.secondary)
