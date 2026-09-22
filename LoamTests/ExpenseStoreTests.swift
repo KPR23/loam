@@ -6,6 +6,7 @@ final class CreateRepaymentParamsTests: XCTestCase {
         let params = CreateRepaymentParams(
             toUserId: UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!,
             amountMinor: 100,
+            currency: "EUR",
             note: nil,
             paidAt: "2026-09-17",
             operationId: UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
@@ -17,6 +18,7 @@ final class CreateRepaymentParamsTests: XCTestCase {
         XCTAssertTrue(payload.keys.contains("p_note"))
         XCTAssertTrue(payload["p_note"] is NSNull)
         XCTAssertEqual(payload["p_amount_minor"] as? Int, 100)
+        XCTAssertEqual(payload["p_currency"] as? String, "EUR")
     }
 }
 
@@ -73,6 +75,28 @@ final class ExpenseStoreSummaryTests: XCTestCase {
         let summary = ExpenseStore.makeSummary(expenses: [expense], userId: user)
         XCTAssertEqual(summary.totalMine.amountMinor, 0)
         XCTAssertEqual(summary.sharedShare.amountMinor, 0)
+    }
+
+    func testSummaryDoesNotCombineCurrencies() {
+        let pln = ExpenseRecord(
+            amountMinor: 1_000,
+            currency: "PLN",
+            category: .groceries,
+            paidBy: user,
+            createdBy: user,
+            shares: [ExpenseShareRecord(userId: user, amountMinor: 1_000)]
+        )
+        let eur = ExpenseRecord(
+            amountMinor: 1_000,
+            currency: "EUR",
+            category: .groceries,
+            paidBy: user,
+            createdBy: user,
+            shares: [ExpenseShareRecord(userId: user, amountMinor: 1_000)]
+        )
+
+        XCTAssertEqual(ExpenseStore.makeSummary(expenses: [pln, eur], userId: user, currency: "PLN").totalMine.amountMinor, 1_000)
+        XCTAssertEqual(ExpenseStore.makeSummary(expenses: [pln, eur], userId: user, currency: "EUR").totalMine.amountMinor, 1_000)
     }
 
     func testEachParticipantAcceptsIndependently() async throws {

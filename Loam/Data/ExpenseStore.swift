@@ -740,12 +740,13 @@ final class ExpenseStore: ObservableObject {
     nonisolated static func makeSummary(
         expenses: [ExpenseRecord],
         userId: UUID,
-        currency: String = "PLN"
+        currency: String = AppPreferences.defaultCurrencyCode
     ) -> MonthSpendSummary {
         var total = 0
         var shared = 0
         var byCategory: [ExpenseCategory: Int] = [:]
         for expense in expenses {
+            guard expense.currency.uppercased() == currency.uppercased() else { continue }
             let mine = expense.acceptedShareMinor(for: userId)
             total += mine
             if mine > 0 {
