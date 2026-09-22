@@ -65,6 +65,29 @@ final class RecurringMaterializerTests: XCTestCase {
         ])
     }
 
+    func testDefaultCalendarUsesSelectedPreferenceTimeZone() {
+        let defaults = UserDefaults.standard
+        let priorTimeZone = defaults.object(forKey: AppPreferences.timeZoneKey)
+        defer {
+            if let priorTimeZone {
+                defaults.set(priorTimeZone, forKey: AppPreferences.timeZoneKey)
+            } else {
+                defaults.removeObject(forKey: AppPreferences.timeZoneKey)
+            }
+        }
+        defaults.set("Pacific/Kiritimati", forKey: AppPreferences.timeZoneKey)
+
+        let calendar = AppPreferences.calendar
+        let start = calendar.date(from: DateComponents(year: 2026, month: 9, day: 1))!
+        let rule = makeRule(unit: .day, count: 1, next: start)
+        let through = calendar.date(from: DateComponents(year: 2026, month: 9, day: 2))!
+
+        XCTAssertEqual(RecurringMaterializer.dueDates(for: rule, through: through), [
+            start,
+            calendar.date(byAdding: .day, value: 1, to: start)!,
+        ])
+    }
+
     func testOccurrenceExpenseCopiesSplitTemplate() {
         let partner = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
         let householdId = UUID()

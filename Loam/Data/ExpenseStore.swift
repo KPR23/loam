@@ -160,7 +160,7 @@ final class ExpenseStore: ObservableObject {
         await recordActivity(kind: .shared, actorId: userId, expense: expense, recipients: partnerUserIds)
         RecentSplitPartners.record(partnerUserIds, for: userId)
         if var rule = recurringRule {
-            rule.nextOccurrence = rule.nextOccurrence(after: spentAt)
+            rule.nextOccurrence = rule.nextOccurrence(after: spentAt, calendar: AppPreferences.calendar)
             _ = try await activeRepository.updateRecurringRule(rule)
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
@@ -208,7 +208,7 @@ final class ExpenseStore: ObservableObject {
         )
         _ = try await activeRepository.create(expense)
         if var rule = recurringRule {
-            rule.nextOccurrence = rule.nextOccurrence(after: spentAt)
+            rule.nextOccurrence = rule.nextOccurrence(after: spentAt, calendar: AppPreferences.calendar)
             _ = try await activeRepository.updateRecurringRule(rule)
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
@@ -636,7 +636,8 @@ final class ExpenseStore: ObservableObject {
 
         let today = AppPreferences.calendar.startOfDay(for: Date())
         for var rule in rules {
-            let dueDates = RecurringMaterializer.dueDates(for: rule, through: today)
+            let calendar = AppPreferences.calendar
+            let dueDates = RecurringMaterializer.dueDates(for: rule, through: today, calendar: calendar)
             guard !dueDates.isEmpty else { continue }
 
             let template = try await repository.fetchLatestExpense(forRecurringId: rule.id)
@@ -676,7 +677,7 @@ final class ExpenseStore: ObservableObject {
             }
 
             if let last = dueDates.last {
-                let advanced = rule.nextOccurrence(after: last)
+                let advanced = rule.nextOccurrence(after: last, calendar: calendar)
                 if advanced != rule.nextOccurrence || createdAny {
                     rule.nextOccurrence = advanced
                     _ = try await repository.updateRecurringRule(rule)
