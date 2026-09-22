@@ -226,7 +226,7 @@ final class AuthSession: ObservableObject {
                 // Keep Auth and the shared profile mirrors aligned if Auth rejects
                 // the metadata update after the database transaction succeeded.
                 if let previousName, !previousName.isEmpty {
-                    try? await client.rpc(
+                    _ = try? await client.rpc(
                         "update_display_name",
                         params: DisplayNameParams(displayName: previousName)
                     ).execute()
