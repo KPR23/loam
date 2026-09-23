@@ -214,6 +214,20 @@ struct ProfileView: View {
                     }
                 }
 
+                if authSession.deletionPending {
+                    Section("Account deletion") {
+                        Label(deletionStatusTitle, systemImage: deletionStatusSymbol)
+                        Text(deletionStatusDetail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        if authSession.deletionStatus == .complete {
+                            Button("Dismiss confirmation") { authSession.dismissDeletionConfirmation() }
+                        } else {
+                            Button("Check deletion status") { Task { await authSession.refreshDeletionStatus() } }
+                        }
+                    }
+                }
+
                 themeSection
                 preferencesSection
 
@@ -392,6 +406,37 @@ struct ProfileView: View {
                                   width: scaled.width, height: scaled.height))
         }
         return cropped.jpegData(compressionQuality: 0.8)
+    }
+
+    private var deletionStatusTitle: String {
+        switch authSession.deletionStatus {
+        case .submissionUncertain: "Request status needs checking"
+        case .processing: "Deletion in progress"
+        case .needsAttention: "Deletion needs attention"
+        case .complete: "Deletion complete"
+        case .unavailable: "Status temporarily unavailable"
+        case .none: "Deletion status"
+        }
+    }
+
+    private var deletionStatusSymbol: String {
+        switch authSession.deletionStatus {
+        case .complete: "checkmark.circle.fill"
+        case .needsAttention: "exclamationmark.triangle.fill"
+        case .unavailable, .submissionUncertain: "arrow.clockwise.circle"
+        default: "hourglass"
+        }
+    }
+
+    private var deletionStatusDetail: String {
+        switch authSession.deletionStatus {
+        case .submissionUncertain: "We couldn’t confirm the request response. Check its status before trying again."
+        case .processing: "Your account is closed. Deletion usually finishes within a few minutes."
+        case .needsAttention: "Your account is closed, but processing is taking longer than expected. Contact support if this continues."
+        case .complete: "Your account and private data have been deleted."
+        case .unavailable: "The status service is unavailable. Your secure receipt is saved; try again shortly."
+        case .none: ""
+        }
     }
 }
 

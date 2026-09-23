@@ -382,6 +382,9 @@ verify_jwt = false
 [functions.account-deletion-worker]
 verify_jwt = false
 
+[functions.account-deletion-monitor]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

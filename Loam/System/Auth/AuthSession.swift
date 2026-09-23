@@ -1,5 +1,6 @@
 import Foundation
 import AuthenticationServices
+import Security
 import Supabase
 
 @MainActor
@@ -20,6 +21,12 @@ final class AuthSession: ObservableObject {
     @Published private(set) var connectedProviders: Set<String> = []
     @Published var lastError: String?
     @Published private(set) var deletionPending = false
+    @Published private(set) var deletionStatus: DeletionStatus = .none
+    @Published private(set) var deletionUpdatedAt: Date?
+
+    enum DeletionStatus: String, Codable, Equatable {
+        case none, submissionUncertain, processing, needsAttention, complete, unavailable
+    }
 
     /// Local-only session used only when Supabase is not configured.
     private(set) var usesDemoMode = false
@@ -54,6 +61,7 @@ final class AuthSession: ObservableObject {
         activeTestAccount = nil
         #endif
         SupabaseClientProvider.activate(.main)
+        await refreshDeletionStatus()
         guard let client = SupabaseClientProvider.shared else {
             usesDemoMode = true
             ExpenseRepositoryFactory.setUsesLocalStorage(true)
@@ -143,6 +151,7 @@ final class AuthSession: ObservableObject {
             }
 
             apply(user: session.user)
+            await refreshDeletionStatus()
             if let appleName {
                 displayName = appleName
             }
@@ -272,21 +281,90 @@ final class AuthSession: ObservableObject {
             throw NSError(domain: "LoamAccount", code: 4, userInfo: [NSLocalizedDescriptionKey: "Confirm with Apple before deleting your account."])
         }
         guard let deletingAccountId = userId else { return }
-        let receipt = DeletionReceipt.create(for: deletingAccountId)
-        try await client.functions.invoke("delete-account", options: FunctionInvokeOptions(body: AccountDeletionRequest(
+        let receipt = try DeletionReceipt.create(for: deletingAccountId)
+        DeletionReceipt.setStatus(.submissionUncertain, for: deletingAccountId)
+        deletionStatus = .submissionUncertain
+        deletionPending = true
+        do {
+            try await client.functions.invoke("delete-account", options: FunctionInvokeOptions(body: AccountDeletionRequest(
             operationId: receipt.operationId.uuidString,
             receiptSecret: receipt.secret,
             authorizationCode: authorizationCode,
             identityToken: identityToken
-        )))
-        deletionPending = true
-        // Acceptance revokes application access immediately; the service worker
-        // then revokes Apple, deletes Auth, and removes every avatar path.
+            )))
+            DeletionReceipt.setStatus(.processing, for: deletingAccountId)
+            deletionStatus = .processing
+        } catch {
+            // The server may have committed acceptance before the response was
+            // lost. Preserve the receipt and reconcile against its status endpoint.
+            lastError = "We couldn’t confirm the request response. Check deletion status before trying again."
+            await refreshDeletionStatus()
+            try? await client.auth.signOut(scope: .local)
+            clearSession()
+            return
+        }
+        // Acceptance closes app access immediately; the service worker revokes
+        // Apple, removes owned avatars, and then soft-deletes the Auth identity.
         try? await client.auth.signOut(scope: .local)
         #if DEBUG
         savedMainAccount = nil
         #endif
         clearSession()
+    }
+
+    func refreshDeletionStatus() async {
+        let receipt = userId.flatMap { DeletionReceipt.pendingReceipt(for: $0) }
+            ?? (userId == nil ? DeletionReceipt.pendingReceipt() : nil)
+        guard let receipt else {
+            deletionPending = false
+            deletionStatus = .none
+            return
+        }
+        deletionPending = true
+        guard let base = URL(string: SupabaseConfig.url), SupabaseConfig.isConfigured else {
+            deletionStatus = .unavailable
+            return
+        }
+        let statusURL = base.appendingPathComponent("functions").appendingPathComponent("v1").appendingPathComponent("delete-account")
+        var components = URLComponents(url: statusURL, resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "operationId", value: receipt.operationId.uuidString)]
+        guard let url = components?.url else { deletionStatus = .unavailable; return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(receipt.secret, forHTTPHeaderField: "X-Deletion-Receipt")
+        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let response = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+            guard response.statusCode == 200 else {
+                if response.statusCode == 404 {
+                    deletionStatus = DeletionReceipt.savedStatus(for: receipt.accountId) ?? .submissionUncertain
+                } else {
+                    deletionStatus = .unavailable
+                }
+                return
+            }
+            let status = try JSONDecoder().decode(DeletionStatusResponse.self, from: data)
+            switch status.status {
+            case "complete":
+                deletionStatus = .complete
+                deletionUpdatedAt = status.completedAt.flatMap { ISO8601DateFormatter().date(from: $0) }
+            case "failed", "needs_attention": deletionStatus = .needsAttention
+            default: deletionStatus = .processing
+            }
+            DeletionReceipt.setStatus(deletionStatus, for: receipt.accountId)
+        } catch {
+            deletionStatus = .unavailable
+        }
+    }
+
+    func dismissDeletionConfirmation() {
+        guard deletionStatus == .complete else { return }
+        if let userId { DeletionReceipt.remove(for: userId) }
+        else { DeletionReceipt.remove() }
+        deletionPending = false
+        deletionStatus = .none
+        Task { await refreshDeletionStatus() }
     }
 
     func signOut() async {
@@ -361,6 +439,7 @@ final class AuthSession: ObservableObject {
         email = user.email
         connectedProviders = Set((user.identities ?? []).map(\.provider))
         deletionPending = DeletionReceipt.exists(for: user.id)
+        deletionStatus = DeletionReceipt.savedStatus(for: user.id) ?? (deletionPending ? .submissionUncertain : .none)
         if let meta = user.userMetadata["full_name"] {
             let value = "\(meta)"
             displayName = value.isEmpty ? (user.email ?? "You") : value
@@ -416,24 +495,106 @@ private struct AccountDeletionRequest: Encodable {
     let identityToken: String
 }
 
+private struct DeletionStatusResponse: Decodable {
+    let status: String
+    let completedAt: String?
+    enum CodingKeys: String, CodingKey {
+        case status
+        case completedAt = "completed_at"
+    }
+}
+
 private enum DeletionReceipt {
-    private static let key = "loam.accountDeletionReceipt"
-    static func create(for accountId: UUID) -> (operationId: UUID, secret: String) {
-        if let saved = UserDefaults.standard.dictionary(forKey: key),
-           saved["accountId"] as? String == accountId.uuidString,
-           let operationId = saved["operationId"] as? String,
-           let id = UUID(uuidString: operationId),
-           let secret = saved["secret"] as? String, secret.count >= 32 {
-            return (id, secret)
+    struct Value: Codable {
+        let accountId: UUID
+        let operationId: UUID
+        let secret: String
+        var status: AuthSession.DeletionStatus
+        let createdAt: Date
+
+        init(accountId: UUID, operationId: UUID, secret: String, status: AuthSession.DeletionStatus, createdAt: Date = Date()) {
+            self.accountId = accountId
+            self.operationId = operationId
+            self.secret = secret
+            self.status = status
+            self.createdAt = createdAt
         }
-        let value = (UUID(), UUID().uuidString + UUID().uuidString)
-        UserDefaults.standard.set(["accountId": accountId.uuidString, "operationId": value.0.uuidString, "secret": value.1], forKey: key)
+    }
+    private static var service: String {
+        let host = URL(string: SupabaseConfig.url)?.host ?? "unconfigured"
+        return "app.loam.account-deletion.\(SupabaseConfig.environment.rawValue).\(host)"
+    }
+    static func create(for accountId: UUID) throws -> (operationId: UUID, secret: String) {
+        if let value = load(for: accountId) { return (value.operationId, value.secret) }
+        let value = Value(accountId: accountId, operationId: UUID(), secret: UUID().uuidString + UUID().uuidString, status: .submissionUncertain)
+        guard save(value) else {
+            throw NSError(domain: "LoamAccountDeletion", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not securely save the deletion receipt. No deletion request was sent."])
+        }
+        return (value.operationId, value.secret)
+    }
+    static func setStatus(_ status: AuthSession.DeletionStatus, for accountId: UUID) {
+        guard var value = load(for: accountId) else { return }
+        value.status = status
+        save(value)
+    }
+    static func savedStatus(for accountId: UUID) -> AuthSession.DeletionStatus? {
+        load(for: accountId)?.status
+    }
+    static func exists(for accountId: UUID) -> Bool { load(for: accountId) != nil }
+    static func pendingReceipt() -> Value? {
+        loadAny() ?? migrateLegacyReceipt()
+    }
+    static func pendingReceipt(for accountId: UUID) -> Value? {
+        if let value = load(for: accountId) { return value }
+        guard let value = migrateLegacyReceipt(), value.accountId == accountId else { return nil }
         return value
     }
+    private static func migrateLegacyReceipt() -> Value? {
+        // Migrate the prior UserDefaults receipt once, then remove its plaintext copy.
+        let legacyKey = "loam.accountDeletionReceipt"
+        guard let saved = UserDefaults.standard.dictionary(forKey: legacyKey),
+              let account = saved["accountId"] as? String, let accountId = UUID(uuidString: account),
+              let operation = saved["operationId"] as? String, let operationId = UUID(uuidString: operation),
+              let secret = saved["secret"] as? String, secret.count >= 32 else { return nil }
+        let value = Value(accountId: accountId, operationId: operationId, secret: secret, status: .submissionUncertain)
+        guard save(value) else { return nil }
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+        return value
+    }
+    static func remove() {
+        if let value = pendingReceipt() { delete(for: value.accountId) }
+    }
+    static func remove(for accountId: UUID) { delete(for: accountId) }
 
-    static func exists(for accountId: UUID) -> Bool {
-        guard let saved = UserDefaults.standard.dictionary(forKey: key) else { return false }
-        return saved["accountId"] as? String == accountId.uuidString
+    private static func load(for accountId: UUID) -> Value? {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: accountId.uuidString, kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data else { return nil }
+        return try? JSONDecoder().decode(Value.self, from: data)
+    }
+    private static func loadAny() -> Value? {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitAll]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let rows = result as? [Data] else { return nil }
+        return rows.compactMap { try? JSONDecoder().decode(Value.self, from: $0) }.max(by: { $0.createdAt < $1.createdAt })
+    }
+    @discardableResult
+    private static func save(_ value: Value) -> Bool {
+        guard let data = try? JSONEncoder().encode(value) else { return false }
+        let identity: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: value.accountId.uuidString]
+        let update = SecItemUpdate(identity as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if update == errSecSuccess { return true }
+        guard update == errSecItemNotFound else { return false }
+        var query = identity
+        query[kSecValueData as String] = data
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
+    }
+    private static func delete(for accountId: UUID) {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: accountId.uuidString]
+        SecItemDelete(query as CFDictionary)
     }
 }
 
