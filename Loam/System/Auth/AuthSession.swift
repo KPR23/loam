@@ -295,6 +295,18 @@ final class AuthSession: ObservableObject {
             DeletionReceipt.setStatus(.processing, for: deletingAccountId)
             deletionStatus = .processing
         } catch {
+            if let functionError = error as? FunctionsError,
+               case let .httpError(code, _) = functionError,
+               Self.isDefinitiveDeletionRejection(code) {
+                DeletionReceipt.remove(for: deletingAccountId)
+                deletionPending = false
+                deletionStatus = .none
+                deletionUpdatedAt = nil
+                let message = Self.deletionRejectionMessage(for: code)
+                lastError = message
+                throw NSError(domain: "LoamAccountDeletion", code: code, userInfo: [NSLocalizedDescriptionKey: message])
+            }
+
             // The server may have committed acceptance before the response was
             // lost. Preserve the receipt and reconcile against its status endpoint.
             lastError = "We couldn’t confirm the request response. Check deletion status before trying again."
@@ -310,6 +322,26 @@ final class AuthSession: ObservableObject {
         savedMainAccount = nil
         #endif
         clearSession()
+    }
+
+    private static func isDefinitiveDeletionRejection(_ statusCode: Int) -> Bool {
+        // These responses are returned before accept_account_deletion creates
+        // an operation. Transport, relay, timeout, and server errors stay
+        // uncertain because the request may have reached the database.
+        [400, 401, 403, 404, 405, 422, 429, 503].contains(statusCode)
+    }
+
+    private static func deletionRejectionMessage(for statusCode: Int) -> String {
+        switch statusCode {
+        case 400:
+            "Apple couldn’t verify this confirmation. Your account is still active; try the deletion flow again."
+        case 401:
+            "Your sign-in expired before the deletion request was accepted. Your account is still active; sign in and try again."
+        case 503:
+            "The deletion service is temporarily unavailable. Your account is still active; try again shortly."
+        default:
+            "The deletion request wasn’t accepted. Your account is still active; try again."
+        }
     }
 
     func refreshDeletionStatus() async {
