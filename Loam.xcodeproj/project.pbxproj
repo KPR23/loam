@@ -32,7 +32,9 @@
 		492940B3AEF2AA1E876FFC40 /* ProposeEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52E9F008EB2501D5905C2CA /* ProposeEditSheet.swift */; };
 		4CC7CD6399A63C76561174E0 /* BalanceSimplifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */; };
 		4D29C94A68060E5A7429306C /* SplitFormSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = E80E6F1581E3843A2C844271 /* SplitFormSeed.swift */; };
+		5197538023662FCC33542AE3 /* AppleDeletionAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FEDAFE978A8FB4E4306121 /* AppleDeletionAuthorization.swift */; };
 		52647BE969B4C648691C9815 /* ExpenseRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */; };
+		53733B401CC61047A6770B27 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21BC58A6AC60D3347EDFACC0 /* Supabase */; };
 		5385DE5F359781E589AADE85 /* BudgetArcLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */; };
 		53AED4FFFBB986CB7B4B2DDC /* HomeExpenseRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914274A331517EC93002CE6C /* HomeExpenseRow.swift */; };
 		543F69BEE3C867F7FB1ED90F /* ExpenseCategoryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3503DF18D70C53D65E9FAC9A /* ExpenseCategoryPicker.swift */; };
@@ -57,7 +59,7 @@
 		8B95AFDA7E6069FB3CDE3769 /* SupabaseConnectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8C8F409F0CF628175F871A /* SupabaseConnectionRepository.swift */; };
 		8D81E161CCD796A4BD558382 /* TestPartner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5607AF86E6B5DA32B91136B6 /* TestPartner.swift */; };
 		8DA69CF70DA4F7B2FA86D3F2 /* PlaceSearchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF5AC0E5465E709F9F1814D /* PlaceSearchController.swift */; };
-		9B4011B594B12229FD7A8CDE /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21BC58A6AC60D3347EDFACC0 /* Supabase */; };
+		9B4011B594B12229FD7A8CDE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = C28A03436A972E37C1394EC9 /* Sentry */; };
 		9C17EC91858B01F4269B3A96 /* SplitExpenseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE84AFEC1B640F27F3AF72B /* SplitExpenseSheet.swift */; };
 		9D4C5FC21BF1452BAA2D629D /* LocalExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */; };
 		9DA43EF3DD42CEAC07A17578 /* ActivityRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DD37731E7B74A5C0B768684 /* ActivityRepository.swift */; };
@@ -72,7 +74,6 @@
 		CF1A3CBDC16DCE533EE59653 /* SplitExpenseSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87AE244F130211B61887F30 /* SplitExpenseSection.swift */; };
 		CF22202F705F49295851F0ED /* ExpenseShareStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */; };
 		D02FC6D36FA2D65A11C60DBA /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A6B1F3FF6967DADF72F0E5 /* AuthSession.swift */; };
-		D02FC6D36FA2D65A11C60DBB /* AppleDeletionAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A6B1F3FF6967DADF72F0E6 /* AppleDeletionAuthorization.swift */; };
 		D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = A74E2AB24186B00FD500CE4D /* Formatters.swift */; };
 		D5198E9063F112C1765093E2 /* HomeCollapsingTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73CC2C0E31AA168F61ABFED /* HomeCollapsingTopBar.swift */; };
 		DC095034852A514D28B3744F /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 230D7634A0B21CFBD5ABD83B /* AppPreferences.swift */; };
@@ -120,7 +121,7 @@
 		1BCD03B5C9F32D9021D06CB6 /* FriendConnectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendConnectionViews.swift; sourceTree = "<group>"; };
 		1C9A76F1F1B13BB49D3BCA2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		20C428C07622150791184237 /* Recurring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recurring.swift; sourceTree = "<group>"; };
-		21C2E3B3B713F758DAD1B856 /* budget-arc.svg */ = {isa = PBXFileReference; path = "budget-arc.svg"; sourceTree = "<group>"; };
+		21C2E3B3B713F758DAD1B856 /* budget-arc.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "budget-arc.svg"; sourceTree = "<group>"; };
 		230D7634A0B21CFBD5ABD83B /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceSimplifier.swift; sourceTree = "<group>"; };
 		278BBBEE5344D0FD28BCCF98 /* LocalHouseholdRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalHouseholdRepository.swift; sourceTree = "<group>"; };
@@ -131,7 +132,6 @@
 		352DDC9EA03E70A678D9AABF /* HouseholdRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdRecord.swift; sourceTree = "<group>"; };
 		37F89A9A6ADFC660229AF4A6 /* ExpenseLocationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseLocationPicker.swift; sourceTree = "<group>"; };
 		38A6B1F3FF6967DADF72F0E5 /* AuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSession.swift; sourceTree = "<group>"; };
-		38A6B1F3FF6967DADF72F0E6 /* AppleDeletionAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleDeletionAuthorization.swift; sourceTree = "<group>"; };
 		38B664DBA46BD536B44E5F73 /* BudgetArcLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetArcLayoutTests.swift; sourceTree = "<group>"; };
 		3DE84AFEC1B640F27F3AF72B /* SplitExpenseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseSheet.swift; sourceTree = "<group>"; };
 		45B398F7B4520CCEC146C3AD /* ExpenseShareAcceptance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareAcceptance.swift; sourceTree = "<group>"; };
@@ -164,7 +164,7 @@
 		8DD37731E7B74A5C0B768684 /* ActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRepository.swift; sourceTree = "<group>"; };
 		8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepository.swift; sourceTree = "<group>"; };
 		914274A331517EC93002CE6C /* HomeExpenseRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeExpenseRow.swift; sourceTree = "<group>"; };
-		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		99F215D3C3920731625D3EE6 /* ConnectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionRepository.swift; sourceTree = "<group>"; };
 		9D15723F1C7A5EE473CA2889 /* TestAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestAccount.swift; sourceTree = "<group>"; };
 		A01FE9F5D1352AD66B6BF4B1 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
@@ -180,8 +180,10 @@
 		B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareStatus.swift; sourceTree = "<group>"; };
 		BA8FD22752CACE19C604B0FD /* SplitExpenseMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseMode.swift; sourceTree = "<group>"; };
 		BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDateCodecTests.swift; sourceTree = "<group>"; };
+		BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
 		D044ABEA612ACF723FCB7589 /* SupabaseBalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBalanceRepository.swift; sourceTree = "<group>"; };
+		D0FEDAFE978A8FB4E4306121 /* AppleDeletionAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleDeletionAuthorization.swift; sourceTree = "<group>"; };
 		D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D533C1F5574D7B7BE0F546AC /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		D5950FD4B0A003B32224F60B /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -197,7 +199,7 @@
 		F6CD835D39E131CEAA0B24E8 /* Money.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Money.swift; sourceTree = "<group>"; };
 		F8E27EAC7F362A51A408D0EC /* BalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceRepository.swift; sourceTree = "<group>"; };
 		FB5855509A815413C1C6AFA1 /* ActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityStore.swift; sourceTree = "<group>"; };
-		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -205,7 +207,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9B4011B594B12229FD7A8CDE /* Supabase in Frameworks */,
+				9B4011B594B12229FD7A8CDE /* Sentry in Frameworks */,
+				53733B401CC61047A6770B27 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -243,8 +246,8 @@
 		0A41DDF8012F3E8B600FD54F /* Auth */ = {
 			isa = PBXGroup;
 			children = (
+				D0FEDAFE978A8FB4E4306121 /* AppleDeletionAuthorization.swift */,
 				38A6B1F3FF6967DADF72F0E5 /* AuthSession.swift */,
-				38A6B1F3FF6967DADF72F0E6 /* AppleDeletionAuthorization.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -490,6 +493,7 @@
 				63C47899F6ED4E7E4BA92DE9 /* Production.xcconfig */,
 				EB06FE891FB3F1266DC71601 /* Release.xcconfig */,
 				A01FE9F5D1352AD66B6BF4B1 /* Secrets.example.xcconfig */,
+				BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */,
 				1A7D71C5B5A83B152966ED5D /* Staging.xcconfig */,
 			);
 			path = Config;
@@ -523,6 +527,7 @@
 				FDA6410533654FF97E7AB390 /* Sources */,
 				51DF6B0B5AFD8D71F648B7BB /* Resources */,
 				BF5E6CCB46B594886E34150F /* Frameworks */,
+				ED220F8626C8467A843B01D0 /* Upload Debug Symbols to Sentry */,
 			);
 			buildRules = (
 			);
@@ -530,6 +535,7 @@
 			);
 			name = Loam;
 			packageProductDependencies = (
+				C28A03436A972E37C1394EC9 /* Sentry */,
 				21BC58A6AC60D3347EDFACC0 /* Supabase */,
 			);
 			productName = Loam;
@@ -548,9 +554,6 @@
 					38C741AEE51B5DD4542905E5 = {
 						DevelopmentTeam = XXJA67J9AN;
 					};
-					8AAF55F2B1E62FB9443C5270 = {
-						DevelopmentTeam = XXJA67J9AN;
-					};
 				};
 			};
 			buildConfigurationList = 9AFC3B51DF531ABE639D7643 /* Build configuration list for PBXProject "Loam" */;
@@ -563,6 +566,7 @@
 			mainGroup = 58B2FDCD8D3B991C33456F31;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				C19829A1E56FC5C25983CA87 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				055A5C1168ED6EEDE75B7E21 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -589,6 +593,24 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		ED220F8626C8467A843B01D0 /* Upload Debug Symbols to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+			);
+			name = "Upload Debug Symbols to Sentry";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script is responsible for uploading debug symbols and source context for Sentry.\nif which sentry-cli >/dev/null; then\n  export SENTRY_ORG=kprs-lab\n  export SENTRY_PROJECT=apple-ios\n  ERROR=$(sentry-cli debug-files upload --include-sources \"$DWARF_DSYM_FOLDER_PATH\" 2>&1 >/dev/null)\n  if [ ! $? -eq 0 ]; then\n    echo \"warning: sentry-cli - $ERROR\"\n  fi\nelse\n  echo \"warning: sentry-cli not installed, download from https://github.com/getsentry/sentry-cli/releases\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		66ADA36FF3D221ED426F945A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -612,8 +634,8 @@
 				EDB3FB0BA21694BAD6E8AB1C /* ActivityView.swift in Sources */,
 				A385DC89F56B32C668A7375C /* AddExpenseView.swift in Sources */,
 				DC095034852A514D28B3744F /* AppPreferences.swift in Sources */,
+				5197538023662FCC33542AE3 /* AppleDeletionAuthorization.swift in Sources */,
 				D02FC6D36FA2D65A11C60DBA /* AuthSession.swift in Sources */,
-				D02FC6D36FA2D65A11C60DBB /* AppleDeletionAuthorization.swift in Sources */,
 				3B0879A3E31BDEB3E9BB33AE /* AuthView.swift in Sources */,
 				47D5C5EC4B5C399B1AD11AD7 /* BalanceRecord.swift in Sources */,
 				65D547A7C01F992870BB3DEC /* BalanceRepository.swift in Sources */,
@@ -702,6 +724,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = XXJA67J9AN;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -950,6 +975,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = XXJA67J9AN;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -985,6 +1013,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = XXJA67J9AN;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1083,6 +1114,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = XXJA67J9AN;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1142,6 +1176,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		C19829A1E56FC5C25983CA87 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.24.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1149,6 +1191,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 055A5C1168ED6EEDE75B7E21 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		C28A03436A972E37C1394EC9 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C19829A1E56FC5C25983CA87 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

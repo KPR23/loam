@@ -1,4 +1,6 @@
 import SwiftUI
+import Sentry
+import Foundation
 
 @main
 struct LoamApp: App {
@@ -12,6 +14,21 @@ struct LoamApp: App {
     @StateObject private var balanceStore = BalanceStore()
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var connectionStore = ConnectionStore()
+
+    init() {
+        guard
+            let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String,
+            !dsn.isEmpty
+        else {
+            return
+        }
+
+        SentrySDK.start { options in
+            options.dsn = dsn
+            options.environment = Bundle.main.object(forInfoDictionaryKey: "LOAM_ENVIRONMENT") as? String ?? "production"
+            options.sendDefaultPii = false
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -40,6 +57,30 @@ struct LoamApp: App {
                         }
                     }
                 }
+        }
+    }
+}
+
+/// Sends stable operation labels only; never pass backend errors or user content here.
+enum LoamErrorCapture {
+    static func capture(_ event: String) {
+        let error = NSError(
+            domain: "Loam.ManualCapture.\(event)",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: event]
+        )
+        SentrySDK.capture(error: error)
+    }
+
+    static func withCapture<Value>(
+        _ event: String,
+        operation: () async throws -> Value
+    ) async throws -> Value {
+        do {
+            return try await operation()
+        } catch {
+            capture(event)
+            throw error
         }
     }
 }

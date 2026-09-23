@@ -104,6 +104,7 @@ Local builds use the committed `CURRENT_PROJECT_VERSION` in `project.yml`.
 
 Info.plist keys (via build settings from xcconfig):
 
+- `SENTRY_DSN`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 

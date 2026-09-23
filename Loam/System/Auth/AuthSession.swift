@@ -130,6 +130,7 @@ final class AuthSession: ObservableObject {
         guard let client = SupabaseClientProvider.shared,
               let tokenData = credential.identityToken,
               let idToken = String(data: tokenData, encoding: .utf8) else {
+            LoamErrorCapture.capture("auth.apple_identity_token_unavailable")
             lastError = "Could not read Apple identity token."
             return
         }
@@ -156,6 +157,7 @@ final class AuthSession: ObservableObject {
                 displayName = appleName
             }
         } catch {
+            LoamErrorCapture.capture("auth.apple_sign_in_failed")
             lastError = error.localizedDescription
             state = .signedOut
         }
@@ -225,12 +227,16 @@ final class AuthSession: ObservableObject {
             Self.persistDemoSession(userId: userId, displayName: name)
         } else if let client = SupabaseClientProvider.shared {
             let previousName = displayName
-            try await client.rpc(
-                "update_display_name",
-                params: DisplayNameParams(displayName: name)
-            ).execute()
+            try await LoamErrorCapture.withCapture("profile.display_name_database_update_failed") {
+                try await client.rpc(
+                    "update_display_name",
+                    params: DisplayNameParams(displayName: name)
+                ).execute()
+            }
             do {
-                let user = try await client.auth.update(user: UserAttributes(data: ["full_name": .string(name)]))
+                let user = try await LoamErrorCapture.withCapture("profile.display_name_auth_update_failed") {
+                    try await client.auth.update(user: UserAttributes(data: ["full_name": .string(name)]))
+                }
                 apply(user: user)
             } catch {
                 // Keep Auth and the shared profile mirrors aligned if Auth rejects
@@ -309,6 +315,7 @@ final class AuthSession: ObservableObject {
 
             // The server may have committed acceptance before the response was
             // lost. Preserve the receipt and reconcile against its status endpoint.
+            LoamErrorCapture.capture("account_deletion.response_uncertain")
             lastError = "We couldn’t confirm the request response. Check deletion status before trying again."
             await refreshDeletionStatus()
             try? await client.auth.signOut(scope: .local)
@@ -377,12 +384,16 @@ final class AuthSession: ObservableObject {
                 return
             }
             let status = try JSONDecoder().decode(DeletionStatusResponse.self, from: data)
+            let previousStatus = deletionStatus
             switch status.status {
             case "complete":
                 deletionStatus = .complete
                 deletionUpdatedAt = status.completedAt.flatMap { ISO8601DateFormatter().date(from: $0) }
             case "failed", "needs_attention": deletionStatus = .needsAttention
             default: deletionStatus = .processing
+            }
+            if deletionStatus == .needsAttention, previousStatus != .needsAttention {
+                LoamErrorCapture.capture("account_deletion.background_processing_needs_attention")
             }
             DeletionReceipt.setStatus(deletionStatus, for: receipt.accountId)
         } catch {
@@ -408,6 +419,7 @@ final class AuthSession: ObservableObject {
             do {
                 try await client.auth.signOut()
             } catch {
+                LoamErrorCapture.capture("auth.sign_out_failed")
                 lastError = error.localizedDescription
                 return
             }
@@ -560,6 +572,7 @@ private enum DeletionReceipt {
         if let value = load(for: accountId) { return (value.operationId, value.secret) }
         let value = Value(accountId: accountId, operationId: UUID(), secret: UUID().uuidString + UUID().uuidString, status: .submissionUncertain)
         guard save(value) else {
+            LoamErrorCapture.capture("account_deletion.receipt_secure_storage_failed")
             throw NSError(domain: "LoamAccountDeletion", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not securely save the deletion receipt. No deletion request was sent."])
         }
         return (value.operationId, value.secret)

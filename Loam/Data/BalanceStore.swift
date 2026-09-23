@@ -14,7 +14,9 @@ final class BalanceStore: ObservableObject {
     }
 
     func repay(to personId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, userId: UUID) async throws {
-        try await BalanceRepositoryFactory.make().createRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note, paidAt: paidAt, operationId: UUID())
+        try await LoamErrorCapture.withCapture("balance.repayment_create_failed") {
+            try await BalanceRepositoryFactory.make().createRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note, paidAt: paidAt, operationId: UUID())
+        }
         await refresh(userId: userId)
     }
 }

@@ -1,4 +1,6 @@
 // Staging Supabase project used by Debug and TestFlight builds.
 APP_DISPLAY_NAME = Loam RC
+LOAM_ENVIRONMENT = staging
+SENTRY_DSN = https:/$()/0e0e726194a581b5afab7405a491bb15@o4512135437942784.ingest.de.sentry.io/4512135445413968
 SUPABASE_URL = https:/$()/iazyvupjvtuiezugurvo.supabase.co
 SUPABASE_ANON_KEY = sb_publishable_EDBOAPJzAaWIO566_-3W5A_vMKI0JXd

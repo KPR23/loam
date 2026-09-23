@@ -26,6 +26,9 @@ configFiles:
   TestFlight: Loam/Config/Staging.xcconfig
   Production: Loam/Config/Production.xcconfig
 packages:
+  sentry-cocoa:
+    url: https://github.com/getsentry/sentry-cocoa
+    from: "9.24.0"
   supabase-swift:
     url: https://github.com/supabase/supabase-swift
     from: "2.0.0"
@@ -47,6 +50,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Loam/Loam.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
+      - package: sentry-cocoa
+        product: Sentry
       - package: supabase-swift
         product: Supabase
     entitlements:
