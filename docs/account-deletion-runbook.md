@@ -2,13 +2,15 @@
 
 ## Required environment values
 
-Add these values to both GitHub Actions environments, `staging` and `production`:
+Add these secrets to the GitHub Actions `staging` environment:
 
-- `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_ACCESS_TOKEN`, `SUPABASE_STAGING_DB_PASSWORD`, `SUPABASE_SERVICE_ROLE_KEY`
 - `DELETION_WORKER_KEY`, `DELETION_NOTIFIER_KEY`, `DELETION_MONITOR_KEY` (each at least 32 random characters and distinct)
 - `DELETION_CREDENTIAL_ENCRYPTION_KEY` (base64 encoded 32-byte key; keep stable so retained credentials remain decryptable)
 - `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`
 - `RESEND_API_KEY`, `DELETION_EMAIL_FROM` (a verified sender identity)
+
+Add the same secret names to the GitHub Actions `production` environment, replacing `SUPABASE_STAGING_DB_PASSWORD` with `SUPABASE_PRODUCTION_DB_PASSWORD`. Each environment should contain values for its own Supabase project.
 
 The deploy workflow applies migrations, uploads function secrets, deploys all deletion functions, writes the worker and notifier keys to Supabase Vault through the service-role-only RPC, and installs one named minute schedule for each. It checks that incorrect worker, notifier, and monitor credentials receive HTTP 401. The SQL functions and schedule use the `project_url`, `deletion_worker_key`, and `deletion_notifier_key` entries in Vault; do not copy these secrets into migration SQL.
 
