@@ -1,3 +1,5 @@
+-- This migration precedes the account-deletion hardening migration, which
+-- depends on its private functions.
 -- Account deletion is an asynchronous, one-way operation.  These tables are
 -- deliberately private: application roles can only ask the Edge Function for
 -- the minimal status protected by the receipt secret.
