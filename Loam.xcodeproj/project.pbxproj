@@ -23,8 +23,10 @@
 		33C83051AA7FF1FDA79F0241 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D533C1F5574D7B7BE0F546AC /* RootView.swift */; };
 		33F1ED5603B3BB1925385A6D /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */; };
 		35F79EDFCD6E864DF576BDA9 /* LocalHouseholdRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 278BBBEE5344D0FD28BCCF98 /* LocalHouseholdRepository.swift */; };
+		3642DFE98565927A4CADF9BA /* FriendConnectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCD03B5C9F32D9021D06CB6 /* FriendConnectionViews.swift */; };
 		379E7F4AEA0164D1B6E740E7 /* LocalBalanceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77BE2F6FFD644CB69CAA1578 /* LocalBalanceRepository.swift */; };
 		3B0879A3E31BDEB3E9BB33AE /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CA57745C8FB4E286749E44E /* AuthView.swift */; };
+		3B6CDA37B5479DE4B4111523 /* ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB5CC654AA22A57AADC24A8 /* ConnectionStore.swift */; };
 		450CF8D24E4AAD123A859E79 /* EditProposalReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15EBCA64BB0DC3FC7F19BF3 /* EditProposalReviewCard.swift */; };
 		47D5C5EC4B5C399B1AD11AD7 /* BalanceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46CC7796E7D041351235A454 /* BalanceRecord.swift */; };
 		492940B3AEF2AA1E876FFC40 /* ProposeEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52E9F008EB2501D5905C2CA /* ProposeEditSheet.swift */; };
@@ -52,6 +54,7 @@
 		89662F4379066472F18C994C /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57BBA68141252EFE7127CA56 /* MainTabView.swift */; };
 		8A2FFEF3FDC79F301B77AE32 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BB3E318E7DB0B9CE3B246C1 /* Category.swift */; };
 		8AB6806BBFF519364B30CF4A /* HouseholdRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 352DDC9EA03E70A678D9AABF /* HouseholdRecord.swift */; };
+		8B95AFDA7E6069FB3CDE3769 /* SupabaseConnectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8C8F409F0CF628175F871A /* SupabaseConnectionRepository.swift */; };
 		8D81E161CCD796A4BD558382 /* TestPartner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5607AF86E6B5DA32B91136B6 /* TestPartner.swift */; };
 		8DA69CF70DA4F7B2FA86D3F2 /* PlaceSearchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF5AC0E5465E709F9F1814D /* PlaceSearchController.swift */; };
 		9B4011B594B12229FD7A8CDE /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21BC58A6AC60D3347EDFACC0 /* Supabase */; };
@@ -82,6 +85,7 @@
 		EDB3FB0BA21694BAD6E8AB1C /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19E1D23ED085FCA9A7BF769A /* ActivityView.swift */; };
 		F003E190915C60EA01A187C3 /* HouseholdStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F29555C57CD09B0685F9ACEA /* HouseholdStore.swift */; };
 		F3540CDF8143C9D908D2720C /* StoreKitStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FCB2D37CB3148229B212824 /* StoreKitStub.swift */; };
+		F36D26359DE8335DF3A19C8D /* ConnectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F215D3C3920731625D3EE6 /* ConnectionRepository.swift */; };
 		F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */; };
 		F5FF7A97367CF369F639062C /* PendingExpensesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E27DC7E441F9167DCEB57D /* PendingExpensesSheet.swift */; };
 		F7D1E2A7318C3E027F56FBCA /* SettlementMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A97EB25D9F1644021698E45B /* SettlementMode.swift */; };
@@ -113,6 +117,7 @@
 		1A7D71C5B5A83B152966ED5D /* Staging.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Staging.xcconfig; sourceTree = "<group>"; };
 		1B937506CE1AD90136888495 /* PendingExpenseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpenseCard.swift; sourceTree = "<group>"; };
 		1BB3E318E7DB0B9CE3B246C1 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
+		1BCD03B5C9F32D9021D06CB6 /* FriendConnectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendConnectionViews.swift; sourceTree = "<group>"; };
 		1C9A76F1F1B13BB49D3BCA2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		20C428C07622150791184237 /* Recurring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recurring.swift; sourceTree = "<group>"; };
 		21C2E3B3B713F758DAD1B856 /* budget-arc.svg */ = {isa = PBXFileReference; path = "budget-arc.svg"; sourceTree = "<group>"; };
@@ -132,6 +137,7 @@
 		45B398F7B4520CCEC146C3AD /* ExpenseShareAcceptance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareAcceptance.swift; sourceTree = "<group>"; };
 		46CC7796E7D041351235A454 /* BalanceRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceRecord.swift; sourceTree = "<group>"; };
 		495BB77A0F2788E50B0DD08B /* HouseholdView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdView.swift; sourceTree = "<group>"; };
+		4AB5CC654AA22A57AADC24A8 /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
 		4EA6A778794AE887AAF81BA6 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		54E27DC7E441F9167DCEB57D /* PendingExpensesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpensesSheet.swift; sourceTree = "<group>"; };
 		5607AF86E6B5DA32B91136B6 /* TestPartner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPartner.swift; sourceTree = "<group>"; };
@@ -149,6 +155,7 @@
 		77BE2F6FFD644CB69CAA1578 /* LocalBalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBalanceRepository.swift; sourceTree = "<group>"; };
 		7D2B225EA738D0900ECF5C69 /* ExpenseLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseLocation.swift; sourceTree = "<group>"; };
 		7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDetailSheet.swift; sourceTree = "<group>"; };
+		7E8C8F409F0CF628175F871A /* SupabaseConnectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConnectionRepository.swift; sourceTree = "<group>"; };
 		7FCB2D37CB3148229B212824 /* StoreKitStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitStub.swift; sourceTree = "<group>"; };
 		8076A22183ED487CFDEF936D /* RecurringMaterializerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringMaterializerTests.swift; sourceTree = "<group>"; };
 		8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySpendHero.swift; sourceTree = "<group>"; };
@@ -158,6 +165,7 @@
 		8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepository.swift; sourceTree = "<group>"; };
 		914274A331517EC93002CE6C /* HomeExpenseRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeExpenseRow.swift; sourceTree = "<group>"; };
 		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		99F215D3C3920731625D3EE6 /* ConnectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionRepository.swift; sourceTree = "<group>"; };
 		9D15723F1C7A5EE473CA2889 /* TestAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestAccount.swift; sourceTree = "<group>"; };
 		A01FE9F5D1352AD66B6BF4B1 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
 		A08A73A1CF023A5DDE2B32C0 /* DeepLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandler.swift; sourceTree = "<group>"; };
@@ -172,7 +180,6 @@
 		B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareStatus.swift; sourceTree = "<group>"; };
 		BA8FD22752CACE19C604B0FD /* SplitExpenseMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseMode.swift; sourceTree = "<group>"; };
 		BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDateCodecTests.swift; sourceTree = "<group>"; };
-		BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
 		D044ABEA612ACF723FCB7589 /* SupabaseBalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBalanceRepository.swift; sourceTree = "<group>"; };
 		D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -398,6 +405,7 @@
 		C52490EC258E788E4090D312 /* Profile */ = {
 			isa = PBXGroup;
 			children = (
+				1BCD03B5C9F32D9021D06CB6 /* FriendConnectionViews.swift */,
 				31EC9FEA936CD6D772BB91A9 /* ProfileView.swift */,
 			);
 			path = Profile;
@@ -430,6 +438,8 @@
 				FB5855509A815413C1C6AFA1 /* ActivityStore.swift */,
 				F8E27EAC7F362A51A408D0EC /* BalanceRepository.swift */,
 				B07214E88835854CA791C14E /* BalanceStore.swift */,
+				99F215D3C3920731625D3EE6 /* ConnectionRepository.swift */,
+				4AB5CC654AA22A57AADC24A8 /* ConnectionStore.swift */,
 				8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */,
 				0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */,
 				591C0E16AC62C2272FA783EA /* ExpenseStore.swift */,
@@ -443,6 +453,7 @@
 				89EAB827A6FDCA5FF2A11FB3 /* SupabaseActivityRepository.swift */,
 				D044ABEA612ACF723FCB7589 /* SupabaseBalanceRepository.swift */,
 				C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */,
+				7E8C8F409F0CF628175F871A /* SupabaseConnectionRepository.swift */,
 				7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */,
 				E6AF7E99F1E669A42B08FB2D /* SupabaseHouseholdRepository.swift */,
 			);
@@ -479,7 +490,6 @@
 				63C47899F6ED4E7E4BA92DE9 /* Production.xcconfig */,
 				EB06FE891FB3F1266DC71601 /* Release.xcconfig */,
 				A01FE9F5D1352AD66B6BF4B1 /* Secrets.example.xcconfig */,
-				BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */,
 				1A7D71C5B5A83B152966ED5D /* Staging.xcconfig */,
 			);
 			path = Config;
@@ -613,6 +623,8 @@
 				5385DE5F359781E589AADE85 /* BudgetArcLayout.swift in Sources */,
 				61B7AF3D80465B3F6F508F58 /* CalendarDateCodec.swift in Sources */,
 				8A2FFEF3FDC79F301B77AE32 /* Category.swift in Sources */,
+				F36D26359DE8335DF3A19C8D /* ConnectionRepository.swift in Sources */,
+				3B6CDA37B5479DE4B4111523 /* ConnectionStore.swift in Sources */,
 				F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */,
 				450CF8D24E4AAD123A859E79 /* EditProposalReviewCard.swift in Sources */,
 				543F69BEE3C867F7FB1ED90F /* ExpenseCategoryPicker.swift in Sources */,
@@ -628,6 +640,7 @@
 				CF22202F705F49295851F0ED /* ExpenseShareStatus.swift in Sources */,
 				79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */,
 				D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */,
+				3642DFE98565927A4CADF9BA /* FriendConnectionViews.swift in Sources */,
 				D5198E9063F112C1765093E2 /* HomeCollapsingTopBar.swift in Sources */,
 				53AED4FFFBB986CB7B4B2DDC /* HomeExpenseRow.swift in Sources */,
 				20488F784A448D5470EF4707 /* HomeTheme.swift in Sources */,
@@ -664,6 +677,7 @@
 				186CE143959250B4610B0458 /* SupabaseActivityRepository.swift in Sources */,
 				7A801B98D5482C7621B591C3 /* SupabaseBalanceRepository.swift in Sources */,
 				33F1ED5603B3BB1925385A6D /* SupabaseClientProvider.swift in Sources */,
+				8B95AFDA7E6069FB3CDE3769 /* SupabaseConnectionRepository.swift in Sources */,
 				EC885C4695DC4841AD1668D2 /* SupabaseExpenseRepository.swift in Sources */,
 				B835F5A9BE1424211EE6FDDF /* SupabaseHouseholdRepository.swift in Sources */,
 				A155F15886F6FED9D59F1145 /* TestAccount.swift in Sources */,

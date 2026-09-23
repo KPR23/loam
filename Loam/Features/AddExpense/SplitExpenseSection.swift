@@ -10,6 +10,7 @@ struct SplitExpenseSection: View {
     var recentPartners: [SplitPartnerOption] = []
     /// When false, at least one partner must stay selected (edit-split / propose-edit flows).
     var requiresPartner: Bool = false
+    var onFriendConnected: ((SplitPartnerOption) -> Void)?
 
     @Binding var selectedPartnerUserIds: Set<UUID>
     @Binding var splitMode: SplitExpenseMode
@@ -84,6 +85,14 @@ struct SplitExpenseSection: View {
     var body: some View {
         Section {
             partnerSearchField
+            NavigationLink {
+                AddFriendView { friend in
+                    selectedPartnerUserIds.insert(friend.userId)
+                    onFriendConnected?(friend)
+                }
+            } label: {
+                Label("Add friend", systemImage: "person.badge.plus")
+            }
         } header: {
             Text("People")
         } footer: {
