@@ -26,8 +26,9 @@ Deno.serve(async (request) => {
   if (!health.last_heartbeat || now - Date.parse(health.last_heartbeat) > 5 * 60_000) alerts.push("worker_heartbeat_missing");
   if (!health.last_notifier_heartbeat || now - Date.parse(health.last_notifier_heartbeat) > 5 * 60_000) alerts.push("notifier_heartbeat_missing");
   if (Number(health.terminal_failures) > 0) alerts.push("terminal_deletion_failure");
-  if (Number(health.email_failures) > 0) alerts.push("terminal_email_delivery_failure");
+  const emailEnabled = Deno.env.get("DELETION_EMAIL_ENABLED") === "true";
+  if (emailEnabled && Number(health.email_failures) > 0) alerts.push("terminal_email_delivery_failure");
   if (health.oldest_pending && now - Date.parse(health.oldest_pending) > 15 * 60_000) alerts.push("request_pending_over_15m");
-  const body = { ok: alerts.length === 0, alerts, last_heartbeat: health.last_heartbeat, last_notifier_heartbeat: health.last_notifier_heartbeat, oldest_pending: health.oldest_pending, terminal_failures: Number(health.terminal_failures), email_failures: Number(health.email_failures), retry_count: Number(health.retry_count), stage_counts: health.stage_counts ?? {}, pending_count: Number(health.pending_count) };
+  const body = { ok: alerts.length === 0, alerts, email_enabled: emailEnabled, last_heartbeat: health.last_heartbeat, last_notifier_heartbeat: health.last_notifier_heartbeat, oldest_pending: health.oldest_pending, terminal_failures: Number(health.terminal_failures), email_failures: Number(health.email_failures), retry_count: Number(health.retry_count), stage_counts: health.stage_counts ?? {}, pending_count: Number(health.pending_count) };
   return Response.json(body, { status: alerts.length ? 503 : 200 });
 });

@@ -8,7 +8,7 @@ Add these secrets to the GitHub Actions `staging` environment:
 - `DELETION_WORKER_KEY`, `DELETION_NOTIFIER_KEY`, `DELETION_MONITOR_KEY` (each at least 32 random characters and distinct)
 - `DELETION_CREDENTIAL_ENCRYPTION_KEY` (base64 encoded 32-byte key; keep stable so retained credentials remain decryptable)
 - `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`
-- `RESEND_API_KEY`, `DELETION_EMAIL_FROM` (a verified sender identity)
+- Optional completion email: set both `RESEND_API_KEY` and `DELETION_EMAIL_FROM` (a verified sender identity), or leave both unset. With them unset, account deletion and in-app status continue to work; the notifier records its heartbeat but sends no email and new deletion requests retain no email address for notification. The monitor response includes `email_enabled: false`.
 
 Add the same secret names to the GitHub Actions `production` environment, replacing `SUPABASE_STAGING_DB_PASSWORD` with `SUPABASE_PRODUCTION_DB_PASSWORD`. Each environment should contain values for its own Supabase project.
 
@@ -20,7 +20,7 @@ Configure an external uptime/heartbeat service to make an HTTPS `GET` every minu
 
 `https://<project-ref>.supabase.co/functions/v1/account-deletion-monitor`
 
-Send `X-Deletion-Monitor-Key: <DELETION_MONITOR_KEY>`. Treat any response other than HTTP 200 as an alert. The endpoint returns HTTP 503 for either missing five-minute worker heartbeat, any terminal deletion or email-delivery failure, or a request pending for more than fifteen minutes. It includes last worker and notifier heartbeats, pending count, oldest request, and failure counts. Keep the monitor outside Supabase so a stopped `pg_cron` scheduler is still detected.
+Send `X-Deletion-Monitor-Key: <DELETION_MONITOR_KEY>`. Treat any response other than HTTP 200 as an alert. The endpoint returns HTTP 503 for either missing five-minute worker heartbeat, any terminal deletion failure, terminal email-delivery failure when email is enabled, or a request pending for more than fifteen minutes. It includes whether email is enabled, last worker and notifier heartbeats, pending count, oldest request, and failure counts. Keep the monitor outside Supabase so a stopped `pg_cron` scheduler is still detected.
 
 Set a five-minute first-check grace period after deployment, then page the operator configured in that external monitoring service on any non-200 response.
 
@@ -45,7 +45,7 @@ select public.recover_account_deletion('<operation UUID>', 'Fixed the Apple clie
 
 Recovery is possible while the encrypted Apple credential remains within its 30-day retention window. If that window expires, the request remains explicitly failed and must be handled with the account owner and Apple authorization; it is never reported as complete. Do not manually mark a deletion complete. Avatar objects are removed before Supabase Auth is soft-deleted. The soft-delete tombstone disables sign-in and preserves the user identifier referenced by other participants' shared history; account RLS also blocks stale access tokens. Shared expenses remain for their other participants with the deleted-user display name.
 
-Email delivery is tracked separately from deletion. The encrypted recipient is retained for up to seven days or twelve attempts and is erased on successful delivery or expiry. A missing verified email does not create an outbox row; the in-app receipt screen still confirms completion.
+Email delivery is tracked separately from deletion. When enabled, the encrypted recipient is retained for up to seven days or twelve attempts and is erased on successful delivery or expiry. A missing verified email, or email delivery being disabled when a request is accepted, does not create an outbox row; the in-app receipt screen still confirms completion. If email is enabled later, an operation accepted while email was enabled may still enqueue a completion email when it finishes, and unexpired queued notices may then be delivered.
 
 ## Staging acceptance before production
 
@@ -55,4 +55,4 @@ Stop each cron job for more than five minutes and force a terminal worker failur
 
 ## App Review notes
 
-Navigation: **Profile → Personal details → Delete account**. After fresh Apple confirmation, account access closes immediately. Deletion usually completes within a few minutes. The signed-out screen restores the secure deletion receipt after relaunch and shows processing, needs attention, completion, or temporary service unavailability. Completion appears in-app; a separate email is sent where a verified address is available. Shared expenses remain visible to other participants with the deleted-user label.
+Navigation: **Profile → Personal details → Delete account**. After fresh Apple confirmation, account access closes immediately. Deletion usually completes within a few minutes. The signed-out screen restores the secure deletion receipt after relaunch and shows processing, needs attention, completion, or temporary service unavailability. Completion appears in-app; a separate email is sent where a verified address is available and completion email delivery is enabled. Shared expenses remain visible to other participants with the deleted-user label.
