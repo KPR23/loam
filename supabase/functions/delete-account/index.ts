@@ -110,7 +110,7 @@ Deno.serve(async (request) => {
       p_receipt_secret_hash: await deletionHash(payload.receiptSecret),
       p_apple_subject: exchangedSubject,
       p_encrypted_credential: await encryptCredential(appleTokens.refresh_token),
-      p_encrypted_notification_address: user.email && user.email_confirmed_at
+      p_encrypted_notification_address: Deno.env.get("DELETION_EMAIL_ENABLED") === "true" && user.email && user.email_confirmed_at
         ? await encryptCredential(user.email)
         : "",
     });

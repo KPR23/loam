@@ -31,8 +31,17 @@ Deno.serve(async (request) => {
   if (!constantTimeEqual(request.headers.get("X-Deletion-Notifier-Key") ?? "", expectedKey)) return new Response("Unauthorized", { status: 401 });
   const url = Deno.env.get("SUPABASE_URL"), serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const resendKey = Deno.env.get("RESEND_API_KEY"), from = Deno.env.get("DELETION_EMAIL_FROM");
-  if (!url || !serviceKey || !resendKey || !from) return Response.json({ error: "notifier_not_configured" }, { status: 503 });
+  const emailEnabled = Deno.env.get("DELETION_EMAIL_ENABLED") === "true";
+  if (!url || !serviceKey) return Response.json({ error: "notifier_not_configured" }, { status: 503 });
   const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  if (!emailEnabled) {
+    const { error: heartbeatError } = await admin.rpc("record_account_deletion_notifier_heartbeat", {
+      p_processed: 0, p_retrying: 0, p_failed: 0,
+    });
+    if (heartbeatError) return Response.json({ error: "notifier_heartbeat_failed" }, { status: 500 });
+    return Response.json({ email_enabled: false, processed: 0, retrying: 0, failed: 0 });
+  }
+  if (!resendKey || !from) return Response.json({ error: "notifier_not_configured" }, { status: 503 });
   const { data: notices, error } = await admin.rpc("claim_account_deletion_notifications");
   if (error) return Response.json({ error: "notification_claim_failed" }, { status: 500 });
   let processed = 0, retrying = 0, failed = 0;
@@ -79,5 +88,5 @@ Deno.serve(async (request) => {
     p_processed: processed, p_retrying: retrying, p_failed: failed,
   });
   if (heartbeatError) return Response.json({ error: "notifier_heartbeat_failed" }, { status: 500 });
-  return Response.json({ processed, retrying, failed });
+  return Response.json({ email_enabled: true, processed, retrying, failed });
 });
