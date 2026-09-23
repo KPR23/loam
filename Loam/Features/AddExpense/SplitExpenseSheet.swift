@@ -30,6 +30,7 @@ struct SplitExpenseSheet: View {
 
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
+    @EnvironmentObject private var connectionStore: ConnectionStore
     @EnvironmentObject private var householdStore: HouseholdStore
     @Environment(\.dismiss) private var dismiss
 
@@ -38,8 +39,9 @@ struct SplitExpenseSheet: View {
     @State private var errorMessage: String?
 
     private var splitPartners: [SplitPartnerOption] {
+        if SupabaseConfig.isConfigured { return connectionStore.connections.filter { $0.userId != myUserId } }
         #if DEBUG
-        SplitPartnerOption.available(
+        return SplitPartnerOption.available(
             for: myUserId,
             savedMainAccount: authSession.savedMainAccountPartnerOption
         )
@@ -92,6 +94,7 @@ struct SplitExpenseSheet: View {
                     participantAmountTexts: $formState.participantAmountTexts
                 )
             }
+            .task { await connectionStore.refresh(userId: myUserId) }
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)
             .navigationTitle(expense.isShared ? "Edit split" : "Split expense")

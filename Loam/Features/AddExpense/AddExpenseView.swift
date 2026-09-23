@@ -8,6 +8,7 @@ private enum AddExpenseStep {
 struct AddExpenseView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
+    @EnvironmentObject private var connectionStore: ConnectionStore
     @EnvironmentObject private var householdStore: HouseholdStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -386,6 +387,7 @@ struct AddExpenseView: View {
 
     private var splitPartners: [SplitPartnerOption] {
         guard let userId = authSession.userId else { return [] }
+        if SupabaseConfig.isConfigured { return connectionStore.connections.filter { $0.userId != userId } }
         #if DEBUG
         return SplitPartnerOption.available(
             for: userId,
@@ -410,7 +412,7 @@ struct AddExpenseView: View {
     }
 
     private var canShowSplitRow: Bool {
-        authSession.userId != nil && !splitPartners.isEmpty
+        authSession.userId != nil && (SupabaseConfig.isConfigured || !splitPartners.isEmpty)
     }
 
     private var splitSummaryText: String {
@@ -435,7 +437,7 @@ struct AddExpenseView: View {
     /// When split UI/partners aren't available, keep existing membership instead of clearing it.
     private var canChangeSplitMembership: Bool {
         SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
-            && !splitPartners.isEmpty
+            && (SupabaseConfig.isConfigured || !splitPartners.isEmpty)
     }
 
     private var parsedMoney: Money? {
@@ -512,6 +514,7 @@ struct AddExpenseView: View {
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)
             .navigationTitle("Split expense")
+            .task { await connectionStore.refresh(userId: userId) }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

@@ -44,6 +44,7 @@ struct ProposeEditSheet: View {
 
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
+    @EnvironmentObject private var connectionStore: ConnectionStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var formState: ProposeEditFormState
@@ -51,8 +52,9 @@ struct ProposeEditSheet: View {
     @State private var errorMessage: String?
 
     private var splitPartners: [SplitPartnerOption] {
+        if SupabaseConfig.isConfigured { return connectionStore.connections.filter { $0.userId != myUserId } }
         #if DEBUG
-        SplitPartnerOption.available(
+        return SplitPartnerOption.available(
             for: myUserId,
             savedMainAccount: authSession.savedMainAccountPartnerOption
         )
@@ -124,6 +126,7 @@ struct ProposeEditSheet: View {
                         .lineLimit(2...4)
                 }
             }
+            .task { await connectionStore.refresh(userId: myUserId) }
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)
             .navigationTitle("Suggest changes")

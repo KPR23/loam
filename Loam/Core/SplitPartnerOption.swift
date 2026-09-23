@@ -1,18 +1,15 @@
 import Foundation
 
-struct SplitPartnerOption: Identifiable, Equatable, Hashable {
+struct SplitPartnerOption: Identifiable, Equatable, Hashable, Sendable {
     let userId: UUID
     let displayName: String
 
     var id: UUID { userId }
 
     static func isSplitAvailable(usesRemoteBackend: Bool) -> Bool {
-        #if DEBUG
-        _ = usesRemoteBackend
-        return true
-        #else
-        return !usesRemoteBackend
-        #endif
+        // Remote accounts split only with an accepted connection; local/demo
+        // storage retains its existing test-person behavior.
+        return !usesRemoteBackend || SupabaseClientProvider.shared != nil
     }
 
     static func available(
@@ -90,6 +87,7 @@ struct SplitPartnerOption: Identifiable, Equatable, Hashable {
     }
 
     static func displayName(for userId: UUID, fallback: String = "Partner") -> String {
+        if let name = ConnectionDirectory.shared.name(for: userId) { return name }
         #if DEBUG
         if let account = TestAccount.configured.first(where: { $0.userId == userId }) {
             return account.displayName
