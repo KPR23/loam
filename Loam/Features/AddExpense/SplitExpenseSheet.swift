@@ -46,7 +46,7 @@ struct SplitExpenseSheet: View {
             savedMainAccount: authSession.savedMainAccountPartnerOption
         )
         #else
-        SplitPartnerOption.available(for: myUserId)
+        return SplitPartnerOption.available(for: myUserId)
         #endif
     }
 
