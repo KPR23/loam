@@ -33,7 +33,12 @@ struct LoamApp: App {
                     await connectionStore.refresh(userId: authSession.userId)
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { Task { await connectionStore.refresh(userId: authSession.userId) } }
+                    if phase == .active {
+                        Task {
+                            await authSession.refreshDeletionStatus()
+                            await connectionStore.refresh(userId: authSession.userId)
+                        }
+                    }
                 }
         }
     }

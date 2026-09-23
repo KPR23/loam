@@ -36,10 +36,16 @@ Deno.serve(async (request) => {
     if (!operationId || receipt.length < 32) {
       return Response.json({ error: "Invalid receipt" }, { status: 400 });
     }
-    const status = await createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+    const url = Deno.env.get("SUPABASE_URL"), serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !serviceKey) return Response.json({ error: "Status service unavailable" }, { status: 503 });
+    const status = await createClient(url, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     }).rpc("deletion_status", { p_operation_id: operationId, p_receipt_secret_hash: await deletionHash(receipt) });
-    return status.error || !status.data?.[0]
+    if (status.error) {
+      console.error("Account deletion status query failed");
+      return Response.json({ error: "Status service unavailable" }, { status: 503 });
+    }
+    return !status.data?.[0]
       ? Response.json({ error: "Not found" }, { status: 404 })
       : Response.json(status.data[0]);
   }
@@ -104,54 +110,14 @@ Deno.serve(async (request) => {
       p_receipt_secret_hash: await deletionHash(payload.receiptSecret),
       p_apple_subject: exchangedSubject,
       p_encrypted_credential: await encryptCredential(appleTokens.refresh_token),
+      p_encrypted_notification_address: user.email && user.email_confirmed_at
+        ? await encryptCredential(user.email)
+        : "",
     });
     if (error) throw error;
     return Response.json({ operationId: data?.[0]?.operation_id ?? payload.operationId, status: data?.[0]?.complete ? "complete" : "processing" }, { status: data?.[0]?.complete ? 200 : 202 });
-  } catch (error) {
-    console.error("Account deletion acceptance failed", error);
-    return Response.json({ error: "Could not accept account deletion. Your account has not changed." }, { status: 500 });
-  }
-
-  /* Legacy immediate-delete code intentionally unreachable: accepting deletion
-     must first create the durable operation above. */
-  try {
-    // The database trigger redacts account data in the same transaction as this
-    // Auth soft deletion. Do this before best-effort Storage cleanup: a failure
-    // after this point can leave only inaccessible orphaned files, never a live
-    // account with private data already destroyed.
-    const { error: deleteError } = await admin.auth.admin.deleteUser(user.id, true);
-    if (deleteError) throw deleteError;
-
-    // Older uploads might remain even if the profile points at only one avatar.
-    // The bucket is private, and the account is already unable to authenticate,
-    // so a cleanup failure is safe to retry operationally without reviving it.
-    try {
-      const avatars = admin.storage.from("avatars");
-      for (let batch = 0; batch < 100; batch += 1) {
-        const { data: files, error: listError } = await avatars.list(user.id, {
-          limit: 100,
-        });
-        if (listError) throw listError;
-        if (!files?.length) break;
-        const paths = files.map((file) => `${user.id}/${file.name}`);
-        const { error: removeError } = await avatars.remove(paths);
-        if (removeError) throw removeError;
-        if (batch === 99) throw new Error("Avatar cleanup exceeded batch limit");
-      }
-    } catch (cleanupError) {
-      // Do not report a failed deletion after Auth and database deletion have
-      // committed. The remaining files are private and can be removed later
-      // with the service role.
-      console.error("Avatar cleanup after account deletion failed", cleanupError);
-      return Response.json({ deleted: true, avatarCleanupPending: true }, { status: 202 });
-    }
-
-    return Response.json({ deleted: true });
-  } catch (error) {
-    console.error("Account deletion failed", error);
-    return Response.json(
-      { error: "Could not delete the account. Please try again." },
-      { status: 500 },
-    );
+  } catch {
+    console.error(JSON.stringify({ event: "account_deletion_acceptance_failed", code: "acceptance_unconfirmed" }));
+    return Response.json({ error: "Could not confirm account deletion. Check the saved deletion status before retrying." }, { status: 500 });
   }
 });
