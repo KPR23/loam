@@ -436,8 +436,15 @@ struct AddExpenseView: View {
 
     /// When split UI/partners aren't available, keep existing membership instead of clearing it.
     private var canChangeSplitMembership: Bool {
-        SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
-            && (SupabaseConfig.isConfigured || !splitPartners.isEmpty)
+        guard SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured) else {
+            return false
+        }
+        if SupabaseConfig.isConfigured {
+            return connectionStore.hasLoadedConnections
+                && !connectionStore.isLoading
+                && connectionStore.lastError == nil
+        }
+        return !splitPartners.isEmpty
     }
 
     private var parsedMoney: Money? {

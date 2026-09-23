@@ -5,6 +5,7 @@ import SwiftUI
 final class ConnectionStore: ObservableObject {
     @Published private(set) var connections: [SplitPartnerOption] = []
     @Published private(set) var isLoading = false
+    @Published private(set) var hasLoadedConnections = false
     @Published var lastError: String?
     private var accountId: UUID?
     private var requestID = UUID()
@@ -13,15 +14,22 @@ final class ConnectionStore: ObservableObject {
         if accountId != userId {
             connections = []
             ConnectionDirectory.shared.replace([])
+            hasLoadedConnections = false
+            lastError = nil
         }
         accountId = userId
-        guard let userId, let client = SupabaseClientProvider.shared else { connections = []; ConnectionDirectory.shared.replace([]); return }
+        guard let userId, let client = SupabaseClientProvider.shared else {
+            connections = []
+            ConnectionDirectory.shared.replace([])
+            hasLoadedConnections = false
+            return
+        }
         let token = UUID(); requestID = token; isLoading = true
         defer { if requestID == token { isLoading = false } }
         do {
             let fetched = try await SupabaseConnectionRepository(client: client).listConnections()
             guard requestID == token, accountId == userId else { return }
-            connections = fetched; ConnectionDirectory.shared.replace(fetched); lastError = nil
+            connections = fetched; ConnectionDirectory.shared.replace(fetched); hasLoadedConnections = true; lastError = nil
         } catch { guard requestID == token else { return }; lastError = error.localizedDescription }
     }
     func createInvitation() async throws -> ConnectionInvitation { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; return try await SupabaseConnectionRepository(client: client).createInvitation() }

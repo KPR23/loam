@@ -13,6 +13,22 @@ update public.connection_invitation
 set expires_at = now()
 where accepted_at is null and (length(code) <> 8 or code !~ '^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]+$');
 
+-- Earlier connections were unique only by their stored orientation, so a pair
+-- could exist twice as (A, B) and (B, A). Retain the accepted record when
+-- possible before enforcing uniqueness regardless of orientation.
+with ranked_connections as (
+  select id,
+         row_number() over (
+           partition by least(user_a, user_b), greatest(user_a, user_b)
+           order by (accepted_at is not null) desc, accepted_at desc nulls last, created_at, id
+         ) as row_number
+  from public.user_connection
+)
+delete from public.user_connection as connection
+using ranked_connections
+where connection.id = ranked_connections.id
+  and ranked_connections.row_number > 1;
+
 create unique index if not exists user_connection_unordered_pair_key
   on public.user_connection (least(user_a, user_b), greatest(user_a, user_b));
 
@@ -134,6 +150,6 @@ end;
 $$;
 
 revoke all on public.connection_code_rate_limit from public, anon, authenticated;
-revoke all on function public.list_connections(), public.create_connection_invitation(), public.revoke_connection_invitation(), public.active_connection_invitation(), public.preview_connection_code(text), public.redeem_connection_code(text) from public, anon;
+revoke all on function public.assert_connection_code_rate(text, integer, interval), public.list_connections(), public.create_connection_invitation(), public.revoke_connection_invitation(), public.active_connection_invitation(), public.preview_connection_code(text), public.redeem_connection_code(text) from public, anon, authenticated;
 grant execute on function public.list_connections(), public.create_connection_invitation(), public.revoke_connection_invitation(), public.active_connection_invitation(), public.preview_connection_code(text), public.redeem_connection_code(text) to authenticated;
 notify pgrst, 'reload schema';
