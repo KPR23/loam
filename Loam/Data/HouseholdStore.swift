@@ -16,11 +16,13 @@ final class HouseholdStore: ObservableObject {
         defer { isLoading = false }
 
         let activeRepository = repository(for: partners)
-        let household = try await activeRepository.ensureSplitHousehold(
-            for: userId,
-            userDisplayName: userDisplayName,
-            partners: partners
-        )
+        let household = try await LoamErrorCapture.withCapture("household.split_setup_failed") {
+            try await activeRepository.ensureSplitHousehold(
+                for: userId,
+                userDisplayName: userDisplayName,
+                partners: partners
+            )
+        }
         testHousehold = household
         return household
     }

@@ -26,3 +26,5 @@ supabase/.temp
 .agents/
 .cursor/
 skills-lock.json
+
+.sentryclirc

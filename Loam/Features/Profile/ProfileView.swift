@@ -45,7 +45,9 @@ final class AvatarStore: ObservableObject {
         }
         let path = "\(userId.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
         let storage = client.storage.from("avatars")
-        try await storage.upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
+        try await LoamErrorCapture.withCapture("profile.avatar_upload_failed") {
+            try await storage.upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
+        }
         do {
             let url = try await storage.createSignedURL(path: path, expiresIn: Self.signedURLLifetime)
             struct Change: Codable { let avatar_path: String }
@@ -62,6 +64,7 @@ final class AvatarStore: ObservableObject {
                 _ = try? await storage.remove(paths: ["\(userId.uuidString.lowercased())/\(previousPath)"])
             }
         } catch {
+            LoamErrorCapture.capture("profile.avatar_metadata_save_failed")
             _ = try? await storage.remove(paths: [path])
             throw error
         }

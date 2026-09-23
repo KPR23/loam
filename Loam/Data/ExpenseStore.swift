@@ -156,12 +156,16 @@ final class ExpenseStore: ObservableObject {
             recurringId: recurringRule?.id,
             shares: shareRecords
         )
-        _ = try await activeRepository.create(expense)
+        _ = try await LoamErrorCapture.withCapture("expense.shared_create_failed") {
+            try await activeRepository.create(expense)
+        }
         await recordActivity(kind: .shared, actorId: userId, expense: expense, recipients: partnerUserIds)
         RecentSplitPartners.record(partnerUserIds, for: userId)
         if var rule = recurringRule {
             rule.nextOccurrence = rule.nextOccurrence(after: spentAt, calendar: AppPreferences.calendar)
-            _ = try await activeRepository.updateRecurringRule(rule)
+            _ = try await LoamErrorCapture.withCapture("expense.recurring_rule_update_failed") {
+                try await activeRepository.updateRecurringRule(rule)
+            }
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
         await refresh(userId: userId)
@@ -206,10 +210,14 @@ final class ExpenseStore: ObservableObject {
             recurringId: recurringRule?.id,
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
-        _ = try await activeRepository.create(expense)
+        _ = try await LoamErrorCapture.withCapture("expense.personal_create_failed") {
+            try await activeRepository.create(expense)
+        }
         if var rule = recurringRule {
             rule.nextOccurrence = rule.nextOccurrence(after: spentAt, calendar: AppPreferences.calendar)
-            _ = try await activeRepository.updateRecurringRule(rule)
+            _ = try await LoamErrorCapture.withCapture("expense.recurring_rule_update_failed") {
+                try await activeRepository.updateRecurringRule(rule)
+            }
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
         await refresh(userId: userId)
@@ -263,7 +271,9 @@ final class ExpenseStore: ObservableObject {
             expense.shares = SplitCalculator.personal(totalMinor: amountMinor, userId: userId).map {
                 ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor)
             }
-            _ = try await activeRepository.update(expense)
+            _ = try await LoamErrorCapture.withCapture("expense.update_failed") {
+                try await activeRepository.update(expense)
+            }
         } else {
             guard let householdId else {
                 throw ExpenseRepositoryError.invalidShares
@@ -291,7 +301,9 @@ final class ExpenseStore: ObservableObject {
                 expense: expense,
                 usersTrustingCreator: usersTrustingCreator
             )
-            _ = try await activeRepository.update(expense)
+            _ = try await LoamErrorCapture.withCapture("expense.update_failed") {
+                try await activeRepository.update(expense)
+            }
         }
 
         if expense.isShared || originalExpense.isShared {
@@ -324,6 +336,7 @@ final class ExpenseStore: ObservableObject {
             }
             await refresh(userId: userId)
         } catch {
+            LoamErrorCapture.capture("expense.delete_failed")
             lastError = error.localizedDescription
         }
     }
@@ -423,7 +436,9 @@ final class ExpenseStore: ObservableObject {
         )
         expense.updatedAt = Date()
 
-        _ = try await activeRepository.update(expense)
+        _ = try await LoamErrorCapture.withCapture("expense.split_setup_failed") {
+            try await activeRepository.update(expense)
+        }
         await recordActivity(kind: .edited, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId })
         RecentSplitPartners.record(partnerUserIds, for: userId)
         await refresh(userId: userId)
@@ -484,6 +499,7 @@ final class ExpenseStore: ObservableObject {
             }
             await refresh(userId: userId)
         } catch {
+            LoamErrorCapture.capture("expense.share_response_failed")
             lastError = error.localizedDescription
             await refresh(userId: userId)
         }
@@ -538,7 +554,9 @@ final class ExpenseStore: ObservableObject {
             message: message
         )
         let activeRepository = repository(for: expense)
-        _ = try await activeRepository.createEditProposal(proposal, expenseId: expense.id)
+        _ = try await LoamErrorCapture.withCapture("expense.edit_proposal_create_failed") {
+            try await activeRepository.createEditProposal(proposal, expenseId: expense.id)
+        }
         await recordActivity(kind: .proposalCreated, actorId: userId, expense: expense, recipients: [expense.createdBy])
         let partnerIds = shares.map(\.userId).filter { $0 != userId }
         RecentSplitPartners.record(partnerIds, for: userId)
@@ -553,7 +571,9 @@ final class ExpenseStore: ObservableObject {
                     ?? proposalExpenses.first(where: { $0.id == id })
             }
             let activeRepository = expense.map { repository(for: $0) } ?? primaryRepository
-            try await activeRepository.respondToProposal(proposalId: proposalId, accept: accept)
+            try await LoamErrorCapture.withCapture("expense.edit_proposal_response_failed") {
+                try await activeRepository.respondToProposal(proposalId: proposalId, accept: accept)
+            }
             if let expense {
                 let proposer = pendingProposals.first(where: { $0.id == proposalId })?.proposedBy
                 await recordActivity(kind: accept ? .proposalAccepted : .proposalRejected, actorId: userId, expense: expense, recipients: proposer.map { [$0] } ?? [])
@@ -626,7 +646,9 @@ final class ExpenseStore: ObservableObject {
         rule.note = note
         rule.location = location
         rule.householdId = householdId
-        return try await repository.createRecurringRule(rule)
+        return try await LoamErrorCapture.withCapture("expense.recurring_rule_create_failed") {
+            try await repository.createRecurringRule(rule)
+        }
     }
 
     /// Creates expense rows for every due occurrence of active rules through today.
