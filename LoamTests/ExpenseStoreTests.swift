@@ -1,294 +1,209 @@
 import XCTest
 @testable import Loam
 
-final class CreateRepaymentParamsTests: XCTestCase {
-    func testNilNoteIsEncodedAsExplicitNullForPostgRESTFunctionResolution() throws {
-        let params = CreateRepaymentParams(
-            toUserId: UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!,
-            amountMinor: 100,
-            currency: "EUR",
-            note: nil,
-            paidAt: "2026-09-17",
-            operationId: UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
-        )
+/// Drives the store the way the screens do, against demo (local) storage.
+@MainActor
+final class ExpenseStoreTests: LocalStorageTestCase {
+    let me = TestUser.alice
+    let partner = TestUser.bob
+    let calendar = AppPreferences.calendar
 
-        let data = try JSONEncoder().encode(params)
-        let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    private var today: Date { calendar.startOfDay(for: Date()) }
 
-        XCTAssertTrue(payload.keys.contains("p_note"))
-        XCTAssertTrue(payload["p_note"] is NSNull)
-        XCTAssertEqual(payload["p_amount_minor"] as? Int, 100)
-        XCTAssertEqual(payload["p_currency"] as? String, "EUR")
-    }
-}
-
-final class ExpenseStoreSummaryTests: XCTestCase {
-    let user = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
-    let other = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
-    let third = UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
-
-    func testPersonalExpenseCountsFully() {
-        let expense = ExpenseRecord(
-            amountMinor: 2500,
-            category: .groceries,
-            paidBy: user,
-            createdBy: user,
-            shares: [ExpenseShareRecord(userId: user, amountMinor: 2500)]
-        )
-        let summary = ExpenseStore.makeSummary(expenses: [expense], userId: user)
-        XCTAssertEqual(summary.totalMine.amountMinor, 2500)
-        XCTAssertEqual(summary.sharedShare.amountMinor, 0)
-        XCTAssertEqual(summary.categoryBreakdown.count, 1)
-        XCTAssertEqual(summary.categoryBreakdown.first?.category, .groceries)
-        XCTAssertEqual(summary.categoryBreakdown.first?.amountMinor, 2500)
+    private func daysAgo(_ count: Int) -> Date {
+        calendar.date(byAdding: .day, value: -count, to: today)!
     }
 
-    func testSharedShareSeparated() {
-        let expense = ExpenseRecord(
-            amountMinor: 1000,
-            category: .dining,
-            paidBy: user,
-            createdBy: user,
-            shares: [
-                ExpenseShareRecord(userId: user, amountMinor: 500, status: .accepted),
-                ExpenseShareRecord(userId: other, amountMinor: 500, status: .accepted),
-            ]
-        )
-        let summary = ExpenseStore.makeSummary(expenses: [expense], userId: user)
-        XCTAssertEqual(summary.totalMine.amountMinor, 500)
-        XCTAssertEqual(summary.sharedShare.amountMinor, 500)
+    private func dailyRule(startingDaysAgo count: Int) -> RecurringRuleRecord {
+        RecurringRuleRecord(ownerUserId: me, amountMinor: 1000, category: .transport, intervalUnit: .day, startDate: daysAgo(count))
     }
 
-    func testPendingShareExcludedFromSummary() {
-        let expense = ExpenseRecord(
-            amountMinor: 2000,
-            category: .groceries,
-            paidBy: other,
-            createdBy: other,
-            shares: [
-                ExpenseShareRecord(userId: other, amountMinor: 1000, status: .accepted),
-                ExpenseShareRecord(userId: user, amountMinor: 1000, status: .pending),
-            ]
-        )
-        let summary = ExpenseStore.makeSummary(expenses: [expense], userId: user)
-        XCTAssertEqual(summary.totalMine.amountMinor, 0)
-        XCTAssertEqual(summary.sharedShare.amountMinor, 0)
+    func testAddingAPersonalExpenseTrimsTextAndUpdatesTheSummary() async throws {
+        let store = ExpenseStore()
+        try await store.addPersonal(amountMinor: 1250, currency: "PLN", category: .groceries, title: "  Weekly shop ", note: "   ", spentAt: Date(), userId: me)
+
+        let expense = try XCTUnwrap(store.expenses.first)
+        XCTAssertEqual(expense.title, "Weekly shop")
+        XCTAssertNil(expense.note)
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 1250)
+        XCTAssertEqual(store.summary.categoryBreakdown, [CategorySpendSlice(category: .groceries, amountMinor: 1250)])
+        XCTAssertNil(store.lastError)
     }
 
-    func testSummaryDoesNotCombineCurrencies() {
-        let pln = ExpenseRecord(
-            amountMinor: 1_000,
-            currency: "PLN",
-            category: .groceries,
-            paidBy: user,
-            createdBy: user,
-            shares: [ExpenseShareRecord(userId: user, amountMinor: 1_000)]
-        )
-        let eur = ExpenseRecord(
-            amountMinor: 1_000,
-            currency: "EUR",
-            category: .groceries,
-            paidBy: user,
-            createdBy: user,
-            shares: [ExpenseShareRecord(userId: user, amountMinor: 1_000)]
-        )
+    func testSplitCountsOnlyMyShareUntilThePartnerAccepts() async throws {
+        let store = ExpenseStore()
+        try await store.addSplit(amountMinor: 1001, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
 
-        XCTAssertEqual(ExpenseStore.makeSummary(expenses: [pln, eur], userId: user, currency: "PLN").totalMine.amountMinor, 1_000)
-        XCTAssertEqual(ExpenseStore.makeSummary(expenses: [pln, eur], userId: user, currency: "EUR").totalMine.amountMinor, 1_000)
+        let expense = try XCTUnwrap(store.expenses.first)
+        XCTAssertEqual(expense.shareRecord(for: me)?.amountMinor, 501)
+        XCTAssertEqual(expense.shareStatus(for: partner), .pending)
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 501)
+        XCTAssertEqual(store.summary.sharedShare.amountMinor, 501)
+        XCTAssertEqual(RecentSplitPartners.loadIDs(for: me), [partner])
+
+        await store.refresh(userId: partner)
+        XCTAssertEqual(store.pendingAcceptanceExpenses.map(\.id), [expense.id])
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 0)
     }
 
-    func testEachParticipantAcceptsIndependently() async throws {
-        let defaultsKey = "loam.local.expenses"
-        UserDefaults.standard.removeObject(forKey: defaultsKey)
-        defer { UserDefaults.standard.removeObject(forKey: defaultsKey) }
+    func testSplitWithSomeoneWhoTrustsMeIsAcceptedAutomatically() async throws {
+        try await LocalExpenseRepository().addTrust(for: partner, trustedUserId: me)
+        let store = ExpenseStore()
+        try await store.addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
 
-        let expense = ExpenseRecord(
-            amountMinor: 3000,
-            category: .groceries,
-            paidBy: user,
-            createdBy: user,
-            shares: [
-                ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
-                ExpenseShareRecord(userId: other, amountMinor: 1000, status: .pending),
-                ExpenseShareRecord(userId: third, amountMinor: 1000, status: .pending),
-            ]
-        )
-
-        let creatorRepo = LocalExpenseRepository()
-        _ = try await creatorRepo.create(expense)
-
-        // First participant accepts — only their share changes.
-        let otherRepo = LocalExpenseRepository()
-        try await otherRepo.respondToShare(expenseId: expense.id, userId: other, action: .accept)
-
-        let afterFirst = try await otherRepo.fetchExpenses(for: other, in: .currentMonth)
-        let afterFirstExpense = try XCTUnwrap(afterFirst.first(where: { $0.id == expense.id }))
-        XCTAssertEqual(afterFirstExpense.shareStatus(for: other), .accepted)
-        XCTAssertEqual(afterFirstExpense.shareStatus(for: third), .pending)
-        XCTAssertEqual(afterFirstExpense.shareStatus(for: user), .accepted)
-
-        XCTAssertEqual(
-            ExpenseStore.makeSummary(expenses: afterFirst, userId: other).totalMine.amountMinor,
-            1000
-        )
-        XCTAssertEqual(
-            ExpenseStore.makeSummary(expenses: afterFirst, userId: third).totalMine.amountMinor,
-            0
-        )
-
-        // Second participant can still accept independently.
-        let thirdRepo = LocalExpenseRepository()
-        try await thirdRepo.respondToShare(expenseId: expense.id, userId: third, action: .accept)
-
-        let afterSecond = try await thirdRepo.fetchExpenses(for: third, in: .currentMonth)
-        let afterSecondExpense = try XCTUnwrap(afterSecond.first(where: { $0.id == expense.id }))
-        XCTAssertEqual(afterSecondExpense.shareStatus(for: other), .accepted)
-        XCTAssertEqual(afterSecondExpense.shareStatus(for: third), .accepted)
-        XCTAssertEqual(
-            ExpenseStore.makeSummary(expenses: afterSecond, userId: third).totalMine.amountMinor,
-            1000
-        )
+        let share = try XCTUnwrap(store.expenses.first?.shareRecord(for: partner))
+        XCTAssertEqual(share.status, .accepted)
+        XCTAssertTrue(share.acceptedViaTrust)
     }
 
-    func testLocalEditKeepsResponsesForUnchangedObligations() async throws {
-        let keys = ["loam.local.expenses", "loam.local.proposals"]
-        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
-        defer { keys.forEach { UserDefaults.standard.removeObject(forKey: $0) } }
-
-        let expense = ExpenseRecord(
-            amountMinor: 3000,
-            category: .groceries,
-            paidBy: user,
-            createdBy: user,
-            shares: [
-                ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
-                ExpenseShareRecord(userId: other, amountMinor: 1000, status: .accepted),
-                ExpenseShareRecord(userId: third, amountMinor: 1000, status: .accepted),
-            ]
-        )
-        let repository = LocalExpenseRepository()
-        _ = try await repository.create(expense)
-
-        // The store rebuilds every share as pending for non-trusting partners.
-        var edited = expense
-        edited.title = "Groceries and snacks"
-        edited.amountMinor = 3200
-        edited.shares = [
-            ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
-            ExpenseShareRecord(userId: other, amountMinor: 1000, status: .pending),
-            ExpenseShareRecord(userId: third, amountMinor: 1200, status: .pending),
-        ]
-        let saved = try await repository.update(edited)
-
-        XCTAssertEqual(saved.shareStatus(for: other), .accepted)
-        XCTAssertEqual(saved.shareStatus(for: third), .pending)
-
-        // A new payer changes everyone's obligation.
-        var repaid = saved
-        repaid.paidBy = other
-        repaid.shares = saved.shares.map {
-            ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor, status: $0.userId == user ? .accepted : .pending)
+    func testAcceptingWithTrustTrustsEachCreatorOnce() async throws {
+        let creatorStore = ExpenseStore()
+        for amount in [1000, 2000] {
+            try await creatorStore.addSplit(amountMinor: amount, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
         }
-        let afterPayerChange = try await repository.update(repaid)
-        XCTAssertEqual(afterPayerChange.shareStatus(for: other), .pending)
+
+        let partnerStore = ExpenseStore()
+        await partnerStore.refresh(userId: partner)
+        await partnerStore.respondToShares(expenseIds: partnerStore.pendingAcceptanceExpenses.map(\.id), userId: partner, action: .acceptWithTrust)
+
+        XCTAssertTrue(partnerStore.pendingAcceptanceExpenses.isEmpty)
+        XCTAssertEqual(partnerStore.summary.totalMine.amountMinor, 1500)
+        let trusted = try await LocalExpenseRepository().fetchTrustedUserIds(for: partner)
+        XCTAssertEqual(trusted, [me])
+        XCTAssertNil(partnerStore.lastError)
     }
 
-    func testAcceptedLocalProposalAcceptsProposerAndKeepsUnchangedResponses() async throws {
-        let keys = ["loam.local.expenses", "loam.local.proposals"]
-        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
-        defer { keys.forEach { UserDefaults.standard.removeObject(forKey: $0) } }
+    func testRejectedSplitDisappearsForThePartner() async throws {
+        try await ExpenseStore().addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
 
-        let expense = ExpenseRecord(
-            amountMinor: 3000,
-            category: .groceries,
-            paidBy: user,
-            createdBy: user,
-            shares: [
-                ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
-                ExpenseShareRecord(userId: other, amountMinor: 1000, status: .accepted),
-                ExpenseShareRecord(userId: third, amountMinor: 1000, status: .accepted),
-            ]
-        )
+        let partnerStore = ExpenseStore()
+        await partnerStore.refresh(userId: partner)
+        await partnerStore.respondToShare(expenseId: try XCTUnwrap(partnerStore.expenses.first?.id), userId: partner, action: .reject)
+
+        XCTAssertTrue(partnerStore.expenses.isEmpty)
+    }
+
+    func testEditingASplitBackToPersonalGivesMeTheWholeAmount() async throws {
+        let store = ExpenseStore()
+        try await store.addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: partner, partnerUserIds: [partner])
+        let expense = try XCTUnwrap(store.expenses.first)
+
+        try await store.update(expenseId: expense.id, amountMinor: 1200, category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: partner, partnerUserIds: [])
+
+        let updated = try XCTUnwrap(store.expenses.first)
+        XCTAssertFalse(updated.isShared)
+        XCTAssertEqual(updated.paidBy, me)
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 1200)
+    }
+
+    func testOnlyTheCreatorCanEditDirectly() async throws {
+        let store = ExpenseStore()
+        try await store.addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
+        let expense = try XCTUnwrap(store.expenses.first)
+
+        do {
+            try await store.update(expenseId: expense.id, amountMinor: 1, category: .dining, note: nil, spentAt: Date(), userId: partner, splitMode: .equal, paidBy: partner, partnerUserIds: [me])
+            XCTFail("A participant rewrote someone else's expense")
+        } catch ExpenseRepositoryError.notFound {}
+    }
+
+    func testRecurringExpenseBackfillsMissedDaysOnce() async throws {
+        let store = ExpenseStore()
+        try await store.addPersonal(amountMinor: 1000, currency: "PLN", category: .transport, note: nil, spentAt: daysAgo(3), userId: me, recurring: dailyRule(startingDaysAgo: 3))
+        await store.refresh(userId: me)
+
         let repository = LocalExpenseRepository()
-        _ = try await repository.create(expense)
-        let proposal = ExpenseEditProposal(
-            expenseId: expense.id,
-            proposedBy: other,
-            amountMinor: 3500,
-            category: .groceries,
-            spentAt: expense.spentAt,
-            paidBy: user,
-            shares: [
-                ExpenseShareRecord(userId: user, amountMinor: 1000),
-                ExpenseShareRecord(userId: other, amountMinor: 1500),
-                ExpenseShareRecord(userId: third, amountMinor: 1000),
-            ]
-        )
-        _ = try await repository.createEditProposal(proposal, expenseId: expense.id)
-        try await repository.respondToProposal(proposalId: proposal.id, accept: true)
-
-        let appliedRows = try await repository.fetchExpenses(ids: [expense.id])
-        let applied = try XCTUnwrap(appliedRows.first)
-        XCTAssertEqual(applied.amountMinor, 3500)
-        XCTAssertEqual(applied.shareStatus(for: other), .accepted)
-        XCTAssertEqual(applied.shareStatus(for: third), .accepted)
+        let rule = try await repository.fetchActiveRecurringRules(for: me).first
+        let ruleId = try XCTUnwrap(rule?.id)
+        for offset in 0...3 {
+            let exists = try await repository.hasExpense(recurringId: ruleId, spentAt: daysAgo(offset))
+            XCTAssertTrue(exists, "Missing the occurrence from \(offset) days ago")
+        }
+        XCTAssertEqual(rule?.nextOccurrence, calendar.date(byAdding: .day, value: 1, to: today))
+        let thisMonth = try await repository.fetchExpenses(for: me, in: DatePeriod(from: today))
+        XCTAssertEqual(thisMonth.filter { $0.spentAt == today }.count, 1, "A refresh generated today twice")
     }
 
-    func testLegacyDemoRuleAdoptsSplitFromLatestOccurrence() async throws {
-        let keys = ["loam.local.expenses", "loam.local.recurring"]
-        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
-        defer { keys.forEach { UserDefaults.standard.removeObject(forKey: $0) } }
+    func testDeletingOneOccurrenceSkipsItForGood() async throws {
+        let store = ExpenseStore()
+        try await store.addPersonal(amountMinor: 1000, currency: "PLN", category: .transport, note: nil, spentAt: daysAgo(2), userId: me, recurring: dailyRule(startingDaysAgo: 2))
+        await store.setPeriod(DatePeriod(from: daysAgo(1)), userId: me)
+        let occurrence = try XCTUnwrap(store.expenses.first { $0.spentAt == daysAgo(1) })
 
-        let rule = RecurringRuleRecord(ownerUserId: user, amountMinor: 1000, category: .housing, intervalUnit: .month, startDate: Date())
-        // Rules saved before payer and split lived on the rule have neither key.
-        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(rule)) as? [String: Any])
-        legacy.removeValue(forKey: "paidBy")
-        legacy.removeValue(forKey: "shares")
-        UserDefaults.standard.set(try JSONSerialization.data(withJSONObject: [legacy]), forKey: "loam.local.recurring")
+        await store.delete(id: occurrence.id, userId: me, recurringMode: .occurrenceOnly)
+        await store.refresh(userId: me)
 
-        let older = ExpenseRecord(
-            amountMinor: 1000, category: .housing, spentAt: Date(timeIntervalSinceNow: -86_400 * 40),
-            paidBy: user, createdBy: user, recurringId: rule.id,
-            shares: [ExpenseShareRecord(userId: user, amountMinor: 1000)]
-        )
-        let latest = ExpenseRecord(
-            amountMinor: 1200, category: .housing, title: "Rent", spentAt: Date(timeIntervalSinceNow: -86_400 * 10),
-            paidBy: other, createdBy: user, recurringId: rule.id,
-            shares: [ExpenseShareRecord(userId: user, amountMinor: 600), ExpenseShareRecord(userId: other, amountMinor: 600)]
-        )
         let repository = LocalExpenseRepository()
-        _ = try await repository.create(latest)
-        _ = try await repository.create(older)
-
-        let migratedRule = try await repository.fetchRecurringRule(id: rule.id)
-        let migrated = try XCTUnwrap(migratedRule)
-        XCTAssertEqual(migrated.paidBy, other)
-        XCTAssertEqual(migrated.amountMinor, 1200)
-        XCTAssertEqual(migrated.title, "Rent")
-        XCTAssertEqual(migrated.shares.map(\.userId), [user, other])
-        XCTAssertEqual(migrated.shares.map(\.amountMinor), [600, 600])
-
-        // The migration is saved, so a fresh load keeps the split.
-        let reloadedRule = try await LocalExpenseRepository().fetchRecurringRule(id: rule.id)
-        let reloaded = try XCTUnwrap(reloadedRule)
-        XCTAssertEqual(reloaded.shares.count, 2)
+        let rule = try await repository.fetchRecurringRule(id: try XCTUnwrap(occurrence.recurringId))
+        XCTAssertEqual(rule?.isActive, true)
+        XCTAssertEqual(rule?.skippedDates, [daysAgo(1)])
+        let recreated = try await repository.hasExpense(recurringId: occurrence.recurringId!, spentAt: daysAgo(1))
+        XCTAssertFalse(recreated)
+        XCTAssertNil(store.lastError)
     }
 
-    func testPendingAcceptanceIsPerUser() {
-        let expense = ExpenseRecord(
-            amountMinor: 3000,
-            category: .shopping,
-            paidBy: user,
-            createdBy: user,
-            shares: [
-                ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
-                ExpenseShareRecord(userId: other, amountMinor: 1000, status: .accepted),
-                ExpenseShareRecord(userId: third, amountMinor: 1000, status: .pending),
-            ]
+    func testStoppingASeriesEndsItAndRemovesLaterOccurrences() async throws {
+        let store = ExpenseStore()
+        try await store.addPersonal(amountMinor: 1000, currency: "PLN", category: .transport, note: nil, spentAt: daysAgo(2), userId: me, recurring: dailyRule(startingDaysAgo: 2))
+        await store.setPeriod(DatePeriod(from: daysAgo(1)), userId: me)
+        let occurrence = try XCTUnwrap(store.expenses.first { $0.spentAt == daysAgo(1) })
+        let ruleId = try XCTUnwrap(occurrence.recurringId)
+
+        await store.delete(id: occurrence.id, userId: me, recurringMode: .stopRecurring)
+        await store.refresh(userId: me)
+
+        let repository = LocalExpenseRepository()
+        let rule = try await repository.fetchRecurringRule(id: ruleId)
+        XCTAssertEqual(rule?.isActive, false)
+        XCTAssertEqual(rule?.endDate, daysAgo(1))
+        let seedKept = try await repository.hasExpense(recurringId: ruleId, spentAt: daysAgo(2))
+        let laterKept = try await repository.hasExpense(recurringId: ruleId, spentAt: today)
+        XCTAssertTrue(seedKept)
+        XCTAssertFalse(laterKept)
+    }
+
+    func testProposalFlowBetweenParticipantAndCreator() async throws {
+        let creatorStore = ExpenseStore()
+        try await creatorStore.addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
+
+        let partnerStore = ExpenseStore()
+        await partnerStore.refresh(userId: partner)
+        let expense = try XCTUnwrap(partnerStore.expenses.first)
+        try await partnerStore.proposeEdit(
+            for: expense, userId: partner, amountMinor: 800, category: .dining, note: nil, spentAt: expense.spentAt, paidBy: me,
+            shares: [ExpenseShareRecord(userId: me, amountMinor: 400), ExpenseShareRecord(userId: partner, amountMinor: 400)],
+            message: "Wrong total"
         )
 
-        XCTAssertFalse(expense.isPendingAcceptance(for: user))
-        XCTAssertFalse(expense.isPendingAcceptance(for: other))
-        XCTAssertTrue(expense.isPendingAcceptance(for: third))
+        await creatorStore.refresh(userId: me)
+        let proposal = try XCTUnwrap(creatorStore.incomingProposals(for: me).first)
+        XCTAssertEqual(creatorStore.pendingProposals(for: expense.id, userId: me).map(\.id), [proposal.id])
+        await creatorStore.respondToProposal(proposalId: proposal.id, userId: me, accept: true)
+
+        XCTAssertTrue(creatorStore.incomingProposals(for: me).isEmpty)
+        XCTAssertEqual(creatorStore.expenses.first?.amountMinor, 800)
+        XCTAssertEqual(creatorStore.expenses.first?.shareStatus(for: partner), .accepted, "The proposer agreed to their own change")
+    }
+
+    func testSignedOutStoreIsEmpty() async throws {
+        let store = ExpenseStore()
+        try await store.addPersonal(amountMinor: 1000, currency: "PLN", category: .other, note: nil, spentAt: Date(), userId: me)
+
+        await store.refresh(userId: nil)
+
+        XCTAssertTrue(store.expenses.isEmpty)
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 0)
+    }
+
+    func testSwitchingMonthsShowsThatMonthOnly() async throws {
+        let store = ExpenseStore()
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: today)!
+        try await store.addPersonal(amountMinor: 700, currency: "PLN", category: .other, note: nil, spentAt: lastMonth, userId: me)
+        XCTAssertTrue(store.expenses.isEmpty)
+
+        await store.setPeriod(DatePeriod(from: lastMonth), userId: me)
+
+        XCTAssertEqual(store.expenses.map(\.amountMinor), [700])
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 700)
     }
 }

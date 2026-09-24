@@ -138,20 +138,4 @@ enum RecentSplitPartners {
         }
         return raw.compactMap(UUID.init(uuidString:))
     }
-
-    #if DEBUG
-    static func resetForTesting(userId: UUID? = nil) {
-        if let userId {
-            UserDefaults.standard.removeObject(forKey: defaultsKey(for: userId))
-            return
-        }
-        // Clear any keys written by tests (legacy global + per-user).
-        UserDefaults.standard.removeObject(forKey: "loam.recentSplitPartnerUserIds")
-        for key in UserDefaults.standard.dictionaryRepresentation().keys
-            where key.hasPrefix("loam.recentSplitPartnerUserIds.")
-        {
-            UserDefaults.standard.removeObject(forKey: key)
-        }
-    }
-    #endif
 }
