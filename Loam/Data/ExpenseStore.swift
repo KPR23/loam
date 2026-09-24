@@ -32,6 +32,18 @@ final class ExpenseStore: ObservableObject {
         await refresh(userId: userId)
     }
 
+    /// Months and days follow the selected time zone. Keeps "this month" selected
+    /// when that zone moves across a month boundary, and refetches with the new day edges.
+    func timeZoneDidChange(from oldTimeZone: TimeZone, userId: UUID?, now: Date = Date()) async {
+        var oldCalendar = Calendar(identifier: .gregorian)
+        oldCalendar.timeZone = oldTimeZone
+        let old = oldCalendar.dateComponents([.year, .month], from: now)
+        if let year = old.year, let month = old.month, period == .month(year: year, month: month) {
+            period = DatePeriod(from: now)
+        }
+        await refresh(userId: userId)
+    }
+
     func refresh(userId: UUID?) async {
         currentUserId = userId
         guard let userId else {

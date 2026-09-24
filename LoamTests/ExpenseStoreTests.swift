@@ -206,4 +206,40 @@ final class ExpenseStoreTests: LocalStorageTestCase {
         XCTAssertEqual(store.expenses.map(\.amountMinor), [700])
         XCTAssertEqual(store.summary.totalMine.amountMinor, 700)
     }
+
+    func testChangingTimeZoneKeepsThisMonthSelected() async throws {
+        // 20:00 UTC on Sep 30 is still September in Honolulu but October in Kiritimati.
+        let now = ISO8601DateFormatter().date(from: "2026-09-30T20:00:00Z")!
+        setTimeZonePreference("Pacific/Honolulu")
+        let store = ExpenseStore()
+        await store.setPeriod(.month(year: 2026, month: 9), userId: me)
+
+        setTimeZonePreference("Pacific/Kiritimati")
+        await store.timeZoneDidChange(from: TimeZone(identifier: "Pacific/Honolulu")!, userId: me, now: now)
+
+        XCTAssertEqual(store.period, .month(year: 2026, month: 10))
+    }
+
+    func testChangingTimeZoneKeepsAMonthTheUserBrowsedTo() async throws {
+        let now = ISO8601DateFormatter().date(from: "2026-09-30T20:00:00Z")!
+        setTimeZonePreference("Pacific/Honolulu")
+        let store = ExpenseStore()
+        await store.setPeriod(.month(year: 2026, month: 5), userId: me)
+
+        setTimeZonePreference("Pacific/Kiritimati")
+        await store.timeZoneDidChange(from: TimeZone(identifier: "Pacific/Honolulu")!, userId: me, now: now)
+
+        XCTAssertEqual(store.period, .month(year: 2026, month: 5))
+    }
+
+    func testChangingTimeZoneRefetchesWithTheNewDayEdges() async throws {
+        setTimeZonePreference("Pacific/Honolulu")
+        let store = ExpenseStore()
+        await store.refresh(userId: me)
+        _ = try await LocalExpenseRepository().create(personalExpense(900))
+
+        await store.timeZoneDidChange(from: TimeZone(identifier: "Pacific/Honolulu")!, userId: me)
+
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 900)
+    }
 }
