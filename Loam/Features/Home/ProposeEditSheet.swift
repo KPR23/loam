@@ -20,7 +20,7 @@ private struct ProposeEditFormState: Equatable {
         let partnerUserIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId)
         let splitSeed = SplitFormSeed.from(expense: expense, myUserId: myUserId)
         return ProposeEditFormState(
-            amountText: Money.sanitizeTypingInput(MoneyFormatter.typingAmount(from: expense.money)),
+            amountText: MoneyFormatter.editableAmount(from: expense.money),
             category: expense.category,
             title: expense.title ?? "",
             note: expense.note ?? "",

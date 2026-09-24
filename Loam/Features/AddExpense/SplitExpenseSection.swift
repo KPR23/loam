@@ -486,7 +486,7 @@ struct SplitExpenseSection: View {
             paidByUserId: paidByUserId
         )
         participantAmountTexts = Dictionary(uniqueKeysWithValues: shares.map {
-            ($0.userId, MoneyFormatter.typingAmount(from: Money(amountMinor: $0.amountMinor, currencyCode: currencyCode)))
+            ($0.userId, MoneyFormatter.editableAmount(from: Money(amountMinor: $0.amountMinor, currencyCode: currencyCode)))
         })
     }
 

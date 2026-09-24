@@ -24,6 +24,18 @@ enum MoneyFormatter {
         decimalAmount(from: money, locale: locale, minimumFractionDigits: 0)
     }
 
+    /// Seed for editable amount fields, in the exact form `Money.sanitizeTypingInput`
+    /// produces, e.g. `1234,5`. Never grouped, so it parses back to the same amount.
+    static func editableAmount(from money: Money) -> String {
+        let major = money.amountMinor / 100
+        let fraction = money.amountMinor % 100
+        switch fraction {
+        case 0: return "\(major)"
+        case let tens where tens % 10 == 0: return "\(major),\(tens / 10)"
+        default: return "\(major),\(String(format: "%02d", fraction))"
+        }
+    }
+
     private static func decimalAmount(
         from money: Money,
         locale: Locale,
