@@ -5,14 +5,16 @@ actor SupabaseActivityRepository: ActivityRepository {
     private let client: SupabaseClient
     init(client: SupabaseClient) { self.client = client }
 
-    func fetchEvents(for userId: UUID, before: ActivityEvent?) async throws -> ActivityPage {
+    func fetchEvents(for userId: UUID, before cursor: UUID?) async throws -> ActivityPage {
         struct Params: Encodable {
             let beforeId: UUID?
             enum CodingKeys: String, CodingKey { case beforeId = "p_before_id" }
         }
-        let rows: [ActivityDTO] = try await client.rpc("activity_page", params: Params(beforeId: before?.id)).execute().value
-        let events = rows.compactMap(\.event)
-        return ActivityPage(events: Array(events.prefix(50)), hasMore: events.count > 50)
+        let rows: [ActivityDTO] = try await client.rpc("activity_page", params: Params(beforeId: cursor)).execute().value
+        // Page on the raw rows: skipping a kind this build doesn't know must
+        // not hide "Load more" or move the cursor.
+        let page = rows.prefix(50)
+        return ActivityPage(events: page.compactMap(\.event), hasMore: rows.count > 50, nextCursor: page.last?.id)
     }
 
     func fetchExpenseEvents(expenseId: UUID, userId: UUID) async throws -> [ActivityEvent] {

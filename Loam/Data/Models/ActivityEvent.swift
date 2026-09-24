@@ -160,4 +160,7 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
 struct ActivityPage: Sendable {
     let events: [ActivityEvent]
     let hasMore: Bool
+    /// ID of the last row the backend returned for this page, including rows
+    /// this client could not show, so paging never stalls on them.
+    let nextCursor: UUID?
 }

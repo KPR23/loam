@@ -4,15 +4,19 @@ actor LocalActivityRepository: ActivityRepository {
     private let key = "loam.local.activity.v1"
     private struct Stored: Codable { let event: ActivityEvent; let audience: [UUID] }
 
-    func fetchEvents(for userId: UUID, before: ActivityEvent?) async throws -> ActivityPage {
+    func fetchEvents(for userId: UUID, before cursor: UUID?) async throws -> ActivityPage {
         let visible = load().filter { $0.audience.contains(userId) }
         let unsorted = visible.map { $0.event }
         let all = unsorted.sorted { lhs, rhs in
             lhs.occurredAt == rhs.occurredAt ? lhs.id.uuidString > rhs.id.uuidString : lhs.occurredAt > rhs.occurredAt
         }
         let filtered: [ActivityEvent]
-        if let before { filtered = all.filter { $0.occurredAt < before.occurredAt || ($0.occurredAt == before.occurredAt && $0.id.uuidString < before.id.uuidString) } } else { filtered = all }
-        return ActivityPage(events: Array(filtered.prefix(50)), hasMore: filtered.count > 50)
+        if let cursor {
+            guard let index = all.firstIndex(where: { $0.id == cursor }) else { return ActivityPage(events: [], hasMore: false, nextCursor: nil) }
+            filtered = Array(all[(index + 1)...])
+        } else { filtered = all }
+        let page = Array(filtered.prefix(50))
+        return ActivityPage(events: page, hasMore: filtered.count > 50, nextCursor: page.last?.id)
     }
 
     func fetchExpenseEvents(expenseId: UUID, userId: UUID) async throws -> [ActivityEvent] {

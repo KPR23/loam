@@ -7,18 +7,19 @@ final class ActivityStore: ObservableObject {
     @Published private(set) var canLoadMore = false
     @Published var lastError: String?
     private var accountId: UUID?
+    private var nextCursor: UUID?
 
     func refresh(userId: UUID?) async {
-        guard let userId else { accountId = nil; events = []; canLoadMore = false; lastError = nil; return }
+        guard let userId else { accountId = nil; events = []; canLoadMore = false; nextCursor = nil; lastError = nil; return }
         accountId = userId; isLoading = true; lastError = nil
         defer { isLoading = false }
-        do { let page = try await ActivityRepositoryFactory.make().fetchEvents(for: userId, before: nil); guard accountId == userId else { return }; events = coalesceSharedEvents(page.events); canLoadMore = page.hasMore } catch { guard accountId == userId else { return }; lastError = error.localizedDescription }
+        do { let page = try await ActivityRepositoryFactory.make().fetchEvents(for: userId, before: nil); guard accountId == userId else { return }; events = coalesceSharedEvents(page.events); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil } catch { guard accountId == userId else { return }; lastError = error.localizedDescription }
     }
 
     func loadMore(userId: UUID) async {
-        guard !isLoading, canLoadMore, let last = events.last else { return }; isLoading = true
+        guard !isLoading, canLoadMore, let cursor = nextCursor else { return }; isLoading = true
         defer { isLoading = false }
-        do { let page = try await ActivityRepositoryFactory.make().fetchEvents(for: userId, before: last); guard accountId == userId else { return }; events = coalesceSharedEvents(events + page.events); canLoadMore = page.hasMore } catch { lastError = error.localizedDescription }
+        do { let page = try await ActivityRepositoryFactory.make().fetchEvents(for: userId, before: cursor); guard accountId == userId else { return }; events = coalesceSharedEvents(events + page.events); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil } catch { lastError = error.localizedDescription }
     }
 
     func recordLocal(_ event: ActivityEvent, audience: [UUID]) async {
