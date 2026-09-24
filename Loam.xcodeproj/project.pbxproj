@@ -96,6 +96,7 @@
 		F36D26359DE8335DF3A19C8D /* ConnectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F215D3C3920731625D3EE6 /* ConnectionRepository.swift */; };
 		F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */; };
 		F5FF7A97367CF369F639062C /* PendingExpensesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E27DC7E441F9167DCEB57D /* PendingExpensesSheet.swift */; };
+		F6A051DA5229C09A10E1D723 /* UITestStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8497DC733F24030334FBDB /* UITestStorageTests.swift */; };
 		F7D1E2A7318C3E027F56FBCA /* SettlementMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A97EB25D9F1644021698E45B /* SettlementMode.swift */; };
 		F8F43A38B3DB55C0897F1281 /* ExpenseEditProposal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB9AB5930F0CF7A98C86DEC /* ExpenseEditProposal.swift */; };
 		F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08A73A1CF023A5DDE2B32C0 /* DeepLinkHandler.swift */; };
@@ -126,6 +127,7 @@
 		05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExpenseRepository.swift; sourceTree = "<group>"; };
 		08BD81EDCA6E65CC7B05C125 /* BalanceSimplifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceSimplifierTests.swift; sourceTree = "<group>"; };
 		0A3D412D891B98D11462EB02 /* Loam.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Loam.entitlements; sourceTree = "<group>"; };
+		0A8497DC733F24030334FBDB /* UITestStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestStorageTests.swift; sourceTree = "<group>"; };
 		0ACAD5F32C6AA82B9023FCEF /* LocalActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalActivityRepository.swift; sourceTree = "<group>"; };
 		0C15AD0F34F080CB70FB979F /* LoamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamApp.swift; sourceTree = "<group>"; };
 		0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepositoryFactory.swift; sourceTree = "<group>"; };
@@ -452,6 +454,7 @@
 				6C0334CD52C6BA2DB298B560 /* SplitPartnerOptionTests.swift */,
 				B3AA130246F214EF2F1E6209 /* SplitValidationTests.swift */,
 				3E49E2A84778450763BB7A2F /* SupabaseConfigTests.swift */,
+				0A8497DC733F24030334FBDB /* UITestStorageTests.swift */,
 				DF8A5809B2CCE000E48B749B /* WireFormatTests.swift */,
 			);
 			path = LoamTests;
@@ -710,6 +713,7 @@
 				F2C7F92037180D928A23DEB6 /* SplitValidationTests.swift in Sources */,
 				40CE985228700649412B0057 /* SupabaseConfigTests.swift in Sources */,
 				A15AFB79C7F55A44566E7A2E /* TestSupport.swift in Sources */,
+				F6A051DA5229C09A10E1D723 /* UITestStorageTests.swift in Sources */,
 				1FE82009647DEFA6B7980F0A /* WireFormatTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

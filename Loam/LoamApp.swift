@@ -16,8 +16,10 @@ struct LoamApp: App {
 
     init() {
         #if DEBUG
-        if LaunchEnvironment.resetsLocalData, let domain = Bundle.main.bundleIdentifier {
-            UserDefaults.standard.removePersistentDomain(forName: domain)
+        if LaunchEnvironment.resetsLocalData {
+            UITestStorage.setAsideAndClear()
+        } else if !LaunchEnvironment.isAutomatedTest {
+            UITestStorage.restore()
         }
         #endif
         // Test runs must never report to Sentry or PostHog.
@@ -89,6 +91,43 @@ enum LaunchEnvironment {
 
     static var isAutomatedTest: Bool { isUnitTestHost || isUITesting }
 }
+
+#if DEBUG
+/// UI tests start from empty demo storage. The simulator's own data is set
+/// aside first and put back on the next normal launch, so running the UI
+/// tests never costs a developer their demo expenses or preferences.
+enum UITestStorage {
+    static let defaultBackupURL = URL.applicationSupportDirectory.appending(path: "ui-test-defaults-backup.plist")
+
+    static func setAsideAndClear(
+        defaults: UserDefaults = .standard,
+        domain: String = Bundle.main.bundleIdentifier ?? "",
+        backupURL: URL = defaultBackupURL
+    ) {
+        // Later launches in the same test run must not replace the real data with test data.
+        if !FileManager.default.fileExists(atPath: backupURL.path) {
+            let saved = defaults.persistentDomain(forName: domain) ?? [:]
+            try? FileManager.default.createDirectory(at: backupURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            guard (try? PropertyListSerialization.data(fromPropertyList: saved, format: .binary, options: 0).write(to: backupURL)) != nil else {
+                return
+            }
+        }
+        defaults.removePersistentDomain(forName: domain)
+    }
+
+    static func restore(
+        defaults: UserDefaults = .standard,
+        domain: String = Bundle.main.bundleIdentifier ?? "",
+        backupURL: URL = defaultBackupURL
+    ) {
+        guard let data = try? Data(contentsOf: backupURL),
+              let saved = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        else { return }
+        defaults.setPersistentDomain(saved, forName: domain)
+        try? FileManager.default.removeItem(at: backupURL)
+    }
+}
+#endif
 
 /// Sends stable operation labels only; never pass backend errors or user content here.
 enum LoamErrorCapture {
