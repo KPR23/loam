@@ -65,6 +65,42 @@ final class RecurringMaterializerTests: XCTestCase {
         ])
     }
 
+    func testMonthEndRuleStaysOnLastDayOfMonth() {
+        let rule = makeRule(unit: .month, count: 1, next: date(2027, 1, 31))
+        let dates = RecurringMaterializer.dueDates(for: rule, through: date(2027, 5, 31), calendar: calendar)
+
+        XCTAssertEqual(dates, [
+            date(2027, 1, 31),
+            date(2027, 2, 28),
+            date(2027, 3, 31),
+            date(2027, 4, 30),
+            date(2027, 5, 31),
+        ])
+        XCTAssertEqual(rule.nextOccurrence(after: date(2027, 5, 31), calendar: calendar), date(2027, 6, 30))
+    }
+
+    func testLeapDayYearlyRuleReturnsOnLeapYears() {
+        let rule = makeRule(unit: .year, count: 1, next: date(2028, 2, 29))
+        let dates = RecurringMaterializer.dueDates(for: rule, through: date(2032, 3, 1), calendar: calendar)
+
+        XCTAssertEqual(dates, [
+            date(2028, 2, 29),
+            date(2029, 2, 28),
+            date(2030, 2, 28),
+            date(2031, 2, 28),
+            date(2032, 2, 29),
+        ])
+    }
+
+    func testDriftedNextOccurrenceSnapsToSchedule() {
+        // Stored by the old stepping: Jan 31, Feb 28, then Mar 28.
+        var rule = makeRule(unit: .month, count: 1, next: date(2027, 1, 31))
+        rule.nextOccurrence = date(2027, 3, 28)
+        let dates = RecurringMaterializer.dueDates(for: rule, through: date(2027, 4, 30), calendar: calendar)
+
+        XCTAssertEqual(dates, [date(2027, 3, 31), date(2027, 4, 30)])
+    }
+
     func testDefaultCalendarUsesSelectedPreferenceTimeZone() {
         let defaults = UserDefaults.standard
         let priorTimeZone = defaults.object(forKey: AppPreferences.timeZoneKey)
