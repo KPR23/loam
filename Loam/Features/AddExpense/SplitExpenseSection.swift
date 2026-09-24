@@ -19,12 +19,33 @@ struct SplitExpenseSection: View {
     @Binding var participantAmountTexts: [UUID: String]
 
     @State private var partnerSearchText = ""
+    /// Existing participants missing from `availablePartners` when the form
+    /// opened: connections load asynchronously, and a co-participant may not
+    /// be connected to the person editing. They stay listed, even after being
+    /// deselected, so they can be removed and added back.
+    @State private var retainedPartners: [SplitPartnerOption] = []
 
     private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
 
     /// Current user is never selectable in the picker UI.
     private var selectablePartners: [SplitPartnerOption] {
-        availablePartners.filter { $0.userId != myUserId }
+        let available = availablePartners.filter { $0.userId != myUserId }
+        var listedIds = Set(available.map(\.userId))
+        var retained: [SplitPartnerOption] = []
+        for partner in retainedPartners + unlistedSelectedPartners where listedIds.insert(partner.userId).inserted {
+            retained.append(partner)
+        }
+        return available + retained
+    }
+
+    /// Selected people without a row in `availablePartners`. Dropping them
+    /// would reset the payer and the prefilled shares.
+    private var unlistedSelectedPartners: [SplitPartnerOption] {
+        let availableIds = Set(availablePartners.map(\.userId))
+        return selectedPartnerUserIds
+            .filter { $0 != myUserId && !availableIds.contains($0) }
+            .map { SplitPartnerOption(userId: $0, displayName: SplitPartnerOption.displayName(for: $0)) }
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 
     private var normalizedSearch: String {
@@ -53,18 +74,8 @@ struct SplitExpenseSection: View {
         return selectablePartners.filter { !recentIds.contains($0.userId) }
     }
 
-    /// Every selected person, including existing participants that are not in
-    /// `availablePartners` (yet): connections load asynchronously, and a
-    /// co-participant may not be connected to the person editing. Dropping
-    /// them would reset the payer and the prefilled shares.
     private var selectedPartners: [SplitPartnerOption] {
-        let known = selectablePartners.filter { selectedPartnerUserIds.contains($0.userId) }
-        let knownIds = Set(known.map(\.userId))
-        let unknown = selectedPartnerUserIds
-            .filter { $0 != myUserId && !knownIds.contains($0) }
-            .map { SplitPartnerOption(userId: $0, displayName: SplitPartnerOption.displayName(for: $0)) }
-            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-        return known + unknown
+        selectablePartners.filter { selectedPartnerUserIds.contains($0.userId) }
     }
 
     private var splitParticipants: [SplitParticipantOption] {
@@ -107,6 +118,11 @@ struct SplitExpenseSection: View {
             Text("People")
         } footer: {
             Text("Search for people to include in this expense.")
+        }
+        .onAppear {
+            if retainedPartners.isEmpty {
+                retainedPartners = unlistedSelectedPartners
+            }
         }
 
         if isSearching {
