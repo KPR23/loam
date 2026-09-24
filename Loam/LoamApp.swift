@@ -15,18 +15,7 @@ struct LoamApp: App {
     @StateObject private var connectionStore = ConnectionStore()
 
     init() {
-        guard
-            let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String,
-            !dsn.isEmpty
-        else {
-            return
-        }
-
-        SentrySDK.start { options in
-            options.dsn = dsn
-            options.environment = Bundle.main.object(forInfoDictionaryKey: "LOAM_ENVIRONMENT") as? String ?? "production"
-            options.sendDefaultPii = false
-        }
+        Telemetry.start()
     }
 
     var body: some Scene {
@@ -46,6 +35,9 @@ struct LoamApp: App {
                 }
                 .task(id: authSession.userId) {
                     await connectionStore.refresh(userId: authSession.userId)
+                }
+                .onChange(of: authSession.userId) { _, userId in
+                    Telemetry.setUser(authSession.usesDemoMode ? nil : userId)
                 }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
