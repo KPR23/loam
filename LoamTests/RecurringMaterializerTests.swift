@@ -1,7 +1,7 @@
 import XCTest
 @testable import Loam
 
-final class RecurringMaterializerTests: XCTestCase {
+final class RecurringMaterializerTests: LocalStorageTestCase {
     private let owner = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
     private let calendar = Calendar.current
 
@@ -102,16 +102,7 @@ final class RecurringMaterializerTests: XCTestCase {
     }
 
     func testDefaultCalendarUsesSelectedPreferenceTimeZone() {
-        let defaults = UserDefaults.standard
-        let priorTimeZone = defaults.object(forKey: AppPreferences.timeZoneKey)
-        defer {
-            if let priorTimeZone {
-                defaults.set(priorTimeZone, forKey: AppPreferences.timeZoneKey)
-            } else {
-                defaults.removeObject(forKey: AppPreferences.timeZoneKey)
-            }
-        }
-        defaults.set("Pacific/Kiritimati", forKey: AppPreferences.timeZoneKey)
+        setTimeZonePreference("Pacific/Kiritimati")
 
         let calendar = AppPreferences.calendar
         let start = calendar.date(from: DateComponents(year: 2026, month: 9, day: 1))!
@@ -142,6 +133,56 @@ final class RecurringMaterializerTests: XCTestCase {
         XCTAssertEqual(occurrence.shares.map(\.amountMinor).sorted(), [400, 600])
     }
 
+    func testEveryTwoWeeksAndEveryThreeMonths() {
+        let biweekly = makeRule(unit: .week, count: 2, next: date(2026, 9, 1))
+        XCTAssertEqual(RecurringMaterializer.dueDates(for: biweekly, through: date(2026, 9, 30), calendar: calendar), [
+            date(2026, 9, 1), date(2026, 9, 15), date(2026, 9, 29),
+        ])
+
+        let quarterly = makeRule(unit: .month, count: 3, next: date(2026, 1, 31))
+        XCTAssertEqual(RecurringMaterializer.dueDates(for: quarterly, through: date(2026, 12, 31), calendar: calendar), [
+            date(2026, 1, 31), date(2026, 4, 30), date(2026, 7, 31), date(2026, 10, 31),
+        ])
+    }
+
+    func testRuleStartingInTheFutureIsNotDueYet() {
+        let rule = makeRule(unit: .day, count: 1, next: date(2026, 10, 1))
+        XCTAssertTrue(RecurringMaterializer.dueDates(for: rule, through: date(2026, 9, 30), calendar: calendar).isEmpty)
+    }
+
+    func testOnePassIsCappedSoABadRuleCannotFloodStorage() {
+        let rule = makeRule(unit: .day, count: 1, next: date(2020, 1, 1))
+        let dates = RecurringMaterializer.dueDates(for: rule, through: date(2026, 9, 30), calendar: calendar)
+        XCTAssertEqual(dates.count, RecurringMaterializer.maxOccurrencesPerPass)
+    }
+
+    func testZeroIntervalIsTreatedAsOne() {
+        let rule = makeRule(unit: .day, count: 0, next: date(2026, 9, 1))
+        XCTAssertEqual(RecurringMaterializer.dueDates(for: rule, through: date(2026, 9, 3), calendar: calendar).count, 3)
+    }
+
+    func testEndedRules() {
+        var rule = makeRule(unit: .day, count: 1, next: date(2020, 1, 1), endDate: date(2020, 2, 1))
+        XCTAssertTrue(rule.hasEnded)
+        rule.endDate = nil
+        XCTAssertFalse(rule.hasEnded)
+        rule.isActive = false
+        XCTAssertTrue(rule.hasEnded)
+    }
+
+    func testRulesSavedByOlderVersionsLoadWithDefaults() throws {
+        let json = """
+        {"id":"\(UUID())","ownerUserId":"\(owner)","amountMinor":700,"currency":"PLN","category":"other",
+         "intervalUnit":"week","intervalCount":1,"nextOccurrence":\(date(2026, 9, 1).timeIntervalSinceReferenceDate)}
+        """
+        let rule = try JSONDecoder().decode(RecurringRuleRecord.self, from: Data(json.utf8))
+        XCTAssertEqual(rule.startDate, date(2026, 9, 1))
+        XCTAssertEqual(rule.paidBy, owner)
+        XCTAssertEqual(rule.shares.map(\.amountMinor), [700])
+        XCTAssertTrue(rule.isActive)
+        XCTAssertTrue(rule.skippedDates.isEmpty)
+    }
+
     private func makeRule(
         unit: RecurringIntervalUnit,
         count: Int,
@@ -161,5 +202,22 @@ final class RecurringMaterializerTests: XCTestCase {
 
     private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+}
+
+final class RecurringPresetTests: XCTestCase {
+    func testPresetsMapToIntervalsAndBack() throws {
+        for preset in RecurringPreset.allCases where preset != .custom {
+            let interval = try XCTUnwrap(preset.interval)
+            XCTAssertEqual(RecurringPreset.matching(unit: interval.unit, count: interval.count), preset)
+        }
+        XCTAssertEqual(RecurringPreset.matching(unit: .day, count: 3), .custom)
+        XCTAssertNil(RecurringPreset.custom.interval)
+    }
+
+    func testScheduleDescriptions() {
+        XCTAssertEqual(RecurringIntervalUnit.month.scheduleDescription(intervalCount: 1), "Monthly")
+        XCTAssertEqual(RecurringIntervalUnit.week.scheduleDescription(intervalCount: 2), "Every 2 weeks")
+        XCTAssertEqual(RecurringIntervalUnit.day.scheduleDescription(intervalCount: 0), "Daily")
     }
 }

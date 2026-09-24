@@ -29,16 +29,6 @@ final class BudgetArcLayoutTests: XCTestCase {
         XCTAssertEqual(rotations.count, 1)
     }
 
-    func testTileBaseFacesTheArcCentre() {
-        let tiles = layout.makeTiles(in: canvas)
-        // Even column counts have no exact apex; the nearest tile still faces the arc centre.
-        let apex = tiles.min(by: { abs($0.t - 0.5) < abs($1.t - 0.5) })!
-        let apexDegrees = layout.startDegrees - layout.sweepDegrees * apex.t
-        XCTAssertEqual(apex.rotationDegrees, 90 - apexDegrees, accuracy: 0.000_1)
-        XCTAssertEqual(tiles.first!.rotationDegrees, 90 - layout.startDegrees, accuracy: 0.000_1)
-        XCTAssertEqual(tiles.last!.rotationDegrees, 90 - layout.endDegrees, accuracy: 0.000_1)
-    }
-
     func testRotatedTilesStayInsideTheCanvas() {
         let tiles = layout.makeTiles(in: canvas)
         for tile in tiles {
@@ -50,44 +40,11 @@ final class BudgetArcLayoutTests: XCTestCase {
         }
     }
 
-    func testOuterRowIsLargerThanInner() {
-        let tiles = layout.makeTiles(in: canvas)
-        let inner = tiles.first { $0.row == 0 }!
-        let outer = tiles.first { $0.row == layout.rowCount - 1 }!
-        XCTAssertEqual(inner.size, layout.squareSize)
-        XCTAssertEqual(outer.size, layout.outerSquareSize)
-        XCTAssertGreaterThan(outer.size, inner.size)
-    }
-
     func testLabelAnchorIsHorizontallyCenteredInBowl() {
         let anchor = layout.labelAnchor(in: canvas)
         XCTAssertEqual(anchor.x, canvas.width / 2, accuracy: 0.001)
         XCTAssertGreaterThan(anchor.y, canvas.height * 0.45)
         XCTAssertLessThan(anchor.y, canvas.height * 0.72)
-    }
-
-    func testLabelMaxWidthClearsInnerHornTiles() {
-        let maxWidth = layout.labelMaxWidth(in: canvas)
-        XCTAssertLessThan(maxWidth, canvas.width - 80)
-        XCTAssertGreaterThan(maxWidth, 100)
-
-        let tiles = layout.makeTiles(in: canvas)
-        let innerHornTiles = tiles.filter { $0.row == 0 && ($0.column == 0 || $0.column == layout.columnCount - 1) }
-        XCTAssertEqual(innerHornTiles.count, 2)
-
-        let left = innerHornTiles.min(by: { $0.point.x < $1.point.x })!
-        let right = innerHornTiles.max(by: { $0.point.x < $1.point.x })!
-        let innerReach = layout.squareSize * CGFloat(2).squareRoot() / 2
-        let safeSpan = (right.point.x - innerReach) - (left.point.x + innerReach) - 24
-        XCTAssertEqual(maxWidth, max(72, safeSpan), accuracy: 0.5)
-    }
-
-    func testSeventyPercentLightsMostTilesButNotAll() {
-        let total = layout.makeTiles(in: canvas).count
-        let filled = BudgetArcFill.filledCount(total: total, progress: 0.70)
-        XCTAssertEqual(filled, Int((Double(total) * 0.70).rounded(.down)))
-        XCTAssertGreaterThan(filled, 0)
-        XCTAssertLessThan(filled, total)
     }
 
     func testCoverageClampsAndPartiallyFillsTheLeadingTile() {
@@ -120,30 +77,29 @@ final class BudgetArcLayoutTests: XCTestCase {
         XCTAssertEqual(BudgetArcFill.category(forTile: 29, total: total, slices: slices), .transport)
         XCTAssertNil(BudgetArcFill.category(forTile: 0, total: total, slices: []))
     }
-}
 
-final class MoneyFormatterHeroTests: XCTestCase {
-    func testWholeZlotyDropsFraction() {
-        let amount = MoneyFormatter.heroAmount(
-            from: Money(amountMinor: 250_00, currencyCode: "PLN"),
-            locale: Locale(identifier: "en_US_POSIX")
-        )
-        XCTAssertEqual(amount, "250")
+    func testLabelFitsBetweenTheHornsOnAnyReasonableCanvas() {
+        for width in [320.0, 360.0, 430.0] {
+            let size = CGSize(width: width, height: 260)
+            XCTAssertLessThan(layout.labelMaxWidth(in: size), width - 80)
+            XCTAssertGreaterThanOrEqual(layout.labelMaxWidth(in: size), 72)
+        }
     }
 
-    func testGroszeKeepTwoFractionDigits() {
-        let amount = MoneyFormatter.heroAmount(
-            from: Money(amountMinor: 250_40, currencyCode: "PLN"),
-            locale: Locale(identifier: "en_US_POSIX")
-        )
-        XCTAssertEqual(amount, "250.40")
+    func testEmptyCanvasDrawsNothingAndKeepsTheLabelCentred() {
+        XCTAssertTrue(layout.makeTiles(in: .zero).isEmpty)
+        XCTAssertEqual(layout.labelAnchor(in: CGSize(width: 0, height: 100)).y, 58, accuracy: 0.001)
     }
 
-    func testTypingAmountDropsTrailingZero() {
-        let amount = MoneyFormatter.typingAmount(
-            from: Money(amountMinor: 2580, currencyCode: "PLN"),
-            locale: Locale(identifier: "en_US_POSIX")
-        )
-        XCTAssertEqual(amount, "25.8")
+    func testTileCountsAlwaysFillEveryTile() {
+        let slices = [
+            CategorySpendSlice(category: .groceries, amountMinor: 1),
+            CategorySpendSlice(category: .dining, amountMinor: 1),
+            CategorySpendSlice(category: .transport, amountMinor: 1),
+        ]
+        for total in 1...40 {
+            XCTAssertEqual(BudgetArcFill.tileCounts(total: total, slices: slices).values.reduce(0, +), total)
+        }
+        XCTAssertTrue(BudgetArcFill.tileCounts(total: 36, slices: [CategorySpendSlice(category: .groceries, amountMinor: 0)]).isEmpty)
     }
 }

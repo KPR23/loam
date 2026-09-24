@@ -1,45 +1,6 @@
 import XCTest
 @testable import Loam
 
-final class MoneyTests: XCTestCase {
-    func testParsesMajorString() {
-        let money = Money(majorString: "12.34", currencyCode: "PLN")
-        XCTAssertEqual(money?.amountMinor, 1234)
-    }
-
-    func testParsesCommaDecimal() {
-        let money = Money(majorString: "12,5", currencyCode: "PLN")
-        XCTAssertEqual(money?.amountMinor, 1250)
-    }
-
-    func testRejectsTooManyFractionDigits() {
-        XCTAssertNil(Money(majorString: "1.234"))
-    }
-
-    func testRejectsLettersAndSymbols() {
-        XCTAssertNil(Money(majorString: "12a"))
-        XCTAssertNil(Money(majorString: "12 zł"))
-        XCTAssertNil(Money(majorString: "-12"))
-        XCTAssertNil(Money(majorString: "12;34"))
-    }
-
-    func testParsesTrailingCommaAsWholeUnits() {
-        XCTAssertEqual(Money(majorString: "12,")?.amountMinor, 1200)
-    }
-
-    func testSanitizeTypingInput() {
-        XCTAssertEqual(Money.sanitizeTypingInput("12a.3b4c5"), "12,34")
-        XCTAssertEqual(Money.sanitizeTypingInput("..,,5"), "0,5")
-        XCTAssertEqual(Money.sanitizeTypingInput("1,2,3"), "1,23")
-    }
-
-    func testAddition() {
-        let a = Money(amountMinor: 100, currencyCode: "PLN")
-        let b = Money(amountMinor: 50, currencyCode: "PLN")
-        XCTAssertEqual((a + b).amountMinor, 150)
-    }
-}
-
 final class SplitCalculatorTests: XCTestCase {
     let alice = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
     let bob = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
@@ -72,7 +33,7 @@ final class SplitCalculatorTests: XCTestCase {
         XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 34) // 33+33+34
     }
 
-    func testPersonalIsFullAmount() {
+    func testPersonalExpenseIsOneFullShare() {
         let shares = SplitCalculator.personal(totalMinor: 2500, userId: alice)
         XCTAssertEqual(shares.count, 1)
         XCTAssertEqual(shares[0].amountMinor, 2500)
@@ -182,32 +143,6 @@ final class SplitCalculatorTests: XCTestCase {
         XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1001))
     }
 
-    func testOverAllocatedPercentageKeepsFormInvalid() {
-        let error = SplitExpenseSection.validationError(
-            totalMinor: 1000,
-            selectedPartnerCount: 1,
-            splitMode: .percentage,
-            participantUserIds: [alice, bob],
-            participantPercentages: [alice: 80, bob: 40],
-            participantAmountTexts: [:]
-        )
-
-        XCTAssertEqual(error, "Percentage shares must total 100%.")
-    }
-
-    func testOverAllocatedExactAmountsKeepFormInvalid() {
-        let error = SplitExpenseSection.validationError(
-            totalMinor: 1000,
-            selectedPartnerCount: 1,
-            splitMode: .exactAmount,
-            participantUserIds: [alice, bob],
-            participantPercentages: [:],
-            participantAmountTexts: [alice: "8,00", bob: "4,00"]
-        )
-
-        XCTAssertEqual(error, "Exact shares must total the expense amount.")
-    }
-
     func testTwoPersonEqualSplit() {
         let shares = SplitCalculator.twoPersonSplit(
             totalMinor: 1001,
@@ -216,7 +151,83 @@ final class SplitCalculatorTests: XCTestCase {
             partnerUserId: bob,
             paidByUserId: bob
         )
-        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 1001))
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 500)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 501)
+    }
+
+    func testRemainderGoesToFirstParticipantWhenPayerIsNotSplitting() {
+        let shares = SplitCalculator.equal(totalMinor: 101, participants: [alice, bob], paidByUserId: carol)
+        XCTAssertTrue(SplitCalculator.sharesSumEqualsTotal(shares, totalMinor: 101))
+        XCTAssertEqual(shares.map(\.amountMinor).sorted(), [50, 51])
+    }
+
+    func testEqualSplitCountsDuplicateParticipantsOnce() {
+        let shares = SplitCalculator.equal(totalMinor: 1000, participants: [alice, bob, bob], paidByUserId: alice)
+        XCTAssertEqual(shares.count, 2)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 500)
+    }
+
+    func testZeroTotalSplitsIntoZeroShares() {
+        let shares = SplitCalculator.equal(totalMinor: 0, participants: [alice, bob], paidByUserId: alice)
+        XCTAssertEqual(shares.map(\.amountMinor), [0, 0])
+    }
+
+    func testMultiPersonEqualSplitRemainderGoesToPayer() {
+        let shares = SplitCalculator.split(
+            totalMinor: 1000,
+            mode: .equal,
+            myUserId: alice,
+            partnerUserIds: [bob, carol],
+            paidByUserId: carol
+        )
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 333)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 333)
+        XCTAssertEqual(shares.first { $0.userId == carol }?.amountMinor, 334)
+    }
+
+    func testIncompletePercentageInputsFallBackToMyPercentage() {
+        let shares = SplitCalculator.split(
+            totalMinor: 1000,
+            mode: .percentage,
+            myUserId: alice,
+            partnerUserIds: [bob],
+            paidByUserId: alice,
+            myPercentage: 40,
+            participantPercentages: [alice: 30]
+        )
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 400)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 600)
+    }
+
+    func testExactInputsThatMissTheTotalFallBackToMyExactAmount() {
+        let shares = SplitCalculator.split(
+            totalMinor: 1000,
+            mode: .exactAmount,
+            myUserId: alice,
+            partnerUserIds: [bob],
+            paidByUserId: alice,
+            myExactAmountMinor: 300,
+            participantExactAmountMinors: [alice: 100, bob: 100]
+        )
+        XCTAssertEqual(shares.first { $0.userId == alice }?.amountMinor, 300)
+        XCTAssertEqual(shares.first { $0.userId == bob }?.amountMinor, 700)
+    }
+
+    func testMatchingPercentagesRejectsInvalidStoredShares() {
+        let halves = [
+            SplitCalculator.Share(userId: alice, amountMinor: 500),
+            SplitCalculator.Share(userId: bob, amountMinor: 500),
+        ]
+        XCTAssertNil(SplitCalculator.matchingPercentages(totalMinor: 0, paidByUserId: alice, storedShares: halves))
+        XCTAssertNil(SplitCalculator.matchingPercentages(totalMinor: 1200, paidByUserId: alice, storedShares: halves))
+        XCTAssertNil(SplitCalculator.matchingPercentages(
+            totalMinor: 1000,
+            paidByUserId: alice,
+            storedShares: [SplitCalculator.Share(userId: alice, amountMinor: 500), SplitCalculator.Share(userId: alice, amountMinor: 500)]
+        ))
+        XCTAssertNil(SplitCalculator.matchingTwoPersonPercentage(
+            totalMinor: 1000, myUserId: alice, partnerUserId: carol, paidByUserId: alice, storedShares: halves
+        ))
     }
 
     func testMatchingPercentageRejectsExactSplitDisguisedAsHalf() {
@@ -289,184 +300,5 @@ final class SplitCalculatorTests: XCTestCase {
                 storedShares: stored
             )
         )
-    }
-}
-
-final class SplitFormSeedTests: XCTestCase {
-    let alice = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
-    let bob = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
-    let carol = UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
-
-    func testMultiPersonPercentageSplitReopensWithoutChangingAllocation() {
-        let stored = SplitCalculator.percentage(
-            totalMinor: 1001,
-            userPercentages: [(alice, 20), (bob, 30), (carol, 50)],
-            paidByUserId: bob
-        )
-        let expense = sharedExpense(totalMinor: 1001, paidBy: bob, shares: stored)
-
-        let seed = SplitFormSeed.from(expense: expense, myUserId: alice)
-
-        XCTAssertEqual(seed.splitMode, .percentage)
-        XCTAssertEqual(seed.participantPercentages, [alice: 20, bob: 30, carol: 50])
-        let reopened = SplitCalculator.split(
-            totalMinor: expense.amountMinor,
-            mode: seed.splitMode,
-            myUserId: alice,
-            partnerUserIds: [bob, carol],
-            paidByUserId: expense.paidBy,
-            participantPercentages: seed.participantPercentages
-        )
-        XCTAssertTrue(SplitCalculator.sharesMatch(reopened, stored))
-    }
-
-    func testMultiPersonExactSplitReopensWithoutChangingAllocation() {
-        let stored = [
-            SplitCalculator.Share(userId: alice, amountMinor: 101),
-            SplitCalculator.Share(userId: bob, amountMinor: 400),
-            SplitCalculator.Share(userId: carol, amountMinor: 500),
-        ]
-        let expense = sharedExpense(totalMinor: 1001, paidBy: bob, shares: stored)
-
-        let seed = SplitFormSeed.from(expense: expense, myUserId: alice)
-        let exactAmounts = seed.participantAmountTexts.compactMapValues {
-            Money(majorString: $0)?.amountMinor
-        }
-
-        XCTAssertEqual(seed.splitMode, .exactAmount)
-        XCTAssertEqual(exactAmounts, [alice: 101, bob: 400, carol: 500])
-        let reopened = SplitCalculator.split(
-            totalMinor: expense.amountMinor,
-            mode: seed.splitMode,
-            myUserId: alice,
-            partnerUserIds: [bob, carol],
-            paidByUserId: expense.paidBy,
-            participantExactAmountMinors: exactAmounts
-        )
-        XCTAssertTrue(SplitCalculator.sharesMatch(reopened, stored))
-    }
-
-    func testMultiPersonEqualSplitStillReopensAsEqual() {
-        let stored = SplitCalculator.equal(
-            totalMinor: 1001,
-            participants: [alice, bob, carol],
-            paidByUserId: bob
-        )
-        let expense = sharedExpense(totalMinor: 1001, paidBy: bob, shares: stored)
-
-        let seed = SplitFormSeed.from(expense: expense, myUserId: alice)
-
-        XCTAssertEqual(seed.splitMode, .equal)
-    }
-
-    private func sharedExpense(
-        totalMinor: Int,
-        paidBy: UUID,
-        shares: [SplitCalculator.Share]
-    ) -> ExpenseRecord {
-        ExpenseRecord(
-            amountMinor: totalMinor,
-            category: .groceries,
-            paidBy: paidBy,
-            createdBy: alice,
-            shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
-        )
-    }
-}
-
-final class BalanceSimplifierTests: XCTestCase {
-    let alice = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
-    let bob = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
-    let carol = UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
-
-    func testSimplePair() {
-        let transfers = BalanceSimplifier.simplify([
-            .init(userId: alice, amountMinor: 500),
-            .init(userId: bob, amountMinor: -500),
-        ])
-        XCTAssertEqual(transfers.count, 1)
-        XCTAssertEqual(transfers[0].fromUserId, bob)
-        XCTAssertEqual(transfers[0].toUserId, alice)
-        XCTAssertEqual(transfers[0].amountMinor, 500)
-    }
-}
-
-final class RecentSplitPartnersTests: XCTestCase {
-    let me = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-    let otherAccount = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-    let julia = UUID(uuidString: "00000000-0000-0000-0000-000000000010")!
-    let philip = UUID(uuidString: "00000000-0000-0000-0000-000000000011")!
-
-    override func setUp() {
-        super.setUp()
-        RecentSplitPartners.resetForTesting()
-    }
-
-    override func tearDown() {
-        RecentSplitPartners.resetForTesting()
-        super.tearDown()
-    }
-
-    func testRecordOrdersMostRecentFirstAndDedupes() {
-        RecentSplitPartners.record([julia], for: me)
-        RecentSplitPartners.record([philip, julia], for: me)
-        XCTAssertEqual(RecentSplitPartners.loadIDs(for: me), [philip, julia])
-    }
-
-    func testRecentExcludesCurrentUserAndMapsAvailable() {
-        RecentSplitPartners.record([me, julia, philip], for: me)
-        let available = [
-            SplitPartnerOption(userId: julia, displayName: "Julia"),
-            SplitPartnerOption(userId: philip, displayName: "Philip"),
-            SplitPartnerOption(userId: me, displayName: "Me"),
-        ]
-        let recent = SplitPartnerOption.recent(available: available, myUserId: me, limit: 5)
-        XCTAssertEqual(recent.map(\.userId), [julia, philip])
-        XCTAssertFalse(recent.contains(where: { $0.userId == me }))
-    }
-
-    func testRecentIsScopedPerAccount() {
-        RecentSplitPartners.record([julia], for: me)
-        RecentSplitPartners.record([philip], for: otherAccount)
-        XCTAssertEqual(RecentSplitPartners.loadIDs(for: me), [julia])
-        XCTAssertEqual(RecentSplitPartners.loadIDs(for: otherAccount), [philip])
-    }
-
-    func testRecentSeedsFromSharedExpenseHistory() {
-        let older = ExpenseRecord(
-            amountMinor: 1000,
-            category: .groceries,
-            spentAt: Date(timeIntervalSince1970: 1_000),
-            paidBy: me,
-            createdBy: me,
-            shares: [
-                ExpenseShareRecord(userId: me, amountMinor: 500),
-                ExpenseShareRecord(userId: philip, amountMinor: 500),
-            ],
-            createdAt: Date(timeIntervalSince1970: 1_000)
-        )
-        let newer = ExpenseRecord(
-            amountMinor: 2000,
-            category: .dining,
-            spentAt: Date(timeIntervalSince1970: 2_000),
-            paidBy: me,
-            createdBy: me,
-            shares: [
-                ExpenseShareRecord(userId: me, amountMinor: 1000),
-                ExpenseShareRecord(userId: julia, amountMinor: 1000),
-            ],
-            createdAt: Date(timeIntervalSince1970: 2_000)
-        )
-        let available = [
-            SplitPartnerOption(userId: julia, displayName: "Julia"),
-            SplitPartnerOption(userId: philip, displayName: "Philip"),
-        ]
-        let recent = SplitPartnerOption.recent(
-            available: available,
-            myUserId: me,
-            seedingFrom: [older, newer],
-            limit: 5
-        )
-        XCTAssertEqual(recent.map(\.userId), [julia, philip])
     }
 }
