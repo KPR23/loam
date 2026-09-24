@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..5' as plan;
+select '1..6' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.c',gen_random_uuid()::text,true),set_config('test.weekly',gen_random_uuid()::text,true),
  set_config('test.daily',gen_random_uuid()::text,true),set_config('test.broken',gen_random_uuid()::text,true);
@@ -95,4 +95,26 @@ do $$ begin
  assert pg_temp.dates('test.drifted')='{2027-03-31,2027-04-30}','Drifted next occurrence was not snapped to the schedule';
 end $$;
 select 'ok 5 - occurrences are anchored to the start date' as result;
+
+-- The rule and its seed expense are saved together, so the hourly job cannot
+-- generate the seed date first and a failed seed leaves no rule behind.
+select set_config('test.seeded',gen_random_uuid()::text,true),set_config('test.seed',gen_random_uuid()::text,true),
+ set_config('test.unseeded',gen_random_uuid()::text,true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+select public.create_recurring_expense(pg_temp.rule(jsonb_build_object('id',current_setting('test.seeded'),'interval_unit','month',
+ 'start_date',current_date,'next_occurrence',(current_date+interval '1 month')::date)),
+ pg_temp.rule(jsonb_build_object('id',current_setting('test.seed'),'spent_at',current_date)));
+do $$ declare failed boolean:=false; begin
+ assert (select recurring_id=current_setting('test.seeded')::uuid from public.expense where id=current_setting('test.seed')::uuid),'Seed not linked to its rule';
+ assert public.materialize_recurring_rules(current_date)=0 and pg_temp.occurrences('test.seeded')=1,'Seed date generated twice';
+ begin
+   perform public.create_recurring_expense(pg_temp.rule(jsonb_build_object('id',current_setting('test.unseeded'),'interval_unit','month',
+     'start_date',current_date,'next_occurrence',(current_date+interval '1 month')::date)),
+     pg_temp.rule(jsonb_build_object('id',gen_random_uuid(),'spent_at',current_date,'amount_minor',999)));
+ exception when others then failed:=true; end;
+ assert failed and not exists(select 1 from public.recurring_rule where id=current_setting('test.unseeded')::uuid),'Rule saved without its seed';
+end $$;
+reset role;
+select 'ok 6 - a recurring rule is created atomically with its seed' as result;
 rollback;

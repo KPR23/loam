@@ -4,7 +4,9 @@ protocol ExpenseRepository: Sendable {
     func fetchExpenses(for userId: UUID, in period: DatePeriod) async throws -> [ExpenseRecord]
     func fetchExpenses(ids: [UUID]) async throws -> [ExpenseRecord]
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord
-    func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord
+    /// Saves a new recurring rule together with its first occurrence, so a
+    /// failed seed leaves no rule and generation never races the seed.
+    func createRecurringExpense(_ expense: ExpenseRecord, rule: RecurringRuleRecord) async throws -> ExpenseRecord
     func updateRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord
     func fetchActiveRecurringRules(for userId: UUID) async throws -> [RecurringRuleRecord]
     func fetchRecurringRule(id: UUID) async throws -> RecurringRuleRecord?
