@@ -26,7 +26,8 @@ select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
 do $$ begin
  assert (select error_code is null from public.redeem_connection_code(current_setting('test.code'))),'Reverse redeem failed';
  assert (select count(*)=1 from public.user_connection),'Duplicate connection rows';
- assert public.are_connected(current_setting('test.a')::uuid,current_setting('test.b')::uuid),'Pair not connected';
+ assert private.are_connected(current_setting('test.a')::uuid,current_setting('test.b')::uuid),'Pair not connected';
+ assert to_regprocedure('public.are_connected(uuid,uuid)') is null,'Policy helper still exposed as RPC';
 end $$;
 reset role;
 select 'ok 2 - redeeming from either side keeps one accepted connection' as result;
