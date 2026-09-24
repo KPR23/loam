@@ -96,15 +96,29 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.loam.LoamTests
         GENERATE_INFOPLIST_FILE: YES
+  LoamUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: LoamUITests
+    dependencies:
+      - target: Loam
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.loam.LoamUITests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Loam
 schemes:
   Loam:
     build:
       targets:
         Loam: all
         LoamTests: [test]
+        LoamUITests: [test]
     test:
       targets:
         - LoamTests
+        - LoamUITests
     run:
       config: Debug
     archive:
@@ -114,8 +128,10 @@ schemes:
       targets:
         Loam: all
         LoamTests: [test]
+        LoamUITests: [test]
     test:
       targets:
         - LoamTests
+        - LoamUITests
     archive:
       config: TestFlight
