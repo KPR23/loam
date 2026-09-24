@@ -60,7 +60,7 @@ Deno.serve(async (request) => {
           from,
           to: [recipient],
           subject: "Your Loam account deletion is complete",
-          text: "Your Loam account deletion has finished. Your account and private account data have been removed. Shared expenses remain available to their other participants.",
+          text: "Your Loam account deletion has finished. Your account and private account data have been removed. Usage analytics are erased by our analytics provider, which can take a few days. Shared expenses remain available to their other participants.",
         }),
         signal: AbortSignal.timeout(10_000),
       });

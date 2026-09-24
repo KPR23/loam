@@ -458,7 +458,7 @@ struct ProfileView: View {
         case .submissionUncertain: "We couldn’t confirm the request response. Check its status before trying again."
         case .processing: "Your account is closed. Deletion usually finishes within a few minutes."
         case .needsAttention: "Your account is closed, but processing is taking longer than expected. Contact support if this continues."
-        case .complete: "Your account and private data have been deleted."
+        case .complete: "Your account and private data have been deleted. Usage analytics are erased by our analytics provider, which can take a few days."
         case .unavailable: "The status service is unavailable. Your secure receipt is saved; try again shortly."
         case .none: ""
         }
@@ -586,7 +586,7 @@ private struct PersonalDetailsView: View {
         } message: {
             Text(authSession.usesDemoMode
                  ? "This permanently removes your on-device demo data. This can’t be undone."
-                 : "Your sign-in, profile photo and private expenses will be removed. Shared expenses and balances remain for other participants under the name Deleted user. This can’t be undone.")
+                 : "Your sign-in, profile photo, private expenses and usage analytics will be removed. Shared expenses and balances remain for other participants under the name Deleted user. This can’t be undone.")
         }
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
