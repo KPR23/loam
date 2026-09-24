@@ -12,6 +12,9 @@ protocol ExpenseRepository: Sendable {
     /// Inserts one recurring occurrence, returning the already-created row when
     /// another client won the same (rule, date) race.
     func createRecurringOccurrence(_ expense: ExpenseRecord) async throws -> ExpenseRecord
+    /// Generates due recurring occurrences through `date` on the backend.
+    /// Returns false when the caller must generate them on the device.
+    func materializeRecurringRules(through date: Date) async throws -> Bool
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     func delete(id: UUID) async throws
     #if DEBUG
