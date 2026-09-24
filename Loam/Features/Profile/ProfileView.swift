@@ -149,6 +149,7 @@ struct ProfileView: View {
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
     @AppStorage(AppPreferences.defaultCurrencyKey) private var defaultCurrency = "PLN"
     @AppStorage(AppPreferences.timeZoneKey) private var timeZoneIdentifier = ""
+    @AppStorage(Telemetry.analyticsConsentKey) private var analyticsConsent = false
     @State private var showsSignOut = false
     @State private var isSigningOut = false
     @State private var featurebaseDestination: FeaturebaseDestination?
@@ -233,6 +234,7 @@ struct ProfileView: View {
 
                 themeSection
                 preferencesSection
+                privacySection
 
                 Section {
                     Button {
@@ -381,6 +383,18 @@ struct ProfileView: View {
             }
         } header: {
             Text("Preferences")
+        }
+    }
+
+    private var privacySection: some View {
+        Section {
+            Toggle(isOn: $analyticsConsent) {
+                ProfileRow("Share usage analytics", symbol: "chart.bar", color: .indigo)
+            }
+        } header: {
+            Text("Privacy")
+        } footer: {
+            Text("Helps improve Loam by recording which screens you use and masked screen recordings. Amounts, descriptions and names are never included. Crash reports are always sent.")
         }
     }
 

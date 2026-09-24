@@ -14,6 +14,8 @@ struct LoamApp: App {
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var connectionStore = ConnectionStore()
 
+    @AppStorage(Telemetry.analyticsConsentKey) private var analyticsConsent = false
+
     init() {
         Telemetry.start()
     }
@@ -38,6 +40,9 @@ struct LoamApp: App {
                 }
                 .onChange(of: authSession.userId) { _, userId in
                     Telemetry.setUser(authSession.usesDemoMode ? nil : userId)
+                }
+                .onChange(of: analyticsConsent) { _, granted in
+                    Telemetry.setAnalyticsConsent(granted)
                 }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {

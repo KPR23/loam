@@ -26,6 +26,9 @@ configFiles:
   TestFlight: Loam/Config/Staging.xcconfig
   Production: Loam/Config/Production.xcconfig
 packages:
+  posthog-ios:
+    url: https://github.com/PostHog/posthog-ios
+    from: "3.82.0"
   sentry-cocoa:
     url: https://github.com/getsentry/sentry-cocoa
     from: "9.24.0"
@@ -69,6 +72,8 @@ targets:
             echo "warning: sentry-cli not installed, download from https://github.com/getsentry/sentry-cli/releases"
           fi
     dependencies:
+      - package: posthog-ios
+        product: PostHog
       - package: sentry-cocoa
         product: Sentry
       - package: supabase-swift

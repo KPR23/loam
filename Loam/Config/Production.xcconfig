@@ -1,6 +1,8 @@
 // Production Supabase project used only by App Store distribution builds.
 APP_DISPLAY_NAME = Loam
 LOAM_ENVIRONMENT = production
+POSTHOG_PROJECT_TOKEN = phc_thTfBwYVQzHcQTqCohbDus8de8KDneynKh2kR4JeAiEK
+POSTHOG_HOST = https:/$()/eu.i.posthog.com
 SENTRY_DSN = https:/$()/0e0e726194a581b5afab7405a491bb15@o4512135437942784.ingest.de.sentry.io/4512135445413968
 SUPABASE_URL = https:/$()/nffogbutnyevhhwnpgip.supabase.co
 SUPABASE_ANON_KEY = sb_publishable_aqRL55vWyTCfBG6KckShpg_z6hlZYD_
