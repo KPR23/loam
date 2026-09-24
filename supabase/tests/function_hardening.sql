@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..2' as plan;
+select '1..3' as plan;
 
 do $$ declare bad text; begin
  select string_agg(p.oid::regprocedure::text,', ') into bad
@@ -31,4 +31,14 @@ do $$ begin
 end $$;
 reset role;
 select 'ok 2 - balance history requires an active account' as result;
+
+-- New functions are executable by PUBLIC unless revoked, even in private.
+do $$ declare bad text; begin
+ select string_agg(p.oid::regprocedure::text,', ') into bad
+ from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+ where n.nspname='private' and (has_function_privilege('anon',p.oid,'EXECUTE')
+   or (has_function_privilege('authenticated',p.oid,'EXECUTE') and p.proname not in ('can_read_expense_shares','are_connected')));
+ assert bad is null,'Private functions executable by clients: '||bad;
+end $$;
+select 'ok 3 - only policy helpers in private are executable by clients' as result;
 rollback;
