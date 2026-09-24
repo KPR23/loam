@@ -58,6 +58,8 @@ do $$ begin
  assert private.materialize_due_recurring_rules()=2,'Scheduled pass skipped a healthy rule';
  assert pg_temp.occurrences('test.broken')=0,'Invalid template was generated';
  assert (select next_occurrence=current_date from public.recurring_rule where id=current_setting('test.broken')::uuid),'Failed rule advanced past a missed date';
+ assert (select failure is not null and failed_at is not null and version=1 from public.recurring_rule where id=current_setting('test.broken')::uuid),'Failure hidden from the owner';
+ assert (select failure is null from public.recurring_rule where id=current_setting('test.daily')::uuid),'Healthy rule reported a failure';
  assert exists(select 1 from public.activity_event where kind='shared' and actor_id=current_setting('test.a')::uuid
    and audience_user_id=current_setting('test.b')::uuid and expense_title='Rent'),'Scheduled occurrence missing from activity';
 end $$;
