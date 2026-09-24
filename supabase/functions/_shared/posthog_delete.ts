@@ -15,10 +15,18 @@ export async function deletePostHogPerson(
       body: JSON.stringify({ distinct_ids: [distinctId.toLowerCase()], delete_events: true, delete_recordings: true }),
     });
   } finally { clearTimeout(timeout); }
-  await response.body?.cancel();
-  // PostHog queues the deletion and answers 202, also when no person exists
-  // because the user never opted in to analytics.
-  if (response.status === 200 || response.status === 202) return;
-  if (response.status === 401 || response.status === 403) throw new Error("posthog_client_configuration");
-  throw new Error(`posthog_delete_http_${response.status}`);
+  if (response.status === 401 || response.status === 403) {
+    await response.body?.cancel();
+    throw new Error("posthog_client_configuration");
+  }
+  if (response.status !== 202) {
+    await response.body?.cancel();
+    throw new Error(`posthog_delete_http_${response.status}`);
+  }
+  // PostHog accepts the request and erases events and recordings in the
+  // background, which can take days; completion wording says so. It also
+  // answers 202 when no person exists because the user never opted in.
+  const summary = await response.json().catch(() => null) as { deletion_errors?: unknown } | null;
+  if (!summary || !Array.isArray(summary.deletion_errors)) throw new Error("posthog_delete_unreadable_response");
+  if (summary.deletion_errors.length > 0) throw new Error("posthog_delete_partial");
 }
