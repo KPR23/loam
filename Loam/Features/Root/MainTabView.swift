@@ -89,7 +89,6 @@ struct MainTabView: View {
     MainTabView()
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
-        .environmentObject(HouseholdStore())
         .environmentObject(BalanceStore())
         .environmentObject(ActivityStore())
 }
