@@ -146,8 +146,8 @@ end $$;
 select 'ok 7 - failed attempts persist and enforce rate limits' as result;
 
 -- All rows share now()'s timestamp. Cursor must still traverse every row.
-insert into public.activity_event(audience_user_id,kind,actor_id,actor_name,expense_id,expense_title,category,affected_share_minor,expense_total_minor,currency)
-select current_setting('test.a')::uuid,'edited',current_setting('test.a')::uuid,'Test',current_setting('test.e')::uuid,'Test','other',500,1000,'PLN' from generate_series(1,60);
+insert into public.activity_event(audience_user_id,kind,actor_id,expense_id,expense_title,category,affected_share_minor,expense_total_minor,currency)
+select current_setting('test.a')::uuid,'edited',current_setting('test.a')::uuid,current_setting('test.e')::uuid,'Test','other',500,1000,'PLN' from generate_series(1,60);
 select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
 set local role authenticated;
 do $$ declare cursor_id uuid; first_ids uuid[]; remaining bigint; expected bigint; begin
