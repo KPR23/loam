@@ -87,6 +87,7 @@
 		F8F43A38B3DB55C0897F1281 /* ExpenseEditProposal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB9AB5930F0CF7A98C86DEC /* ExpenseEditProposal.swift */; };
 		F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08A73A1CF023A5DDE2B32C0 /* DeepLinkHandler.swift */; };
 		FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5950FD4B0A003B32224F60B /* HomeView.swift */; };
+		FDF41AA79A0BDAB289F21E58 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D4F8162B4C53DEDDD87E91 /* Telemetry.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,7 +116,7 @@
 		1BCD03B5C9F32D9021D06CB6 /* FriendConnectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendConnectionViews.swift; sourceTree = "<group>"; };
 		1C9A76F1F1B13BB49D3BCA2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		20C428C07622150791184237 /* Recurring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recurring.swift; sourceTree = "<group>"; };
-		21C2E3B3B713F758DAD1B856 /* budget-arc.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "budget-arc.svg"; sourceTree = "<group>"; };
+		21C2E3B3B713F758DAD1B856 /* budget-arc.svg */ = {isa = PBXFileReference; path = "budget-arc.svg"; sourceTree = "<group>"; };
 		230D7634A0B21CFBD5ABD83B /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceSimplifier.swift; sourceTree = "<group>"; };
 		2FB9AB5930F0CF7A98C86DEC /* ExpenseEditProposal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseEditProposal.swift; sourceTree = "<group>"; };
@@ -155,7 +156,7 @@
 		8DD37731E7B74A5C0B768684 /* ActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRepository.swift; sourceTree = "<group>"; };
 		8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRepository.swift; sourceTree = "<group>"; };
 		914274A331517EC93002CE6C /* HomeExpenseRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeExpenseRow.swift; sourceTree = "<group>"; };
-		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		99F215D3C3920731625D3EE6 /* ConnectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionRepository.swift; sourceTree = "<group>"; };
 		9D15723F1C7A5EE473CA2889 /* TestAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestAccount.swift; sourceTree = "<group>"; };
 		A01FE9F5D1352AD66B6BF4B1 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
@@ -171,7 +172,7 @@
 		B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareStatus.swift; sourceTree = "<group>"; };
 		BA8FD22752CACE19C604B0FD /* SplitExpenseMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseMode.swift; sourceTree = "<group>"; };
 		BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDateCodecTests.swift; sourceTree = "<group>"; };
-		BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		C4D4F8162B4C53DEDDD87E91 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
 		D044ABEA612ACF723FCB7589 /* SupabaseBalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBalanceRepository.swift; sourceTree = "<group>"; };
 		D0FEDAFE978A8FB4E4306121 /* AppleDeletionAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleDeletionAuthorization.swift; sourceTree = "<group>"; };
@@ -187,7 +188,7 @@
 		F6CD835D39E131CEAA0B24E8 /* Money.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Money.swift; sourceTree = "<group>"; };
 		F8E27EAC7F362A51A408D0EC /* BalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceRepository.swift; sourceTree = "<group>"; };
 		FB5855509A815413C1C6AFA1 /* ActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityStore.swift; sourceTree = "<group>"; };
-		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -305,6 +306,7 @@
 				0A41DDF8012F3E8B600FD54F /* Auth */,
 				A64F5718641EC616AD4D43F7 /* DeepLinks */,
 				D6C23B4009C88F2999C07192 /* StoreKit */,
+				62F1CB0A3659025B41BD37A0 /* Telemetry */,
 			);
 			path = System;
 			sourceTree = "<group>";
@@ -342,6 +344,14 @@
 				19E1D23ED085FCA9A7BF769A /* ActivityView.swift */,
 			);
 			path = Activity;
+			sourceTree = "<group>";
+		};
+		62F1CB0A3659025B41BD37A0 /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				C4D4F8162B4C53DEDDD87E91 /* Telemetry.swift */,
+			);
+			path = Telemetry;
 			sourceTree = "<group>";
 		};
 		82D602BAA840840463B4BFDE /* Models */ = {
@@ -467,7 +477,6 @@
 				63C47899F6ED4E7E4BA92DE9 /* Production.xcconfig */,
 				EB06FE891FB3F1266DC71601 /* Release.xcconfig */,
 				A01FE9F5D1352AD66B6BF4B1 /* Secrets.example.xcconfig */,
-				BD531E4E810F6157A1DA1AA2 /* Secrets.xcconfig */,
 				1A7D71C5B5A83B152966ED5D /* Staging.xcconfig */,
 			);
 			path = Config;
@@ -501,7 +510,7 @@
 				FDA6410533654FF97E7AB390 /* Sources */,
 				51DF6B0B5AFD8D71F648B7BB /* Resources */,
 				BF5E6CCB46B594886E34150F /* Frameworks */,
-				ED220F8626C8467A843B01D0 /* Upload Debug Symbols to Sentry */,
+				53B411A030165E0DD84A5C1B /* Upload Debug Symbols to Sentry */,
 			);
 			buildRules = (
 			);
@@ -526,6 +535,9 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					38C741AEE51B5DD4542905E5 = {
+						DevelopmentTeam = XXJA67J9AN;
+					};
+					8AAF55F2B1E62FB9443C5270 = {
 						DevelopmentTeam = XXJA67J9AN;
 					};
 				};
@@ -568,15 +580,20 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		ED220F8626C8467A843B01D0 /* Upload Debug Symbols to Sentry */ = {
+		53B411A030165E0DD84A5C1B /* Upload Debug Symbols to Sentry */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			inputFileListPaths = (
 			);
 			inputPaths = (
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
 			);
 			name = "Upload Debug Symbols to Sentry";
+			outputFileListPaths = (
+			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -670,6 +687,7 @@
 				33F1ED5603B3BB1925385A6D /* SupabaseClientProvider.swift in Sources */,
 				8B95AFDA7E6069FB3CDE3769 /* SupabaseConnectionRepository.swift in Sources */,
 				EC885C4695DC4841AD1668D2 /* SupabaseExpenseRepository.swift in Sources */,
+				FDF41AA79A0BDAB289F21E58 /* Telemetry.swift in Sources */,
 				A155F15886F6FED9D59F1145 /* TestAccount.swift in Sources */,
 				8D81E161CCD796A4BD558382 /* TestPartner.swift in Sources */,
 			);
@@ -692,8 +710,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = XXJA67J9AN;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
@@ -943,8 +959,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = XXJA67J9AN;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
@@ -981,8 +995,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = XXJA67J9AN;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
@@ -1082,8 +1094,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Loam/Loam.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = XXJA67J9AN;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Loam/Info.plist;
