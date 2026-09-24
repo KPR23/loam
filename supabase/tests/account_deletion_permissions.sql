@@ -1,6 +1,6 @@
 -- Run with `supabase test db` after applying the account deletion migrations.
 begin;
-select plan(26);
+select plan(28);
 
 select ok(not has_function_privilege('anon', 'public.claim_account_deletion_job()', 'EXECUTE'), 'anon cannot claim deletion jobs');
 select ok(not has_function_privilege('authenticated', 'public.claim_account_deletion_job()', 'EXECUTE'), 'authenticated cannot claim deletion jobs');
@@ -34,6 +34,9 @@ select ok(not has_function_privilege('anon', 'public.record_account_deletion_hea
 select ok(not has_function_privilege('anon', 'public.record_account_deletion_notifier_heartbeat(integer,integer,integer)', 'EXECUTE'), 'anon cannot forge notifier heartbeats');
 select ok(not has_function_privilege('authenticated', 'public.purge_completed_account_deletions()', 'EXECUTE'), 'authenticated cannot purge receipts');
 select ok(has_function_privilege('service_role', 'public.purge_completed_account_deletions()', 'EXECUTE'), 'service role can purge receipts');
+
+select ok(to_regprocedure('public.accept_account_deletion(uuid,uuid,text,text,text)') is null, 'superseded acceptance overload is gone');
+select ok(to_regprocedure('public.advance_account_deletion_job(uuid,text,boolean,text)') is null, 'lease-less job transition overload is gone');
 
 select * from finish();
 rollback;
