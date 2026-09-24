@@ -31,12 +31,12 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             }
     }
 
-    func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
-        let id: UUID = try await client.rpc("save_recurring_rule", params: SaveRecurringParams(
-            pRule: RecurringRuleInsertDTO(from: rule), pExpectedVersion: nil
+    func createRecurringExpense(_ expense: ExpenseRecord, rule: RecurringRuleRecord) async throws -> ExpenseRecord {
+        try validate(expense)
+        let id: UUID = try await client.rpc("create_recurring_expense", params: CreateRecurringExpenseParams(
+            pRule: RecurringRuleInsertDTO(from: rule), pExpense: ExpenseInsertDTO(from: expense)
         )).execute().value
-        guard let saved = try await fetchRecurringRule(id: id) else { throw ExpenseRepositoryError.notFound }
-        return saved
+        return try await fetchExpense(id: id)
     }
 
     func updateRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
@@ -317,6 +317,11 @@ private struct SaveRecurringParams: Encodable {
     let pRule: RecurringRuleInsertDTO
     let pExpectedVersion: Int?
     enum CodingKeys: String, CodingKey { case pRule = "p_rule", pExpectedVersion = "p_expected_version" }
+}
+private struct CreateRecurringExpenseParams: Encodable {
+    let pRule: RecurringRuleInsertDTO
+    let pExpense: ExpenseInsertDTO
+    enum CodingKeys: String, CodingKey { case pRule = "p_rule", pExpense = "p_expense" }
 }
 private struct MaterializeRecurringParams: Encodable {
     let pThrough: String

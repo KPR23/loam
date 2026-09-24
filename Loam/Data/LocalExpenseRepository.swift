@@ -38,11 +38,17 @@ actor LocalExpenseRepository: ExpenseRepository {
         return expense
     }
 
-    func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
-        var all = try loadRecurring()
-        all.append(rule)
-        try saveRecurring(all)
-        return rule
+    func createRecurringExpense(_ expense: ExpenseRecord, rule: RecurringRuleRecord) async throws -> ExpenseRecord {
+        // Validate the seed first so a rejected seed leaves no rule behind.
+        try validate(expense)
+        var rules = try loadRecurring()
+        guard !rules.contains(where: { $0.id == rule.id }) else { throw ExpenseRepositoryError.conflict }
+        rules.append(rule)
+        var all = try load()
+        all.append(expense)
+        try save(all)
+        try saveRecurring(rules)
+        return expense
     }
 
     func updateRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {

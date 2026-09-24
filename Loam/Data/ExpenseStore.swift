@@ -130,14 +130,14 @@ final class ExpenseStore: ObservableObject {
             usersTrustingCreator: usersTrustingCreator
         )
 
-        let recurringRule = try await persistRecurringRule(
+        let recurringRule = makeRecurringRule(
             recurring,
             title: trimmedTitle,
             note: trimmedNote,
             location: location,
             paidBy: paidBy,
             shares: shareRecords,
-            repository: activeRepository
+            seedDate: spentAt
         )
 
         let expense = ExpenseRecord(
@@ -154,15 +154,14 @@ final class ExpenseStore: ObservableObject {
             shares: shareRecords
         )
         _ = try await LoamErrorCapture.withCapture("expense.shared_create_failed") {
-            try await activeRepository.create(expense)
+            if let recurringRule {
+                return try await activeRepository.createRecurringExpense(expense, rule: recurringRule)
+            }
+            return try await activeRepository.create(expense)
         }
         await recordActivity(kind: .shared, actorId: userId, expense: expense, recipients: partnerUserIds)
         RecentSplitPartners.record(partnerUserIds, for: userId)
-        if var rule = recurringRule {
-            rule.nextOccurrence = rule.nextOccurrence(after: spentAt, calendar: AppPreferences.calendar)
-            _ = try await LoamErrorCapture.withCapture("expense.recurring_rule_update_failed") {
-                try await activeRepository.updateRecurringRule(rule)
-            }
+        if recurringRule != nil {
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
         await refresh(userId: userId)
@@ -183,14 +182,14 @@ final class ExpenseStore: ObservableObject {
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
         let activeRepository = primaryRepository
 
-        let recurringRule = try await persistRecurringRule(
+        let recurringRule = makeRecurringRule(
             recurring,
             title: trimmedTitle,
             note: trimmedNote,
             location: location,
             paidBy: userId,
             shares: [ExpenseShareRecord(userId: userId, amountMinor: amountMinor)],
-            repository: activeRepository
+            seedDate: spentAt
         )
 
         let shares = SplitCalculator.personal(totalMinor: amountMinor, userId: userId)
@@ -208,13 +207,12 @@ final class ExpenseStore: ObservableObject {
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
         _ = try await LoamErrorCapture.withCapture("expense.personal_create_failed") {
-            try await activeRepository.create(expense)
-        }
-        if var rule = recurringRule {
-            rule.nextOccurrence = rule.nextOccurrence(after: spentAt, calendar: AppPreferences.calendar)
-            _ = try await LoamErrorCapture.withCapture("expense.recurring_rule_update_failed") {
-                try await activeRepository.updateRecurringRule(rule)
+            if let recurringRule {
+                return try await activeRepository.createRecurringExpense(expense, rule: recurringRule)
             }
+            return try await activeRepository.create(expense)
+        }
+        if recurringRule != nil {
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
         await refresh(userId: userId)
@@ -618,24 +616,24 @@ final class ExpenseStore: ObservableObject {
         try? await ActivityRepositoryFactory.make().record(event, audience: audience)
     }
 
-    private func persistRecurringRule(
+    /// The rule is saved with its seed expense, already advanced past it.
+    private func makeRecurringRule(
         _ recurring: RecurringRuleRecord?,
         title: String?,
         note: String?,
         location: ExpenseLocation?,
         paidBy: UUID,
         shares: [ExpenseShareRecord],
-        repository: ExpenseRepository
-    ) async throws -> RecurringRuleRecord? {
+        seedDate: Date
+    ) -> RecurringRuleRecord? {
         guard var rule = recurring else { return nil }
         rule.title = title
         rule.note = note
         rule.location = location
         rule.paidBy = paidBy
         rule.shares = shares
-        return try await LoamErrorCapture.withCapture("expense.recurring_rule_create_failed") {
-            try await repository.createRecurringRule(rule)
-        }
+        rule.nextOccurrence = rule.nextOccurrence(after: seedDate, calendar: AppPreferences.calendar)
+        return rule
     }
 
     /// Creates expense rows for every due occurrence of active rules through today.
