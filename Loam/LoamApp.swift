@@ -77,8 +77,14 @@ enum LoamErrorCapture {
         do {
             return try await operation()
         } catch {
-            capture(event)
+            if !isCancellation(error) {
+                capture(event)
+            }
             throw error
         }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 }
