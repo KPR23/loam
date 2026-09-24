@@ -109,6 +109,9 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
     var nextOccurrence: Date
     var skippedDates: [Date]
     var isActive: Bool
+    /// Why the server last failed to generate a due occurrence; the rule stays
+    /// due and is retried until the owner fixes or stops it.
+    var generationFailure: String?
 
     init(
         id: UUID = UUID(),
@@ -128,7 +131,8 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         endDate: Date? = nil,
         nextOccurrence: Date? = nil,
         skippedDates: [Date] = [],
-        isActive: Bool = true
+        isActive: Bool = true,
+        generationFailure: String? = nil
     ) {
         let calendar = AppPreferences.calendar
         self.id = id
@@ -149,6 +153,12 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         self.nextOccurrence = calendar.startOfDay(for: nextOccurrence ?? startDate)
         self.skippedDates = skippedDates.map { calendar.startOfDay(for: $0) }
         self.isActive = isActive
+        self.generationFailure = generationFailure
+    }
+
+    var displayTitle: String {
+        let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? category.displayName : trimmed
     }
 
     /// Rules saved before the payer and split lived on the rule took them,
@@ -237,6 +247,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         case nextOccurrence
         case skippedDates
         case isActive
+        case generationFailure
     }
 
     init(from decoder: Decoder) throws {
@@ -264,6 +275,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         skippedDates = (try container.decodeIfPresent([Date].self, forKey: .skippedDates) ?? [])
             .map { calendar.startOfDay(for: $0) }
         isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
+        generationFailure = try container.decodeIfPresent(String.self, forKey: .generationFailure)
     }
 }
 
@@ -415,6 +427,7 @@ struct RecurringRuleDTO: Decodable, Sendable {
     var nextOccurrence: String
     var skippedDates: [String]?
     var isActive: Bool
+    var failure: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -434,6 +447,7 @@ struct RecurringRuleDTO: Decodable, Sendable {
         case nextOccurrence = "next_occurrence"
         case skippedDates = "skipped_dates"
         case isActive = "is_active"
+        case failure
     }
 
     func toRecord() -> RecurringRuleRecord? {
@@ -460,7 +474,8 @@ struct RecurringRuleDTO: Decodable, Sendable {
             endDate: endDate.flatMap { CalendarDateCodec.date(from: $0) },
             nextOccurrence: next,
             skippedDates: parsedSkipped,
-            isActive: isActive
+            isActive: isActive,
+            generationFailure: failure
         )
     }
 }

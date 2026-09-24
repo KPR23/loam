@@ -6,6 +6,8 @@ final class ExpenseStore: ObservableObject {
     @Published private(set) var pendingProposals: [ExpenseEditProposal] = []
     /// Expenses referenced by pending proposals that fall outside the active period.
     @Published private(set) var proposalExpenses: [ExpenseRecord] = []
+    /// The user's rules the server could not generate a due occurrence for.
+    @Published private(set) var failingRecurringRules: [RecurringRuleRecord] = []
     @Published private(set) var summary: MonthSpendSummary = .zero()
     @Published private(set) var isLoading = false
     @Published var lastError: String?
@@ -36,6 +38,7 @@ final class ExpenseStore: ObservableObject {
             expenses = []
             pendingProposals = []
             proposalExpenses = []
+            failingRecurringRules = []
             recurringStartDatesById = [:]
             summary = .zero()
             return
@@ -55,6 +58,9 @@ final class ExpenseStore: ObservableObject {
         } catch {
             lastError = error.localizedDescription
         }
+
+        let rules = (try? await primaryRepository.fetchActiveRecurringRules(for: userId)) ?? []
+        failingRecurringRules = rules.filter { $0.generationFailure != nil }
 
         let proposals = (try? await primaryRepository.fetchPendingProposals(for: userId)) ?? []
         pendingProposals = proposals

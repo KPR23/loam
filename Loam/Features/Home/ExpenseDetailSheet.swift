@@ -133,7 +133,7 @@ struct ExpenseDetailSheet: View {
                 }
 
                 if let recurringRule {
-                    Section("Recurring") {
+                    Section {
                         LabeledContent("Frequency") {
                             Text(recurringRule.scheduleDescription)
                         }
@@ -154,6 +154,12 @@ struct ExpenseDetailSheet: View {
 
                         LabeledContent("Status") {
                             recurringStatusLabel(for: recurringRule)
+                        }
+                    } header: {
+                        Text("Recurring")
+                    } footer: {
+                        if let failure = recurringRule.generationFailure, recurringRule.isActive, !recurringRule.hasEnded {
+                            Text("The next charge couldn't be added: \(failure). It will be retried.")
                         }
                     }
                 } else if expense.isRecurring {
@@ -228,13 +234,14 @@ struct ExpenseDetailSheet: View {
     @ViewBuilder
     private func recurringStatusLabel(for rule: RecurringRuleRecord) -> some View {
         let isActive = rule.isActive && !rule.hasEnded
+        let isFailing = isActive && rule.generationFailure != nil
         Label {
-            Text(isActive ? "Active" : "Inactive")
+            Text(isFailing ? "Needs attention" : isActive ? "Active" : "Inactive")
         } icon: {
-            Image(systemName: isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
+            Image(systemName: isFailing ? "exclamationmark.triangle.fill" : isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
         }
         .font(.body.weight(.medium))
-        .foregroundStyle(isActive ? Color.green : Color.red)
+        .foregroundStyle(isFailing ? Color.orange : isActive ? Color.green : Color.red)
         .labelStyle(.titleAndIcon)
     }
 

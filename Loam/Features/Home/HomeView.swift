@@ -358,6 +358,20 @@ struct HomeView: View {
             }
         }
 
+        if !expenseStore.failingRecurringRules.isEmpty {
+            Section {
+                ForEach(expenseStore.failingRecurringRules) { rule in
+                    Label {
+                        Text("\u{201C}\(rule.displayTitle)\u{201D} didn't repeat: \(rule.generationFailure ?? ""). Edit or stop it to continue.")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                }
+            }
+        }
+
         if let error = expenseStore.lastError {
             Section {
                 Text(error)
