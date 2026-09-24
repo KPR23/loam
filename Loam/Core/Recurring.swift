@@ -93,7 +93,9 @@ enum RecurringPreset: String, CaseIterable, Identifiable, Sendable {
 struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var ownerUserId: UUID
-    var householdId: UUID?
+    var paidBy: UUID
+    var shares: [ExpenseShareRecord]
+    var version: Int?
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
@@ -111,7 +113,9 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
     init(
         id: UUID = UUID(),
         ownerUserId: UUID,
-        householdId: UUID? = nil,
+        paidBy: UUID? = nil,
+        shares: [ExpenseShareRecord]? = nil,
+        version: Int = 1,
         amountMinor: Int,
         currency: String = "PLN",
         category: ExpenseCategory,
@@ -129,7 +133,9 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         let calendar = AppPreferences.calendar
         self.id = id
         self.ownerUserId = ownerUserId
-        self.householdId = householdId
+        self.paidBy = paidBy ?? ownerUserId
+        self.shares = shares ?? [ExpenseShareRecord(userId: ownerUserId, amountMinor: amountMinor)]
+        self.version = version
         self.amountMinor = amountMinor
         self.currency = currency
         self.category = category
@@ -187,7 +193,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id
         case ownerUserId
-        case householdId
+        case paidBy, shares, version
         case amountMinor
         case currency
         case category
@@ -207,8 +213,10 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         ownerUserId = try container.decode(UUID.self, forKey: .ownerUserId)
-        householdId = try container.decodeIfPresent(UUID.self, forKey: .householdId)
         amountMinor = try container.decode(Int.self, forKey: .amountMinor)
+        paidBy = try container.decodeIfPresent(UUID.self, forKey: .paidBy) ?? ownerUserId
+        shares = try container.decodeIfPresent([ExpenseShareRecord].self, forKey: .shares) ?? [ExpenseShareRecord(userId: ownerUserId, amountMinor: amountMinor)]
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         currency = try container.decode(String.self, forKey: .currency)
         category = try container.decode(ExpenseCategory.self, forKey: .category)
         title = try container.decodeIfPresent(String.self, forKey: .title)
@@ -263,36 +271,21 @@ enum RecurringMaterializer {
         return dates
     }
 
-    /// Builds a new expense for `spentAt`, copying split structure from `template` when present.
+    /// Builds an occurrence using the authoritative rule, including its payer and split.
     static func occurrenceExpense(
         rule: RecurringRuleRecord,
-        spentAt: Date,
-        template: ExpenseRecord?
+        spentAt: Date
     ) -> ExpenseRecord {
-        let amountMinor = template?.amountMinor ?? rule.amountMinor
-        let currency = template?.currency ?? rule.currency
-        let category = template?.category ?? rule.category
-        let title = template?.title ?? rule.title
-        let note = template?.note ?? rule.note
-        let location = template?.location ?? rule.location
-        let paidBy = template?.paidBy ?? rule.ownerUserId
-        let createdBy = template?.createdBy ?? rule.ownerUserId
-        let householdId = template?.householdId ?? rule.householdId
-
-        // Acceptance/trust is applied by ExpenseStore when materializing.
-        let shares: [ExpenseShareRecord]
-        if let template, !template.shares.isEmpty {
-            shares = template.shares.map { share in
-                ExpenseShareRecord(
-                    userId: share.userId,
-                    amountMinor: share.amountMinor
-                )
-            }
-        } else {
-            shares = [
-                ExpenseShareRecord(userId: rule.ownerUserId, amountMinor: amountMinor)
-            ]
-        }
+        // Past occurrences never serve as mutable templates for future ones.
+        let amountMinor = rule.amountMinor
+        let currency = rule.currency
+        let category = rule.category
+        let title = rule.title
+        let note = rule.note
+        let location = rule.location
+        let paidBy = rule.paidBy
+        let createdBy = rule.ownerUserId
+        let shares = rule.shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
 
         return ExpenseRecord(
             amountMinor: amountMinor,
@@ -304,7 +297,6 @@ enum RecurringMaterializer {
             spentAt: spentAt,
             paidBy: paidBy,
             createdBy: createdBy,
-            householdId: householdId,
             recurringId: rule.id,
             shares: shares
         )
@@ -314,7 +306,9 @@ enum RecurringMaterializer {
 struct RecurringRuleInsertDTO: Encodable, Sendable {
     var id: UUID
     var ownerUserId: UUID
-    var householdId: UUID?
+    var paidBy: UUID
+    var shares: [ProposalShareDTO]
+    var version: Int?
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
@@ -332,7 +326,8 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
     enum CodingKeys: String, CodingKey {
         case id
         case ownerUserId = "owner_user_id"
-        case householdId = "household_id"
+        case paidBy = "paid_by"
+        case shares, version
         case amountMinor = "amount_minor"
         case currency
         case category
@@ -351,7 +346,9 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
     init(from record: RecurringRuleRecord) {
         id = record.id
         ownerUserId = record.ownerUserId
-        householdId = record.householdId
+        paidBy = record.paidBy
+        shares = record.shares.map { ProposalShareDTO(userId: $0.userId, amountMinor: $0.amountMinor) }
+        version = record.version
         amountMinor = record.amountMinor
         currency = record.currency
         category = record.category
@@ -371,7 +368,9 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
 struct RecurringRuleDTO: Decodable, Sendable {
     var id: UUID
     var ownerUserId: UUID
-    var householdId: UUID?
+    var paidBy: UUID
+    var shares: [ProposalShareDTO]
+    var version: Int?
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
@@ -389,7 +388,8 @@ struct RecurringRuleDTO: Decodable, Sendable {
     enum CodingKeys: String, CodingKey {
         case id
         case ownerUserId = "owner_user_id"
-        case householdId = "household_id"
+        case paidBy = "paid_by"
+        case shares, version
         case amountMinor = "amount_minor"
         case currency
         case category
@@ -414,7 +414,9 @@ struct RecurringRuleDTO: Decodable, Sendable {
         return RecurringRuleRecord(
             id: id,
             ownerUserId: ownerUserId,
-            householdId: householdId,
+            paidBy: paidBy,
+            shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) },
+            version: version ?? 1,
             amountMinor: amountMinor,
             currency: currency,
             category: category,
@@ -429,30 +431,6 @@ struct RecurringRuleDTO: Decodable, Sendable {
             skippedDates: parsedSkipped,
             isActive: isActive
         )
-    }
-}
-
-struct RecurringRuleUpdateDTO: Encodable, Sendable {
-    var nextOccurrence: String
-    var endDate: String?
-    var skippedDates: [String]
-    var isActive: Bool
-    var householdId: UUID?
-
-    enum CodingKeys: String, CodingKey {
-        case nextOccurrence = "next_occurrence"
-        case endDate = "end_date"
-        case skippedDates = "skipped_dates"
-        case isActive = "is_active"
-        case householdId = "household_id"
-    }
-
-    init(from record: RecurringRuleRecord) {
-        nextOccurrence = CalendarDateCodec.string(from: record.nextOccurrence)
-        endDate = record.endDate.map { CalendarDateCodec.string(from: $0) }
-        skippedDates = record.skippedDates.map { CalendarDateCodec.string(from: $0) }
-        isActive = record.isActive
-        householdId = record.householdId
     }
 }
 

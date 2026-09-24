@@ -268,7 +268,7 @@ final class AuthSession: ObservableObject {
             for key in [
                 Self.demoUserIdKey, Self.demoDisplayNameKey,
                 "loam.local.expenses", "loam.local.recurring", "loam.local.proposals",
-                "loam.local.trust", "loam.local.households", "loam.local.household",
+                "loam.local.trust", "loam.local.trust.v2", "loam.local.households", "loam.local.household",
                 "loam.local.repayments", "loam.local.activity.v1",
             ] {
                 defaults.removeObject(forKey: key)

@@ -43,7 +43,7 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
     var spentAt: String
     var paidBy: UUID
     var createdBy: UUID
-    var householdId: UUID?
+    var version: Int?
     var recurringId: UUID?
     var createdAt: Date?
     var updatedAt: Date?
@@ -60,8 +60,8 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
         case spentAt = "spent_at"
         case paidBy = "paid_by"
         case createdBy = "created_by"
-        case householdId = "household_id"
         case recurringId = "recurring_id"
+        case version
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case expenseShare = "expense_share"
@@ -81,7 +81,7 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
             spentAt: spent,
             paidBy: paidBy,
             createdBy: createdBy,
-            householdId: householdId,
+            version: version ?? 1,
             recurringId: recurringId,
             shares: shares,
             createdAt: createdAt ?? Date(),
@@ -91,9 +91,7 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
 
 }
 
-/// Insert body without timestamps (DB defaults). Shares are inserted separately —
-/// PostgREST nested inserts treat `expense_share` as a missing column when the
-/// relationship isn't writable in the schema cache.
+/// Complete transaction payload. Consent fields are assigned by the server.
 struct ExpenseInsertDTO: Encodable, Sendable {
     var id: UUID
     var amountMinor: Int
@@ -104,119 +102,16 @@ struct ExpenseInsertDTO: Encodable, Sendable {
     var location: ExpenseLocation?
     var spentAt: String
     var paidBy: UUID
-    var createdBy: UUID
-    var householdId: UUID?
     var recurringId: UUID?
-
+    var shares: [ProposalShareDTO]
     enum CodingKeys: String, CodingKey {
-        case id
-        case amountMinor = "amount_minor"
-        case currency
-        case category
-        case title
-        case note
-        case location
-        case spentAt = "spent_at"
-        case paidBy = "paid_by"
-        case createdBy = "created_by"
-        case householdId = "household_id"
-        case recurringId = "recurring_id"
+        case id, currency, category, title, note, location, shares
+        case amountMinor = "amount_minor", spentAt = "spent_at", paidBy = "paid_by", recurringId = "recurring_id"
     }
-
     init(from record: ExpenseRecord) {
-        id = record.id
-        amountMinor = record.amountMinor
-        currency = record.currency
-        category = record.category
-        title = record.title
-        note = record.note
-        location = record.location
-        spentAt = CalendarDateCodec.string(from: record.spentAt)
-        paidBy = record.paidBy
-        createdBy = record.createdBy
-        householdId = record.householdId
-        recurringId = record.recurringId
-    }
-}
-
-struct ExpenseShareInsertDTO: Encodable, Sendable {
-    var id: UUID
-    var expenseId: UUID
-    var userId: UUID
-    var amountMinor: Int
-    var status: ExpenseShareStatus?
-    var respondedAt: Date?
-    var acceptedViaTrust: Bool?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case expenseId = "expense_id"
-        case userId = "user_id"
-        case amountMinor = "amount_minor"
-        case status
-        case respondedAt = "responded_at"
-        case acceptedViaTrust = "accepted_via_trust"
-    }
-
-    init(
-        id: UUID,
-        expenseId: UUID,
-        userId: UUID,
-        amountMinor: Int,
-        status: ExpenseShareStatus? = nil,
-        respondedAt: Date? = nil,
-        acceptedViaTrust: Bool? = nil
-    ) {
-        self.id = id
-        self.expenseId = expenseId
-        self.userId = userId
-        self.amountMinor = amountMinor
-        self.status = status
-        self.respondedAt = respondedAt
-        self.acceptedViaTrust = acceptedViaTrust
-    }
-}
-
-struct ExpenseUpdateDTO: Encodable, Sendable {
-    var amountMinor: Int
-    var currency: String
-    var category: ExpenseCategory
-    var title: String?
-    var note: String?
-    var location: ExpenseLocation?
-    var spentAt: String
-    var paidBy: UUID
-    var householdId: UUID?
-    var recurringId: UUID?
-    var updatedAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case amountMinor = "amount_minor"
-        case currency
-        case category
-        case title
-        case note
-        case location
-        case spentAt = "spent_at"
-        case paidBy = "paid_by"
-        case householdId = "household_id"
-        case recurringId = "recurring_id"
-        case updatedAt = "updated_at"
-    }
-
-    init(from record: ExpenseRecord) {
-        amountMinor = record.amountMinor
-        currency = record.currency
-        category = record.category
-        title = record.title
-        note = record.note
-        location = record.location
-        spentAt = CalendarDateCodec.string(from: record.spentAt)
-        paidBy = record.paidBy
-        householdId = record.householdId
-        recurringId = record.recurringId
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        updatedAt = iso.string(from: Date())
+        id = record.id; amountMinor = record.amountMinor; currency = record.currency
+        category = record.category; title = record.title; note = record.note; location = record.location
+        spentAt = CalendarDateCodec.string(from: record.spentAt); paidBy = record.paidBy; recurringId = record.recurringId
+        shares = record.shares.map { ProposalShareDTO(userId: $0.userId, amountMinor: $0.amountMinor) }
     }
 }

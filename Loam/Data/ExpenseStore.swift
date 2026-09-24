@@ -81,7 +81,6 @@ final class ExpenseStore: ObservableObject {
         location: ExpenseLocation? = nil,
         spentAt: Date,
         userId: UUID,
-        householdId: UUID,
         splitMode: SplitExpenseMode,
         paidBy: UUID,
         partnerUserIds: [UUID],
@@ -116,7 +115,6 @@ final class ExpenseStore: ObservableObject {
             spentAt: spentAt,
             paidBy: paidBy,
             createdBy: userId,
-            householdId: householdId,
             shares: []
         )
 
@@ -124,7 +122,6 @@ final class ExpenseStore: ObservableObject {
         let usersTrustingCreator = await usersTrusting(
             creatorId: userId,
             partnerUserIds: partnerUserIds,
-            householdId: householdId,
             repository: activeRepository
         )
         let shareRecords = ExpenseShareAcceptance.sharesWithAcceptance(
@@ -138,7 +135,8 @@ final class ExpenseStore: ObservableObject {
             title: trimmedTitle,
             note: trimmedNote,
             location: location,
-            householdId: householdId,
+            paidBy: paidBy,
+            shares: shareRecords,
             repository: activeRepository
         )
 
@@ -152,7 +150,6 @@ final class ExpenseStore: ObservableObject {
             spentAt: spentAt,
             paidBy: paidBy,
             createdBy: userId,
-            householdId: householdId,
             recurringId: recurringRule?.id,
             shares: shareRecords
         )
@@ -191,7 +188,8 @@ final class ExpenseStore: ObservableObject {
             title: trimmedTitle,
             note: trimmedNote,
             location: location,
-            householdId: nil,
+            paidBy: userId,
+            shares: [ExpenseShareRecord(userId: userId, amountMinor: amountMinor)],
             repository: activeRepository
         )
 
@@ -206,7 +204,6 @@ final class ExpenseStore: ObservableObject {
             spentAt: spentAt,
             paidBy: userId,
             createdBy: userId,
-            householdId: nil,
             recurringId: recurringRule?.id,
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
@@ -232,7 +229,6 @@ final class ExpenseStore: ObservableObject {
         location: ExpenseLocation? = nil,
         spentAt: Date,
         userId: UUID,
-        householdId: UUID?,
         splitMode: SplitExpenseMode,
         paidBy: UUID,
         partnerUserIds: [UUID],
@@ -266,7 +262,6 @@ final class ExpenseStore: ObservableObject {
         expense.updatedAt = Date()
 
         if partnerUserIds.isEmpty {
-            expense.householdId = nil
             expense.paidBy = userId
             expense.shares = SplitCalculator.personal(totalMinor: amountMinor, userId: userId).map {
                 ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor)
@@ -275,9 +270,6 @@ final class ExpenseStore: ObservableObject {
                 try await activeRepository.update(expense)
             }
         } else {
-            guard let householdId else {
-                throw ExpenseRepositoryError.invalidShares
-            }
             let calculatedShares = SplitCalculator.split(
                 totalMinor: amountMinor,
                 mode: splitMode,
@@ -289,11 +281,9 @@ final class ExpenseStore: ObservableObject {
                 participantPercentages: participantPercentages,
                 participantExactAmountMinors: participantExactAmountMinors
             )
-            expense.householdId = householdId
             let usersTrustingCreator = await usersTrusting(
                 creatorId: userId,
                 partnerUserIds: partnerUserIds,
-                householdId: householdId,
                 repository: activeRepository
             )
             expense.shares = ExpenseShareAcceptance.sharesWithAcceptance(
@@ -389,13 +379,12 @@ final class ExpenseStore: ObservableObject {
                 after: occurrenceDate
             )
         }
-        _ = try await repository.updateRecurringRule(rule)
+        rule = try await repository.updateRecurringRule(rule)
     }
 
     func applySplit(
         to expenseId: UUID,
         userId: UUID,
-        householdId: UUID,
         splitMode: SplitExpenseMode,
         paidBy: UUID,
         partnerUserIds: [UUID],
@@ -420,13 +409,11 @@ final class ExpenseStore: ObservableObject {
             participantExactAmountMinors: participantExactAmountMinors
         )
 
-        expense.householdId = householdId
         expense.paidBy = paidBy
         let activeRepository = repository(forSplitWith: partnerUserIds)
         let usersTrustingCreator = await usersTrusting(
             creatorId: userId,
             partnerUserIds: partnerUserIds,
-            householdId: householdId,
             repository: activeRepository
         )
         expense.shares = ExpenseShareAcceptance.sharesWithAcceptance(
@@ -473,13 +460,10 @@ final class ExpenseStore: ObservableObject {
         do {
             var trustedScopes: Set<String> = []
             for target in targets {
-                // Trust once per creator/household when bulk-accepting with trust.
+                // Trust once per creator when bulk-accepting with trust.
                 let itemAction: ExpenseShareResponseAction
                 if action == .acceptWithTrust {
-                    let scopeKey = [
-                        target.expense.householdId?.uuidString ?? "none",
-                        target.expense.createdBy.uuidString
-                    ].joined(separator: "|")
+                    let scopeKey = target.expense.createdBy.uuidString
                     if trustedScopes.contains(scopeKey) {
                         itemAction = .accept
                     } else {
@@ -543,6 +527,7 @@ final class ExpenseStore: ObservableObject {
         let proposal = ExpenseEditProposal(
             expenseId: expense.id,
             proposedBy: userId,
+            baseVersion: expense.version ?? 1,
             amountMinor: amountMinor,
             category: category,
             title: title,
@@ -638,14 +623,16 @@ final class ExpenseStore: ObservableObject {
         title: String?,
         note: String?,
         location: ExpenseLocation?,
-        householdId: UUID?,
+        paidBy: UUID,
+        shares: [ExpenseShareRecord],
         repository: ExpenseRepository
     ) async throws -> RecurringRuleRecord? {
         guard var rule = recurring else { return nil }
         rule.title = title
         rule.note = note
         rule.location = location
-        rule.householdId = householdId
+        rule.paidBy = paidBy
+        rule.shares = shares
         return try await LoamErrorCapture.withCapture("expense.recurring_rule_create_failed") {
             try await repository.createRecurringRule(rule)
         }
@@ -662,15 +649,13 @@ final class ExpenseStore: ObservableObject {
             let dueDates = RecurringMaterializer.dueDates(for: rule, through: today, calendar: calendar)
             guard !dueDates.isEmpty else { continue }
 
-            let template = try await repository.fetchLatestExpense(forRecurringId: rule.id)
-            let partnerIds = (template?.shares.map(\.userId) ?? [])
+            let partnerIds = rule.shares.map(\.userId)
                 .filter { $0 != rule.ownerUserId }
             let trusting: Set<UUID>
-            if let householdId = template?.householdId ?? rule.householdId, !partnerIds.isEmpty {
+            if !partnerIds.isEmpty {
                 trusting = await usersTrusting(
-                    creatorId: template?.createdBy ?? rule.ownerUserId,
+                    creatorId: rule.ownerUserId,
                     partnerUserIds: partnerIds,
-                    householdId: householdId,
                     repository: repository
                 )
             } else {
@@ -681,8 +666,7 @@ final class ExpenseStore: ObservableObject {
             for date in dueDates {
                 var occurrence = RecurringMaterializer.occurrenceExpense(
                     rule: rule,
-                    spentAt: date,
-                    template: template
+                    spentAt: date
                 )
                 if occurrence.isShared {
                     let calculated = occurrence.shares.map {
@@ -702,7 +686,7 @@ final class ExpenseStore: ObservableObject {
                 let advanced = rule.nextOccurrence(after: last, calendar: calendar)
                 if advanced != rule.nextOccurrence || createdAny {
                     rule.nextOccurrence = advanced
-                    _ = try await repository.updateRecurringRule(rule)
+                    rule = try await repository.updateRecurringRule(rule)
                 }
             }
         }
@@ -711,12 +695,11 @@ final class ExpenseStore: ObservableObject {
     private func usersTrusting(
         creatorId: UUID,
         partnerUserIds: [UUID],
-        householdId: UUID,
         repository: ExpenseRepository
     ) async -> Set<UUID> {
         var trusting: Set<UUID> = []
         for partnerId in partnerUserIds where partnerId != creatorId {
-            let trustedCreators = (try? await repository.fetchTrustedUserIds(for: partnerId, householdId: householdId)) ?? []
+            let trustedCreators = (try? await repository.fetchTrustedUserIds(for: partnerId)) ?? []
             if trustedCreators.contains(creatorId) {
                 trusting.insert(partnerId)
             }
@@ -774,7 +757,7 @@ final class ExpenseStore: ObservableObject {
             if mine > 0 {
                 byCategory[expense.category, default: 0] += mine
             }
-            if expense.householdId != nil {
+            if expense.isShared {
                 shared += mine
             }
         }

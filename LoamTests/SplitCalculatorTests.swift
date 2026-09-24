@@ -369,7 +369,6 @@ final class SplitFormSeedTests: XCTestCase {
             category: .groceries,
             paidBy: paidBy,
             createdBy: alice,
-            householdId: UUID(),
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
     }
@@ -440,7 +439,6 @@ final class RecentSplitPartnersTests: XCTestCase {
             spentAt: Date(timeIntervalSince1970: 1_000),
             paidBy: me,
             createdBy: me,
-            householdId: UUID(),
             shares: [
                 ExpenseShareRecord(userId: me, amountMinor: 500),
                 ExpenseShareRecord(userId: philip, amountMinor: 500),
@@ -453,7 +451,6 @@ final class RecentSplitPartnersTests: XCTestCase {
             spentAt: Date(timeIntervalSince1970: 2_000),
             paidBy: me,
             createdBy: me,
-            householdId: UUID(),
             shares: [
                 ExpenseShareRecord(userId: me, amountMinor: 1000),
                 ExpenseShareRecord(userId: julia, amountMinor: 1000),

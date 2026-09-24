@@ -88,34 +88,19 @@ final class RecurringMaterializerTests: XCTestCase {
         ])
     }
 
-    func testOccurrenceExpenseCopiesSplitTemplate() {
+    func testOccurrencePreservesRuleSplitWithoutHistoricalExpense() {
         let partner = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
-        let householdId = UUID()
-        let rule = makeRule(unit: .day, count: 1, next: date(2026, 9, 1), householdId: householdId)
-        let template = ExpenseRecord(
-            amountMinor: 1000,
-            category: .utilities,
-            title: "Internet",
-            spentAt: date(2026, 9, 1),
-            paidBy: owner,
-            createdBy: owner,
-            householdId: householdId,
-            recurringId: rule.id,
-            shares: [
-                ExpenseShareRecord(userId: owner, amountMinor: 600),
-                ExpenseShareRecord(userId: partner, amountMinor: 400),
-            ]
-        )
-
+        var rule = makeRule(unit: .day, count: 1, next: date(2026, 9, 1))
+        rule.amountMinor = 1000
+        rule.title = "Internet"
+        rule.shares = [ExpenseShareRecord(userId: owner, amountMinor: 600), ExpenseShareRecord(userId: partner, amountMinor: 400)]
         let occurrence = RecurringMaterializer.occurrenceExpense(
             rule: rule,
-            spentAt: date(2026, 9, 2),
-            template: template
+            spentAt: date(2026, 9, 2)
         )
 
         XCTAssertEqual(occurrence.amountMinor, 1000)
         XCTAssertEqual(occurrence.title, "Internet")
-        XCTAssertEqual(occurrence.householdId, householdId)
         XCTAssertEqual(occurrence.recurringId, rule.id)
         XCTAssertEqual(occurrence.spentAt, date(2026, 9, 2))
         XCTAssertEqual(occurrence.shares.map(\.amountMinor).sorted(), [400, 600])
@@ -125,12 +110,10 @@ final class RecurringMaterializerTests: XCTestCase {
         unit: RecurringIntervalUnit,
         count: Int,
         next: Date,
-        householdId: UUID? = nil,
         endDate: Date? = nil
     ) -> RecurringRuleRecord {
         RecurringRuleRecord(
             ownerUserId: owner,
-            householdId: householdId,
             amountMinor: 500,
             category: .other,
             intervalUnit: unit,

@@ -49,7 +49,6 @@ final class ExpenseStoreSummaryTests: XCTestCase {
             category: .dining,
             paidBy: user,
             createdBy: user,
-            householdId: UUID(),
             shares: [
                 ExpenseShareRecord(userId: user, amountMinor: 500, status: .accepted),
                 ExpenseShareRecord(userId: other, amountMinor: 500, status: .accepted),
@@ -66,7 +65,6 @@ final class ExpenseStoreSummaryTests: XCTestCase {
             category: .groceries,
             paidBy: other,
             createdBy: other,
-            householdId: UUID(),
             shares: [
                 ExpenseShareRecord(userId: other, amountMinor: 1000, status: .accepted),
                 ExpenseShareRecord(userId: user, amountMinor: 1000, status: .pending),
@@ -104,13 +102,11 @@ final class ExpenseStoreSummaryTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: defaultsKey)
         defer { UserDefaults.standard.removeObject(forKey: defaultsKey) }
 
-        let householdId = UUID()
         let expense = ExpenseRecord(
             amountMinor: 3000,
             category: .groceries,
             paidBy: user,
             createdBy: user,
-            householdId: householdId,
             shares: [
                 ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
                 ExpenseShareRecord(userId: other, amountMinor: 1000, status: .pending),
@@ -160,7 +156,6 @@ final class ExpenseStoreSummaryTests: XCTestCase {
             category: .shopping,
             paidBy: user,
             createdBy: user,
-            householdId: UUID(),
             shares: [
                 ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
                 ExpenseShareRecord(userId: other, amountMinor: 1000, status: .accepted),

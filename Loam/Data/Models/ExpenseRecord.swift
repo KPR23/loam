@@ -58,7 +58,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
     var spentAt: Date
     var paidBy: UUID
     var createdBy: UUID
-    var householdId: UUID?
+    var version: Int?
     var recurringId: UUID?
     var shares: [ExpenseShareRecord]
     var createdAt: Date
@@ -75,7 +75,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         spentAt: Date = Date(),
         paidBy: UUID,
         createdBy: UUID,
-        householdId: UUID? = nil,
+        version: Int = 1,
         recurringId: UUID? = nil,
         shares: [ExpenseShareRecord],
         createdAt: Date = Date(),
@@ -91,7 +91,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         self.spentAt = AppPreferences.calendar.startOfDay(for: spentAt)
         self.paidBy = paidBy
         self.createdBy = createdBy
-        self.householdId = householdId
+        self.version = version
         self.recurringId = recurringId
         self.shares = shares
         self.createdAt = createdAt
@@ -117,7 +117,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         return Money(amountMinor: minor, currencyCode: currency)
     }
 
-    var isShared: Bool { householdId != nil }
+    var isShared: Bool { shares.contains { $0.userId != createdBy } }
 
     var isRecurring: Bool { recurringId != nil }
 

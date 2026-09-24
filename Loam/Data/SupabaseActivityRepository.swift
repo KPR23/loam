@@ -6,18 +6,11 @@ actor SupabaseActivityRepository: ActivityRepository {
     init(client: SupabaseClient) { self.client = client }
 
     func fetchEvents(for userId: UUID, before: ActivityEvent?) async throws -> ActivityPage {
-        // The timestamp remains the primary cursor. The server index also includes
-        // the immutable ID, while this conservative predicate prevents duplicates
-        // on refresh even on PostgREST versions without an `or` filter builder.
-        let rows: [ActivityDTO]
-        if let cursor = before {
-            rows = try await client.from("activity_event").select()
-                .lt("occurred_at", value: cursor.occurredAt.ISO8601Format())
-                .order("occurred_at", ascending: false).order("id", ascending: false).limit(51).execute().value
-        } else {
-            rows = try await client.from("activity_event").select()
-                .order("occurred_at", ascending: false).order("id", ascending: false).limit(51).execute().value
+        struct Params: Encodable {
+            let beforeId: UUID?
+            enum CodingKeys: String, CodingKey { case beforeId = "p_before_id" }
         }
+        let rows: [ActivityDTO] = try await client.rpc("activity_page", params: Params(beforeId: before?.id)).execute().value
         let events = rows.compactMap(\.event)
         return ActivityPage(events: Array(events.prefix(50)), hasMore: events.count > 50)
     }

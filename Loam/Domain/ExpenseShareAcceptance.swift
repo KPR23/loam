@@ -12,7 +12,6 @@ enum ExpenseShareAcceptance {
             let status = statusForShare(
                 userId: share.userId,
                 createdBy: expense.createdBy,
-                householdId: expense.householdId,
                 usersTrustingCreator: usersTrustingCreator
             )
             return ExpenseShareRecord(
@@ -31,10 +30,8 @@ enum ExpenseShareAcceptance {
     static func statusForShare(
         userId: UUID,
         createdBy: UUID,
-        householdId: UUID?,
         usersTrustingCreator: Set<UUID>
     ) -> ExpenseShareStatus {
-        guard householdId != nil else { return .accepted }
         if userId == createdBy { return .accepted }
         if usersTrustingCreator.contains(userId) { return .accepted }
         return .pending

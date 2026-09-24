@@ -32,20 +32,19 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     }
 
     func createRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
-        _ = try await client
-            .from("recurring_rule")
-            .insert(RecurringRuleInsertDTO(from: rule))
-            .execute()
-        return rule
+        let id: UUID = try await client.rpc("save_recurring_rule", params: SaveRecurringParams(
+            pRule: RecurringRuleInsertDTO(from: rule), pExpectedVersion: nil
+        )).execute().value
+        guard let saved = try await fetchRecurringRule(id: id) else { throw ExpenseRepositoryError.notFound }
+        return saved
     }
 
     func updateRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord {
-        _ = try await client
-            .from("recurring_rule")
-            .update(RecurringRuleUpdateDTO(from: rule))
-            .eq("id", value: rule.id)
-            .execute()
-        return rule
+        let id: UUID = try await client.rpc("save_recurring_rule", params: SaveRecurringParams(
+            pRule: RecurringRuleInsertDTO(from: rule), pExpectedVersion: rule.version ?? 1
+        )).execute().value
+        guard let saved = try await fetchRecurringRule(id: id) else { throw ExpenseRepositoryError.notFound }
+        return saved
     }
 
     func fetchActiveRecurringRules(for userId: UUID) async throws -> [RecurringRuleRecord] {
@@ -64,19 +63,6 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             .from("recurring_rule")
             .select()
             .eq("id", value: id)
-            .limit(1)
-            .execute()
-            .value
-        return rows.compactMap { $0.toRecord() }.first
-    }
-
-    func fetchLatestExpense(forRecurringId recurringId: UUID) async throws -> ExpenseRecord? {
-        let rows: [ExpenseDTO] = try await client
-            .from("expense")
-            .select("*, expense_share(*)")
-            .eq("recurring_id", value: recurringId)
-            .order("spent_at", ascending: false)
-            .order("created_at", ascending: false)
             .limit(1)
             .execute()
             .value
@@ -120,57 +106,18 @@ actor SupabaseExpenseRepository: ExpenseRepository {
 
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
-
-        // Two-step insert: nested `expense_share` in the expense body fails with
-        // PGRST "could not find the expense_share column … in the schema cache".
-        _ = try await client
-            .from("expense")
-            .insert(ExpenseInsertDTO(from: expense))
-            .execute()
-
-        let sharePayload = expense.shares.map {
-            ExpenseShareInsertDTO(
-                id: $0.id,
-                expenseId: expense.id,
-                userId: $0.userId,
-                amountMinor: $0.amountMinor,
-                status: $0.status,
-                respondedAt: $0.respondedAt,
-                acceptedViaTrust: $0.acceptedViaTrust
-            )
-        }
-
-        do {
-            _ = try await client
-                .from("expense_share")
-                .insert(sharePayload)
-                .execute()
-        } catch {
-            // Avoid orphan expense rows if share insert fails (e.g. sum trigger).
-            _ = try? await client
-                .from("expense")
-                .delete()
-                .eq("id", value: expense.id)
-                .execute()
-            throw error
-        }
-
-        return try await fetchExpense(id: expense.id)
+        let id: UUID = try await client.rpc("save_expense", params: SaveExpenseParams(
+            pExpense: ExpenseInsertDTO(from: expense), pExpectedVersion: nil
+        )).execute().value
+        return try await fetchExpense(id: id)
     }
 
     func update(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
-
-        // One RPC keeps share replacement in a single DB transaction. Separate HTTP
-        // updates commit individually and trip the deferred share-sum trigger early.
-        _ = try await client
-            .rpc(
-                "update_expense_with_shares",
-                params: UpdateExpenseWithSharesParams(from: expense)
-            )
-            .execute()
-
-        return try await fetchExpense(id: expense.id)
+        let id: UUID = try await client.rpc("save_expense", params: SaveExpenseParams(
+            pExpense: ExpenseInsertDTO(from: expense), pExpectedVersion: expense.version ?? 1
+        )).execute().value
+        return try await fetchExpense(id: id)
     }
 
     func delete(id: UUID) async throws {
@@ -248,7 +195,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     }
 
     func createEditProposal(_ proposal: ExpenseEditProposal, expenseId: UUID) async throws -> ExpenseEditProposal {
-        let params = CreateEditProposalParams(proposal: proposal, expenseId: expenseId)
+        let params = CreateEditProposalParams(pExpenseId: expenseId, pExpectedVersion: proposal.baseVersion ?? 1, pProposal: ProposalPayload(proposal))
         let proposalId: UUID = try await client
             .rpc("create_expense_edit_proposal", params: params)
             .execute()
@@ -277,7 +224,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             .execute()
     }
 
-    func fetchTrustedUserIds(for userId: UUID, householdId: UUID) async throws -> Set<UUID> {
+    func fetchTrustedUserIds(for userId: UUID) async throws -> Set<UUID> {
         struct TrustRow: Decodable {
             let trustedUserId: UUID
 
@@ -290,29 +237,26 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             .from("expense_share_trust")
             .select("trusted_user_id")
             .eq("user_id", value: userId)
-            .eq("household_id", value: householdId)
             .execute()
             .value
 
         return Set(rows.map(\.trustedUserId))
     }
 
-    func addTrust(for userId: UUID, trustedUserId: UUID, householdId: UUID) async throws {
+    func addTrust(for userId: UUID, trustedUserId: UUID) async throws {
         struct TrustInsert: Encodable {
             let userId: UUID
             let trustedUserId: UUID
-            let householdId: UUID
 
             enum CodingKeys: String, CodingKey {
                 case userId = "user_id"
                 case trustedUserId = "trusted_user_id"
-                case householdId = "household_id"
             }
         }
 
         _ = try await client
             .from("expense_share_trust")
-            .insert(TrustInsert(userId: userId, trustedUserId: trustedUserId, householdId: householdId))
+            .insert(TrustInsert(userId: userId, trustedUserId: trustedUserId))
             .execute()
     }
 
@@ -356,182 +300,35 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     }
 }
 
-private struct UpdateExpenseWithSharesParams: Encodable, Sendable {
-    let pExpenseId: UUID
-    let pAmountMinor: Int
-    let pCurrency: String
-    let pCategory: ExpenseCategory
-    let pTitle: String?
-    let pNote: String?
-    let pLocation: ExpenseLocation?
-    let pSpentAt: String
-    let pPaidBy: UUID
-    let pHouseholdId: UUID?
-    let pRecurringId: UUID?
-    let pShares: [ShareParam]
-
-    enum CodingKeys: String, CodingKey {
-        case pExpenseId = "p_expense_id"
-        case pAmountMinor = "p_amount_minor"
-        case pCurrency = "p_currency"
-        case pCategory = "p_category"
-        case pTitle = "p_title"
-        case pNote = "p_note"
-        case pLocation = "p_location"
-        case pSpentAt = "p_spent_at"
-        case pPaidBy = "p_paid_by"
-        case pHouseholdId = "p_household_id"
-        case pRecurringId = "p_recurring_id"
-        case pShares = "p_shares"
-    }
-
-    init(from expense: ExpenseRecord) {
-        pExpenseId = expense.id
-        pAmountMinor = expense.amountMinor
-        pCurrency = expense.currency
-        pCategory = expense.category
-        pTitle = expense.title
-        pNote = expense.note
-        pLocation = expense.location
-        pSpentAt = CalendarDateCodec.string(from: expense.spentAt)
-        pPaidBy = expense.paidBy
-        pHouseholdId = expense.householdId
-        pRecurringId = expense.recurringId
-        pShares = expense.shares.map { ShareParam(userId: $0.userId, amountMinor: $0.amountMinor) }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(pExpenseId, forKey: .pExpenseId)
-        try container.encode(pAmountMinor, forKey: .pAmountMinor)
-        try container.encode(pCurrency, forKey: .pCurrency)
-        try container.encode(pCategory, forKey: .pCategory)
-        if let pTitle {
-            try container.encode(pTitle, forKey: .pTitle)
-        } else {
-            try container.encodeNil(forKey: .pTitle)
-        }
-        if let pNote {
-            try container.encode(pNote, forKey: .pNote)
-        } else {
-            try container.encodeNil(forKey: .pNote)
-        }
-        if let pLocation {
-            try container.encode(pLocation, forKey: .pLocation)
-        } else {
-            try container.encodeNil(forKey: .pLocation)
-        }
-        try container.encode(pSpentAt, forKey: .pSpentAt)
-        try container.encode(pPaidBy, forKey: .pPaidBy)
-        if let pHouseholdId {
-            try container.encode(pHouseholdId, forKey: .pHouseholdId)
-        } else {
-            try container.encodeNil(forKey: .pHouseholdId)
-        }
-        if let pRecurringId {
-            try container.encode(pRecurringId, forKey: .pRecurringId)
-        } else {
-            try container.encodeNil(forKey: .pRecurringId)
-        }
-        try container.encode(pShares, forKey: .pShares)
-    }
+private struct SaveExpenseParams: Encodable {
+    let pExpense: ExpenseInsertDTO
+    let pExpectedVersion: Int?
+    enum CodingKeys: String, CodingKey { case pExpense = "p_expense", pExpectedVersion = "p_expected_version" }
 }
-
-private struct ShareParam: Encodable, Sendable {
-    let userId: UUID
-    let amountMinor: Int
-
-    enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-        case amountMinor = "amount_minor"
-    }
+private struct SaveRecurringParams: Encodable {
+    let pRule: RecurringRuleInsertDTO
+    let pExpectedVersion: Int?
+    enum CodingKeys: String, CodingKey { case pRule = "p_rule", pExpectedVersion = "p_expected_version" }
 }
-
-private struct RespondToShareParams: Encodable, Sendable {
-    let expenseId: UUID
-    let action: String
-
-    enum CodingKeys: String, CodingKey {
-        case expenseId = "p_expense_id"
-        case action = "p_action"
-    }
+private struct RespondToShareParams: Encodable {
+    let expenseId: UUID; let action: String
+    enum CodingKeys: String, CodingKey { case expenseId = "p_expense_id", action = "p_action" }
 }
-
-private struct RespondToProposalParams: Encodable, Sendable {
-    let proposalId: UUID
-    let accept: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case proposalId = "p_proposal_id"
-        case accept = "p_accept"
-    }
+private struct RespondToProposalParams: Encodable {
+    let proposalId: UUID; let accept: Bool
+    enum CodingKeys: String, CodingKey { case proposalId = "p_proposal_id", accept = "p_accept" }
 }
-
-private struct CreateEditProposalParams: Encodable, Sendable {
-    let expenseId: UUID
-    let amountMinor: Int
-    let category: ExpenseCategory
-    let title: String?
-    let note: String?
-    let location: ExpenseLocation?
-    let spentAt: String
-    let paidBy: UUID
-    let shares: [ShareParam]
-    let message: String?
-
-    enum CodingKeys: String, CodingKey {
-        case expenseId = "p_expense_id"
-        case amountMinor = "p_amount_minor"
-        case category = "p_category"
-        case title = "p_title"
-        case note = "p_note"
-        case location = "p_location"
-        case spentAt = "p_spent_at"
-        case paidBy = "p_paid_by"
-        case shares = "p_shares"
-        case message = "p_message"
-    }
-
-    init(proposal: ExpenseEditProposal, expenseId: UUID) {
-        self.expenseId = expenseId
-        amountMinor = proposal.amountMinor
-        category = proposal.category
-        title = proposal.title
-        note = proposal.note
-        location = proposal.location
-        spentAt = CalendarDateCodec.string(from: proposal.spentAt)
-        paidBy = proposal.paidBy
-        shares = proposal.shares.map { ShareParam(userId: $0.userId, amountMinor: $0.amountMinor) }
-        message = proposal.message
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(expenseId, forKey: .expenseId)
-        try container.encode(amountMinor, forKey: .amountMinor)
-        try container.encode(category, forKey: .category)
-        if let title {
-            try container.encode(title, forKey: .title)
-        } else {
-            try container.encodeNil(forKey: .title)
-        }
-        if let note {
-            try container.encode(note, forKey: .note)
-        } else {
-            try container.encodeNil(forKey: .note)
-        }
-        if let location {
-            try container.encode(location, forKey: .location)
-        } else {
-            try container.encodeNil(forKey: .location)
-        }
-        try container.encode(spentAt, forKey: .spentAt)
-        try container.encode(paidBy, forKey: .paidBy)
-        try container.encode(shares, forKey: .shares)
-        if let message {
-            try container.encode(message, forKey: .message)
-        } else {
-            try container.encodeNil(forKey: .message)
-        }
+private struct CreateEditProposalParams: Encodable {
+    let pExpenseId: UUID; let pExpectedVersion: Int; let pProposal: ProposalPayload
+    enum CodingKeys: String, CodingKey { case pExpenseId = "p_expense_id", pExpectedVersion = "p_expected_version", pProposal = "p_proposal" }
+}
+private struct ProposalPayload: Encodable {
+    let amountMinor: Int; let category: ExpenseCategory; let title: String?; let note: String?
+    let location: ExpenseLocation?; let spentAt: String; let paidBy: UUID; let shares: [ProposalShareDTO]; let message: String?
+    enum CodingKeys: String, CodingKey { case amountMinor = "amount_minor", spentAt = "spent_at", paidBy = "paid_by", category, title, note, location, shares, message }
+    init(_ p: ExpenseEditProposal) {
+        amountMinor = p.amountMinor; category = p.category; title = p.title; note = p.note; location = p.location
+        spentAt = CalendarDateCodec.string(from: p.spentAt); paidBy = p.paidBy; message = p.message
+        shares = p.shares.map { ProposalShareDTO(userId: $0.userId, amountMinor: $0.amountMinor) }
     }
 }

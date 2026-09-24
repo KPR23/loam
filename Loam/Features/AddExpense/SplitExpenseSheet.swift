@@ -31,7 +31,6 @@ struct SplitExpenseSheet: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
     @EnvironmentObject private var connectionStore: ConnectionStore
-    @EnvironmentObject private var householdStore: HouseholdStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var formState: SplitFormState
@@ -138,15 +137,9 @@ struct SplitExpenseSheet: View {
 
         do {
             let partners = selectedSplitPartners
-            let household = try await householdStore.ensureSplitHousehold(
-                userId: myUserId,
-                userDisplayName: authSession.displayName ?? "You",
-                partners: partners
-            )
             try await expenseStore.applySplit(
                 to: expense.id,
                 userId: myUserId,
-                householdId: household.id,
                 splitMode: formState.splitMode,
                 paidBy: formState.paidByUserId,
                 partnerUserIds: partners.map(\.userId),
@@ -194,5 +187,4 @@ struct SplitExpenseSheet: View {
     )
     .environmentObject(AuthSession())
     .environmentObject(ExpenseStore())
-    .environmentObject(HouseholdStore())
 }
