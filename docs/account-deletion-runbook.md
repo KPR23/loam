@@ -8,6 +8,7 @@ Add these secrets to the GitHub Actions `staging` environment:
 - `DELETION_WORKER_KEY`, `DELETION_NOTIFIER_KEY`, `DELETION_MONITOR_KEY` (each at least 32 random characters and distinct)
 - `DELETION_CREDENTIAL_ENCRYPTION_KEY` (base64 encoded 32-byte key; keep stable so retained credentials remain decryptable)
 - `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`
+- `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` (a personal API key limited to the `person:write` and `session_recording:write` scopes on that project). The worker deletes the user's PostHog person, events and recordings before deleting their auth account. Staging and production share one PostHog project, so both environments use the same values.
 - Optional completion email: set both `RESEND_API_KEY` and `DELETION_EMAIL_FROM` (a verified sender identity), or leave both unset. With them unset, account deletion and in-app status continue to work; the notifier records its heartbeat but sends no email and new deletion requests retain no email address for notification. The monitor response includes `email_enabled: false`.
 
 Add the same secret names to the GitHub Actions `production` environment, replacing `SUPABASE_STAGING_DB_PASSWORD` with `SUPABASE_PRODUCTION_DB_PASSWORD`. Each environment should contain values for its own Supabase project.
