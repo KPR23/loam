@@ -32,7 +32,7 @@
 		4D29C94A68060E5A7429306C /* SplitFormSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = E80E6F1581E3843A2C844271 /* SplitFormSeed.swift */; };
 		5197538023662FCC33542AE3 /* AppleDeletionAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FEDAFE978A8FB4E4306121 /* AppleDeletionAuthorization.swift */; };
 		52647BE969B4C648691C9815 /* ExpenseRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */; };
-		53733B401CC61047A6770B27 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21BC58A6AC60D3347EDFACC0 /* Supabase */; };
+		53733B401CC61047A6770B27 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = C28A03436A972E37C1394EC9 /* Sentry */; };
 		5385DE5F359781E589AADE85 /* BudgetArcLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */; };
 		53AED4FFFBB986CB7B4B2DDC /* HomeExpenseRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914274A331517EC93002CE6C /* HomeExpenseRow.swift */; };
 		543F69BEE3C867F7FB1ED90F /* ExpenseCategoryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3503DF18D70C53D65E9FAC9A /* ExpenseCategoryPicker.swift */; };
@@ -55,7 +55,7 @@
 		8B95AFDA7E6069FB3CDE3769 /* SupabaseConnectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8C8F409F0CF628175F871A /* SupabaseConnectionRepository.swift */; };
 		8D81E161CCD796A4BD558382 /* TestPartner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5607AF86E6B5DA32B91136B6 /* TestPartner.swift */; };
 		8DA69CF70DA4F7B2FA86D3F2 /* PlaceSearchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF5AC0E5465E709F9F1814D /* PlaceSearchController.swift */; };
-		9B4011B594B12229FD7A8CDE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = C28A03436A972E37C1394EC9 /* Sentry */; };
+		9B4011B594B12229FD7A8CDE /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 00A593E299BD43D1BF871E34 /* PostHog */; };
 		9C17EC91858B01F4269B3A96 /* SplitExpenseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE84AFEC1B640F27F3AF72B /* SplitExpenseSheet.swift */; };
 		9D4C5FC21BF1452BAA2D629D /* LocalExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */; };
 		9DA43EF3DD42CEAC07A17578 /* ActivityRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DD37731E7B74A5C0B768684 /* ActivityRepository.swift */; };
@@ -64,6 +64,7 @@
 		A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C15AD0F34F080CB70FB979F /* LoamApp.swift */; };
 		A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */; };
 		ACDEE6074DB240C61F8BF7F1 /* ExpenseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */; };
+		AD5212BA06EA685377D320E4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21BC58A6AC60D3347EDFACC0 /* Supabase */; };
 		BC595E14561F6D076C40E8C5 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07214E88835854CA791C14E /* BalanceStore.swift */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
 		CF1A3CBDC16DCE533EE59653 /* SplitExpenseSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87AE244F130211B61887F30 /* SplitExpenseSection.swift */; };
@@ -196,8 +197,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9B4011B594B12229FD7A8CDE /* Sentry in Frameworks */,
-				53733B401CC61047A6770B27 /* Supabase in Frameworks */,
+				9B4011B594B12229FD7A8CDE /* PostHog in Frameworks */,
+				53733B401CC61047A6770B27 /* Sentry in Frameworks */,
+				AD5212BA06EA685377D320E4 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -518,6 +520,7 @@
 			);
 			name = Loam;
 			packageProductDependencies = (
+				00A593E299BD43D1BF871E34 /* PostHog */,
 				C28A03436A972E37C1394EC9 /* Sentry */,
 				21BC58A6AC60D3347EDFACC0 /* Supabase */,
 			);
@@ -552,6 +555,7 @@
 			mainGroup = 58B2FDCD8D3B991C33456F31;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				50DB89FE8CA18CDF91ECDA22 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				C19829A1E56FC5C25983CA87 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				055A5C1168ED6EEDE75B7E21 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
@@ -1154,6 +1158,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		50DB89FE8CA18CDF91ECDA22 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.82.0;
+			};
+		};
 		C19829A1E56FC5C25983CA87 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
@@ -1165,6 +1177,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		00A593E299BD43D1BF871E34 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50DB89FE8CA18CDF91ECDA22 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
 		21BC58A6AC60D3347EDFACC0 /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 055A5C1168ED6EEDE75B7E21 /* XCRemoteSwiftPackageReference "supabase-swift" */;
