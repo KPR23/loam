@@ -4,6 +4,14 @@ alter table private.account_deletion_job drop constraint if exists account_delet
 alter table private.account_deletion_job add constraint account_deletion_job_stage_check
   check (stage in ('revoke_apple', 'delete_avatars', 'delete_analytics', 'delete_auth', 'complete', 'needs_attention'));
 
+-- Jobs already past avatar deletion would otherwise finish without erasing
+-- analytics. Rewinding is safe: auth deletion tolerates an already-deleted
+-- user, and an older worker holding a lease fails its stale transition.
+update private.account_deletion_job set stage = 'delete_analytics', stage_attempts = 0, updated_at = now()
+where stage = 'delete_auth';
+update private.account_deletion_job set progress = jsonb_set(progress, '{last_failure,stage}', '"delete_analytics"')
+where stage = 'needs_attention' and progress->'last_failure'->>'stage' = 'delete_auth';
+
 create or replace function public.account_deletion_health()
 returns table(last_heartbeat timestamptz, last_notifier_heartbeat timestamptz, oldest_pending timestamptz, terminal_failures bigint, pending_count bigint, email_failures bigint, retry_count bigint, stage_counts jsonb)
 language sql security definer set search_path = '' as $$
