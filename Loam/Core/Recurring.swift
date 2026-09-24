@@ -151,6 +151,19 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         self.isActive = isActive
     }
 
+    /// Rules saved before the payer and split lived on the rule took them,
+    /// with the rest of the template, from their latest occurrence.
+    mutating func adoptTemplate(_ expense: ExpenseRecord) {
+        amountMinor = expense.amountMinor
+        currency = expense.currency
+        category = expense.category
+        title = expense.title
+        note = expense.note
+        location = expense.location
+        paidBy = expense.paidBy
+        shares = expense.shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
+    }
+
     func isSkipped(_ date: Date, calendar: Calendar = AppPreferences.calendar) -> Bool {
         skippedDates.contains { calendar.isDate($0, inSameDayAs: date) }
     }

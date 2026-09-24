@@ -327,8 +327,29 @@ actor LocalExpenseRepository: ExpenseRepository {
             return []
         }
         let decoded = try JSONDecoder().decode([RecurringRuleRecord].self, from: data)
-        recurringCache = decoded
-        return decoded
+        let migrated = try adoptingLegacyTemplates(decoded, storedAs: data)
+        recurringCache = migrated
+        return migrated
+    }
+
+    /// Rules saved before the payer and split lived on the rule decode as
+    /// owner-only. Restore the template the old app took from their latest
+    /// occurrence, once, so a split rule keeps generating split expenses.
+    private func adoptingLegacyTemplates(_ rules: [RecurringRuleRecord], storedAs data: Data) throws -> [RecurringRuleRecord] {
+        struct StoredShape: Decodable { var shares: [ExpenseShareRecord]? }
+        let shapes = (try? JSONDecoder().decode([StoredShape].self, from: data)) ?? []
+        guard shapes.count == rules.count, shapes.contains(where: { $0.shares == nil }) else { return rules }
+
+        let expenses = try load()
+        var migrated = rules
+        for index in migrated.indices where shapes[index].shares == nil {
+            let latest = expenses
+                .filter { $0.recurringId == migrated[index].id }
+                .max { ($0.spentAt, $0.createdAt) < ($1.spentAt, $1.createdAt) }
+            if let latest { migrated[index].adoptTemplate(latest) }
+        }
+        try saveRecurring(migrated)
+        return migrated
     }
 
     private func saveRecurring(_ rules: [RecurringRuleRecord]) throws {
