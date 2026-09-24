@@ -53,6 +53,10 @@ enum SupabaseConfig {
 
     /// Human-readable reason when the backend client is off (debug / setup).
     static var configurationIssue: String? {
+        configurationIssue(url: url, anonKey: anonKey)
+    }
+
+    static func configurationIssue(url: String, anonKey: String) -> String? {
         if url.isEmpty || anonKey.isEmpty || url == "https:" {
             return "Missing SUPABASE_URL / SUPABASE_ANON_KEY in the app bundle. Set them in Loam/Config/Config.xcconfig and clean build."
         }
