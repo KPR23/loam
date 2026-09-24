@@ -149,7 +149,7 @@ struct ProfileView: View {
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
     @AppStorage(AppPreferences.defaultCurrencyKey) private var defaultCurrency = "PLN"
     @AppStorage(AppPreferences.timeZoneKey) private var timeZoneIdentifier = ""
-    @AppStorage(Telemetry.analyticsConsentKey) private var analyticsConsent = false
+    @State private var analyticsConsent = false
     @State private var showsSignOut = false
     @State private var isSigningOut = false
     @State private var featurebaseDestination: FeaturebaseDestination?
@@ -234,7 +234,9 @@ struct ProfileView: View {
 
                 themeSection
                 preferencesSection
-                privacySection
+                if let userId = authSession.userId, !authSession.usesDemoMode {
+                    privacySection(userId: userId)
+                }
 
                 Section {
                     Button {
@@ -386,10 +388,16 @@ struct ProfileView: View {
         }
     }
 
-    private var privacySection: some View {
+    private func privacySection(userId: UUID) -> some View {
         Section {
             Toggle(isOn: $analyticsConsent) {
                 ProfileRow("Share usage analytics", symbol: "chart.bar", color: .indigo)
+            }
+            .task(id: userId) {
+                analyticsConsent = Telemetry.hasAnalyticsConsent(for: userId)
+            }
+            .onChange(of: analyticsConsent) { _, granted in
+                Telemetry.setAnalyticsConsent(granted, for: userId)
             }
         } header: {
             Text("Privacy")
