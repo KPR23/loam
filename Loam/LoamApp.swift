@@ -58,6 +58,14 @@ struct LoamApp: App {
             .onChange(of: authSession.userId) { _, userId in
                 Telemetry.setUser(authSession.usesDemoMode ? nil : userId)
             }
+            .onChange(of: timeZoneIdentifier) { oldIdentifier, _ in
+                Task {
+                    await expenseStore.timeZoneDidChange(
+                        from: AppPreferences.timeZone(for: oldIdentifier),
+                        userId: authSession.userId
+                    )
+                }
+            }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     Task {
