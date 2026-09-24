@@ -27,6 +27,12 @@ final class ActivityStore: ObservableObject {
         if let accountId, audience.contains(accountId) { await refresh(userId: accountId) }
     }
 
+    /// History for one expense's detail screen, oldest first.
+    func history(forExpense expenseId: UUID, userId: UUID) async throws -> [ActivityEvent] {
+        let events = try await ActivityRepositoryFactory.make().fetchExpenseEvents(expenseId: expenseId, userId: userId)
+        return coalesceSharedEvents(events)
+    }
+
     private func coalesceSharedEvents(_ input: [ActivityEvent]) -> [ActivityEvent] {
         var result: [ActivityEvent] = []
         var indexes: [String: Int] = [:]
@@ -39,13 +45,22 @@ final class ActivityStore: ObservableObject {
             if let index = indexes[key] {
                 let existing = result[index]
                 var names = existing.recipientNames
-                for name in event.recipientNames where !names.contains(name) { names.append(name) }
+                var ids = existing.recipientIds
+                if ids.count == names.count, event.recipientIds.count == event.recipientNames.count {
+                    for (id, name) in zip(event.recipientIds, event.recipientNames) where !ids.contains(id) {
+                        ids.append(id)
+                        names.append(name)
+                    }
+                } else {
+                    ids = []
+                    for name in event.recipientNames where !names.contains(name) { names.append(name) }
+                }
                 result[index] = ActivityEvent(
                     id: existing.id, occurredAt: existing.occurredAt, kind: existing.kind,
                     actorId: existing.actorId, actorName: existing.actorName,
                     recipientId: names.count == 1 ? existing.recipientId : nil,
                     recipientName: names.count == 1 ? names[0] : nil,
-                    recipientNames: names, expenseId: existing.expenseId,
+                    recipientNames: names, recipientIds: ids, expenseId: existing.expenseId,
                     expenseTitle: existing.expenseTitle, category: existing.category,
                     affectedShareMinor: existing.affectedShareMinor + event.affectedShareMinor,
                     expenseTotalMinor: existing.expenseTotalMinor, currency: existing.currency

@@ -148,6 +148,12 @@ final class AuthSession: ObservableObject {
                     _ = try? await client.auth.update(
                         user: UserAttributes(data: ["full_name": .string(formatted)])
                     )
+                    // The profile row was created from the email before Apple's
+                    // name arrived; keep what other people see in sync.
+                    _ = try? await client.rpc(
+                        "update_display_name",
+                        params: DisplayNameParams(displayName: formatted)
+                    ).execute()
                 }
             }
 
@@ -484,13 +490,14 @@ final class AuthSession: ObservableObject {
         connectedProviders = Set((user.identities ?? []).map(\.provider))
         deletionPending = DeletionReceipt.exists(for: user.id)
         deletionStatus = DeletionReceipt.savedStatus(for: user.id) ?? (deletionPending ? .submissionUncertain : .none)
-        if let meta = user.userMetadata["full_name"] {
-            let value = "\(meta)"
-            displayName = value.isEmpty ? (user.email ?? "You") : value
-        } else if let email = user.email {
-            displayName = email
+        if let meta = user.userMetadata["full_name"], !"\(meta)".isEmpty {
+            displayName = "\(meta)"
         } else {
-            displayName = "You"
+            // Accounts without a chosen name use the profile's name, which the
+            // database derives from the email; never show the raw address.
+            displayName = Self.emailLocalPart(user.email) ?? "You"
+            let userId = user.id
+            Task { await self.loadProfileDisplayName(for: userId) }
         }
         #if DEBUG
         if SupabaseClientProvider.activeDevice == .main {
@@ -501,6 +508,37 @@ final class AuthSession: ObservableObject {
         }
         #endif
         state = .signedIn
+    }
+
+    private static func emailLocalPart(_ email: String?) -> String? {
+        guard let local = email?.split(separator: "@").first, !local.isEmpty else { return nil }
+        return String(local)
+    }
+
+    private func loadProfileDisplayName(for userId: UUID) async {
+        guard let client = SupabaseClientProvider.shared else { return }
+        struct Row: Decodable {
+            let displayName: String?
+            enum CodingKeys: String, CodingKey { case displayName = "display_name" }
+        }
+        do {
+            let row: Row = try await client.from("profile")
+                .select("display_name")
+                .eq("id", value: userId)
+                .single()
+                .execute()
+                .value
+            let name = row.displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !name.isEmpty, self.userId == userId else { return }
+            displayName = name
+            #if DEBUG
+            if savedMainAccount?.userId == userId {
+                savedMainAccount = SavedMainAccount(userId: userId, displayName: name)
+            }
+            #endif
+        } catch {
+            // Keep the email-derived fallback; the next sign-in retries.
+        }
     }
 
     #if DEBUG

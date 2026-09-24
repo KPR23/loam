@@ -1,25 +1,5 @@
 import SwiftUI
 
-private struct SplitExpensePresentation: Identifiable {
-    let expense: ExpenseRecord
-    let myUserId: UUID
-
-    var id: UUID { expense.id }
-}
-
-private struct ProposeEditPresentation: Identifiable {
-    let expense: ExpenseRecord
-    let myUserId: UUID
-
-    var id: UUID { expense.id }
-}
-
-private struct EditExpensePresentation: Identifiable {
-    let expense: ExpenseRecord
-
-    var id: UUID { expense.id }
-}
-
 struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
@@ -30,10 +10,7 @@ struct HomeView: View {
     @State private var showMonthPicker = false
     @State private var collapseProgress: CGFloat = 0
     @State private var arcReveal: Double = 0
-    @State private var expensePendingDelete: ExpenseRecord?
-    @State private var expensePendingSplit: SplitExpensePresentation?
-    @State private var expensePendingProposeEdit: ProposeEditPresentation?
-    @State private var expensePendingEdit: EditExpensePresentation?
+    @State private var actionRequest: ExpenseActionRequest?
     @State private var selectedExpense: ExpenseRecord?
     @State private var showAllPendingExpenses = false
 
@@ -112,89 +89,12 @@ struct HomeView: View {
                 Task { await expenseStore.setPeriod(newPeriod, userId: userId) }
             }
         }
-        .sheet(item: $expensePendingSplit) { presentation in
-            SplitExpenseSheet(expense: presentation.expense, myUserId: presentation.myUserId)
-        }
-        .sheet(item: $expensePendingProposeEdit) { presentation in
-            ProposeEditSheet(expense: presentation.expense, myUserId: presentation.myUserId)
-        }
-        .sheet(item: $expensePendingEdit) { presentation in
-            AddExpenseView(existingExpense: presentation.expense)
-        }
         .sheet(isPresented: $showAllPendingExpenses) {
             if let userId = authSession.userId {
                 PendingExpensesSheet(myUserId: userId)
             }
         }
-        .sheet(item: $selectedExpense) { expense in
-            let isPendingAcceptance = authSession.userId.map { expense.isPendingAcceptance(for: $0) } ?? false
-            ExpenseDetailSheet(
-                expense: expense,
-                onEdit: (!isPendingAcceptance && canEdit(expense)) ? {
-                    let target = expense
-                    selectedExpense = nil
-                    presentEdit(for: target)
-                } : nil,
-                onSplit: (!isPendingAcceptance && canSplit(expense)) ? {
-                    let target = expense
-                    selectedExpense = nil
-                    presentSplit(for: target)
-                } : nil,
-                onDelete: isPendingAcceptance ? nil : {
-                    let target = expense
-                    selectedExpense = nil
-                    presentDeleteConfirmation(for: target)
-                },
-                pendingActions: pendingDetailActions(for: expense)
-            )
-        }
-        .alert(
-            "Delete this expense?",
-            isPresented: Binding(
-                get: { expensePendingDelete?.isRecurring == false },
-                set: { if !$0 { expensePendingDelete = nil } }
-            )
-        ) {
-            if let expense = expensePendingDelete, expense.isShared, canSplit(expense) {
-                Button("Edit split") {
-                    expensePendingDelete = nil
-                    presentSplit(for: expense)
-                }
-            }
-            Button("Delete", role: .destructive) {
-                guard let expense = expensePendingDelete, let userId = authSession.userId else { return }
-                Task { await expenseStore.delete(id: expense.id, userId: userId) }
-                expensePendingDelete = nil
-            }
-            Button("Cancel", role: .cancel) {
-                expensePendingDelete = nil
-            }
-        } message: {
-            if let expense = expensePendingDelete {
-                Text(deleteConfirmationMessage(for: expense))
-            }
-        }
-        .alert(
-            "Delete recurring expense?",
-            isPresented: Binding(
-                get: { expensePendingDelete?.isRecurring == true },
-                set: { if !$0 { expensePendingDelete = nil } }
-            )
-        ) {
-            Button("Delete this occurrence only") {
-                deletePendingRecurringExpense(mode: .occurrenceOnly)
-            }
-            Button("Delete and stop repeating", role: .destructive) {
-                deletePendingRecurringExpense(mode: .stopRecurring)
-            }
-            Button("Cancel", role: .cancel) {
-                expensePendingDelete = nil
-            }
-        } message: {
-            if let expense = expensePendingDelete {
-                Text(recurringDeleteConfirmationMessage(for: expense))
-            }
-        }
+        .expenseActionsHost(selectedExpense: $selectedExpense, request: $actionRequest)
     }
 
     @ViewBuilder
@@ -211,10 +111,7 @@ struct HomeView: View {
                             expense: expense,
                             myUserId: userId,
                             onProposeEdit: {
-                                expensePendingProposeEdit = ProposeEditPresentation(
-                                    expense: expense,
-                                    myUserId: userId
-                                )
+                                actionRequest = .proposeEdit(expense)
                             },
                             onShowDetails: {
                                 selectedExpense = expense
@@ -261,6 +158,7 @@ struct HomeView: View {
                                 proposal: proposal,
                                 expense: expense,
                                 proposerName: SplitPartnerOption.displayName(for: proposal.proposedBy),
+                                viewerId: userId,
                                 onAccept: {
                                     Task {
                                         await expenseStore.respondToProposal(
@@ -488,93 +386,16 @@ struct HomeView: View {
         return expense.createdBy == userId
     }
 
-    private func pendingDetailActions(for expense: ExpenseRecord) -> ExpenseDetailPendingActions? {
-        guard let userId = authSession.userId, expense.isPendingAcceptance(for: userId) else {
-            return nil
-        }
-        let creatorName = SplitPartnerOption.displayName(for: expense.createdBy)
-        return ExpenseDetailPendingActions(
-            creatorName: creatorName,
-            onAccept: {
-                selectedExpense = nil
-                Task {
-                    await expenseStore.respondToShare(
-                        expenseId: expense.id,
-                        userId: userId,
-                        action: .accept
-                    )
-                }
-            },
-            onAcceptWithTrust: {
-                selectedExpense = nil
-                Task {
-                    await expenseStore.respondToShare(
-                        expenseId: expense.id,
-                        userId: userId,
-                        action: .acceptWithTrust
-                    )
-                }
-            },
-            onReject: {
-                selectedExpense = nil
-                Task {
-                    await expenseStore.respondToShare(
-                        expenseId: expense.id,
-                        userId: userId,
-                        action: .reject
-                    )
-                }
-            },
-            onProposeEdit: {
-                selectedExpense = nil
-                expensePendingProposeEdit = ProposeEditPresentation(expense: expense, myUserId: userId)
-            }
-        )
-    }
-
     private func presentSplit(for expense: ExpenseRecord) {
-        guard let userId = authSession.userId else { return }
-        expensePendingSplit = SplitExpensePresentation(expense: expense, myUserId: userId)
+        actionRequest = .split(expense)
     }
 
     private func presentEdit(for expense: ExpenseRecord) {
-        expensePendingEdit = EditExpensePresentation(expense: expense)
+        actionRequest = .edit(expense)
     }
 
     private func presentDeleteConfirmation(for expense: ExpenseRecord) {
-        // Defer until swipe actions finish dismissing so the row stays put until confirmed.
-        Task { @MainActor in
-            expensePendingDelete = expense
-        }
-    }
-
-    private func deleteConfirmationMessage(for expense: ExpenseRecord) -> String {
-        var message = "\(expense.displayTitle) · \(MoneyFormatter.string(from: expense.money))"
-        if expense.isShared, let userId = authSession.userId {
-            let partnerIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: userId)
-            let partnerNames = SplitPartnerOption.displayNames(for: partnerIds)
-            message += "\n\nThis will also remove the expense for \(partnerNames)."
-        }
-        return message
-    }
-
-    private func recurringDeleteConfirmationMessage(for expense: ExpenseRecord) -> String {
-        var message = "\(expense.displayTitle) · \(MoneyFormatter.string(from: expense.money))"
-        message += "\n\nChoose whether to remove only this month's charge or stop the recurring expense entirely."
-        if expense.isShared, let userId = authSession.userId {
-            let partnerIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: userId)
-            let partnerNames = SplitPartnerOption.displayNames(for: partnerIds)
-            message += "\n\nEither option removes this occurrence for \(partnerNames)."
-        }
-        return message
-    }
-
-    private func deletePendingRecurringExpense(mode: RecurringDeletionMode) {
-        guard let expense = expensePendingDelete, let userId = authSession.userId else { return }
-        Task {
-            await expenseStore.delete(id: expense.id, userId: userId, recurringMode: mode)
-        }
-        expensePendingDelete = nil
+        actionRequest = .delete(expense)
     }
 }
 

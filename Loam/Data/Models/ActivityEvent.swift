@@ -12,6 +12,10 @@ enum ActivityEventKind: String, Codable, Sendable {
     case proposalRejected = "proposal_rejected"
     case autoAccepted = "auto_accepted"
     case proposalSuperseded = "proposal_superseded"
+    case repaymentRecorded = "repayment_recorded"
+    case repaymentReversed = "repayment_reversed"
+
+    var isRepayment: Bool { self == .repaymentRecorded || self == .repaymentReversed }
 }
 
 struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
@@ -23,7 +27,10 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
     let recipientId: UUID?
     let recipientName: String?
     let recipientNames: [String]
+    /// Parallel to `recipientNames` when the backend provides it; empty for older rows.
+    let recipientIds: [UUID]
     let expenseId: UUID?
+    let repaymentId: UUID?
     let expenseTitle: String
     let category: ExpenseCategory
     let affectedShareMinor: Int
@@ -31,14 +38,16 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
     let currency: String
 
     enum CodingKeys: String, CodingKey {
-        case id, occurredAt, kind, actorId, actorName, recipientId, recipientName, recipientNames
-        case expenseId, expenseTitle, category, affectedShareMinor, expenseTotalMinor, currency
+        case id, occurredAt, kind, actorId, actorName, recipientId, recipientName, recipientNames, recipientIds
+        case expenseId, repaymentId, expenseTitle, category, affectedShareMinor, expenseTotalMinor, currency
     }
 
-    init(id: UUID = UUID(), occurredAt: Date = Date(), kind: ActivityEventKind, actorId: UUID, actorName: String, recipientId: UUID? = nil, recipientName: String? = nil, recipientNames: [String] = [], expenseId: UUID? = nil, expenseTitle: String, category: ExpenseCategory, affectedShareMinor: Int, expenseTotalMinor: Int, currency: String) {
+    init(id: UUID = UUID(), occurredAt: Date = Date(), kind: ActivityEventKind, actorId: UUID, actorName: String, recipientId: UUID? = nil, recipientName: String? = nil, recipientNames: [String] = [], recipientIds: [UUID] = [], expenseId: UUID? = nil, repaymentId: UUID? = nil, expenseTitle: String, category: ExpenseCategory, affectedShareMinor: Int, expenseTotalMinor: Int, currency: String) {
         self.id = id; self.occurredAt = occurredAt; self.kind = kind; self.actorId = actorId; self.actorName = actorName
         self.recipientId = recipientId; self.recipientName = recipientName; self.expenseId = expenseId
         self.recipientNames = recipientNames.isEmpty ? (recipientName.map { [$0] } ?? []) : recipientNames
+        self.recipientIds = recipientIds.isEmpty ? (recipientId.map { [$0] } ?? []) : recipientIds
+        self.repaymentId = repaymentId
         self.expenseTitle = expenseTitle; self.category = category; self.affectedShareMinor = affectedShareMinor
         self.expenseTotalMinor = expenseTotalMinor; self.currency = currency
     }
@@ -54,7 +63,10 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
         recipientName = try values.decodeIfPresent(String.self, forKey: .recipientName)
         recipientNames = try values.decodeIfPresent([String].self, forKey: .recipientNames)
             ?? (recipientName.map { [$0] } ?? [])
+        recipientIds = try values.decodeIfPresent([UUID].self, forKey: .recipientIds)
+            ?? (recipientId.map { [$0] } ?? [])
         expenseId = try values.decodeIfPresent(UUID.self, forKey: .expenseId)
+        repaymentId = try values.decodeIfPresent(UUID.self, forKey: .repaymentId)
         expenseTitle = try values.decode(String.self, forKey: .expenseTitle)
         category = try values.decode(ExpenseCategory.self, forKey: .category)
         affectedShareMinor = try values.decode(Int.self, forKey: .affectedShareMinor)
@@ -63,25 +75,63 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
     }
 
     func sentence(viewerId: UUID) -> String {
-        let actor = actorId == viewerId ? "You" : actorName
+        let actorIsViewer = actorId == viewerId
+        let actor = actorIsViewer ? "You" : actorName
         let recipient = recipientId == viewerId ? "you" : (recipientName ?? "a participant")
         switch kind {
         case .shared:
-            let names = recipientNames.map { $0 == recipientName && recipientId == viewerId ? "you" : $0 }
-            return "\(actor) shared an expense with \(list(names.isEmpty ? [recipientName ?? "a participant"] : names))"
-        case .accepted, .rejected, .proposalAccepted, .proposalRejected:
-            switch kind {
-            case .accepted: return "\(actor) accepted \(recipient)'s expense"
-            case .rejected: return "\(actor) rejected \(recipient)'s expense"
-            case .proposalAccepted: return "\(actor) accepted \(recipient)'s proposal"
-            default: return "\(actor) rejected \(recipient)'s proposal"
-            }
-        case .edited: return "\(actor) edited a shared expense"
-        case .participantRemoved: return "\(actor) removed \(recipient) from an expense"
-        case .deleted: return "\(actor) deleted a shared expense"
-        case .proposalCreated: return "\(actor) proposed an edit"
-        case .autoAccepted: return "\(actor)'s expense was accepted automatically"
-        case .proposalSuperseded: return "\(actor)'s proposal was superseded"
+            return "\(actor) shared an expense with \(list(recipientMentions(viewerId: viewerId)))"
+        case .accepted:
+            return "\(actor) accepted \(Self.possessive(recipient)) expense"
+        case .rejected:
+            return "\(actor) declined \(Self.possessive(recipient)) expense"
+        case .proposalAccepted:
+            return "\(actor) accepted \(Self.possessive(recipient)) suggested changes"
+        case .proposalRejected:
+            return "\(actor) declined \(Self.possessive(recipient)) suggested changes"
+        case .edited:
+            return "\(actor) edited a shared expense"
+        case .participantRemoved:
+            // Remote rows only reach the removed people; local rows also reach the actor.
+            let removed = actorIsViewer ? list(recipientMentions(viewerId: viewerId)) : "you"
+            return "\(actor) removed \(removed) from an expense"
+        case .deleted:
+            return "\(actor) deleted a shared expense"
+        case .proposalCreated:
+            if recipientId == nil { return "\(actor) suggested changes" }
+            return "\(actor) suggested changes to \(Self.possessive(recipient)) expense"
+        case .autoAccepted:
+            return "\(Self.possessive(actor)) expense was accepted automatically"
+        case .proposalSuperseded:
+            return "\(Self.possessive(actor)) suggested changes were replaced"
+        case .repaymentRecorded:
+            return actorIsViewer
+                ? "You recorded a repayment to \(recipientName ?? "someone")"
+                : "\(actor) recorded a repayment to you"
+        case .repaymentReversed:
+            return actorIsViewer
+                ? "You reversed a repayment to \(recipientName ?? "someone")"
+                : "\(actor) reversed a repayment to you"
+        }
+    }
+
+    /// Recipient names with the viewer as "you", listed first.
+    private func recipientMentions(viewerId: UUID) -> [String] {
+        guard !recipientNames.isEmpty else { return [recipientId == viewerId ? "you" : (recipientName ?? "a participant")] }
+        guard recipientIds.count == recipientNames.count else { return recipientNames }
+        var others: [String] = []
+        var includesViewer = false
+        for (id, name) in zip(recipientIds, recipientNames) {
+            if id == viewerId { includesViewer = true } else { others.append(name) }
+        }
+        return includesViewer ? ["you"] + others : others
+    }
+
+    private static func possessive(_ name: String) -> String {
+        switch name {
+        case "you": return "your"
+        case "You": return "Your"
+        default: return name.hasSuffix("s") ? "\(name)'" : "\(name)'s"
         }
     }
 
@@ -101,6 +151,8 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
         case .rejected, .proposalRejected: return "xmark.circle.fill"
         case .edited, .proposalCreated: return "pencil.circle.fill"
         case .participantRemoved, .deleted, .proposalSuperseded: return "trash.circle.fill"
+        case .repaymentRecorded: return "banknote.fill"
+        case .repaymentReversed: return "arrow.uturn.backward.circle.fill"
         }
     }
 }

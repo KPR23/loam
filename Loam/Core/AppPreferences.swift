@@ -6,7 +6,13 @@ enum AppPreferences {
 
     static let supportedCurrencies = ["PLN", "EUR", "USD"]
 
+    /// Other currencies are disabled for now; every new expense uses PLN,
+    /// including for people who picked another default earlier.
+    static let allowsCurrencySelection = false
+    static let fallbackCurrencyCode = "PLN"
+
     static var defaultCurrencyCode: String {
+        guard allowsCurrencySelection else { return fallbackCurrencyCode }
         let saved = UserDefaults.standard.string(forKey: defaultCurrencyKey) ?? "PLN"
         return supportedCurrencies.contains(saved.uppercased()) ? saved.uppercased() : "PLN"
     }

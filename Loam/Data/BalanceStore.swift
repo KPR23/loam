@@ -18,6 +18,26 @@ final class BalanceStore: ObservableObject {
             try await BalanceRepositoryFactory.make().createRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note, paidAt: paidAt, operationId: UUID())
         }
         Telemetry.capture(.repaymentRecorded)
+        await recordLocalRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note)
         await refresh(userId: userId)
+    }
+
+    /// The backend records repayment activity itself; demo storage needs a local row.
+    private func recordLocalRepayment(from userId: UUID, to personId: UUID, amountMinor: Int, currencyCode: String, note: String?) async {
+        guard ExpenseRepositoryFactory.usesLocalStorage else { return }
+        let trimmedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let event = ActivityEvent(
+            kind: .repaymentRecorded,
+            actorId: userId,
+            actorName: SplitPartnerOption.displayName(for: userId, fallback: "You"),
+            recipientId: personId,
+            recipientName: SplitPartnerOption.displayName(for: personId),
+            expenseTitle: trimmedNote.isEmpty ? "Repayment" : trimmedNote,
+            category: .other,
+            affectedShareMinor: amountMinor,
+            expenseTotalMinor: amountMinor,
+            currency: currencyCode
+        )
+        try? await ActivityRepositoryFactory.make().record(event, audience: [userId, personId])
     }
 }
