@@ -3,6 +3,9 @@ name: Supabase migrations
 on:
   push:
     branches: [dev, main]
+  # Deploy jobs are gated on the branch name, so pull requests only verify.
+  pull_request:
+    branches: [dev, main]
 
 permissions:
   contents: read
