@@ -150,6 +150,46 @@ final class ExpenseStoreSummaryTests: XCTestCase {
         )
     }
 
+    func testLegacyDemoRuleAdoptsSplitFromLatestOccurrence() async throws {
+        let keys = ["loam.local.expenses", "loam.local.recurring"]
+        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        defer { keys.forEach { UserDefaults.standard.removeObject(forKey: $0) } }
+
+        let rule = RecurringRuleRecord(ownerUserId: user, amountMinor: 1000, category: .housing, intervalUnit: .month, startDate: Date())
+        // Rules saved before payer and split lived on the rule have neither key.
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(rule)) as? [String: Any])
+        legacy.removeValue(forKey: "paidBy")
+        legacy.removeValue(forKey: "shares")
+        UserDefaults.standard.set(try JSONSerialization.data(withJSONObject: [legacy]), forKey: "loam.local.recurring")
+
+        let older = ExpenseRecord(
+            amountMinor: 1000, category: .housing, spentAt: Date(timeIntervalSinceNow: -86_400 * 40),
+            paidBy: user, createdBy: user, recurringId: rule.id,
+            shares: [ExpenseShareRecord(userId: user, amountMinor: 1000)]
+        )
+        let latest = ExpenseRecord(
+            amountMinor: 1200, category: .housing, title: "Rent", spentAt: Date(timeIntervalSinceNow: -86_400 * 10),
+            paidBy: other, createdBy: user, recurringId: rule.id,
+            shares: [ExpenseShareRecord(userId: user, amountMinor: 600), ExpenseShareRecord(userId: other, amountMinor: 600)]
+        )
+        let repository = LocalExpenseRepository()
+        _ = try await repository.create(latest)
+        _ = try await repository.create(older)
+
+        let migratedRule = try await repository.fetchRecurringRule(id: rule.id)
+        let migrated = try XCTUnwrap(migratedRule)
+        XCTAssertEqual(migrated.paidBy, other)
+        XCTAssertEqual(migrated.amountMinor, 1200)
+        XCTAssertEqual(migrated.title, "Rent")
+        XCTAssertEqual(migrated.shares.map(\.userId), [user, other])
+        XCTAssertEqual(migrated.shares.map(\.amountMinor), [600, 600])
+
+        // The migration is saved, so a fresh load keeps the split.
+        let reloadedRule = try await LocalExpenseRepository().fetchRecurringRule(id: rule.id)
+        let reloaded = try XCTUnwrap(reloadedRule)
+        XCTAssertEqual(reloaded.shares.count, 2)
+    }
+
     func testPendingAcceptanceIsPerUser() {
         let expense = ExpenseRecord(
             amountMinor: 3000,
