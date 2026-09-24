@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..4' as plan;
+select '1..5' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.c',gen_random_uuid()::text,true),set_config('test.weekly',gen_random_uuid()::text,true),
  set_config('test.daily',gen_random_uuid()::text,true),set_config('test.broken',gen_random_uuid()::text,true);
@@ -68,4 +68,31 @@ select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
 do $$ begin assert public.materialize_recurring_rules()=0,'Non-owner generated another owner''s rule'; end $$;
 reset role;
 select 'ok 4 - only the owner''s rules are generated on request' as result;
+
+-- Month-end and leap-day rules stay anchored to their start date.
+select set_config('test.monthly',gen_random_uuid()::text,true),set_config('test.leap',gen_random_uuid()::text,true),
+ set_config('test.drifted',gen_random_uuid()::text,true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+select public.save_recurring_rule(pg_temp.rule(jsonb_build_object('id',current_setting('test.monthly'),'interval_unit','month',
+ 'start_date','2027-01-31','next_occurrence','2027-01-31')));
+select public.save_recurring_rule(pg_temp.rule(jsonb_build_object('id',current_setting('test.leap'),'interval_unit','year',
+ 'start_date','2028-02-29','next_occurrence','2028-02-29')));
+-- Stored by the old stepping: Jan 31, Feb 28, then Mar 28.
+select public.save_recurring_rule(pg_temp.rule(jsonb_build_object('id',current_setting('test.drifted'),'interval_unit','month',
+ 'start_date','2027-01-31','next_occurrence','2027-03-28')));
+reset role;
+create function pg_temp.dates(p_rule text) returns date[] language sql as $$
+  select array_agg(spent_at order by spent_at) from public.expense where recurring_id=current_setting(p_rule)::uuid
+$$;
+do $$ begin
+ perform private.materialize_recurring_rule(current_setting('test.monthly')::uuid,'2027-05-31');
+ assert pg_temp.dates('test.monthly')='{2027-01-31,2027-02-28,2027-03-31,2027-04-30,2027-05-31}','Month-end rule drifted';
+ assert (select next_occurrence='2027-06-30' from public.recurring_rule where id=current_setting('test.monthly')::uuid),'Month-end rule advanced off schedule';
+ perform private.materialize_recurring_rule(current_setting('test.leap')::uuid,'2032-03-01');
+ assert pg_temp.dates('test.leap')='{2028-02-29,2029-02-28,2030-02-28,2031-02-28,2032-02-29}','Leap-day rule drifted';
+ perform private.materialize_recurring_rule(current_setting('test.drifted')::uuid,'2027-04-30');
+ assert pg_temp.dates('test.drifted')='{2027-03-31,2027-04-30}','Drifted next occurrence was not snapped to the schedule';
+end $$;
+select 'ok 5 - occurrences are anchored to the start date' as result;
 rollback;
