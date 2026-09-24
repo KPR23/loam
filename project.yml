@@ -54,6 +54,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # The Sentry upload script reads dSYMs outside the script sandbox.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+        # Sentry needs dSYMs to symbolicate crashes from every configuration.
+        DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
     postBuildScripts:
       - name: Upload Debug Symbols to Sentry
         basedOnDependencyAnalysis: false
