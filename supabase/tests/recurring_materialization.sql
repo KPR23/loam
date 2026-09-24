@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..6' as plan;
+select '1..7' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.c',gen_random_uuid()::text,true),set_config('test.weekly',gen_random_uuid()::text,true),
  set_config('test.daily',gen_random_uuid()::text,true),set_config('test.broken',gen_random_uuid()::text,true);
@@ -117,4 +117,17 @@ do $$ declare failed boolean:=false; begin
 end $$;
 reset role;
 select 'ok 6 - a recurring rule is created atomically with its seed' as result;
+
+-- A rule past its end date is no longer selected and rewritten every hour.
+select set_config('test.ended',gen_random_uuid()::text,true);
+insert into public.recurring_rule(id,owner_user_id,paid_by,shares,amount_minor,currency,category,interval_unit,interval_count,start_date,end_date,next_occurrence)
+ values(current_setting('test.ended')::uuid,current_setting('test.a')::uuid,current_setting('test.a')::uuid,
+  jsonb_build_array(jsonb_build_object('user_id',current_setting('test.a'),'amount_minor',1000)),
+  1000,'PLN','other','week',1,current_date-14,current_date-10,current_date-7);
+do $$ begin
+ perform private.materialize_due_recurring_rules();
+ assert (select version=1 from public.recurring_rule where id=current_setting('test.ended')::uuid),'Ended rule was rewritten';
+ assert pg_temp.occurrences('test.ended')=0,'Ended rule generated past its end date';
+end $$;
+select 'ok 7 - ended rules are left alone' as result;
 rollback;
