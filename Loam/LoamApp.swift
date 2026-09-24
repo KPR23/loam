@@ -10,7 +10,6 @@ struct LoamApp: App {
     @AppStorage(AppPreferences.timeZoneKey) private var timeZoneIdentifier = ""
     @StateObject private var authSession = AuthSession()
     @StateObject private var expenseStore = ExpenseStore()
-    @StateObject private var householdStore = HouseholdStore()
     @StateObject private var balanceStore = BalanceStore()
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var connectionStore = ConnectionStore()
@@ -38,7 +37,6 @@ struct LoamApp: App {
                 .environment(\.timeZone, AppPreferences.timeZone(for: timeZoneIdentifier))
                 .environmentObject(authSession)
                 .environmentObject(expenseStore)
-                .environmentObject(householdStore)
                 .environmentObject(balanceStore)
                 .environmentObject(activityStore)
                 .environmentObject(connectionStore)
