@@ -150,6 +150,90 @@ final class ExpenseStoreSummaryTests: XCTestCase {
         )
     }
 
+    func testLocalEditKeepsResponsesForUnchangedObligations() async throws {
+        let keys = ["loam.local.expenses", "loam.local.proposals"]
+        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        defer { keys.forEach { UserDefaults.standard.removeObject(forKey: $0) } }
+
+        let expense = ExpenseRecord(
+            amountMinor: 3000,
+            category: .groceries,
+            paidBy: user,
+            createdBy: user,
+            shares: [
+                ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
+                ExpenseShareRecord(userId: other, amountMinor: 1000, status: .accepted),
+                ExpenseShareRecord(userId: third, amountMinor: 1000, status: .accepted),
+            ]
+        )
+        let repository = LocalExpenseRepository()
+        _ = try await repository.create(expense)
+
+        // The store rebuilds every share as pending for non-trusting partners.
+        var edited = expense
+        edited.title = "Groceries and snacks"
+        edited.amountMinor = 3200
+        edited.shares = [
+            ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
+            ExpenseShareRecord(userId: other, amountMinor: 1000, status: .pending),
+            ExpenseShareRecord(userId: third, amountMinor: 1200, status: .pending),
+        ]
+        let saved = try await repository.update(edited)
+
+        XCTAssertEqual(saved.shareStatus(for: other), .accepted)
+        XCTAssertEqual(saved.shareStatus(for: third), .pending)
+
+        // A new payer changes everyone's obligation.
+        var repaid = saved
+        repaid.paidBy = other
+        repaid.shares = saved.shares.map {
+            ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor, status: $0.userId == user ? .accepted : .pending)
+        }
+        let afterPayerChange = try await repository.update(repaid)
+        XCTAssertEqual(afterPayerChange.shareStatus(for: other), .pending)
+    }
+
+    func testAcceptedLocalProposalAcceptsProposerAndKeepsUnchangedResponses() async throws {
+        let keys = ["loam.local.expenses", "loam.local.proposals"]
+        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        defer { keys.forEach { UserDefaults.standard.removeObject(forKey: $0) } }
+
+        let expense = ExpenseRecord(
+            amountMinor: 3000,
+            category: .groceries,
+            paidBy: user,
+            createdBy: user,
+            shares: [
+                ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
+                ExpenseShareRecord(userId: other, amountMinor: 1000, status: .accepted),
+                ExpenseShareRecord(userId: third, amountMinor: 1000, status: .accepted),
+            ]
+        )
+        let repository = LocalExpenseRepository()
+        _ = try await repository.create(expense)
+        let proposal = ExpenseEditProposal(
+            expenseId: expense.id,
+            proposedBy: other,
+            amountMinor: 3500,
+            category: .groceries,
+            spentAt: expense.spentAt,
+            paidBy: user,
+            shares: [
+                ExpenseShareRecord(userId: user, amountMinor: 1000),
+                ExpenseShareRecord(userId: other, amountMinor: 1500),
+                ExpenseShareRecord(userId: third, amountMinor: 1000),
+            ]
+        )
+        _ = try await repository.createEditProposal(proposal, expenseId: expense.id)
+        try await repository.respondToProposal(proposalId: proposal.id, accept: true)
+
+        let appliedRows = try await repository.fetchExpenses(ids: [expense.id])
+        let applied = try XCTUnwrap(appliedRows.first)
+        XCTAssertEqual(applied.amountMinor, 3500)
+        XCTAssertEqual(applied.shareStatus(for: other), .accepted)
+        XCTAssertEqual(applied.shareStatus(for: third), .accepted)
+    }
+
     func testLegacyDemoRuleAdoptsSplitFromLatestOccurrence() async throws {
         let keys = ["loam.local.expenses", "loam.local.recurring"]
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }

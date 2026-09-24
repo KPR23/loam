@@ -96,6 +96,13 @@ actor LocalExpenseRepository: ExpenseRepository {
         }
         var updated = expense
         guard (all[index].version ?? 1) == (expense.version ?? 1) else { throw ExpenseRepositoryError.conflict }
+        updated.shares = ExpenseShareAcceptance.preservingResponses(
+            expense.shares,
+            from: all[index],
+            paidBy: expense.paidBy,
+            currency: expense.currency,
+            forced: [all[index].createdBy]
+        )
         updated.version = (expense.version ?? 1) + 1
         updated.updatedAt = Date()
         all[index] = updated
@@ -237,6 +244,7 @@ actor LocalExpenseRepository: ExpenseRepository {
                 }
             }
 
+            let previous = all[expenseIndex]
             all[expenseIndex].version = (all[expenseIndex].version ?? 1) + 1
             all[expenseIndex].amountMinor = proposal.amountMinor
             all[expenseIndex].category = proposal.category
@@ -245,8 +253,9 @@ actor LocalExpenseRepository: ExpenseRepository {
             all[expenseIndex].location = proposal.location
             all[expenseIndex].spentAt = proposal.spentAt
             all[expenseIndex].paidBy = proposal.paidBy
-            all[expenseIndex].shares = proposal.shares.map { share in
-                let status = ExpenseShareAcceptance.statusForShare(
+            // The proposer is not asked to accept their own change.
+            let proposedShares = proposal.shares.map { share in
+                let status: ExpenseShareStatus = share.userId == proposal.proposedBy ? .accepted : ExpenseShareAcceptance.statusForShare(
                     userId: share.userId,
                     createdBy: createdBy,
                     usersTrustingCreator: usersTrustingCreator
@@ -257,9 +266,17 @@ actor LocalExpenseRepository: ExpenseRepository {
                     amountMinor: share.amountMinor,
                     status: status,
                     respondedAt: status == .accepted ? Date() : nil,
-                    acceptedViaTrust: status == .accepted && usersTrustingCreator.contains(share.userId)
+                    acceptedViaTrust: status == .accepted && share.userId != proposal.proposedBy
+                        && usersTrustingCreator.contains(share.userId)
                 )
             }
+            all[expenseIndex].shares = ExpenseShareAcceptance.preservingResponses(
+                proposedShares,
+                from: previous,
+                paidBy: proposal.paidBy,
+                currency: previous.currency,
+                forced: [createdBy, proposal.proposedBy]
+            )
             all[expenseIndex].updatedAt = Date()
             try save(all)
 
