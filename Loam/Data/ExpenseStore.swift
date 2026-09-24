@@ -364,7 +364,7 @@ final class ExpenseStore: ObservableObject {
               let startDate = recurringStartDatesById[recurringId] else {
             return false
         }
-        return Calendar.current.isDate(expense.spentAt, inSameDayAs: startDate)
+        return AppPreferences.calendar.isDate(expense.spentAt, inSameDayAs: startDate)
     }
 
     private func applyRecurringDeletion(
