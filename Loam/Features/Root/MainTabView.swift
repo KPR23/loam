@@ -6,6 +6,15 @@ struct MainTabView: View {
         case balances
         case activity
         case profile
+
+        var screenName: String {
+            switch self {
+            case .expenses: "Expenses"
+            case .balances: "Balances"
+            case .activity: "Activity"
+            case .profile: "Profile"
+            }
+        }
     }
 
     @State private var selection: AppTab = .expenses
@@ -21,6 +30,9 @@ struct MainTabView: View {
             }
         }
         .sensoryFeedback(.selection, trigger: selection)
+        .onChange(of: selection, initial: true) { _, tab in
+            Telemetry.screen(tab.screenName)
+        }
     }
 
     @available(iOS 18.0, *)
