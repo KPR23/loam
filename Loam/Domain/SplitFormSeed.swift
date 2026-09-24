@@ -13,7 +13,7 @@ struct SplitFormSeed: Equatable, Sendable {
         let amountTexts = Dictionary(uniqueKeysWithValues: expense.shares.map {
             (
                 $0.userId,
-                MoneyFormatter.typingAmount(from: Money(amountMinor: $0.amountMinor, currencyCode: expense.currency))
+                MoneyFormatter.editableAmount(from: Money(amountMinor: $0.amountMinor, currencyCode: expense.currency))
             )
         })
         let equalPercentages = equalPercentages(for: expense.shares.map(\.userId))
@@ -55,7 +55,7 @@ struct SplitFormSeed: Equatable, Sendable {
             return SplitFormSeed(
                 splitMode: .exactAmount,
                 myPercentage: 50,
-                myExactAmountText: MoneyFormatter.typingAmount(
+                myExactAmountText: MoneyFormatter.editableAmount(
                     from: Money(amountMinor: myShare, currencyCode: expense.currency)
                 ),
                 participantPercentages: equalPercentages,

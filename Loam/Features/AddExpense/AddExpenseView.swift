@@ -55,7 +55,7 @@ struct AddExpenseView: View {
         let splitSeed = SplitFormSeed.from(expense: expense, myUserId: myUserId)
 
         _amountText = State(
-            initialValue: Money.sanitizeTypingInput(MoneyFormatter.typingAmount(from: expense.money))
+            initialValue: MoneyFormatter.editableAmount(from: expense.money)
         )
         _category = State(initialValue: expense.category)
         _title = State(initialValue: expense.title ?? "")
