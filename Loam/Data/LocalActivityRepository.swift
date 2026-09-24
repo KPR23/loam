@@ -15,6 +15,13 @@ actor LocalActivityRepository: ActivityRepository {
         return ActivityPage(events: Array(filtered.prefix(50)), hasMore: filtered.count > 50)
     }
 
+    func fetchExpenseEvents(expenseId: UUID, userId: UUID) async throws -> [ActivityEvent] {
+        load()
+            .filter { $0.audience.contains(userId) && $0.event.expenseId == expenseId }
+            .map(\.event)
+            .sorted { $0.occurredAt == $1.occurredAt ? $0.id.uuidString < $1.id.uuidString : $0.occurredAt < $1.occurredAt }
+    }
+
     func record(_ event: ActivityEvent, audience: [UUID]) async throws {
         guard !audience.isEmpty else { return }
         var values = load(); values.append(Stored(event: event, audience: Array(Set(audience))))

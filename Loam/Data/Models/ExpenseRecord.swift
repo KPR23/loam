@@ -119,6 +119,16 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
 
     var isShared: Bool { shares.contains { $0.userId != createdBy } }
 
+    /// Someone besides `userId` still carries part of this expense: they have
+    /// not declined it and either owe a share or paid for it.
+    func isSharedWithOthers(for userId: UUID) -> Bool {
+        shares.contains { share in
+            share.userId != userId
+                && share.status != .rejected
+                && (share.amountMinor > 0 || share.userId == paidBy)
+        }
+    }
+
     var isRecurring: Bool { recurringId != nil }
 
     /// You paid (`paidBy`) → branch; otherwise you were added as a participant → pull.

@@ -53,8 +53,18 @@ struct SplitExpenseSection: View {
         return selectablePartners.filter { !recentIds.contains($0.userId) }
     }
 
+    /// Every selected person, including existing participants that are not in
+    /// `availablePartners` (yet): connections load asynchronously, and a
+    /// co-participant may not be connected to the person editing. Dropping
+    /// them would reset the payer and the prefilled shares.
     private var selectedPartners: [SplitPartnerOption] {
-        selectablePartners.filter { selectedPartnerUserIds.contains($0.userId) }
+        let known = selectablePartners.filter { selectedPartnerUserIds.contains($0.userId) }
+        let knownIds = Set(known.map(\.userId))
+        let unknown = selectedPartnerUserIds
+            .filter { $0 != myUserId && !knownIds.contains($0) }
+            .map { SplitPartnerOption(userId: $0, displayName: SplitPartnerOption.displayName(for: $0)) }
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        return known + unknown
     }
 
     private var splitParticipants: [SplitParticipantOption] {
@@ -522,7 +532,7 @@ struct SplitExpenseSection: View {
         case .percentage:
             let percentages = participantUserIds.compactMap { participantPercentages[$0] }
             guard percentages.count == participantUserIds.count,
-                  percentages.allSatisfy({ $0 > 0 }) else {
+                  percentages.allSatisfy({ $0 >= 0 }) else {
                 return "Enter a percentage for every person."
             }
             guard percentages.reduce(0, +) == 100 else {

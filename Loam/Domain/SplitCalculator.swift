@@ -5,10 +5,11 @@ enum SplitCalculator {
     struct Participant: Hashable, Sendable {
         let userId: UUID
         /// Relative weight. Equal split uses weight 1 for each included person.
+        /// Zero is allowed so someone can pay for another person entirely.
         let weight: Int
 
         init(userId: UUID, weight: Int = 1) {
-            precondition(weight > 0, "Weight must be positive")
+            precondition(weight >= 0, "Weight must not be negative")
             self.userId = userId
             self.weight = weight
         }
@@ -41,7 +42,8 @@ enum SplitCalculator {
         return shares
     }
 
-    /// Weighted split (e.g. 2:1). Floor each share; leftover grosze go to `remainderTo` when present.
+    /// Weighted split (e.g. 2:1). Floor each share; leftover grosze go to `remainderTo` when present
+    /// with a non-zero weight, otherwise to the first person with a non-zero weight.
     static func weightedSplit(
         totalMinor: Int,
         participants: [Participant],
@@ -64,7 +66,9 @@ enum SplitCalculator {
         let remainder = totalMinor - allocated
         guard remainder != 0 else { return shares }
 
-        let targetIndex = shares.firstIndex(where: { $0.userId == remainderTo }) ?? 0
+        let targetIndex = participants.firstIndex(where: { $0.userId == remainderTo && $0.weight > 0 })
+            ?? participants.firstIndex(where: { $0.weight > 0 })
+            ?? 0
         shares[targetIndex] = Share(
             userId: shares[targetIndex].userId,
             amountMinor: shares[targetIndex].amountMinor + remainder
@@ -72,7 +76,7 @@ enum SplitCalculator {
         return shares
     }
 
-    /// Percentage split (must sum to 100). Remainder grosze go to `paidByUserId`.
+    /// Percentage split (must sum to 100; 0% is allowed). Remainder grosze go to `paidByUserId`.
     static func percentage(
         totalMinor: Int,
         userPercentages: [(userId: UUID, percent: Int)],
@@ -105,7 +109,7 @@ enum SplitCalculator {
         if mode == .percentage {
             let percentages = participantPercentages.filter { participantIds.contains($0.key) }
             if percentages.count == participantIds.count,
-               percentages.values.allSatisfy({ $0 > 0 }),
+               percentages.values.allSatisfy({ $0 >= 0 }),
                percentages.values.reduce(0, +) == 100 {
                 return percentage(
                     totalMinor: totalMinor,
@@ -239,7 +243,7 @@ enum SplitCalculator {
             let percentage = Int(round(Double(share.amountMinor) / Double(totalMinor) * 100))
             return (share.userId, percentage)
         })
-        guard percentages.values.allSatisfy({ $0 > 0 }),
+        guard percentages.values.allSatisfy({ $0 >= 0 }),
               percentages.values.reduce(0, +) == 100 else {
             return nil
         }

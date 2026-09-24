@@ -6,6 +6,9 @@ final class ExpenseStore: ObservableObject {
     @Published private(set) var pendingProposals: [ExpenseEditProposal] = []
     /// Expenses referenced by pending proposals that fall outside the active period.
     @Published private(set) var proposalExpenses: [ExpenseRecord] = []
+    /// Expenses opened outside Home (e.g. from Activity) that fall outside the
+    /// active period, kept fresh so their detail screen can act on them.
+    @Published private(set) var detachedExpenses: [ExpenseRecord] = []
     /// The user's rules the server could not generate a due occurrence for.
     @Published private(set) var failingRecurringRules: [RecurringRuleRecord] = []
     @Published private(set) var summary: MonthSpendSummary = .zero()
@@ -50,6 +53,7 @@ final class ExpenseStore: ObservableObject {
             expenses = []
             pendingProposals = []
             proposalExpenses = []
+            detachedExpenses = []
             failingRecurringRules = []
             recurringStartDatesById = [:]
             summary = .zero()
@@ -77,17 +81,64 @@ final class ExpenseStore: ObservableObject {
         let proposals = (try? await primaryRepository.fetchPendingProposals(for: userId)) ?? []
         pendingProposals = proposals
         proposalExpenses = await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses)
+        detachedExpenses = await refreshDetachedExpenses(userId: userId)
     }
 
     func expense(forProposal proposal: ExpenseEditProposal) -> ExpenseRecord? {
-        expenses.first(where: { $0.id == proposal.expenseId })
-            ?? proposalExpenses.first(where: { $0.id == proposal.expenseId })
+        knownExpense(id: proposal.expenseId)
+    }
+
+    /// The freshest loaded copy of an expense, wherever it was loaded from.
+    func knownExpense(id: UUID) -> ExpenseRecord? {
+        expenses.first(where: { $0.id == id })
+            ?? proposalExpenses.first(where: { $0.id == id })
+            ?? detachedExpenses.first(where: { $0.id == id })
     }
 
     /// Used by Activity after an event is selected; a missing row is expected for deleted/inaccessible history.
     func fetchExpense(id: UUID, userId: UUID) async -> ExpenseRecord? {
         if let cached = expenses.first(where: { $0.id == id }) { return cached }
-        return try? await primaryRepository.fetchExpenses(ids: [id]).first(where: { $0.shareRecord(for: userId) != nil })
+        guard let fetched = try? await primaryRepository.fetchExpenses(ids: [id]).first(where: { $0.shareRecord(for: userId) != nil }) else {
+            detachedExpenses.removeAll { $0.id == id }
+            return nil
+        }
+        detachedExpenses.removeAll { $0.id == id }
+        detachedExpenses.append(fetched)
+        return fetched
+    }
+
+    /// Reloads one expense and the pending proposals so its detail screen shows
+    /// answers and suggestions that arrived since the last full refresh.
+    func reloadForDetail(expenseId: UUID, userId: UUID) async {
+        guard currentUserId == userId else { return }
+        if let proposals = try? await primaryRepository.fetchPendingProposals(for: userId) {
+            pendingProposals = proposals
+            proposalExpenses = await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses)
+        }
+        guard let fetched = try? await primaryRepository.fetchExpenses(ids: [expenseId]).first,
+              fetched.shareRecord(for: userId) != nil,
+              currentUserId == userId else { return }
+        if let index = expenses.firstIndex(where: { $0.id == expenseId }) {
+            expenses[index] = fetched
+            summary = Self.makeSummary(expenses: expenses, userId: userId)
+        } else if let index = proposalExpenses.firstIndex(where: { $0.id == expenseId }) {
+            proposalExpenses[index] = fetched
+        } else {
+            detachedExpenses.removeAll { $0.id == expenseId }
+            detachedExpenses.append(fetched)
+        }
+    }
+
+    /// Pending proposals for one expense that this user can see: their own, or
+    /// every proposal when they own the expense.
+    func visibleProposals(forExpense expenseId: UUID, userId: UUID) -> [ExpenseEditProposal] {
+        pendingProposals
+            .filter { proposal in
+                proposal.expenseId == expenseId
+                    && proposal.status == .pending
+                    && (proposal.proposedBy == userId || knownExpense(id: expenseId)?.createdBy == userId)
+            }
+            .sorted { $0.createdAt < $1.createdAt }
     }
 
     func addSplit(
@@ -255,7 +306,7 @@ final class ExpenseStore: ObservableObject {
         participantPercentages: [UUID: Int] = [:],
         participantExactAmountMinors: [UUID: Int] = [:]
     ) async throws {
-        guard var expense = expenses.first(where: { $0.id == expenseId }) else {
+        guard var expense = knownExpense(id: expenseId) else {
             throw ExpenseRepositoryError.notFound
         }
         let originalExpense = expense
@@ -327,7 +378,7 @@ final class ExpenseStore: ObservableObject {
 
     func delete(id: UUID, userId: UUID, recurringMode: RecurringDeletionMode? = nil) async {
         do {
-            if let expense = expenses.first(where: { $0.id == id }) {
+            if let expense = knownExpense(id: id) {
                 let activeRepository = repository(for: expense)
                 try await activeRepository.delete(id: id)
                 if expense.isShared { await recordActivity(kind: .deleted, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId }) }
@@ -411,7 +462,7 @@ final class ExpenseStore: ObservableObject {
         participantPercentages: [UUID: Int] = [:],
         participantExactAmountMinors: [UUID: Int] = [:]
     ) async throws {
-        guard var expense = expenses.first(where: { $0.id == expenseId }) else {
+        guard var expense = knownExpense(id: expenseId) else {
             throw ExpenseRepositoryError.notFound
         }
 
@@ -464,7 +515,7 @@ final class ExpenseStore: ObservableObject {
         action: ExpenseShareResponseAction
     ) async {
         let targets: [(id: UUID, expense: ExpenseRecord)] = expenseIds.compactMap { id in
-            guard let expense = expenses.first(where: { $0.id == id }),
+            guard let expense = knownExpense(id: id),
                   expense.isPendingAcceptance(for: userId) else { return nil }
             return (id, expense)
         }
@@ -569,10 +620,7 @@ final class ExpenseStore: ObservableObject {
     func respondToProposal(proposalId: UUID, userId: UUID, accept: Bool) async {
         do {
             let expenseId = pendingProposals.first(where: { $0.id == proposalId })?.expenseId
-            let expense = expenseId.flatMap { id in
-                expenses.first(where: { $0.id == id })
-                    ?? proposalExpenses.first(where: { $0.id == id })
-            }
+            let expense = expenseId.flatMap { knownExpense(id: $0) }
             let activeRepository = expense.map { repository(for: $0) } ?? primaryRepository
             try await LoamErrorCapture.withCapture("expense.edit_proposal_response_failed") {
                 try await activeRepository.respondToProposal(proposalId: proposalId, accept: accept)
@@ -587,21 +635,20 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
-    func pendingProposals(for expenseId: UUID, userId: UUID) -> [ExpenseEditProposal] {
-        pendingProposals.filter { proposal in
-            proposal.expenseId == expenseId
-                && proposal.status == .pending
-                && (proposal.proposedBy != userId || expenses.contains(where: { $0.id == expenseId && $0.createdBy == userId })
-                    || proposalExpenses.contains(where: { $0.id == expenseId && $0.createdBy == userId }))
-        }
-    }
-
     func incomingProposals(for userId: UUID) -> [ExpenseEditProposal] {
         pendingProposals.filter { proposal in
             guard proposal.status == .pending else { return false }
             guard let expense = expense(forProposal: proposal) else { return false }
             return expense.createdBy == userId
         }
+    }
+
+    private func refreshDetachedExpenses(userId: UUID) async -> [ExpenseRecord] {
+        let periodIds = Set(expenses.map(\.id)).union(proposalExpenses.map(\.id))
+        let ids = detachedExpenses.map(\.id).filter { !periodIds.contains($0) }
+        guard !ids.isEmpty else { return [] }
+        guard let fetched = try? await primaryRepository.fetchExpenses(ids: ids) else { return detachedExpenses }
+        return fetched.filter { $0.shareRecord(for: userId) != nil }
     }
 
     private func resolveProposalExpenses(
@@ -626,6 +673,7 @@ final class ExpenseStore: ObservableObject {
             recipientId: recipients.count == 1 ? recipients[0] : nil,
             recipientName: recipients.count == 1 ? SplitPartnerOption.displayName(for: recipients[0]) : nil,
             recipientNames: recipients.map { SplitPartnerOption.displayName(for: $0) },
+            recipientIds: recipients,
             expenseId: expense.id,
             expenseTitle: expense.displayTitle,
             category: expense.category,
@@ -777,7 +825,7 @@ final class ExpenseStore: ObservableObject {
             if mine > 0 {
                 byCategory[expense.category, default: 0] += mine
             }
-            if expense.isShared {
+            if expense.isSharedWithOthers(for: userId) {
                 shared += mine
             }
         }

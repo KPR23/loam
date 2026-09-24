@@ -177,7 +177,7 @@ final class ExpenseStoreTests: LocalStorageTestCase {
 
         await creatorStore.refresh(userId: me)
         let proposal = try XCTUnwrap(creatorStore.incomingProposals(for: me).first)
-        XCTAssertEqual(creatorStore.pendingProposals(for: expense.id, userId: me).map(\.id), [proposal.id])
+        XCTAssertEqual(creatorStore.visibleProposals(forExpense: expense.id, userId: me).map(\.id), [proposal.id])
         await creatorStore.respondToProposal(proposalId: proposal.id, userId: me, accept: true)
 
         XCTAssertTrue(creatorStore.incomingProposals(for: me).isEmpty)
@@ -241,5 +241,64 @@ final class ExpenseStoreTests: LocalStorageTestCase {
         await store.timeZoneDidChange(from: TimeZone(identifier: "Pacific/Honolulu")!, userId: me)
 
         XCTAssertEqual(store.summary.totalMine.amountMinor, 900)
+    }
+}
+
+final class ActivitySentenceTests: XCTestCase {
+    let me = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
+    let julia = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
+    let philip = UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
+
+    private func event(
+        _ kind: ActivityEventKind,
+        actor: UUID,
+        actorName: String,
+        recipient: UUID? = nil,
+        recipientName: String? = nil,
+        recipientIds: [UUID] = [],
+        recipientNames: [String] = []
+    ) -> ActivityEvent {
+        ActivityEvent(
+            kind: kind,
+            actorId: actor,
+            actorName: actorName,
+            recipientId: recipient,
+            recipientName: recipientName,
+            recipientNames: recipientNames,
+            recipientIds: recipientIds,
+            expenseTitle: "Dinner",
+            category: .dining,
+            affectedShareMinor: 500,
+            expenseTotalMinor: 1500,
+            currency: "PLN"
+        )
+    }
+
+    func testSharedExpenseCallsTheViewerYou() {
+        let shared = event(.shared, actor: julia, actorName: "Julia", recipientIds: [philip, me], recipientNames: ["Philip", "Kacper Z"])
+        XCTAssertEqual(shared.sentence(viewerId: me), "Julia shared an expense with you and Philip")
+        XCTAssertEqual(shared.sentence(viewerId: philip), "Julia shared an expense with you and Kacper Z")
+    }
+
+    func testResponsesUsePossessiveYou() {
+        let accepted = event(.accepted, actor: julia, actorName: "Julia", recipient: me, recipientName: "Kacper Z")
+        XCTAssertEqual(accepted.sentence(viewerId: me), "Julia accepted your expense")
+    }
+
+    func testAcceptedProposalNamesTheProposer() {
+        let accepted = event(.proposalAccepted, actor: me, actorName: "Kacper Z", recipient: julia, recipientName: "Julia")
+        XCTAssertEqual(accepted.sentence(viewerId: me), "You accepted Julia's suggested changes")
+        XCTAssertEqual(accepted.sentence(viewerId: julia), "Kacper Z accepted your suggested changes")
+    }
+
+    func testRepaymentsReadFromEachSide() {
+        let repayment = event(.repaymentRecorded, actor: julia, actorName: "Julia", recipient: me, recipientName: "Kacper Z")
+        XCTAssertEqual(repayment.sentence(viewerId: me), "Julia recorded a repayment to you")
+        XCTAssertEqual(repayment.sentence(viewerId: julia), "You recorded a repayment to Kacper Z")
+    }
+
+    func testRemovedParticipantIsToldDirectly() {
+        let removed = event(.participantRemoved, actor: julia, actorName: "Julia", recipientIds: [me], recipientNames: ["Kacper Z"])
+        XCTAssertEqual(removed.sentence(viewerId: me), "Julia removed you from an expense")
     }
 }

@@ -39,18 +39,35 @@ struct PendingExpenseListRow: View {
     let onProposeEdit: () -> Void
     let onShowDetails: () -> Void
 
+    /// The suggestion this person already sent stays visible until the owner answers.
+    private var hasSentProposal: Bool {
+        expenseStore.visibleProposals(forExpense: expense.id, userId: myUserId)
+            .contains { $0.proposedBy == myUserId }
+    }
+
     var body: some View {
-        PendingExpenseRow(
-            expense: expense,
-            myUserId: myUserId,
-            creatorName: SplitPartnerOption.displayName(for: expense.createdBy),
-            showsCreatorLabel: showsCreatorLabel,
-            onAccept: { respond(.accept) },
-            onAcceptWithTrust: { respond(.acceptWithTrust) },
-            onReject: { respond(.reject) },
-            onProposeEdit: onProposeEdit,
-            onShowDetails: onShowDetails
-        )
+        VStack(alignment: .leading, spacing: 10) {
+            PendingExpenseRow(
+                expense: expense,
+                myUserId: myUserId,
+                creatorName: SplitPartnerOption.displayName(for: expense.createdBy),
+                showsCreatorLabel: showsCreatorLabel,
+                onAccept: { respond(.accept) },
+                onAcceptWithTrust: { respond(.acceptWithTrust) },
+                onReject: { respond(.reject) },
+                onProposeEdit: onProposeEdit,
+                onShowDetails: onShowDetails
+            )
+
+            if hasSentProposal {
+                Label(
+                    "You suggested changes · waiting for \(SplitPartnerOption.displayName(for: expense.createdBy))",
+                    systemImage: "square.and.pencil"
+                )
+                .font(.footnote)
+                .foregroundStyle(HomeTheme.secondary)
+            }
+        }
         .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {

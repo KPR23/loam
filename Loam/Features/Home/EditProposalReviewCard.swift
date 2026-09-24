@@ -4,8 +4,12 @@ struct EditProposalReviewCard: View {
     let proposal: ExpenseEditProposal
     let expense: ExpenseRecord
     let proposerName: String
-    let onAccept: () -> Void
-    let onReject: () -> Void
+    /// Labels this person's own share and payment as "You".
+    var viewerId: UUID? = nil
+    /// Shown instead of the buttons when someone else decides.
+    var awaitingReviewFrom: String? = nil
+    var onAccept: (() -> Void)? = nil
+    var onReject: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -68,8 +72,8 @@ struct EditProposalReviewCard: View {
                 if expense.paidBy != proposal.paidBy {
                     changeRow(
                         label: "Payer",
-                        from: SplitPartnerOption.displayName(for: expense.paidBy),
-                        to: SplitPartnerOption.displayName(for: proposal.paidBy)
+                        from: name(for: expense.paidBy),
+                        to: name(for: proposal.paidBy)
                     )
                 }
                 if !sharesMatch(expense.shares, proposal.shares) {
@@ -81,20 +85,28 @@ struct EditProposalReviewCard: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                Button(action: { LoamFeedback.tap(); onReject() }) {
-                    Text("Decline")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+            if let onAccept, let onReject {
+                HStack(spacing: 10) {
+                    Button(action: { LoamFeedback.tap(); onReject() }) {
+                        Text("Decline")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
 
-                Button(action: { LoamFeedback.tap(); onAccept() }) {
-                    Text("Apply changes")
-                        .frame(maxWidth: .infinity)
+                    Button(action: { LoamFeedback.tap(); onAccept() }) {
+                        Text("Apply changes")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                // List swallows taps on nested bordered buttons unless the row opts out.
+                .buttonStyle(.borderless)
+            } else if let awaitingReviewFrom {
+                Label("Waiting for \(awaitingReviewFrom) to review", systemImage: "clock")
+                    .font(.footnote)
+                    .foregroundStyle(HomeTheme.secondary)
             }
         }
         .padding(.vertical, 4)
@@ -120,6 +132,10 @@ struct EditProposalReviewCard: View {
         }
     }
 
+    private func name(for userId: UUID) -> String {
+        userId == viewerId ? "You" : SplitPartnerOption.displayName(for: userId)
+    }
+
     private func normalizedNote(_ note: String?) -> String {
         note?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
@@ -138,16 +154,16 @@ struct EditProposalReviewCard: View {
     private func sharesSummary(_ shares: [ExpenseShareRecord], currency: String) -> String {
         shares
             .sorted {
-                SplitPartnerOption.displayName(for: $0.userId)
-                    .localizedCaseInsensitiveCompare(SplitPartnerOption.displayName(for: $1.userId))
+                name(for: $0.userId)
+                    .localizedCaseInsensitiveCompare(name(for: $1.userId))
                     == .orderedAscending
             }
             .map { share in
-                let name = SplitPartnerOption.displayName(for: share.userId)
+                let label = name(for: share.userId)
                 let amount = MoneyFormatter.string(
                     from: Money(amountMinor: share.amountMinor, currencyCode: currency)
                 )
-                return "\(name) \(amount)"
+                return "\(label) \(amount)"
             }
             .joined(separator: ", ")
     }
