@@ -171,7 +171,16 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         return endDate.formatted(date: .abbreviated, time: .omitted)
     }
 
+    /// First scheduled date strictly after `date`.
     func nextOccurrence(after date: Date, calendar: Calendar = AppPreferences.calendar) -> Date {
+        let day = calendar.startOfDay(for: date)
+        return occurrence(onOrAfter: calendar.date(byAdding: .day, value: 1, to: day) ?? day, calendar: calendar)
+    }
+
+    /// First scheduled date on or after `date`. Every occurrence is `startDate`
+    /// plus whole intervals, so month-end rules stay on the last day
+    /// (Jan 31 → Feb 28 → Mar 31) instead of drifting. Matches the server.
+    func occurrence(onOrAfter date: Date, calendar: Calendar = AppPreferences.calendar) -> Date {
         let component: Calendar.Component
         switch intervalUnit {
         case .day: component = .day
@@ -179,11 +188,19 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         case .month: component = .month
         case .year: component = .year
         }
-        return calendar.date(
-            byAdding: component,
-            value: max(1, intervalCount),
-            to: calendar.startOfDay(for: date)
-        ) ?? date
+        let step = max(1, intervalCount)
+        let start = calendar.startOfDay(for: startDate)
+        let day = calendar.startOfDay(for: date)
+        guard day > start else { return start }
+
+        func scheduled(_ index: Int) -> Date {
+            calendar.date(byAdding: component, value: index * step, to: start) ?? start
+        }
+        // Estimate the index from the elapsed span, then step to the exact one.
+        let elapsed = calendar.dateComponents([component], from: start, to: day).value(for: component) ?? 0
+        var index = max(0, elapsed / step - 1)
+        while scheduled(index) < day { index += 1 }
+        return scheduled(index)
     }
 
     var scheduleDescription: String {
@@ -251,7 +268,8 @@ enum RecurringMaterializer {
         guard rule.isActive else { return [] }
 
         let through = calendar.startOfDay(for: throughDate)
-        var cursor = calendar.startOfDay(for: rule.nextOccurrence)
+        // A next occurrence stored by older drifting logic snaps to the schedule.
+        var cursor = rule.occurrence(onOrAfter: rule.nextOccurrence, calendar: calendar)
         guard cursor <= through else { return [] }
 
         var dates: [Date] = []
