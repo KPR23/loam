@@ -85,3 +85,15 @@ Deno.test("an unreadable PostHog response is never treated as success", async ()
   await expectPostHogFailure(202, "posthog_delete_unreadable_response", null);
   await expectPostHogFailure(200, "posthog_delete_http_200");
 });
+
+Deno.test("a PostHog response body that stalls times out as a retryable failure", async () => {
+  const stalledBody = new ReadableStream<Uint8Array>({ pull: () => new Promise(() => {}) });
+  const stalled: typeof fetch = () => Promise.resolve(new Response(stalledBody, { status: 202 }));
+  try {
+    await deletePostHogPerson("user", postHogConfig, stalled, 10);
+  } catch (error) {
+    if (error instanceof Error && error.message === "posthog_delete_timeout") return;
+    throw new Error(`Expected posthog_delete_timeout, got ${String(error)}`);
+  }
+  throw new Error("Expected posthog_delete_timeout, got success");
+});
