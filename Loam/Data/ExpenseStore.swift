@@ -165,6 +165,7 @@ final class ExpenseStore: ObservableObject {
             }
             return try await activeRepository.create(expense)
         }
+        Telemetry.capture(.expenseCreated(shared: true, recurring: recurringRule != nil, participantCount: shareRecords.count))
         await recordActivity(kind: .shared, actorId: userId, expense: expense, recipients: partnerUserIds)
         RecentSplitPartners.record(partnerUserIds, for: userId)
         if recurringRule != nil {
@@ -218,6 +219,7 @@ final class ExpenseStore: ObservableObject {
             }
             return try await activeRepository.create(expense)
         }
+        Telemetry.capture(.expenseCreated(shared: false, recurring: recurringRule != nil, participantCount: 1))
         if recurringRule != nil {
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }

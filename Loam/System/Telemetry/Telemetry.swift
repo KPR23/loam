@@ -41,6 +41,16 @@ enum Telemetry {
         }
     }
 
+    static func screen(_ name: String) {
+        guard postHogStarted else { return }
+        PostHogSDK.shared.screen(name)
+    }
+
+    static func capture(_ event: ProductEvent) {
+        guard postHogStarted else { return }
+        PostHogSDK.shared.capture(event.name, properties: event.properties)
+    }
+
     private static func startSentry() {
         guard let dsn = infoString("SENTRY_DSN") else { return }
 
@@ -115,5 +125,28 @@ enum Telemetry {
             return nil
         }
         return value
+    }
+}
+
+/// Product analytics events. Properties must never carry amounts, titles, notes,
+/// locations, names or other personal data.
+enum ProductEvent {
+    case expenseCreated(shared: Bool, recurring: Bool, participantCount: Int)
+    case repaymentRecorded
+
+    var name: String {
+        switch self {
+        case .expenseCreated: "expense created"
+        case .repaymentRecorded: "repayment recorded"
+        }
+    }
+
+    var properties: [String: Any]? {
+        switch self {
+        case let .expenseCreated(shared, recurring, participantCount):
+            ["shared": shared, "recurring": recurring, "participant_count": participantCount]
+        case .repaymentRecorded:
+            nil
+        }
     }
 }

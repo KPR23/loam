@@ -17,6 +17,7 @@ final class BalanceStore: ObservableObject {
         try await LoamErrorCapture.withCapture("balance.repayment_create_failed") {
             try await BalanceRepositoryFactory.make().createRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note, paidAt: paidAt, operationId: UUID())
         }
+        Telemetry.capture(.repaymentRecorded)
         await refresh(userId: userId)
     }
 }
