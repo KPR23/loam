@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
 import { requireAppleRevocationSuccess } from "../_shared/apple_revoke.ts";
+import { deletePostHogPerson } from "../_shared/posthog_delete.ts";
 
 async function decryptCredential(value: string): Promise<string> {
   const encodedKey = Deno.env.get("DELETION_CREDENTIAL_ENCRYPTION_KEY");
@@ -74,7 +75,12 @@ Deno.serve(async (request) => {
           const { error: removeError } = await storage.remove(files.map((file) => `${job.account_id}/${file.name}`));
           if (removeError) throw new Error("avatar_remove_failed");
         }
-        await advance(admin, job, files?.length ? "delete_avatars" : "delete_auth", true);
+        await advance(admin, job, files?.length ? "delete_avatars" : "delete_analytics", true);
+      } else if (job.stage === "delete_analytics") {
+        const projectId = Deno.env.get("POSTHOG_PROJECT_ID"), apiKey = Deno.env.get("POSTHOG_PERSONAL_API_KEY");
+        if (!projectId || !apiKey) throw new Error("posthog_configuration_missing");
+        await deletePostHogPerson(job.account_id, { host: Deno.env.get("POSTHOG_API_HOST") ?? "https://eu.posthog.com", projectId, apiKey });
+        await advance(admin, job, "delete_auth", true);
       } else if (job.stage === "delete_auth") {
         // Keep the Supabase soft-delete tombstone because shared expense rows
         // still reference this identity. Soft deletion disables future sessions;

@@ -1,6 +1,6 @@
 -- Run with `supabase test db` after applying the account deletion migrations.
 begin;
-select plan(28);
+select plan(29);
 
 select ok(not has_function_privilege('anon', 'public.claim_account_deletion_job()', 'EXECUTE'), 'anon cannot claim deletion jobs');
 select ok(not has_function_privilege('authenticated', 'public.claim_account_deletion_job()', 'EXECUTE'), 'authenticated cannot claim deletion jobs');
@@ -37,6 +37,11 @@ select ok(has_function_privilege('service_role', 'public.purge_completed_account
 
 select ok(to_regprocedure('public.accept_account_deletion(uuid,uuid,text,text,text)') is null, 'superseded acceptance overload is gone');
 select ok(to_regprocedure('public.advance_account_deletion_job(uuid,text,boolean,text)') is null, 'lease-less job transition overload is gone');
+
+select ok(
+  (select pg_get_constraintdef(oid) from pg_constraint where conname = 'account_deletion_job_stage_check') like '%delete_analytics%',
+  'deletion jobs can enter the analytics deletion stage'
+);
 
 select * from finish();
 rollback;
