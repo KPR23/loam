@@ -3,42 +3,36 @@ import PostHog
 import Sentry
 
 /// Sentry reports crashes and handled errors for every user. PostHog analytics and session
-/// replay start only after the user opts in, and never before, so nothing reaches PostHog
-/// without consent. Both tools share the Supabase user ID so a crash can be matched to the
-/// user's path in PostHog.
+/// replay run only for a signed-in user who opted in, so nothing reaches PostHog without that
+/// user's consent. Consent is stored per account: another account signing in on the same
+/// device starts opted out. Both tools share the Supabase user ID so a crash can be matched
+/// to the user's path in PostHog.
 @MainActor
 enum Telemetry {
-    static let analyticsConsentKey = "loam.analyticsConsent"
+    private static let analyticsConsentKeyPrefix = "loam.analyticsConsent."
 
     private static var postHogStarted = false
     private static var userId: String?
 
     static func start() {
         startSentry()
-        if UserDefaults.standard.bool(forKey: analyticsConsentKey) {
-            startPostHog()
-        }
     }
 
     /// Pass `nil` when signed out or in local demo mode, whose IDs are not real accounts.
     static func setUser(_ id: UUID?) {
         // Supabase stores UUIDs in lowercase; match it so IDs can be looked up in the database.
-        userId = id?.uuidString.lowercased()
+        userId = id.map(normalizedId)
         SentrySDK.setUser(userId.map { Sentry.User(userId: $0) })
-        syncPostHogIdentity()
+        applyAnalyticsConsent()
     }
 
-    static func setAnalyticsConsent(_ granted: Bool) {
-        if granted {
-            if postHogStarted {
-                PostHogSDK.shared.optIn()
-            } else {
-                startPostHog()
-            }
-            syncPostHogIdentity()
-        } else if postHogStarted {
-            PostHogSDK.shared.optOut()
-        }
+    static func hasAnalyticsConsent(for id: UUID) -> Bool {
+        UserDefaults.standard.bool(forKey: analyticsConsentKey(for: normalizedId(id)))
+    }
+
+    static func setAnalyticsConsent(_ granted: Bool, for id: UUID) {
+        UserDefaults.standard.set(granted, forKey: analyticsConsentKey(for: normalizedId(id)))
+        applyAnalyticsConsent()
     }
 
     static func screen(_ name: String) {
@@ -98,22 +92,44 @@ enum Telemetry {
         PostHogSDK.shared.optIn()
         PostHogSDK.shared.register(["environment": environment])
         postHogStarted = true
-        syncPostHogIdentity()
     }
 
-    private static func syncPostHogIdentity() {
-        guard postHogStarted, !PostHogSDK.shared.isOptOut() else { return }
-        let postHog = PostHogSDK.shared
-        let isIdentified = postHog.getDistinctId() != postHog.getAnonymousId()
-
-        if let userId {
-            guard postHog.getDistinctId() != userId else { return }
-            // Another account signed in without signing out first.
-            if isIdentified { postHog.reset() }
-            postHog.identify(userId)
-        } else if isIdentified {
-            postHog.reset()
+    private static func applyAnalyticsConsent() {
+        let consentedUserId = userId.flatMap { id in
+            UserDefaults.standard.bool(forKey: analyticsConsentKey(for: id)) ? id : nil
         }
+
+        guard let consentedUserId else {
+            guard postHogStarted else { return }
+            let postHog = PostHogSDK.shared
+            // Drop the previous user's identity before capture stops.
+            if postHog.getDistinctId() != postHog.getAnonymousId() { postHog.reset() }
+            postHog.optOut()
+            return
+        }
+
+        if postHogStarted {
+            PostHogSDK.shared.optIn()
+        } else {
+            startPostHog()
+        }
+        identify(consentedUserId)
+    }
+
+    private static func identify(_ id: String) {
+        let postHog = PostHogSDK.shared
+        guard postHog.getDistinctId() != id else { return }
+        // Another account signed in without signing out first.
+        if postHog.getDistinctId() != postHog.getAnonymousId() { postHog.reset() }
+        postHog.identify(id)
+    }
+
+    private static func analyticsConsentKey(for id: String) -> String {
+        analyticsConsentKeyPrefix + id
+    }
+
+    private static func normalizedId(_ id: UUID) -> String {
+        id.uuidString.lowercased()
     }
 
     private static var environment: String {
