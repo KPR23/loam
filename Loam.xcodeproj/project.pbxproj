@@ -70,6 +70,7 @@
 		A155F15886F6FED9D59F1145 /* TestAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D15723F1C7A5EE473CA2889 /* TestAccount.swift */; };
 		A15AFB79C7F55A44566E7A2E /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2945E6BB2BB8D085C50A455A /* TestSupport.swift */; };
 		A385DC89F56B32C668A7375C /* AddExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD805CDE31A24AD630A9703 /* AddExpenseView.swift */; };
+		A3D3837FCD2233B631CAD203 /* LoamUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0074DD56D78CF70693398156 /* LoamUITests.swift */; };
 		A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C15AD0F34F080CB70FB979F /* LoamApp.swift */; };
 		A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */; };
 		ACDEE6074DB240C61F8BF7F1 /* ExpenseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */; };
@@ -103,6 +104,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		A6B2A2C6AE632106771ABD63 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AD162B8856C34D5401E79BCB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8AAF55F2B1E62FB9443C5270;
+			remoteInfo = Loam;
+		};
 		DED1D7C494B6DC4047360103 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AD162B8856C34D5401E79BCB /* Project object */;
@@ -113,6 +121,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0074DD56D78CF70693398156 /* LoamUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamUITests.swift; sourceTree = "<group>"; };
 		03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculator.swift; sourceTree = "<group>"; };
 		05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExpenseRepository.swift; sourceTree = "<group>"; };
 		08BD81EDCA6E65CC7B05C125 /* BalanceSimplifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceSimplifierTests.swift; sourceTree = "<group>"; };
@@ -169,6 +178,7 @@
 		7FCB2D37CB3148229B212824 /* StoreKitStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitStub.swift; sourceTree = "<group>"; };
 		8076A22183ED487CFDEF936D /* RecurringMaterializerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringMaterializerTests.swift; sourceTree = "<group>"; };
 		8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySpendHero.swift; sourceTree = "<group>"; };
+		85588239EC07E5388F8FDC37 /* LoamUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		880E7A5E824CC111BEF5B8F4 /* ActivityEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityEvent.swift; sourceTree = "<group>"; };
 		89EAB827A6FDCA5FF2A11FB3 /* SupabaseActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseActivityRepository.swift; sourceTree = "<group>"; };
 		8DD37731E7B74A5C0B768684 /* ActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRepository.swift; sourceTree = "<group>"; };
@@ -252,6 +262,7 @@
 			children = (
 				FE507A81DBF873171B9032A1 /* Loam.app */,
 				96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */,
+				85588239EC07E5388F8FDC37 /* LoamUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -366,6 +377,7 @@
 			children = (
 				2EE1B6EB7DAF0A7907F7C369 /* Loam */,
 				AA1A670124B4A58B5074AEE8 /* LoamTests */,
+				7B47F43276E11DEDE59ECF19 /* LoamUITests */,
 				029F65459DF81BDFA37ABC77 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -384,6 +396,14 @@
 				C4D4F8162B4C53DEDDD87E91 /* Telemetry.swift */,
 			);
 			path = Telemetry;
+			sourceTree = "<group>";
+		};
+		7B47F43276E11DEDE59ECF19 /* LoamUITests */ = {
+			isa = PBXGroup;
+			children = (
+				0074DD56D78CF70693398156 /* LoamUITests.swift */,
+			);
+			path = LoamUITests;
 			sourceTree = "<group>";
 		};
 		82D602BAA840840463B4BFDE /* Models */ = {
@@ -546,6 +566,24 @@
 			productReference = 96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		6BB283D16BEB6299DCFA1EC5 /* LoamUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9A683259767D23186669B33C /* Build configuration list for PBXNativeTarget "LoamUITests" */;
+			buildPhases = (
+				B13313E8EB2F4F611778A242 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6632B08B5987CDC25AA444AE /* PBXTargetDependency */,
+			);
+			name = LoamUITests;
+			packageProductDependencies = (
+			);
+			productName = LoamUITests;
+			productReference = 85588239EC07E5388F8FDC37 /* LoamUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		8AAF55F2B1E62FB9443C5270 /* Loam */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DD7C7FF42E933B81DB2B7F80 /* Build configuration list for PBXNativeTarget "Loam" */;
@@ -581,6 +619,10 @@
 					38C741AEE51B5DD4542905E5 = {
 						DevelopmentTeam = XXJA67J9AN;
 					};
+					6BB283D16BEB6299DCFA1EC5 = {
+						DevelopmentTeam = XXJA67J9AN;
+						TestTargetID = 8AAF55F2B1E62FB9443C5270;
+					};
 					8AAF55F2B1E62FB9443C5270 = {
 						DevelopmentTeam = XXJA67J9AN;
 					};
@@ -607,6 +649,7 @@
 			targets = (
 				8AAF55F2B1E62FB9443C5270 /* Loam */,
 				38C741AEE51B5DD4542905E5 /* LoamTests */,
+				6BB283D16BEB6299DCFA1EC5 /* LoamUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -668,6 +711,14 @@
 				40CE985228700649412B0057 /* SupabaseConfigTests.swift in Sources */,
 				A15AFB79C7F55A44566E7A2E /* TestSupport.swift in Sources */,
 				1FE82009647DEFA6B7980F0A /* WireFormatTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B13313E8EB2F4F611778A242 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3D3837FCD2233B631CAD203 /* LoamUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -752,6 +803,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		6632B08B5987CDC25AA444AE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8AAF55F2B1E62FB9443C5270 /* Loam */;
+			targetProxy = A6B2A2C6AE632106771ABD63 /* PBXContainerItemProxy */;
+		};
 		E08D638C91001C3FC662AEA7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 8AAF55F2B1E62FB9443C5270 /* Loam */;
@@ -780,6 +836,23 @@
 			};
 			name = Debug;
 		};
+		07A22CABF9AAD3E645776705 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.loam.LoamUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Loam;
+			};
+			name = Debug;
+		};
 		141FAF6AC6CE65D0C9A7DCCB /* Production */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -796,6 +869,40 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Loam.app/Loam";
 			};
 			name = Production;
+		};
+		3B5E2431B0EF75FD7512B9E8 /* Production */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.loam.LoamUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Loam;
+			};
+			name = Production;
+		};
+		3FED4C668794CBE9F60F6391 /* TestFlight */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.loam.LoamUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Loam;
+			};
+			name = TestFlight;
 		};
 		613D70E58E34291B9DAA4780 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -939,6 +1046,23 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Loam.app/Loam";
 			};
 			name = Debug;
+		};
+		8858AF3F48653C3C00C0025C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.loam.LoamUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Loam;
+			};
+			name = Release;
 		};
 		93C860893498F866A000C69E /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1177,6 +1301,17 @@
 				141FAF6AC6CE65D0C9A7DCCB /* Production */,
 				E39599C05923D5011CB18B85 /* Release */,
 				D0FE930B6F73904FCD7785B3 /* TestFlight */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9A683259767D23186669B33C /* Build configuration list for PBXNativeTarget "LoamUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				07A22CABF9AAD3E645776705 /* Debug */,
+				3B5E2431B0EF75FD7512B9E8 /* Production */,
+				8858AF3F48653C3C00C0025C /* Release */,
+				3FED4C668794CBE9F60F6391 /* TestFlight */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
