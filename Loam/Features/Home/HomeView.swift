@@ -382,7 +382,7 @@ struct HomeView: View {
     }
 
     private var expensesByDay: [(date: Date, expenses: [ExpenseRecord])] {
-        let calendar = Calendar.current
+        let calendar = AppPreferences.calendar
         let listedExpenses = expenseStore.expenses.filter { expense in
             guard let userId = authSession.userId else { return true }
             return !expense.isPendingAcceptance(for: userId)
@@ -417,8 +417,9 @@ struct HomeView: View {
     }
 
     private func daySectionTitle(for date: Date) -> String {
-        let calendar = Calendar.current
-        let dayMonth = date.formatted(.dateTime.day().month(.abbreviated))
+        let calendar = AppPreferences.calendar
+        let style = Date.FormatStyle(timeZone: calendar.timeZone)
+        let dayMonth = date.formatted(style.day().month(.abbreviated))
 
         let prefix: String
         if calendar.isDateInToday(date) {
@@ -426,7 +427,7 @@ struct HomeView: View {
         } else if calendar.isDateInYesterday(date) {
             prefix = "Yesterday"
         } else {
-            prefix = date.formatted(.dateTime.weekday(.wide))
+            prefix = date.formatted(style.weekday(.wide))
         }
 
         return "\(prefix), \(dayMonth)"

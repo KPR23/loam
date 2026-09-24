@@ -62,11 +62,12 @@ enum MoneyFormatter {
     }
 }
 
+/// A calendar month in the app's selected time zone, matching how `spentAt` days are stored.
 enum DatePeriod: Equatable {
     case month(year: Int, month: Int)
 
     static var currentMonth: DatePeriod {
-        let calendar = Calendar.current
+        let calendar = AppPreferences.calendar
         let now = Date()
         let components = calendar.dateComponents([.year, .month], from: now)
         let year = components.year ?? calendar.component(.year, from: now)
@@ -75,7 +76,7 @@ enum DatePeriod: Equatable {
     }
 
     init(from date: Date) {
-        let calendar = Calendar.current
+        let calendar = AppPreferences.calendar
         let components = calendar.dateComponents([.year, .month], from: date)
         let year = components.year ?? calendar.component(.year, from: date)
         let month = components.month ?? calendar.component(.month, from: date)
@@ -89,7 +90,7 @@ enum DatePeriod: Equatable {
             components.year = year
             components.month = month
             components.day = 1
-            return Calendar.current.date(from: components) ?? Date()
+            return AppPreferences.calendar.date(from: components) ?? Date()
         }
     }
 
@@ -104,8 +105,9 @@ enum DatePeriod: Equatable {
             components.year = year
             components.month = month
             components.day = 1
-            let date = Calendar.current.date(from: components) ?? Date()
+            let date = AppPreferences.calendar.date(from: components) ?? Date()
             let formatter = DateFormatter()
+            formatter.timeZone = AppPreferences.timeZone
             formatter.dateFormat = "MMMM yyyy"
             return formatter.string(from: date)
         }
@@ -119,8 +121,9 @@ enum DatePeriod: Equatable {
             startComponents.year = year
             startComponents.month = month
             startComponents.day = 1
-            let start = Calendar.current.date(from: startComponents)!
-            let endExclusive = Calendar.current.date(byAdding: .month, value: 1, to: start)!
+            let calendar = AppPreferences.calendar
+            let start = calendar.date(from: startComponents)!
+            let endExclusive = calendar.date(byAdding: .month, value: 1, to: start)!
             return (start, endExclusive)
         }
     }

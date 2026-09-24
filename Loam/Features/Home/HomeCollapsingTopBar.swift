@@ -154,7 +154,7 @@ struct MonthPickerSheet: View {
     }
 
     private func selectCurrentMonth() {
-        let calendar = Calendar.current
+        let calendar = AppPreferences.calendar
         let now = Date()
         selectedYear = calendar.component(.year, from: now)
         selectedMonth = calendar.component(.month, from: now)

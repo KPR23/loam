@@ -73,9 +73,10 @@ actor LocalExpenseRepository: ExpenseRepository {
     }
 
     func hasExpense(recurringId: UUID, spentAt: Date) async throws -> Bool {
-        let day = Calendar.current.startOfDay(for: spentAt)
+        let calendar = AppPreferences.calendar
+        let day = calendar.startOfDay(for: spentAt)
         return try load().contains {
-            $0.recurringId == recurringId && Calendar.current.isDate($0.spentAt, inSameDayAs: day)
+            $0.recurringId == recurringId && calendar.isDate($0.spentAt, inSameDayAs: day)
         }
     }
 
@@ -87,7 +88,7 @@ actor LocalExpenseRepository: ExpenseRepository {
     func createRecurringOccurrence(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         if let recurringId = expense.recurringId,
            let existing = try load().first(where: {
-               $0.recurringId == recurringId && Calendar.current.isDate($0.spentAt, inSameDayAs: expense.spentAt)
+               $0.recurringId == recurringId && AppPreferences.calendar.isDate($0.spentAt, inSameDayAs: expense.spentAt)
            }) {
             return existing
         }
@@ -146,7 +147,7 @@ actor LocalExpenseRepository: ExpenseRepository {
     #endif
 
     func deleteFutureRecurringExpenses(recurringId: UUID, after date: Date) async throws {
-        let calendar = Calendar.current
+        let calendar = AppPreferences.calendar
         let cutoff = calendar.startOfDay(for: date)
         var all = try load()
         let removedIds = Set(all.filter {
