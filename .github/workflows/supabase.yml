@@ -50,8 +50,18 @@ jobs:
         if: always()
         run: supabase stop --no-backup
 
+  test-functions:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+      - name: Test edge functions
+        run: deno test supabase/functions
+
   deploy-staging:
-    needs: verify-database
+    needs: [verify-database, test-functions]
     if: github.ref_name == 'dev'
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     environment: staging
@@ -142,7 +152,7 @@ jobs:
           test "$status" = 401
 
   deploy-production:
-    needs: verify-database
+    needs: [verify-database, test-functions]
     if: github.ref_name == 'main'
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     environment: production
