@@ -8,7 +8,6 @@ protocol ExpenseRepository: Sendable {
     func updateRecurringRule(_ rule: RecurringRuleRecord) async throws -> RecurringRuleRecord
     func fetchActiveRecurringRules(for userId: UUID) async throws -> [RecurringRuleRecord]
     func fetchRecurringRule(id: UUID) async throws -> RecurringRuleRecord?
-    func fetchLatestExpense(forRecurringId recurringId: UUID) async throws -> ExpenseRecord?
     func hasExpense(recurringId: UUID, spentAt: Date) async throws -> Bool
     /// Inserts one recurring occurrence, returning the already-created row when
     /// another client won the same (rule, date) race.
@@ -24,17 +23,19 @@ protocol ExpenseRepository: Sendable {
     func fetchPendingProposals(for userId: UUID) async throws -> [ExpenseEditProposal]
     func createEditProposal(_ proposal: ExpenseEditProposal, expenseId: UUID) async throws -> ExpenseEditProposal
     func respondToProposal(proposalId: UUID, accept: Bool) async throws
-    func fetchTrustedUserIds(for userId: UUID, householdId: UUID) async throws -> Set<UUID>
-    func addTrust(for userId: UUID, trustedUserId: UUID, householdId: UUID) async throws
+    func fetchTrustedUserIds(for userId: UUID) async throws -> Set<UUID>
+    func addTrust(for userId: UUID, trustedUserId: UUID) async throws
 }
 
 enum ExpenseRepositoryError: LocalizedError {
     case notFound
     case invalidShares
     case notSignedIn
+    case conflict
 
     var errorDescription: String? {
         switch self {
+        case .conflict: return "Expense changed. Refresh and try again."
         case .notFound: return "Expense not found."
         case .invalidShares: return "Shares must sum to the expense total."
         case .notSignedIn: return "Sign in to manage expenses."

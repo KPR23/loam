@@ -24,20 +24,22 @@ actor SupabaseConnectionRepository: ConnectionRepository {
     func revokeInvitation() async throws { _ = try await client.rpc("revoke_connection_invitation").execute() }
     func preview(code: String) async throws -> String {
         struct Params: Encodable { let pCode: String; enum CodingKeys: String, CodingKey { case pCode = "p_code" } }
-        struct Row: Decodable { let inviterName: String; enum CodingKeys: String, CodingKey { case inviterName = "inviter_name" } }
+        struct Row: Decodable { let inviterName: String?; let errorCode: String?; enum CodingKeys: String, CodingKey { case inviterName = "inviter_name", errorCode = "error_code" } }
         let rows: [Row] = try await client.rpc("preview_connection_code", params: Params(pCode: code)).execute().value
+        if rows.first?.errorCode == "rate_limited" { throw ConnectionError.rateLimited }
         guard let name = rows.first?.inviterName else { throw ConnectionError.unavailable }
         return name
     }
     func redeem(code: String) async throws -> SplitPartnerOption {
         struct Params: Encodable { let pCode: String; enum CodingKeys: String, CodingKey { case pCode = "p_code" } }
-        struct Row: Decodable { let userId: UUID; let displayName: String; enum CodingKeys: String, CodingKey { case userId = "user_id", displayName = "display_name" } }
+        struct Row: Decodable { let userId: UUID?; let displayName: String?; let errorCode: String?; enum CodingKeys: String, CodingKey { case userId = "user_id", displayName = "display_name", errorCode = "error_code" } }
         let rows: [Row] = try await client.rpc("redeem_connection_code", params: Params(pCode: code)).execute().value
-        guard let row = rows.first else { throw ConnectionError.unavailable }
-        return SplitPartnerOption(userId: row.userId, displayName: row.displayName)
+        if rows.first?.errorCode == "rate_limited" { throw ConnectionError.rateLimited }
+        guard let row = rows.first, let id = row.userId, let name = row.displayName else { throw ConnectionError.unavailable }
+        return SplitPartnerOption(userId: id, displayName: name)
     }
 }
 
-enum ConnectionError: LocalizedError { case unavailable
-    var errorDescription: String? { "That code is unavailable. Check it and try again." }
+enum ConnectionError: LocalizedError { case unavailable, rateLimited
+    var errorDescription: String? { self == .rateLimited ? "Too many attempts. Try again in 15 minutes." : "That code is unavailable. Check it and try again." }
 }

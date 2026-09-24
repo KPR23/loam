@@ -5,7 +5,7 @@ actor LocalExpenseRepository: ExpenseRepository {
     private let defaultsKey = "loam.local.expenses"
     private let recurringDefaultsKey = "loam.local.recurring"
     private let proposalsDefaultsKey = "loam.local.proposals"
-    private let trustDefaultsKey = "loam.local.trust"
+    private let trustDefaultsKey = "loam.local.trust.v2"
     private var cache: [ExpenseRecord]?
     private var recurringCache: [RecurringRuleRecord]?
     private var proposalsCache: [ExpenseEditProposal]?
@@ -50,9 +50,12 @@ actor LocalExpenseRepository: ExpenseRepository {
         guard let index = all.firstIndex(where: { $0.id == rule.id }) else {
             throw ExpenseRepositoryError.notFound
         }
-        all[index] = rule
+        guard (all[index].version ?? 1) == (rule.version ?? 1) else { throw ExpenseRepositoryError.conflict }
+        var updated = rule
+        updated.version = (rule.version ?? 1) + 1
+        all[index] = updated
         try saveRecurring(all)
-        return rule
+        return updated
     }
 
     func fetchActiveRecurringRules(for userId: UUID) async throws -> [RecurringRuleRecord] {
@@ -61,15 +64,6 @@ actor LocalExpenseRepository: ExpenseRepository {
 
     func fetchRecurringRule(id: UUID) async throws -> RecurringRuleRecord? {
         try loadRecurring().first { $0.id == id }
-    }
-
-    func fetchLatestExpense(forRecurringId recurringId: UUID) async throws -> ExpenseRecord? {
-        try load()
-            .filter { $0.recurringId == recurringId }
-            .sorted {
-                $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt)
-            }
-            .first
     }
 
     func hasExpense(recurringId: UUID, spentAt: Date) async throws -> Bool {
@@ -81,9 +75,9 @@ actor LocalExpenseRepository: ExpenseRepository {
 
     func createRecurringOccurrence(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         if let recurringId = expense.recurringId,
-           try await hasExpense(recurringId: recurringId, spentAt: expense.spentAt),
-           let existing = try await fetchLatestExpense(forRecurringId: recurringId),
-           Calendar.current.isDate(existing.spentAt, inSameDayAs: expense.spentAt) {
+           let existing = try load().first(where: {
+               $0.recurringId == recurringId && Calendar.current.isDate($0.spentAt, inSameDayAs: expense.spentAt)
+           }) {
             return existing
         }
         return try await create(expense)
@@ -96,6 +90,8 @@ actor LocalExpenseRepository: ExpenseRepository {
             throw ExpenseRepositoryError.notFound
         }
         var updated = expense
+        guard (all[index].version ?? 1) == (expense.version ?? 1) else { throw ExpenseRepositoryError.conflict }
+        updated.version = (expense.version ?? 1) + 1
         updated.updatedAt = Date()
         all[index] = updated
         try save(all)
@@ -174,11 +170,10 @@ actor LocalExpenseRepository: ExpenseRepository {
             updatedShares[shareIndex].respondedAt = Date()
             // Manual accept — even with trust opt-in — is not "accepted via trust".
             updatedShares[shareIndex].acceptedViaTrust = false
-            if action == .acceptWithTrust, let householdId = all[index].householdId {
+            if action == .acceptWithTrust {
                 try await addTrust(
                     for: userId,
-                    trustedUserId: all[index].createdBy,
-                    householdId: householdId
+                    trustedUserId: all[index].createdBy
                 )
             }
         }
@@ -214,7 +209,6 @@ actor LocalExpenseRepository: ExpenseRepository {
             throw ExpenseRepositoryError.notFound
         }
 
-        let householdId = all[expenseIndex].householdId
         let createdBy = all[expenseIndex].createdBy
 
         proposal.status = accept ? .accepted : .rejected
@@ -222,21 +216,23 @@ actor LocalExpenseRepository: ExpenseRepository {
         proposals[proposalIndex] = proposal
 
         if accept {
+            guard (proposal.baseVersion ?? 1) == (all[expenseIndex].version ?? 1) else { throw ExpenseRepositoryError.conflict }
             let proposerIsParticipant = all[expenseIndex].shares.contains { $0.userId == proposal.proposedBy }
-            guard householdId != nil, proposal.proposedBy != createdBy, proposerIsParticipant else {
+            guard all[expenseIndex].isShared, proposal.proposedBy != createdBy, proposerIsParticipant else {
                 throw ExpenseRepositoryError.notFound
             }
 
             var usersTrustingCreator: Set<UUID> = []
-            if let householdId {
+            do {
                 for share in proposal.shares where share.userId != createdBy {
-                    let trustedCreators = (try? await fetchTrustedUserIds(for: share.userId, householdId: householdId)) ?? []
+                    let trustedCreators = (try? await fetchTrustedUserIds(for: share.userId)) ?? []
                     if trustedCreators.contains(createdBy) {
                         usersTrustingCreator.insert(share.userId)
                     }
                 }
             }
 
+            all[expenseIndex].version = (all[expenseIndex].version ?? 1) + 1
             all[expenseIndex].amountMinor = proposal.amountMinor
             all[expenseIndex].category = proposal.category
             all[expenseIndex].title = proposal.title
@@ -248,7 +244,6 @@ actor LocalExpenseRepository: ExpenseRepository {
                 let status = ExpenseShareAcceptance.statusForShare(
                     userId: share.userId,
                     createdBy: createdBy,
-                    householdId: householdId,
                     usersTrustingCreator: usersTrustingCreator
                 )
                 return ExpenseShareRecord(
@@ -272,17 +267,17 @@ actor LocalExpenseRepository: ExpenseRepository {
         try saveProposals(proposals)
     }
 
-    func fetchTrustedUserIds(for userId: UUID, householdId: UUID) async throws -> Set<UUID> {
+    func fetchTrustedUserIds(for userId: UUID) async throws -> Set<UUID> {
         Set(
             try loadTrust()
-                .filter { $0.userId == userId && $0.householdId == householdId }
+                .filter { $0.userId == userId }
                 .map(\.trustedUserId)
         )
     }
 
-    func addTrust(for userId: UUID, trustedUserId: UUID, householdId: UUID) async throws {
+    func addTrust(for userId: UUID, trustedUserId: UUID) async throws {
         var trust = try loadTrust()
-        let record = LocalTrustRecord(userId: userId, trustedUserId: trustedUserId, householdId: householdId)
+        let record = LocalTrustRecord(userId: userId, trustedUserId: trustedUserId)
         guard !trust.contains(record) else { return }
         trust.append(record)
         try saveTrust(trust)
@@ -375,5 +370,4 @@ actor LocalExpenseRepository: ExpenseRepository {
 private struct LocalTrustRecord: Codable, Hashable {
     var userId: UUID
     var trustedUserId: UUID
-    var householdId: UUID
 }

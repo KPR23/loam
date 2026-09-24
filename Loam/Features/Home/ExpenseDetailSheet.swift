@@ -310,7 +310,6 @@ struct ExpenseDetailSheet: View {
         note: "Dinner out",
         paidBy: partnerId,
         createdBy: myId,
-        householdId: UUID(),
         shares: [
             ExpenseShareRecord(userId: myId, amountMinor: 4000),
             ExpenseShareRecord(userId: partnerId, amountMinor: 4000),

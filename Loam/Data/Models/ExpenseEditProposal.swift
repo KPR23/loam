@@ -3,6 +3,7 @@ import Foundation
 struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var expenseId: UUID
+    var baseVersion: Int?
     var proposedBy: UUID
     var status: ExpenseProposalStatus
     var amountMinor: Int
@@ -21,6 +22,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         id: UUID = UUID(),
         expenseId: UUID,
         proposedBy: UUID,
+        baseVersion: Int = 1,
         status: ExpenseProposalStatus = .pending,
         amountMinor: Int,
         category: ExpenseCategory,
@@ -37,6 +39,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         self.id = id
         self.expenseId = expenseId
         self.proposedBy = proposedBy
+        self.baseVersion = baseVersion
         self.status = status
         self.amountMinor = amountMinor
         self.category = category
@@ -51,7 +54,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         self.respondedAt = respondedAt
     }
 
-    func toExpenseRecord(currency: String, householdId: UUID?, createdBy: UUID) -> ExpenseRecord {
+    func toExpenseRecord(currency: String, createdBy: UUID) -> ExpenseRecord {
         ExpenseRecord(
             id: expenseId,
             amountMinor: amountMinor,
@@ -63,7 +66,6 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
             spentAt: spentAt,
             paidBy: paidBy,
             createdBy: createdBy,
-            householdId: householdId,
             shares: shares
         )
     }
@@ -77,6 +79,7 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
 struct ExpenseEditProposalDTO: Codable, Sendable {
     var id: UUID?
     var expenseId: UUID
+    var baseVersion: Int?
     var proposedBy: UUID
     var status: ExpenseProposalStatus
     var amountMinor: Int
@@ -94,6 +97,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case id
         case expenseId = "expense_id"
+        case baseVersion = "base_version"
         case proposedBy = "proposed_by"
         case status
         case amountMinor = "amount_minor"
@@ -115,6 +119,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
             id: id ?? UUID(),
             expenseId: expenseId,
             proposedBy: proposedBy,
+            baseVersion: baseVersion ?? 1,
             status: status,
             amountMinor: amountMinor,
             category: category,

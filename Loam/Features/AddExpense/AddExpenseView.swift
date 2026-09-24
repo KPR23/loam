@@ -9,7 +9,6 @@ struct AddExpenseView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
     @EnvironmentObject private var connectionStore: ConnectionStore
-    @EnvironmentObject private var householdStore: HouseholdStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -608,11 +607,6 @@ struct AddExpenseView: View {
 
         if isSplit {
             let partners = selectedSplitPartners
-            let household = try await householdStore.ensureSplitHousehold(
-                userId: userId,
-                userDisplayName: authSession.displayName ?? "You",
-                partners: partners
-            )
             try await expenseStore.addSplit(
                 amountMinor: money.amountMinor,
                 currency: currencyCode,
@@ -622,7 +616,6 @@ struct AddExpenseView: View {
                 location: location,
                 spentAt: spentAt,
                 userId: userId,
-                householdId: household.id,
                 splitMode: splitMode,
                 paidBy: paidByUserId ?? userId,
                 partnerUserIds: partners.map(\.userId),
@@ -655,11 +648,6 @@ struct AddExpenseView: View {
 
         if isSplit {
             let partners = selectedSplitPartners
-            let household = try await householdStore.ensureSplitHousehold(
-                userId: userId,
-                userDisplayName: authSession.displayName ?? "You",
-                partners: partners
-            )
             try await expenseStore.update(
                 expenseId: expense.id,
                 amountMinor: money.amountMinor,
@@ -669,7 +657,6 @@ struct AddExpenseView: View {
                 location: location,
                 spentAt: spentAt,
                 userId: userId,
-                householdId: household.id,
                 splitMode: splitMode,
                 paidBy: paidByUserId ?? userId,
                 partnerUserIds: partners.map(\.userId),
@@ -688,7 +675,6 @@ struct AddExpenseView: View {
                 location: location,
                 spentAt: spentAt,
                 userId: userId,
-                householdId: nil,
                 splitMode: .equal,
                 paidBy: userId,
                 partnerUserIds: []
@@ -701,9 +687,6 @@ struct AddExpenseView: View {
     }
 
     private func saveEditPreservingSplit(expense: ExpenseRecord, money: Money, userId: UUID) async throws {
-        guard let householdId = expense.householdId else {
-            throw ExpenseRepositoryError.invalidShares
-        }
         let partnerIds = Array(SplitPartnerOption.partnerUserIds(in: expense, myUserId: userId))
         guard !partnerIds.isEmpty else {
             throw ExpenseRepositoryError.invalidShares
@@ -718,7 +701,6 @@ struct AddExpenseView: View {
             location: location,
             spentAt: spentAt,
             userId: userId,
-            householdId: householdId,
             splitMode: splitMode,
             paidBy: paidByUserId ?? expense.paidBy,
             partnerUserIds: partnerIds,
@@ -745,5 +727,4 @@ private extension String {
     AddExpenseView()
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
-        .environmentObject(HouseholdStore())
 }
