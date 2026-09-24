@@ -39,7 +39,12 @@ struct Money: Hashable, Codable, Sendable, Comparable {
             fraction = 0
         }
 
-        self.amountMinor = major * 100 + fraction
+        // The amount field accepts any number of digits; reject what cannot be stored instead of trapping.
+        let (majorMinor, multiplyOverflow) = major.multipliedReportingOverflow(by: 100)
+        let (amountMinor, addOverflow) = majorMinor.addingReportingOverflow(fraction)
+        guard !multiplyOverflow, !addOverflow else { return nil }
+
+        self.amountMinor = amountMinor
         self.currencyCode = currencyCode.uppercased()
     }
 
