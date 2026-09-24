@@ -86,6 +86,14 @@ actor SupabaseExpenseRepository: ExpenseRepository {
         return !rows.isEmpty
     }
 
+    func materializeRecurringRules(through date: Date) async throws -> Bool {
+        // The server builds occurrences from the rule and advances it atomically.
+        let _: Int = try await client.rpc("materialize_recurring_rules", params: MaterializeRecurringParams(
+            pThrough: CalendarDateCodec.string(from: date)
+        )).execute().value
+        return true
+    }
+
     func createRecurringOccurrence(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         do {
             return try await create(expense)
@@ -309,6 +317,10 @@ private struct SaveRecurringParams: Encodable {
     let pRule: RecurringRuleInsertDTO
     let pExpectedVersion: Int?
     enum CodingKeys: String, CodingKey { case pRule = "p_rule", pExpectedVersion = "p_expected_version" }
+}
+private struct MaterializeRecurringParams: Encodable {
+    let pThrough: String
+    enum CodingKeys: String, CodingKey { case pThrough = "p_through" }
 }
 private struct RespondToShareParams: Encodable {
     let expenseId: UUID; let action: String

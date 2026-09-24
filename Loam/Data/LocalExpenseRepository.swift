@@ -73,6 +73,11 @@ actor LocalExpenseRepository: ExpenseRepository {
         }
     }
 
+    func materializeRecurringRules(through date: Date) async throws -> Bool {
+        _ = date
+        return false
+    }
+
     func createRecurringOccurrence(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         if let recurringId = expense.recurringId,
            let existing = try load().first(where: {
