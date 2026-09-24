@@ -168,7 +168,8 @@ $$;
 revoke all on function public.activity_page(uuid) from public,anon,authenticated;
 grant execute on function public.activity_page(uuid) to authenticated;
 
--- One expense's history as the caller saw it, oldest first.
+-- The newest 200 events of one expense's history as the caller saw it,
+-- returned oldest first.
 create function public.expense_activity(p_expense_id uuid)
 returns table(id uuid,audience_user_id uuid,occurred_at timestamptz,kind text,actor_id uuid,actor_name text,
   recipient_id uuid,recipient_name text,recipient_names text[],recipient_ids uuid[],expense_id uuid,repayment_id uuid,expense_title text,
@@ -178,9 +179,10 @@ language sql stable security definer set search_path='' as $$
     a.recipient_id,case when a.recipient_id is not null then public.activity_name(a.recipient_id) end,
     array(select public.activity_name(r.id) from unnest(a.recipient_ids) with ordinality r(id,n) order by r.n),
     a.recipient_ids,a.expense_id,a.repayment_id,a.expense_title,a.category,a.affected_share_minor,a.expense_total_minor,a.currency
-  from public.activity_event a
-  where public.current_account_is_active() and a.audience_user_id=auth.uid() and a.expense_id=p_expense_id
-  order by a.occurred_at,a.id limit 200
+  from (select * from public.activity_event e
+    where public.current_account_is_active() and e.audience_user_id=auth.uid() and e.expense_id=p_expense_id
+    order by e.occurred_at desc,e.id desc limit 200) a
+  order by a.occurred_at,a.id
 $$;
 revoke all on function public.expense_activity(uuid) from public,anon,authenticated;
 grant execute on function public.expense_activity(uuid) to authenticated;
