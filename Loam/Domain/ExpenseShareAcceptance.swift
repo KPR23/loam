@@ -27,6 +27,32 @@ enum ExpenseShareAcceptance {
         }
     }
 
+    /// Mirrors `save_expense_as`: while the payer and currency are unchanged,
+    /// a participant whose own amount is unchanged keeps their answer,
+    /// including a rejection. Trust only applies to new or changed amounts.
+    /// `forced` users (the creator, a proposer whose change is applied) keep
+    /// the status already assigned.
+    static func preservingResponses(
+        _ shares: [ExpenseShareRecord],
+        from previous: ExpenseRecord,
+        paidBy: UUID,
+        currency: String,
+        forced: Set<UUID>
+    ) -> [ExpenseShareRecord] {
+        guard previous.paidBy == paidBy, previous.currency == currency else { return shares }
+        return shares.map { share in
+            guard !forced.contains(share.userId),
+                  let old = previous.shares.first(where: { $0.userId == share.userId }),
+                  old.amountMinor == share.amountMinor
+            else { return share }
+            var kept = share
+            kept.status = old.status
+            kept.respondedAt = old.respondedAt
+            kept.acceptedViaTrust = old.acceptedViaTrust
+            return kept
+        }
+    }
+
     static func statusForShare(
         userId: UUID,
         createdBy: UUID,
