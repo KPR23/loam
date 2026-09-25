@@ -84,6 +84,7 @@ jobs:
           xcrun simctl list devices available | grep "${DEVICE_ID}"
 
       - name: Build and test
+        # A failed test launch otherwise waits 10 minutes for simulator diagnostics.
         run: |
           set -o pipefail
           xcodebuild test \
@@ -91,4 +92,5 @@ jobs:
             -scheme Loam \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
             CODE_SIGNING_ALLOWED=NO \
-            -skipPackagePluginValidation
+            -skipPackagePluginValidation \
+            -collect-test-diagnostics never
