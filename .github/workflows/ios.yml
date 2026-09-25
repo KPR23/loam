@@ -7,6 +7,7 @@ on:
     paths:
       - Loam/**
       - LoamTests/**
+      - LoamUITests/**
       - Loam.xcodeproj/**
       - project.yml
       - .github/workflows/ios.yml
@@ -34,10 +35,12 @@ jobs:
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj
 
-      - name: Select iOS simulator
+      # A self-hosted Mac shares its simulators with local work. A fresh simulator per run
+      # keeps other sessions from rebooting or reusing it mid-test.
+      - name: Create iOS simulator
         id: simulator
         run: |
-          DEVICE_ID="$(
+          read -r DEVICE_TYPE RUNTIME <<< "$(
             python3 <<'PY'
           import json
           import subprocess
@@ -68,20 +71,23 @@ jobs:
               for runtime in reversed(runtimes):
                   for device in data["devices"][runtime]:
                       if device.get("isAvailable") and device["name"] == name:
-                          print(device["udid"])
+                          print(device["deviceTypeIdentifier"], runtime)
                           sys.exit(0)
 
           for runtime in reversed(runtimes):
               for device in data["devices"][runtime]:
                   if device.get("isAvailable") and "iPhone" in device["name"]:
-                      print(device["udid"])
+                      print(device["deviceTypeIdentifier"], runtime)
                       sys.exit(0)
 
           sys.exit("No suitable iPhone simulator found on runner")
           PY
           )"
+          DEVICE_ID="$(xcrun simctl create "Loam CI ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" "$DEVICE_TYPE" "$RUNTIME")"
           echo "device_id=${DEVICE_ID}" >> "$GITHUB_OUTPUT"
-          xcrun simctl list devices available | grep "${DEVICE_ID}"
+          # Launching tests into a half-booted simulator fails with "server died".
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl list devices | grep "${DEVICE_ID}"
 
       - name: Build and test
         # A failed test launch otherwise waits 10 minutes for simulator diagnostics.
@@ -94,3 +100,9 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             -skipPackagePluginValidation \
             -collect-test-diagnostics never
+
+      - name: Delete iOS simulator
+        if: always() && steps.simulator.outputs.device_id != ''
+        run: |
+          xcrun simctl shutdown "${{ steps.simulator.outputs.device_id }}" || true
+          xcrun simctl delete "${{ steps.simulator.outputs.device_id }}"
