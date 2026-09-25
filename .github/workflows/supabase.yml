@@ -28,7 +28,13 @@ jobs:
         if: runner.environment == 'self-hosted'
         run: |
           # Pins the preinstalled binary to supabase-go from the v2.99.0 release, like setup-cli does.
-          echo "2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50  $HOME/bin/supabase" | sha256sum --check --strict
+          # Compared manually (not `sha256sum -c`) since the runner's sha256sum doesn't support long flags.
+          actual="$(sha256sum "$HOME/bin/supabase" | cut -d ' ' -f 1)"
+          expected="2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50"
+          if [ "$actual" != "$expected" ]; then
+            echo "Checksum mismatch for $HOME/bin/supabase: expected $expected, got $actual" >&2
+            exit 1
+          fi
           echo "$HOME/bin" >> "$GITHUB_PATH"
           echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
       - name: Replay migrations on a clean database
@@ -75,7 +81,13 @@ jobs:
         if: runner.environment == 'self-hosted'
         run: |
           # Pins the preinstalled binary to supabase-go from the v2.99.0 release, like setup-cli does.
-          echo "2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50  $HOME/bin/supabase" | sha256sum --check --strict
+          # Compared manually (not `sha256sum -c`) since the runner's sha256sum doesn't support long flags.
+          actual="$(sha256sum "$HOME/bin/supabase" | cut -d ' ' -f 1)"
+          expected="2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50"
+          if [ "$actual" != "$expected" ]; then
+            echo "Checksum mismatch for $HOME/bin/supabase: expected $expected, got $actual" >&2
+            exit 1
+          fi
           echo "$HOME/bin" >> "$GITHUB_PATH"
           echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
       - name: Link staging project
@@ -160,7 +172,13 @@ jobs:
         if: runner.environment == 'self-hosted'
         run: |
           # Pins the preinstalled binary to supabase-go from the v2.99.0 release, like setup-cli does.
-          echo "2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50  $HOME/bin/supabase" | sha256sum --check --strict
+          # Compared manually (not `sha256sum -c`) since the runner's sha256sum doesn't support long flags.
+          actual="$(sha256sum "$HOME/bin/supabase" | cut -d ' ' -f 1)"
+          expected="2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50"
+          if [ "$actual" != "$expected" ]; then
+            echo "Checksum mismatch for $HOME/bin/supabase: expected $expected, got $actual" >&2
+            exit 1
+          fi
           echo "$HOME/bin" >> "$GITHUB_PATH"
           echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
       - name: Link production project
