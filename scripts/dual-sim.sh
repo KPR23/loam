@@ -68,7 +68,8 @@ xcrun simctl boot "$UDID_A" 2>/dev/null || true
 xcrun simctl boot "$UDID_B" 2>/dev/null || true
 open -a Simulator 2>/dev/null \
   || open "$(xcode-select -p)/Applications/Simulator.app" 2>/dev/null \
-  || echo "Could not open Simulator.app UI automatically — open it manually to view the devices." >&2
+  || open -b com.apple.dt.Devices 2>/dev/null \
+  || echo "Could not open the Simulator UI automatically — open it manually to view the devices." >&2
 
 echo "== Building Debug ($SCHEME) =="
 if command -v xcpretty >/dev/null 2>&1; then
