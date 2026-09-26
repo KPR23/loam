@@ -154,11 +154,10 @@ struct HomeView: View {
                 Section {
                     ForEach(proposals) { proposal in
                         if let expense = expenseStore.expense(forProposal: proposal) {
-                            EditProposalReviewCard(
+                            EditProposalSummaryCard(
                                 proposal: proposal,
                                 expense: expense,
                                 proposerName: SplitPartnerOption.displayName(for: proposal.proposedBy),
-                                viewerId: userId,
                                 onAccept: {
                                     Task {
                                         await expenseStore.respondToProposal(
@@ -176,6 +175,9 @@ struct HomeView: View {
                                             accept: false
                                         )
                                     }
+                                },
+                                onShowDetails: {
+                                    selectedExpense = expense
                                 }
                             )
                         }

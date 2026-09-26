@@ -90,16 +90,16 @@ struct EditProposalReviewCard: View {
                     Button(action: { LoamFeedback.tap(); onReject() }) {
                         Text("Decline")
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
                     }
                     .buttonStyle(.bordered)
-                    .controlSize(.small)
 
                     Button(action: { LoamFeedback.tap(); onAccept() }) {
                         Text("Apply changes")
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
                     }
                     .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
                 }
                 // List swallows taps on nested bordered buttons unless the row opts out.
                 .buttonStyle(.borderless)
@@ -146,9 +146,31 @@ struct EditProposalReviewCard: View {
     }
 
     private func sharesMatch(_ lhs: [ExpenseShareRecord], _ rhs: [ExpenseShareRecord]) -> Bool {
+        Self.sharesMatch(lhs, rhs)
+    }
+
+    fileprivate static func sharesMatch(_ lhs: [ExpenseShareRecord], _ rhs: [ExpenseShareRecord]) -> Bool {
         let left = Dictionary(uniqueKeysWithValues: lhs.map { ($0.userId, $0.amountMinor) })
         let right = Dictionary(uniqueKeysWithValues: rhs.map { ($0.userId, $0.amountMinor) })
         return left == right
+    }
+
+    fileprivate static func normalizedNote(_ note: String?) -> String {
+        note?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// The names of the fields a proposal would change, in display order.
+    static func changedFieldLabels(expense: ExpenseRecord, proposal: ExpenseEditProposal) -> [String] {
+        var labels: [String] = []
+        if expense.amountMinor != proposal.amountMinor { labels.append("Amount") }
+        if expense.category != proposal.category { labels.append("Category") }
+        if normalizedNote(expense.title) != normalizedNote(proposal.title) { labels.append("Title") }
+        if expense.spentAt != proposal.spentAt { labels.append("Date") }
+        if normalizedNote(expense.note) != normalizedNote(proposal.note) { labels.append("Note") }
+        if expense.location != proposal.location { labels.append("Location") }
+        if expense.paidBy != proposal.paidBy { labels.append("Payer") }
+        if !sharesMatch(expense.shares, proposal.shares) { labels.append("Shares") }
+        return labels
     }
 
     private func sharesSummary(_ shares: [ExpenseShareRecord], currency: String) -> String {
@@ -166,5 +188,66 @@ struct EditProposalReviewCard: View {
                 return "\(label) \(amount)"
             }
             .joined(separator: ", ")
+    }
+}
+
+/// Compact summary shown on Home; tap it to see the full diff in the expense's details.
+struct EditProposalSummaryCard: View {
+    let proposal: ExpenseEditProposal
+    let expense: ExpenseRecord
+    let proposerName: String
+    var onAccept: (() -> Void)? = nil
+    var onReject: (() -> Void)? = nil
+    var onShowDetails: (() -> Void)? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button(action: { onShowDetails?() }) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("\(proposerName) suggested changes", systemImage: "square.and.pencil")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HomeTheme.accent)
+                        .labelStyle(.titleAndIcon)
+
+                    Text(summary)
+                        .font(.footnote)
+                        .foregroundStyle(HomeTheme.secondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if let onAccept, let onReject {
+                HStack(spacing: 10) {
+                    Button(action: { LoamFeedback.tap(); onReject() }) {
+                        Text("Decline")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(action: { LoamFeedback.tap(); onAccept() }) {
+                        Text("Apply changes")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                // List swallows taps on nested bordered buttons unless the row opts out.
+                .buttonStyle(.borderless)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var summary: String {
+        let fields = EditProposalReviewCard.changedFieldLabels(expense: expense, proposal: proposal)
+        switch fields.count {
+        case 0: return "No changes"
+        case 1: return "\(fields[0]) changed"
+        default: return "\(fields.count) fields changed \u{2022} \(fields.joined(separator: ", "))"
+        }
     }
 }
