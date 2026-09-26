@@ -158,7 +158,7 @@ final class ActivityTests: LocalStorageTestCase {
         }
 
         let firstPage = try await repository.fetchEvents(for: TestUser.alice, before: nil)
-        let secondPage = try await repository.fetchEvents(for: TestUser.alice, before: firstPage.events.last)
+        let secondPage = try await repository.fetchEvents(for: TestUser.alice, before: firstPage.nextCursor)
 
         XCTAssertEqual(firstPage.events.count, 50)
         XCTAssertTrue(firstPage.hasMore)
