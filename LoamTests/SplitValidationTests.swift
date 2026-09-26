@@ -40,7 +40,8 @@ final class SplitValidationTests: XCTestCase {
     func testPercentagesMustCoverEveryoneAndTotal100() {
         XCTAssertNil(error(mode: .percentage, percentages: [alice: 30, bob: 70]))
         XCTAssertEqual(error(mode: .percentage, percentages: [alice: 100]), "Enter a percentage for every person.")
-        XCTAssertEqual(error(mode: .percentage, percentages: [alice: 100, bob: 0]), "Enter a percentage for every person.")
+        // 0% is allowed so someone can pay for another person entirely.
+        XCTAssertNil(error(mode: .percentage, percentages: [alice: 100, bob: 0]))
         XCTAssertEqual(error(mode: .percentage, percentages: [alice: 80, bob: 40]), "Percentage shares must total 100%.")
     }
 

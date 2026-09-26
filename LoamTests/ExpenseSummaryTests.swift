@@ -22,6 +22,39 @@ final class ExpenseSummaryTests: XCTestCase {
         XCTAssertEqual(summary.categoryBreakdown.first?.amountMinor, 2500)
     }
 
+    func testDeclinedByEveryoneElseIsNotCountedAsShared() {
+        let expense = ExpenseRecord(
+            amountMinor: 1000,
+            category: .dining,
+            paidBy: user,
+            createdBy: user,
+            shares: [
+                ExpenseShareRecord(userId: user, amountMinor: 500, status: .accepted),
+                ExpenseShareRecord(userId: other, amountMinor: 500, status: .rejected),
+            ]
+        )
+        let summary = ExpenseStore.makeSummary(expenses: [expense], userId: user)
+        XCTAssertEqual(summary.totalMine.amountMinor, 500)
+        XCTAssertEqual(summary.sharedShare.amountMinor, 0)
+    }
+
+    func testPaidInFullBySomeoneElseCountsAsShared() {
+        let expense = ExpenseRecord(
+            amountMinor: 1000,
+            category: .dining,
+            paidBy: other,
+            createdBy: other,
+            shares: [
+                ExpenseShareRecord(userId: other, amountMinor: 0, status: .accepted),
+                ExpenseShareRecord(userId: user, amountMinor: 1000, status: .accepted),
+            ]
+        )
+        let summary = ExpenseStore.makeSummary(expenses: [expense], userId: user)
+        XCTAssertEqual(summary.totalMine.amountMinor, 1000)
+        XCTAssertEqual(summary.sharedShare.amountMinor, 1000)
+        XCTAssertEqual(ExpenseStore.makeSummary(expenses: [expense], userId: other).totalMine.amountMinor, 0)
+    }
+
     func testSharedShareSeparated() {
         let expense = ExpenseRecord(
             amountMinor: 1000,
