@@ -65,6 +65,23 @@ struct AuthView: View {
                     .foregroundStyle(.secondary)
             }
 
+            #if DEBUG
+            if SupabaseConfig.allowsTestAccounts, !TestAccount.configured.isEmpty {
+                VStack(spacing: 8) {
+                    Text("Test accounts")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ForEach(TestAccount.configured) { account in
+                        Button("Continue as \(account.displayName)") {
+                            Task { await authSession.switchToTestAccount(account) }
+                        }
+                        .font(.subheadline)
+                    }
+                }
+                .padding(.top, 4)
+            }
+            #endif
+
             if authSession.deletionPending {
                 VStack(spacing: 10) {
                     Label(deletionTitle, systemImage: deletionSymbol)
