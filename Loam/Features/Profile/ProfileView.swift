@@ -270,11 +270,6 @@ struct ProfileView: View {
                         }
                     }
                     .disabled(isSigningOut)
-                } footer: {
-                    Text("Loam · \(Self.version)")
-                        .font(.footnote)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 16)
                 }
 
                 #if DEBUG
@@ -412,20 +407,20 @@ struct ProfileView: View {
         } header: {
             Text("Privacy")
         } footer: {
-            Text("Helps improve Loam by recording which screens you use and masked screen recordings. Amounts, descriptions and names are never included. Crash reports are always sent.")
+            Text("No amounts, descriptions or names are ever included. Crash reports are always sent.")
         }
     }
 
     private func preferenceLabel(_ title: String, symbol: String, color: Color) -> some View {
         Label {
             Text(title)
-                .font(.callout)
+                .font(.body)
                 .foregroundStyle(HomeTheme.text)
         } icon: {
             Image(systemName: symbol)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(color)
-                .frame(width: 20, height: 20)
+                .frame(width: 24, height: 24)
         }
         .labelStyle(CompactProfileLabelStyle())
     }
@@ -515,19 +510,19 @@ private struct ProfileRow: View {
         HStack {
             Label {
                 Text(title)
-                    .font(.callout)
+                    .font(.body)
                     .foregroundStyle(destructive ? Color.red : HomeTheme.text)
             } icon: {
                 Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(color)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 24, height: 24)
             }
             .labelStyle(CompactProfileLabelStyle())
             if let detail {
                 Spacer(minLength: 8)
                 Text(detail)
-                    .font(.callout)
+                    .font(.body)
                     .foregroundStyle(.secondary)
             }
         }
