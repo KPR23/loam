@@ -25,7 +25,7 @@ struct ExpenseCategoryPicker: View {
     private var formRow: some View {
         LabeledContent("Category") {
             menuLabel {
-                HStack(spacing: 10) {
+                HStack(spacing: 6) {
                     categoryIcon
                         .frame(width: 22, alignment: .center)
 
@@ -44,7 +44,7 @@ struct ExpenseCategoryPicker: View {
 
     private var chip: some View {
         menuLabel {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 categoryIcon
 
                 Text(category.displayName)
