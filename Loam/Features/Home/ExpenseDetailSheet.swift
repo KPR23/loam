@@ -128,7 +128,7 @@ struct ExpenseDetailSheet: View {
                     .listRowBackground(Color.clear)
                 }
 
-                if expense.isShared {
+                if !proposals.isEmpty {
                     statusSection
                 }
 
@@ -228,8 +228,13 @@ struct ExpenseDetailSheet: View {
                     Section("Split") {
                         ForEach(sortedShares) { share in
                             LabeledContent(shareLabel(for: share.userId)) {
-                                Text(MoneyFormatter.string(from: shareMoney(for: share)))
-                                    .monospacedDigit()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(MoneyFormatter.string(from: shareMoney(for: share)))
+                                        .monospacedDigit()
+                                    if share.userId != expense.createdBy {
+                                        responseLabel(for: share.status, compact: true)
+                                    }
+                                }
                             }
                         }
                     }
@@ -299,28 +304,69 @@ struct ExpenseDetailSheet: View {
 
     // MARK: - Status
 
-    /// Suggested changes still waiting for the owner, then everyone's answer.
+    private enum StatusRole {
+        case proposed
+        case awaitingDecision
+        case share(ExpenseShareStatus)
+    }
+
+    private struct StatusRow: Identifiable {
+        let id: UUID
+        let role: StatusRole
+    }
+
+    /// Suggested changes still waiting for the owner, then who proposed them,
+    /// who still has to decide, and anyone else whose share would change.
     @ViewBuilder
     private var statusSection: some View {
         Section {
             ForEach(proposals) { proposal in
                 proposalCard(proposal)
-            }
 
-            ForEach(respondingShares) { share in
-                HStack(spacing: 10) {
-                    AvatarView(userId: share.userId, size: 26)
-                    Text(shareLabel(for: share.userId))
-                        .font(.system(.body, design: .rounded))
-                    Spacer(minLength: 8)
-                    responseLabel(for: share.status)
+                ForEach(statusRows(for: proposal)) { row in
+                    HStack(spacing: 10) {
+                        AvatarView(userId: row.id, size: 26)
+                        Text(shareLabel(for: row.id))
+                            .font(.system(.body, design: .rounded))
+                        Spacer(minLength: 8)
+                        statusRoleLabel(row.role)
+                    }
+                    .accessibilityElement(children: .combine)
                 }
-                .accessibilityElement(children: .combine)
             }
         } header: {
             Text("Status")
         } footer: {
             Text(statusFooter)
+        }
+    }
+
+    /// The proposer, then the owner who has to decide, then anyone else
+    /// (excluding both) whose current share amount this proposal would change.
+    private func statusRows(for proposal: ExpenseEditProposal) -> [StatusRow] {
+        var rows: [StatusRow] = [StatusRow(id: proposal.proposedBy, role: .proposed)]
+        if proposal.proposedBy != expense.createdBy {
+            rows.append(StatusRow(id: expense.createdBy, role: .awaitingDecision))
+        }
+        let exclude: Set<UUID> = [proposal.proposedBy, expense.createdBy]
+        let currentAmounts = Dictionary(uniqueKeysWithValues: expense.shares.map { ($0.userId, $0.amountMinor) })
+        let statusByUser = Dictionary(uniqueKeysWithValues: expense.shares.map { ($0.userId, $0.status) })
+        for share in proposal.shares where !exclude.contains(share.userId) {
+            guard currentAmounts[share.userId] != share.amountMinor else { continue }
+            rows.append(StatusRow(id: share.userId, role: .share(statusByUser[share.userId] ?? .pending)))
+        }
+        return rows
+    }
+
+    @ViewBuilder
+    private func statusRoleLabel(_ role: StatusRole) -> some View {
+        switch role {
+        case .proposed:
+            responseLabel("Proposed changes", systemImage: "square.and.pencil", color: HomeTheme.accent)
+        case .awaitingDecision:
+            responseLabel("Awaiting response", systemImage: "clock.fill", color: .orange)
+        case .share(let status):
+            responseLabel(for: status)
         }
     }
 
@@ -348,13 +394,27 @@ struct ExpenseDetailSheet: View {
         }
     }
 
-    /// The owner accepts their own expense implicitly, so only others answer.
-    private var respondingShares: [ExpenseShareRecord] {
-        sortedShares.filter { $0.userId != expense.createdBy }
+    /// The owner and the proposer are forced onto the new amounts once a
+    /// proposal is applied, so only participants whose share would actually
+    /// change need to answer again.
+    private var affectedShares: [ExpenseShareRecord] {
+        let owner = expense.createdBy
+        let proposers = Set(proposals.map(\.proposedBy))
+        let currentAmounts = Dictionary(uniqueKeysWithValues: expense.shares.map { ($0.userId, $0.amountMinor) })
+        var affectedIds: Set<UUID> = []
+        for proposal in proposals {
+            for share in proposal.shares where share.userId != owner && !proposers.contains(share.userId) {
+                if currentAmounts[share.userId] != share.amountMinor {
+                    affectedIds.insert(share.userId)
+                }
+            }
+        }
+        return sortedShares.filter { affectedIds.contains($0.userId) }
     }
 
     private var statusFooter: String {
-        let shares = respondingShares
+        let shares = affectedShares
+        guard !shares.isEmpty else { return "Everyone else's share stays the same." }
         let accepted = shares.filter { $0.status == .accepted }.count
         let declined = shares.filter { $0.status == .rejected }.count
         let waiting = shares.count - accepted - declined
@@ -362,26 +422,24 @@ struct ExpenseDetailSheet: View {
         if accepted > 0 { parts.append("\(accepted) accepted") }
         if declined > 0 { parts.append("\(declined) declined") }
         if waiting > 0 { parts.append("\(waiting) awaiting a response") }
-        let owner = isOwner ? "You" : SplitPartnerOption.displayName(for: expense.createdBy)
-        let summary = parts.isEmpty ? "" : " " + parts.joined(separator: ", ") + "."
-        return "\(owner) added this expense.\(summary)"
+        return "This change affects \(parts.joined(separator: ", "))."
     }
 
     @ViewBuilder
-    private func responseLabel(for status: ExpenseShareStatus) -> some View {
+    private func responseLabel(for status: ExpenseShareStatus, compact: Bool = false) -> some View {
         switch status {
         case .accepted:
-            responseLabel("Accepted", systemImage: "checkmark.circle.fill", color: .green)
+            responseLabel("Accepted", systemImage: "checkmark.circle.fill", color: .green, compact: compact)
         case .rejected:
-            responseLabel("Declined", systemImage: "xmark.circle.fill", color: .red)
+            responseLabel("Declined", systemImage: "xmark.circle.fill", color: .red, compact: compact)
         case .pending:
-            responseLabel("Awaiting", systemImage: "clock.fill", color: .orange)
+            responseLabel("Awaiting", systemImage: "clock.fill", color: .orange, compact: compact)
         }
     }
 
-    private func responseLabel(_ title: String, systemImage: String, color: Color) -> some View {
+    private func responseLabel(_ title: String, systemImage: String, color: Color, compact: Bool = false) -> some View {
         Label(title, systemImage: systemImage)
-            .font(.subheadline.weight(.medium))
+            .font(compact ? .caption.weight(.medium) : .subheadline.weight(.medium))
             .foregroundStyle(color)
             .labelStyle(.titleAndIcon)
     }
