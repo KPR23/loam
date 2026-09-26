@@ -280,6 +280,12 @@ final class ActivitySentenceTests: XCTestCase {
         XCTAssertEqual(shared.sentence(viewerId: philip), "Julia shared an expense with you and Kacper Z")
     }
 
+    /// The actor's own copy of a "shared" event should read "You", not their own name.
+    func testSharedExpenseCallsTheActingViewerYouToo() {
+        let shared = event(.shared, actor: julia, actorName: "Julia", recipientIds: [philip], recipientNames: ["Philip"])
+        XCTAssertEqual(shared.sentence(viewerId: julia), "You shared an expense with Philip")
+    }
+
     func testResponsesUsePossessiveYou() {
         let accepted = event(.accepted, actor: julia, actorName: "Julia", recipient: me, recipientName: "Kacper Z")
         XCTAssertEqual(accepted.sentence(viewerId: me), "Julia accepted your expense")
