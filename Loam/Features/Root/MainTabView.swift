@@ -17,6 +17,9 @@ struct MainTabView: View {
         }
     }
 
+    @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var activityStore: ActivityStore
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .expenses
     @State private var expensesReloadToken = 0
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
@@ -32,6 +35,11 @@ struct MainTabView: View {
         .sensoryFeedback(.selection, trigger: selection)
         .onChange(of: selection, initial: true) { _, tab in
             Telemetry.screen(tab.screenName)
+            // Activity marks itself read; elsewhere, pick up events that arrived meanwhile.
+            if tab != .activity { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
         }
     }
 
@@ -49,6 +57,7 @@ struct MainTabView: View {
             Tab("Activity", systemImage: "clock.arrow.circlepath", value: AppTab.activity) {
                 ActivityView()
             }
+            .badge(activityStore.unreadCount)
 
             Tab("Profile", systemImage: "person", value: AppTab.profile) {
                 ProfileView()
@@ -81,6 +90,7 @@ struct MainTabView: View {
                     Label("Activity", systemImage: "clock.arrow.circlepath")
                 }
                 .tag(AppTab.activity)
+                .badge(activityStore.unreadCount)
 
             ProfileView()
                 .tabItem {
