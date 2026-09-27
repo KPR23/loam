@@ -473,7 +473,7 @@ struct ExpenseDetailSheet: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: event.symbolName)
                 .font(.body)
-                .foregroundStyle(HomeTheme.secondary)
+                .foregroundStyle(event.kind.tint)
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(event.sentence(viewerId: myUserId ?? event.actorId))
