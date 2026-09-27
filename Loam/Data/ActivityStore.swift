@@ -15,6 +15,8 @@ final class ActivityStore: ObservableObject {
     private var foldedIds: [UUID: [UUID]] = [:]
     /// Bumped by each refresh so a page fetched before it can't land on the new list.
     private var generation = 0
+    /// `activity_unread_count` stops counting here.
+    private static let unreadCountCap = 100
 
     func refreshUnreadCount(userId: UUID?) async {
         guard let userId else { unreadCount = 0; return }
@@ -53,9 +55,11 @@ final class ActivityStore: ObservableObject {
         let ids = Set(read.map(\.id))
         let rowIds = ids.flatMap { foldedIds[$0] ?? [$0] }
         events.removeAll { ids.contains($0.id) }
-        unreadCount = max(0, unreadCount - rowIds.count)
+        // The server caps the count, so a capped badge waits for the real number.
+        if unreadCount < Self.unreadCountCap { unreadCount = max(0, unreadCount - rowIds.count) }
         do {
             try await ActivityRepositoryFactory.make().markRead(rowIds, userId: userId)
+            await refreshUnreadCount(userId: userId)
         } catch {
             guard accountId == userId else { return }
             lastError = error.localizedDescription
