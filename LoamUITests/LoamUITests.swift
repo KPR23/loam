@@ -105,7 +105,7 @@ final class LoamUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["All settled up"].waitForExistence(timeout: 5))
 
         tab("Activity").tap()
-        XCTAssertTrue(app.staticTexts["No activity yet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["You're all caught up"].waitForExistence(timeout: 5))
 
         tab("Profile").tap()
         XCTAssertTrue(scrollDown(to: signOutButton).exists)
