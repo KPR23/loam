@@ -115,6 +115,50 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
         }
     }
 
+    /// Feed sentence that names the expense in bold, e.g. "Anna accepted **Dinner**".
+    /// `sentence(viewerId:)` stays title-free for the expense's own history.
+    func headline(viewerId: UUID) -> AttributedString {
+        let actorIsViewer = actorId == viewerId
+        let actor = actorIsViewer ? "You" : actorName
+        let recipient = recipientId == viewerId ? "you" : (recipientName ?? "a participant")
+        var title = AttributedString(expenseTitle)
+        title.inlinePresentationIntent = .stronglyEmphasized
+        func around(_ before: String, _ after: String = "") -> AttributedString {
+            AttributedString(before) + title + AttributedString(after)
+        }
+        switch kind {
+        case .shared:
+            return around("\(actor) shared ", " with \(list(recipientMentions(viewerId: viewerId)))")
+        case .accepted:
+            return around("\(actor) accepted ")
+        case .rejected:
+            return around("\(actor) declined ")
+        case .proposalAccepted:
+            return around("\(actor) accepted \(Self.possessive(recipient)) changes to ")
+        case .proposalRejected:
+            return around("\(actor) declined \(Self.possessive(recipient)) changes to ")
+        case .edited:
+            return around("\(actor) edited ")
+        case .participantRemoved:
+            let removed = actorIsViewer ? list(recipientMentions(viewerId: viewerId)) : "you"
+            return around("\(actor) removed \(removed) from ")
+        case .deleted:
+            return around("\(actor) deleted ")
+        case .proposalCreated:
+            return around("\(actor) suggested changes to ")
+        case .autoAccepted:
+            return around("", " was accepted automatically")
+        case .proposalSuperseded:
+            return around("\(Self.possessive(actor)) changes to ", " were replaced")
+        case .repaymentRecorded:
+            return AttributedString(actorIsViewer ? "You paid \(recipientName ?? "someone") back" : "\(actor) paid you back")
+        case .repaymentReversed:
+            return AttributedString(actorIsViewer
+                ? "You reversed a repayment to \(recipientName ?? "someone")"
+                : "\(actor) reversed a repayment to you")
+        }
+    }
+
     /// Recipient names with the viewer as "you", listed first.
     private func recipientMentions(viewerId: UUID) -> [String] {
         guard !recipientNames.isEmpty else { return [recipientId == viewerId ? "you" : (recipientName ?? "a participant")] }
@@ -164,3 +208,4 @@ struct ActivityPage: Sendable {
     /// this client could not show, so paging never stalls on them.
     let nextCursor: UUID?
 }
+
