@@ -5,12 +5,12 @@ actor SupabaseActivityRepository: ActivityRepository {
     private let client: SupabaseClient
     init(client: SupabaseClient) { self.client = client }
 
-    func fetchEvents(for userId: UUID, before cursor: UUID?) async throws -> ActivityPage {
+    func fetchUnreadEvents(for userId: UUID, before cursor: UUID?) async throws -> ActivityPage {
         struct Params: Encodable {
             let beforeId: UUID?
             enum CodingKeys: String, CodingKey { case beforeId = "p_before_id" }
         }
-        let rows: [ActivityDTO] = try await client.rpc("activity_page", params: Params(beforeId: cursor)).execute().value
+        let rows: [ActivityDTO] = try await client.rpc("activity_inbox", params: Params(beforeId: cursor)).execute().value
         // Page on the raw rows: skipping a kind this build doesn't know must
         // not hide "Load more" or move the cursor.
         let page = rows.prefix(50)
@@ -29,6 +29,21 @@ actor SupabaseActivityRepository: ActivityRepository {
 
     // Remote history is written only by database mutation functions/triggers.
     func record(_ event: ActivityEvent, audience: [UUID]) async throws { _ = event; _ = audience }
+
+    func unreadCount(for userId: UUID) async throws -> Int {
+        _ = userId
+        return try await client.rpc("activity_unread_count").execute().value
+    }
+
+    func markRead(_ eventIds: [UUID], userId: UUID) async throws {
+        _ = userId
+        guard !eventIds.isEmpty else { return }
+        struct Params: Encodable {
+            let ids: [UUID]
+            enum CodingKeys: String, CodingKey { case ids = "p_ids" }
+        }
+        try await client.rpc("mark_activity_read", params: Params(ids: eventIds)).execute()
+    }
 }
 
 private struct ActivityDTO: Decodable {

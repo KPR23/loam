@@ -2,19 +2,49 @@ import Foundation
 
 actor LocalActivityRepository: ActivityRepository {
     private let key = "loam.local.activity.v1"
-    private struct Stored: Codable { let event: ActivityEvent; let audience: [UUID] }
+    private struct Stored: Codable {
+        let event: ActivityEvent
+        let audience: [UUID]
+        var readBy: [UUID]
 
-    func fetchEvents(for userId: UUID, before cursor: UUID?) async throws -> ActivityPage {
-        let visible = load().filter { $0.audience.contains(userId) }
-        let unsorted = visible.map { $0.event }
-        let all = unsorted.sorted { lhs, rhs in
-            lhs.occurredAt == rhs.occurredAt ? lhs.id.uuidString > rhs.id.uuidString : lhs.occurredAt > rhs.occurredAt
+        init(event: ActivityEvent, audience: [UUID], readBy: [UUID]) {
+            self.event = event; self.audience = audience; self.readBy = readBy
         }
-        let filtered: [ActivityEvent]
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            event = try values.decode(ActivityEvent.self, forKey: .event)
+            audience = try values.decode([UUID].self, forKey: .audience)
+            // History recorded before the inbox existed starts out read.
+            readBy = try values.decodeIfPresent([UUID].self, forKey: .readBy) ?? audience
+        }
+
+        /// Only people who can see the event can read it.
+        mutating func markRead(by users: [UUID]) {
+            for userId in users where audience.contains(userId) && !readBy.contains(userId) {
+                readBy.append(userId)
+            }
+        }
+
+        /// Same rule as the server: a newer event about the same expense or repayment replaces this one.
+        func isReplaced(by newer: ActivityEvent) -> Bool {
+            if let id = event.expenseId, id == newer.expenseId { return true }
+            if let id = event.repaymentId, id == newer.repaymentId { return true }
+            return false
+        }
+    }
+
+    func fetchUnreadEvents(for userId: UUID, before cursor: UUID?) async throws -> ActivityPage {
+        let visible: [Stored] = load().filter { $0.audience.contains(userId) }
+        let unread: Set<UUID> = Set(visible.filter { !$0.readBy.contains(userId) }.map { $0.event.id })
+        let all: [ActivityEvent] = visible.map { $0.event }.sorted(by: Self.newestFirst)
+        let older: ArraySlice<ActivityEvent>
         if let cursor {
+            // The cursor row may have been read since; its position still counts.
             guard let index = all.firstIndex(where: { $0.id == cursor }) else { return ActivityPage(events: [], hasMore: false, nextCursor: nil) }
-            filtered = Array(all[(index + 1)...])
-        } else { filtered = all }
+            older = all[(index + 1)...]
+        } else { older = all[...] }
+        let filtered = older.filter { unread.contains($0.id) }
         let page = Array(filtered.prefix(50))
         return ActivityPage(events: page, hasMore: filtered.count > 50, nextCursor: page.last?.id)
     }
@@ -28,12 +58,39 @@ actor LocalActivityRepository: ActivityRepository {
 
     func record(_ event: ActivityEvent, audience: [UUID]) async throws {
         guard !audience.isEmpty else { return }
-        var values = load(); values.append(Stored(event: event, audience: Array(Set(audience))))
-        UserDefaults.standard.set(try JSONEncoder().encode(values), forKey: key)
+        let audience = Array(Set(audience))
+        var values = load()
+        for index in values.indices where values[index].isReplaced(by: event) {
+            values[index].markRead(by: audience)
+        }
+        values.append(Stored(event: event, audience: audience, readBy: audience.contains(event.actorId) ? [event.actorId] : []))
+        try save(values)
+    }
+
+    func unreadCount(for userId: UUID) async throws -> Int {
+        min(load().filter { $0.audience.contains(userId) && !$0.readBy.contains(userId) }.count, 100)
+    }
+
+    func markRead(_ eventIds: [UUID], userId: UUID) async throws {
+        let ids = Set(eventIds)
+        var values = load()
+        for index in values.indices where ids.contains(values[index].event.id) {
+            values[index].markRead(by: [userId])
+        }
+        try save(values)
+    }
+
+    private static func newestFirst(_ lhs: ActivityEvent, _ rhs: ActivityEvent) -> Bool {
+        if lhs.occurredAt != rhs.occurredAt { return lhs.occurredAt > rhs.occurredAt }
+        return lhs.id.uuidString > rhs.id.uuidString
     }
 
     private func load() -> [Stored] {
         guard let data = UserDefaults.standard.data(forKey: key), let values = try? JSONDecoder().decode([Stored].self, from: data) else { return [] }
         return values
+    }
+
+    private func save(_ values: [Stored]) throws {
+        UserDefaults.standard.set(try JSONEncoder().encode(values), forKey: key)
     }
 }

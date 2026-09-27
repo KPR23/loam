@@ -119,12 +119,13 @@ final class BalanceSnapshotTests: XCTestCase {
 }
 
 final class ActivityTests: LocalStorageTestCase {
-    private func event(_ kind: ActivityEventKind, at seconds: TimeInterval, expenseId: UUID? = nil, recipient: String? = nil, share: Int = 0) -> ActivityEvent {
+    /// Carol acts, so Alice and Bob see her events as unread.
+    private func event(_ kind: ActivityEventKind, at seconds: TimeInterval, by actor: UUID = TestUser.carol, expenseId: UUID? = nil, recipient: String? = nil, share: Int = 0) -> ActivityEvent {
         ActivityEvent(
             occurredAt: Date(timeIntervalSince1970: seconds),
             kind: kind,
-            actorId: TestUser.alice,
-            actorName: "Alice",
+            actorId: actor,
+            actorName: "Carol",
             recipientName: recipient,
             recipientNames: recipient.map { [$0] } ?? [],
             expenseId: expenseId,
@@ -143,12 +144,10 @@ final class ActivityTests: LocalStorageTestCase {
         try await repository.record(first, audience: [TestUser.alice, TestUser.bob])
         try await repository.record(second, audience: [TestUser.alice])
 
-        let bobPage = try await repository.fetchEvents(for: TestUser.bob, before: nil)
-        let alicePage = try await repository.fetchEvents(for: TestUser.alice, before: nil)
-        let carolPage = try await repository.fetchEvents(for: TestUser.carol, before: nil)
+        let alicePage = try await repository.fetchUnreadEvents(for: TestUser.alice, before: nil)
+        let bobPage = try await repository.fetchUnreadEvents(for: TestUser.bob, before: nil)
         XCTAssertEqual(alicePage.events.map(\.id), [second.id, first.id])
         XCTAssertEqual(bobPage.events.map(\.id), [first.id])
-        XCTAssertTrue(carolPage.events.isEmpty)
     }
 
     func testPagesContinueAfterTheLastEvent() async throws {
@@ -157,8 +156,8 @@ final class ActivityTests: LocalStorageTestCase {
             try await repository.record(event(.edited, at: TimeInterval(second)), audience: [TestUser.alice])
         }
 
-        let firstPage = try await repository.fetchEvents(for: TestUser.alice, before: nil)
-        let secondPage = try await repository.fetchEvents(for: TestUser.alice, before: firstPage.nextCursor)
+        let firstPage = try await repository.fetchUnreadEvents(for: TestUser.alice, before: nil)
+        let secondPage = try await repository.fetchUnreadEvents(for: TestUser.alice, before: firstPage.nextCursor)
 
         XCTAssertEqual(firstPage.events.count, 50)
         XCTAssertTrue(firstPage.hasMore)
@@ -168,19 +167,64 @@ final class ActivityTests: LocalStorageTestCase {
     }
 
     @MainActor
-    func testSharingWithSeveralPeopleShowsAsOneEvent() async throws {
+    func testSharingWithSeveralPeopleShowsAsOneHistoryEvent() async throws {
         let expenseId = UUID()
         let repository = LocalActivityRepository()
         try await repository.record(event(.shared, at: 100, expenseId: expenseId, recipient: "Bob", share: 300), audience: [TestUser.alice])
         try await repository.record(event(.shared, at: 100, expenseId: expenseId, recipient: "Carol", share: 300), audience: [TestUser.alice])
 
+        let history = try await ActivityStore().history(forExpense: expenseId, userId: TestUser.alice)
+
+        XCTAssertEqual(history.count, 1)
+        // Both rows share a timestamp, so the name order is not defined.
+        XCTAssertEqual(Set(history.first?.recipientNames ?? []), ["Bob", "Carol"])
+        XCTAssertEqual(history.first?.affectedShareMinor, 600)
+        XCTAssertNil(history.first?.recipientName)
+    }
+
+    func testOwnActionsAreNeverUnread() async throws {
+        let repository = LocalActivityRepository()
+        try await repository.record(event(.shared, at: 100, by: TestUser.alice, expenseId: UUID()), audience: [TestUser.alice, TestUser.bob])
+
+        let alicePage = try await repository.fetchUnreadEvents(for: TestUser.alice, before: nil)
+        let bobPage = try await repository.fetchUnreadEvents(for: TestUser.bob, before: nil)
+        let aliceCount = try await repository.unreadCount(for: TestUser.alice)
+        XCTAssertTrue(alicePage.events.isEmpty)
+        XCTAssertEqual(aliceCount, 0)
+        XCTAssertEqual(bobPage.events.count, 1)
+    }
+
+    func testANewerEventAboutTheSameExpenseReadsOlderOnes() async throws {
+        let expenseId = UUID()
+        let repository = LocalActivityRepository()
+        let shared = event(.shared, at: 100, expenseId: expenseId)
+        try await repository.record(shared, audience: [TestUser.alice, TestUser.carol])
+        try await repository.record(event(.accepted, at: 200, by: TestUser.alice, expenseId: expenseId), audience: [TestUser.alice, TestUser.carol])
+
+        let alicePage = try await repository.fetchUnreadEvents(for: TestUser.alice, before: nil)
+        let history = try await repository.fetchExpenseEvents(expenseId: expenseId, userId: TestUser.alice)
+        XCTAssertTrue(alicePage.events.isEmpty, "Answering reads the request")
+        XCTAssertEqual(history.count, 2, "Read events stay in the expense's history")
+        let carolPage = try await repository.fetchUnreadEvents(for: TestUser.carol, before: nil)
+        XCTAssertEqual(carolPage.events.map(\.kind), [.accepted])
+    }
+
+    @MainActor
+    func testMarkingReadRemovesTheEventOnlyForThatPerson() async throws {
+        let repository = LocalActivityRepository()
+        let edited = event(.edited, at: 100, expenseId: UUID())
+        try await repository.record(edited, audience: [TestUser.alice, TestUser.bob])
+
         let store = ActivityStore()
         await store.refresh(userId: TestUser.alice)
+        XCTAssertEqual(store.unreadCount, 1)
+        await store.markRead(store.events, userId: TestUser.alice)
+        XCTAssertTrue(store.events.isEmpty)
+        XCTAssertEqual(store.unreadCount, 0)
 
-        XCTAssertEqual(store.events.count, 1)
-        // Both rows share a timestamp, so the name order is not defined.
-        XCTAssertEqual(Set(store.events.first?.recipientNames ?? []), ["Bob", "Carol"])
-        XCTAssertEqual(store.events.first?.affectedShareMinor, 600)
-        XCTAssertNil(store.events.first?.recipientName)
+        await store.refresh(userId: TestUser.alice)
+        XCTAssertTrue(store.events.isEmpty)
+        let bobCount = try await repository.unreadCount(for: TestUser.bob)
+        XCTAssertEqual(bobCount, 1)
     }
 }
