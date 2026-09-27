@@ -297,6 +297,23 @@ final class ActivitySentenceTests: XCTestCase {
         XCTAssertEqual(accepted.sentence(viewerId: julia), "Kacper Z accepted your suggested changes")
     }
 
+    func testHeadlinesNameTheExpense() {
+        let shared = event(.shared, actor: julia, actorName: "Julia", recipientIds: [me], recipientNames: ["Kacper Z"])
+        XCTAssertEqual(String(shared.headline(viewerId: me).characters), "Julia shared Dinner with you")
+        let accepted = event(.proposalAccepted, actor: me, actorName: "Kacper Z", recipient: julia, recipientName: "Julia")
+        XCTAssertEqual(String(accepted.headline(viewerId: julia).characters), "Kacper Z accepted your changes to Dinner")
+        let deleted = event(.deleted, actor: me, actorName: "Kacper Z")
+        XCTAssertEqual(String(deleted.headline(viewerId: me).characters), "You deleted Dinner")
+    }
+
+    func testHeadlineEmphasizesOnlyTheTitle() {
+        let edited = event(.edited, actor: julia, actorName: "Julia")
+        let bold = edited.headline(viewerId: me).runs
+            .filter { $0.inlinePresentationIntent == .stronglyEmphasized }
+            .map { String(edited.headline(viewerId: me)[$0.range].characters) }
+        XCTAssertEqual(bold, ["Dinner"])
+    }
+
     func testRepaymentsReadFromEachSide() {
         let repayment = event(.repaymentRecorded, actor: julia, actorName: "Julia", recipient: me, recipientName: "Kacper Z")
         XCTAssertEqual(repayment.sentence(viewerId: me), "Julia recorded a repayment to you")
