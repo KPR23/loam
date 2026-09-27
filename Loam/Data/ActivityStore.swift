@@ -13,6 +13,8 @@ final class ActivityStore: ObservableObject {
     private var nextCursor: UUID?
     /// Rows folded into a shown event, so marking it read reads all of them.
     private var foldedIds: [UUID: [UUID]] = [:]
+    /// Bumped by each refresh so a page fetched before it can't land on the new list.
+    private var generation = 0
 
     func refreshUnreadCount(userId: UUID?) async {
         guard let userId else { unreadCount = 0; return }
@@ -25,12 +27,14 @@ final class ActivityStore: ObservableObject {
             accountId = nil; events = []; foldedIds = [:]; canLoadMore = false; nextCursor = nil; lastError = nil; unreadCount = 0
             return
         }
+        generation += 1
+        let current = generation
         accountId = userId; isLoading = true; lastError = nil
-        defer { isLoading = false }
+        defer { if generation == current { isLoading = false } }
         let repository = ActivityRepositoryFactory.make()
         do {
             let page = try await repository.fetchUnreadEvents(for: userId, before: nil)
-            guard accountId == userId else { return }
+            guard accountId == userId, generation == current else { return }
             setEvents(page.events); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil
         } catch { guard accountId == userId else { return }; lastError = error.localizedDescription }
         await refreshUnreadCount(userId: userId)
@@ -38,8 +42,9 @@ final class ActivityStore: ObservableObject {
 
     func loadMore(userId: UUID) async {
         guard !isLoading, canLoadMore, let cursor = nextCursor else { return }; isLoading = true
-        defer { isLoading = false }
-        do { let page = try await ActivityRepositoryFactory.make().fetchUnreadEvents(for: userId, before: cursor); guard accountId == userId else { return }; setEvents(events + page.events, keepingFolds: true); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil } catch { lastError = error.localizedDescription }
+        let current = generation
+        defer { if generation == current { isLoading = false } }
+        do { let page = try await ActivityRepositoryFactory.make().fetchUnreadEvents(for: userId, before: cursor); guard accountId == userId, generation == current else { return }; setEvents(events + page.events, keepingFolds: true); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil } catch { guard generation == current else { return }; lastError = error.localizedDescription }
     }
 
     /// Takes the events out of the inbox right away; a failed save puts them back.
