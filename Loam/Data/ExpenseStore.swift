@@ -107,6 +107,17 @@ final class ExpenseStore: ObservableObject {
         return fetched
     }
 
+    /// Loads expenses Activity refers to that aren't loaded yet (e.g. outside the
+    /// active period), so their pending requests can be answered from there.
+    func loadDetachedExpenses(ids: [UUID], userId: UUID) async {
+        guard currentUserId == userId else { return }
+        let missing = Array(Set(ids.filter { knownExpense(id: $0) == nil }))
+        guard !missing.isEmpty,
+              let fetched = try? await primaryRepository.fetchExpenses(ids: missing),
+              currentUserId == userId else { return }
+        detachedExpenses.append(contentsOf: fetched.filter { $0.shareRecord(for: userId) != nil && knownExpense(id: $0.id) == nil })
+    }
+
     /// Reloads one expense and the pending proposals so its detail screen shows
     /// answers and suggestions that arrived since the last full refresh.
     func reloadForDetail(expenseId: UUID, userId: UUID) async {

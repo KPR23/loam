@@ -54,6 +54,11 @@ struct ActivityView: View {
                 }
             }
             .task(id: authSession.userId) { await reload() }
+            .task(id: responseExpenseIds) {
+                // Requests can sit outside the Expenses period; load them so they can be answered here.
+                guard let userId = authSession.userId, !responseExpenseIds.isEmpty else { return }
+                await expenseStore.loadDetachedExpenses(ids: responseExpenseIds, userId: userId)
+            }
             .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await reload() } } }
             .refreshable {
                 // Pull to refresh also picks up new requests.
@@ -161,6 +166,14 @@ struct ActivityView: View {
 
     private var requests: [ActivityEvent] { activityStore.events.filter { requestKind(for: $0) != nil } }
     private var notifications: [ActivityEvent] { activityStore.events.filter { requestKind(for: $0) == nil } }
+
+    /// Expenses behind others' shares and edits, which may be waiting on the viewer.
+    private var responseExpenseIds: [UUID] {
+        let userId = authSession.userId
+        return activityStore.events
+            .filter { ($0.kind == .shared || $0.kind == .edited) && $0.actorId != userId }
+            .compactMap(\.expenseId)
+    }
 
     /// Whether the viewer still has to answer this event, judged from what Expenses has loaded.
     private func requestKind(for event: ActivityEvent) -> ActivityRequestKind? {
