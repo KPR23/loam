@@ -9,6 +9,7 @@ struct AddExpenseView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
     @EnvironmentObject private var connectionStore: ConnectionStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -38,6 +39,7 @@ struct AddExpenseView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var isSplitSheetPresented = false
+    @State private var showsPaywall = false
     @FocusState private var amountFocused: Bool
     @FocusState private var titleFocused: Bool
     @FocusState private var noteFocused: Bool
@@ -235,9 +237,20 @@ struct AddExpenseView: View {
 
                 DatePicker("Date", selection: $spentAt, displayedComponents: .date)
 
-                TextField("Note (optional)", text: $note, axis: .vertical)
-                    .lineLimit(1...3)
-                    .focused($noteFocused)
+                // An existing note stays editable after Pro lapses.
+                if subscriptions.isPro || !note.isEmpty {
+                    TextField("Note (optional)", text: $note, axis: .vertical)
+                        .lineLimit(1...3)
+                        .focused($noteFocused)
+                } else {
+                    Button { showsPaywall = true } label: {
+                        HStack {
+                            Text("Note (optional)").foregroundStyle(.tertiary)
+                            Spacer()
+                            ProBadge()
+                        }
+                    }
+                }
             } header: {
                 Text("Details")
             }
@@ -282,7 +295,12 @@ struct AddExpenseView: View {
 
             if !isEditing {
                 Section {
-                    Toggle("Repeat", isOn: $isRepeating)
+                    Toggle(isOn: repeatBinding) {
+                        HStack {
+                            Text("Repeat")
+                            if !subscriptions.isPro { ProBadge() }
+                        }
+                    }
 
                     if isRepeating {
                         Picker("Frequency", selection: $repeatPreset) {
@@ -334,6 +352,7 @@ struct AddExpenseView: View {
                 }
             }
         }
+        .proPaywall(isPresented: $showsPaywall)
         .onAppear {
             if paidByUserId == nil {
                 paidByUserId = authSession.userId
@@ -469,6 +488,20 @@ struct AddExpenseView: View {
             return MoneyFormatter.typingAmount(from: money)
         }
         return amountText
+    }
+
+    /// Turning Repeat on opens the paywall for accounts without Pro.
+    private var repeatBinding: Binding<Bool> {
+        Binding(
+            get: { isRepeating },
+            set: { isOn in
+                if isOn && !subscriptions.isPro {
+                    showsPaywall = true
+                } else {
+                    isRepeating = isOn
+                }
+            }
+        )
     }
 
     private var repeatScheduleDescription: String {

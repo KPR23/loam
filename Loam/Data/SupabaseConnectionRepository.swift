@@ -11,10 +11,11 @@ actor SupabaseConnectionRepository: ConnectionRepository {
         return rows.map { SplitPartnerOption(userId: $0.userId, displayName: $0.displayName) }
     }
     func createInvitation() async throws -> ConnectionInvitation {
-        struct Row: Decodable { let code: String; let expiresAt: Date; enum CodingKeys: String, CodingKey { case code, expiresAt = "expires_at" } }
+        struct Row: Decodable { let code: String?; let expiresAt: Date?; let errorCode: String?; enum CodingKeys: String, CodingKey { case code, expiresAt = "expires_at", errorCode = "error_code" } }
         let rows: [Row] = try await client.rpc("create_connection_invitation").execute().value
-        guard let row = rows.first else { throw ConnectionError.unavailable }
-        return ConnectionInvitation(code: row.code, expiresAt: row.expiresAt)
+        if rows.first?.errorCode == "pro_required" { throw ConnectionError.proRequired }
+        guard let row = rows.first, let code = row.code, let expiresAt = row.expiresAt else { throw ConnectionError.unavailable }
+        return ConnectionInvitation(code: code, expiresAt: expiresAt)
     }
     func activeInvitation() async throws -> ConnectionInvitation? {
         struct Row: Decodable { let code: String; let expiresAt: Date; enum CodingKeys: String, CodingKey { case code, expiresAt = "expires_at" } }
@@ -40,6 +41,12 @@ actor SupabaseConnectionRepository: ConnectionRepository {
     }
 }
 
-enum ConnectionError: LocalizedError { case unavailable, rateLimited
-    var errorDescription: String? { self == .rateLimited ? "Too many attempts. Try again in 15 minutes." : "That code is unavailable. Check it and try again." }
+enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired
+    var errorDescription: String? {
+        switch self {
+        case .unavailable: "That code is unavailable. Check it and try again."
+        case .rateLimited: "Too many attempts. Try again in 15 minutes."
+        case .proRequired: "Loam Pro is needed to invite more people."
+        }
+    }
 }

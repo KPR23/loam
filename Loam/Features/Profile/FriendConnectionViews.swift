@@ -23,10 +23,13 @@ struct FriendConnectionHub: View {
 
 struct ShareConnectionCodeView: View {
     @EnvironmentObject private var connectionStore: ConnectionStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var invitation: ConnectionInvitation?
     @State private var error: String?
     @State private var isWorking = false
     @State private var justCopied = false
+    @State private var requiresPro = false
+    @State private var showsPaywall = false
     var body: some View {
         List {
             if let invitation {
@@ -50,15 +53,53 @@ struct ShareConnectionCodeView: View {
                     Text("Send this code to someone you trust. They’ll enter it in Loam to connect with you.")
                 }
             }
-            Section { Button { Task { await create() } } label: { Label(invitation == nil ? "Create code" : "Replace code", systemImage: "arrow.clockwise") }.disabled(isWorking) }
+            if requiresPro {
+                Section {
+                    Button { showsPaywall = true } label: { Label("Upgrade to Loam Pro", systemImage: "sparkles") }
+                } header: {
+                    Text("Invite more people")
+                } footer: {
+                    Text("Loam Free includes one connection. Upgrade to invite more. Joining with a code someone sends you is always free.")
+                }
+            } else {
+                Section { Button { Task { await create() } } label: { Label(invitation == nil ? "Create code" : "Replace code", systemImage: "arrow.clockwise") }.disabled(isWorking) }
+            }
         }
         .navigationTitle("Share my code")
         .navigationBarTitleDisplayMode(.inline)
         .task { if invitation == nil { await loadOrCreate() } }
+        .proPaywall(isPresented: $showsPaywall)
+        .onChange(of: subscriptions.isPro) { _, isPro in
+            if isPro, requiresPro { requiresPro = false; Task { await create() } }
+        }
         .alert("Couldn’t create a code", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
     }
-    private func create() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; do { invitation = try await connectionStore.createInvitation() } catch { self.error = error.localizedDescription } }
-    private func loadOrCreate() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; do { if let active = try await connectionStore.activeInvitation() { invitation = active } else { invitation = try await connectionStore.createInvitation() } } catch { self.error = error.localizedDescription } }
+    /// The server enforces the same limit; checking first just opens the paywall sooner.
+    private var needsPro: Bool {
+        !subscriptions.isPro && connectionStore.connections.count >= SubscriptionStore.freeConnectionLimit
+    }
+    private func create() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; await createInvitation() }
+    private func loadOrCreate() async {
+        guard !isWorking else { return }; isWorking = true; defer { isWorking = false }
+        do {
+            if let active = try await connectionStore.activeInvitation() { invitation = active }
+            else if needsPro { showPaywall() }
+            else { await createInvitation() }
+        } catch { self.error = error.localizedDescription }
+    }
+    private func createInvitation() async {
+        do { invitation = try await connectionStore.createInvitation() }
+        catch ConnectionError.proRequired where subscriptions.isPro {
+            // A fresh purchase can beat RevenueCat's webhook to the backend.
+            await subscriptions.syncBackendEntitlement()
+            do { invitation = try await connectionStore.createInvitation() }
+            catch ConnectionError.proRequired { showPaywall() }
+            catch { self.error = error.localizedDescription }
+        }
+        catch ConnectionError.proRequired { showPaywall() }
+        catch { self.error = error.localizedDescription }
+    }
+    private func showPaywall() { requiresPro = true; showsPaywall = true }
     private func revoke() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; do { try await connectionStore.revokeInvitation(); invitation = nil } catch { self.error = error.localizedDescription } }
 }
 
