@@ -7,7 +7,7 @@ Native iOS expense tracker for personal spending and pairwise shared balances. S
 - SwiftUI, iOS 17+
 - Supabase (Postgres + Auth + Realtime + RLS)
 - Sign in with Apple
-- StoreKit 2 (stub in later phase)
+- RevenueCat (StoreKit purchases, paywall, Customer Center)
 
 ## Phase status
 
@@ -86,7 +86,15 @@ Keep this away from production with a separate Supabase project:
 
 Only publishable keys belong in the app. Use a secret/service-role key only in a trusted provisioning script or the Supabase dashboard; never add it to an Xcode setting, plist, scheme, or repository.
 
-### 4. Xcode Cloud / TestFlight
+### 4. Loam Pro (RevenueCat)
+
+Apple processes payments; RevenueCat validates receipts and owns the `loam_pro` entitlement. Loam Free covers personal tracking and one connection. Pro unlocks inviting more connections, recurring expenses and notes. Only the person creating an invite needs Pro: redeeming a code is always free.
+
+- `REVENUECAT_API_KEY`: Debug uses the RevenueCat Test Store key. `Staging.xcconfig` (TestFlight) and `Production.xcconfig` need the public Apple key (`appl_…`). The SDK crashes Release builds that use a `test_` key. With no key, purchases are off and everyone stays on Free.
+- Dashboard: products `monthly`, `yearly` (two-week trial) and `lifetime`, all attached to `loam_pro`, in the current offering as the monthly, annual and lifetime packages. The paywall and Customer Center are designed there too.
+- Backend: the app logs customers in with the lowercase Supabase user ID. `create_connection_invitation` checks `private.pro_entitlement`, which the `revenuecat-webhook` and `sync-pro-entitlement` functions fill from RevenueCat's REST API. Set the GitHub secrets `REVENUECAT_SECRET_API_KEY` (a v1 secret key) and `REVENUECAT_WEBHOOK_AUTH`. Point the RevenueCat webhook at `<project>/functions/v1/revenuecat-webhook` and set its Authorization header to the exact `REVENUECAT_WEBHOOK_AUTH` value.
+
+### 5. Xcode Cloud / TestFlight
 
 The shared `Loam` scheme archives with the `Production` configuration. The `Loam-TestFlight` scheme archives with the `TestFlight` configuration, so TestFlight builds use staging while App Store distribution builds use production.
 
@@ -106,6 +114,7 @@ Info.plist keys (via build settings from xcconfig):
 
 - `POSTHOG_PROJECT_TOKEN`
 - `POSTHOG_HOST`
+- `REVENUECAT_API_KEY`
 - `SENTRY_DSN`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
@@ -118,7 +127,7 @@ Loam/
 ├─ Data/       Models, ExpenseStore, LocalExpenseRepository, Supabase client
 ├─ Domain/     SplitCalculator, BalanceSimplifier
 ├─ Features/   Auth, Home, AddExpense, Balances, Root (+ Profile)
-└─ System/     Auth, DeepLinks, StoreKit stub
+└─ System/     Auth, DeepLinks, Subscriptions, Telemetry
 
 Design/        App icon source (.icon bundle + exports → AppIcon.appiconset)
 supabase/      SQL migrations + local config
