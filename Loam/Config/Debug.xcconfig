@@ -12,6 +12,10 @@ LOAM_TEST_PHILIP_USER_ID =
 LOAM_TEST_PHILIP_EMAIL =
 LOAM_TEST_PHILIP_PASSWORD =
 
+// RevenueCat Test Store: simulated purchases without App Store Connect. Test
+// Store keys must never ship, so only Debug builds use this one.
+REVENUECAT_API_KEY = test_TwgaGSLmMkXYiEEIwqBeOkFhSQi
+
 // Local credentials belong in this ignored file. Keeping the include last lets
 // local values override the safe empty defaults above.
 #include? "Secrets.xcconfig"

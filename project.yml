@@ -29,6 +29,9 @@ packages:
   posthog-ios:
     url: https://github.com/PostHog/posthog-ios
     from: "3.82.0"
+  purchases-ios-spm:
+    url: https://github.com/RevenueCat/purchases-ios-spm.git
+    from: "5.91.0"
   sentry-cocoa:
     url: https://github.com/getsentry/sentry-cocoa
     from: "9.24.0"
@@ -76,6 +79,10 @@ targets:
     dependencies:
       - package: posthog-ios
         product: PostHog
+      - package: purchases-ios-spm
+        product: RevenueCat
+      - package: purchases-ios-spm
+        product: RevenueCatUI
       - package: sentry-cocoa
         product: Sentry
       - package: supabase-swift

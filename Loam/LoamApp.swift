@@ -13,6 +13,7 @@ struct LoamApp: App {
     @StateObject private var balanceStore = BalanceStore()
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var connectionStore = ConnectionStore()
+    @StateObject private var subscriptionStore = SubscriptionStore()
 
     init() {
         #if DEBUG
@@ -22,9 +23,10 @@ struct LoamApp: App {
             UITestStorage.restore()
         }
         #endif
-        // Test runs must never report to Sentry or PostHog.
+        // Test runs must never report to Sentry or PostHog, or reach RevenueCat.
         if !LaunchEnvironment.isAutomatedTest {
             Telemetry.start()
+            SubscriptionStore.configure()
         }
     }
 
@@ -50,12 +52,16 @@ struct LoamApp: App {
             .environmentObject(balanceStore)
             .environmentObject(activityStore)
             .environmentObject(connectionStore)
+            .environmentObject(subscriptionStore)
             .task {
                 LegacyDemoFixtureCleanup.removeIfNeeded()
                 await authSession.bootstrap()
             }
             .task(id: authSession.userId) {
                 await connectionStore.refresh(userId: authSession.userId)
+            }
+            .task(id: subscriptionAccountId) {
+                await subscriptionStore.identify(userId: subscriptionAccountId)
             }
             .onChange(of: authSession.userId) { _, userId in
                 Telemetry.setUser(authSession.usesDemoMode ? nil : userId)
@@ -73,9 +79,15 @@ struct LoamApp: App {
                     Task {
                         await authSession.refreshDeletionStatus()
                         await connectionStore.refresh(userId: authSession.userId)
+                        await subscriptionStore.identify(userId: subscriptionAccountId)
                     }
                 }
             }
+    }
+
+    /// Demo IDs are not real accounts, so their purchases stay on an anonymous customer.
+    private var subscriptionAccountId: UUID? {
+        authSession.usesDemoMode ? nil : authSession.userId
     }
 }
 
