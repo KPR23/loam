@@ -40,6 +40,9 @@ grant execute on function public.record_pro_entitlement(uuid, boolean, timestamp
 -- never asked to pay. Existing connections stay when Pro lapses.
 -- The check runs before the rate limit and before replacing the active code,
 -- so a refused request costs nothing and leaves the current code valid.
+-- Locking the caller's active codes first serializes this with a redemption:
+-- one in flight holds that lock, so the count sees its connection once it
+-- commits; one that starts later finds the code already replaced.
 drop function public.create_connection_invitation();
 create function public.create_connection_invitation()
 returns table(code text, expires_at timestamptz, error_code text)
@@ -48,6 +51,9 @@ declare v_user_id uuid := (select auth.uid()); v_code text; v_expiry timestamptz
 begin
   if v_user_id is null then raise exception 'Not authenticated'; end if;
   if not exists (select 1 from public.profile p where p.id = v_user_id and p.deleted_at is null) then raise exception 'Account unavailable'; end if;
+  perform 1 from public.connection_invitation as i
+  where i.created_by = v_user_id and i.accepted_at is null and i.expires_at > now()
+  for update;
   if not private.has_pro(v_user_id) and (
     select count(*) from public.user_connection c
     join public.profile p on p.id = case when c.user_a = v_user_id then c.user_b else c.user_a end
