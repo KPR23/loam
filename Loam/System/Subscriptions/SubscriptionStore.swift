@@ -21,6 +21,8 @@ final class SubscriptionStore: ObservableObject {
 
     /// `.none` until an identity is requested, and again after it fails so it is retried.
     private var requestedUserId: UUID?? = .none
+    /// While another account loads, RevenueCat can still report the previous one.
+    private var isSwitchingAccount = false
 
     /// Call once at launch, before the store is created.
     static func configure() {
@@ -35,7 +37,8 @@ final class SubscriptionStore: ObservableObject {
         guard isAvailable else { return }
         Task { [weak self] in
             for await info in Purchases.shared.customerInfoStream {
-                self?.apply(info)
+                guard let self else { return }
+                if !self.isSwitchingAccount { self.apply(info) }
             }
         }
     }
@@ -44,6 +47,12 @@ final class SubscriptionStore: ObservableObject {
     func identify(userId: UUID?) async {
         guard isAvailable, requestedUserId != .some(userId) else { return }
         requestedUserId = .some(userId)
+        // Until this account's entitlement loads, it has none; a failed switch
+        // must never leave it with the previous account's Pro.
+        isPro = false
+        customerInfo = nil
+        isSwitchingAccount = true
+        defer { if requestedUserId == .some(userId) { isSwitchingAccount = false } }
         do {
             if let userId {
                 let (info, _) = try await Purchases.shared.logIn(userId.uuidString.lowercased())
@@ -51,8 +60,10 @@ final class SubscriptionStore: ObservableObject {
                 apply(info)
                 // Purchases made before sign-in move to this account; let the backend see them.
                 if isPro { await syncBackendEntitlement() }
-            } else if !Purchases.shared.isAnonymous {
-                let info = try await Purchases.shared.logOut()
+            } else {
+                let info = Purchases.shared.isAnonymous
+                    ? try await Purchases.shared.customerInfo()
+                    : try await Purchases.shared.logOut()
                 guard requestedUserId == .some(nil) else { return }
                 apply(info)
             }
