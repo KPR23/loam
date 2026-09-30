@@ -149,7 +149,7 @@ struct ExpenseDetailSheet: View {
                         .foregroundStyle(expense.category.color)
                     }
 
-                    if let location = expense.location {
+                    if FeatureFlags.merchant, let location = expense.location {
                         LabeledContent("Location") {
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text(location.name)

@@ -68,7 +68,8 @@ struct HomeExpenseRow: View {
                     .foregroundStyle(HomeTheme.text)
                     .multilineTextAlignment(.leading)
 
-                if let placeName = expense.location?.name,
+                if FeatureFlags.merchant,
+                   let placeName = expense.location?.name,
                    placeName.caseInsensitiveCompare(expense.displayTitle) != .orderedSame {
                     Text(placeName)
                         .font(.caption)

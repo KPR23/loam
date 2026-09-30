@@ -79,6 +79,7 @@
 		AB48FC73157D6F0E678978C5 /* ProPaywall.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F4BD07622490320E4F0F158 /* ProPaywall.swift */; };
 		ACDEE6074DB240C61F8BF7F1 /* ExpenseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */; };
 		AD5212BA06EA685377D320E4 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73A037BC2A3E8DB7E3ACD9FE /* RevenueCatUI */; };
+		B2F75633AB5044BB813FD2A1 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */; };
 		BC595E14561F6D076C40E8C5 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07214E88835854CA791C14E /* BalanceStore.swift */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
 		CF1A3CBDC16DCE533EE59653 /* SplitExpenseSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87AE244F130211B61887F30 /* SplitExpenseSection.swift */; };
@@ -213,6 +214,7 @@
 		D044ABEA612ACF723FCB7589 /* SupabaseBalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBalanceRepository.swift; sourceTree = "<group>"; };
 		D0FEDAFE978A8FB4E4306121 /* AppleDeletionAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleDeletionAuthorization.swift; sourceTree = "<group>"; };
 		D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		D533C1F5574D7B7BE0F546AC /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		D5950FD4B0A003B32224F60B /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		D7C32AD46A7AE52E1FD1D228 /* SplitCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculatorTests.swift; sourceTree = "<group>"; };
@@ -300,6 +302,7 @@
 				1BB3E318E7DB0B9CE3B246C1 /* Category.swift */,
 				7D2B225EA738D0900ECF5C69 /* ExpenseLocation.swift */,
 				B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */,
+				D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */,
 				A74E2AB24186B00FD500CE4D /* Formatters.swift */,
 				F6CD835D39E131CEAA0B24E8 /* Money.swift */,
 				5EF5AC0E5465E709F9F1814D /* PlaceSearchController.swift */,
@@ -781,6 +784,7 @@
 				174A10F4525A9C72D9869593 /* ExpenseShareAcceptance.swift in Sources */,
 				CF22202F705F49295851F0ED /* ExpenseShareStatus.swift in Sources */,
 				79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */,
+				B2F75633AB5044BB813FD2A1 /* FeatureFlags.swift in Sources */,
 				D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */,
 				3642DFE98565927A4CADF9BA /* FriendConnectionViews.swift in Sources */,
 				D5198E9063F112C1765093E2 /* HomeCollapsingTopBar.swift in Sources */,

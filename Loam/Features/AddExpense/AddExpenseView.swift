@@ -287,10 +287,12 @@ struct AddExpenseView: View {
                 }
             }
 
-            Section {
-                ExpenseLocationPicker(location: $location)
-            } header: {
-                Text("Merchant")
+            if FeatureFlags.merchant {
+                Section {
+                    ExpenseLocationPicker(location: $location)
+                } header: {
+                    Text("Merchant")
+                }
             }
 
             if !isEditing {
