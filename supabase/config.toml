@@ -388,6 +388,14 @@ verify_jwt = false
 [functions.account-deletion-notifier]
 verify_jwt = false
 
+# RevenueCat authenticates with the shared REVENUECAT_WEBHOOK_AUTH value.
+[functions.revenuecat-webhook]
+verify_jwt = false
+
+# Verifies the caller's session explicitly, like delete-account.
+[functions.sync-pro-entitlement]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
