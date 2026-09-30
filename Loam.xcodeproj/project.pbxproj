@@ -30,6 +30,7 @@
 		3B6CDA37B5479DE4B4111523 /* ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB5CC654AA22A57AADC24A8 /* ConnectionStore.swift */; };
 		40CE985228700649412B0057 /* SupabaseConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E49E2A84778450763BB7A2F /* SupabaseConfigTests.swift */; };
 		450CF8D24E4AAD123A859E79 /* EditProposalReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15EBCA64BB0DC3FC7F19BF3 /* EditProposalReviewCard.swift */; };
+		464225EB57698979D84999AA /* SubscriptionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDC87E4454EB50A4BB3CDF92 /* SubscriptionStore.swift */; };
 		47D5C5EC4B5C399B1AD11AD7 /* BalanceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46CC7796E7D041351235A454 /* BalanceRecord.swift */; };
 		492940B3AEF2AA1E876FFC40 /* ProposeEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52E9F008EB2501D5905C2CA /* ProposeEditSheet.swift */; };
 		495631F46ADF0CD29DAE5F09 /* SplitFormSeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F29A0D09C3AFE76A4000E67A /* SplitFormSeedTests.swift */; };
@@ -38,7 +39,7 @@
 		4D355CDF8A3D632F730E20FB /* ExpenseSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99A7E2ACFDFFA08B0048B9C9 /* ExpenseSummaryTests.swift */; };
 		5197538023662FCC33542AE3 /* AppleDeletionAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FEDAFE978A8FB4E4306121 /* AppleDeletionAuthorization.swift */; };
 		52647BE969B4C648691C9815 /* ExpenseRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */; };
-		53733B401CC61047A6770B27 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = C28A03436A972E37C1394EC9 /* Sentry */; };
+		53733B401CC61047A6770B27 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 8391E5400EB4018D21691EE1 /* RevenueCat */; };
 		5385DE5F359781E589AADE85 /* BudgetArcLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED9EDABD88B51F9CFEA82A58 /* BudgetArcLayout.swift */; };
 		53AED4FFFBB986CB7B4B2DDC /* HomeExpenseRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914274A331517EC93002CE6C /* HomeExpenseRow.swift */; };
 		543F69BEE3C867F7FB1ED90F /* ExpenseCategoryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3503DF18D70C53D65E9FAC9A /* ExpenseCategoryPicker.swift */; };
@@ -50,6 +51,7 @@
 		68242700360ED70E1E345E54 /* PendingExpenseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B937506CE1AD90136888495 /* PendingExpenseCard.swift */; };
 		689897107294EC9BB89E3DBA /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EEBEB450D61F2F9080F0C496 /* AppIcon.icon */; };
 		699C700B7D9C668D32D611EB /* ExpenseStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */; };
+		7326C39296D12B70AB7C7609 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21BC58A6AC60D3347EDFACC0 /* Supabase */; };
 		79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 591C0E16AC62C2272FA783EA /* ExpenseStore.swift */; };
 		79D96C7D97FE719A2FAC5622 /* ExpenseLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B225EA738D0900ECF5C69 /* ExpenseLocation.swift */; };
 		7A801B98D5482C7621B591C3 /* SupabaseBalanceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044ABEA612ACF723FCB7589 /* SupabaseBalanceRepository.swift */; };
@@ -61,6 +63,7 @@
 		8B95AFDA7E6069FB3CDE3769 /* SupabaseConnectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8C8F409F0CF628175F871A /* SupabaseConnectionRepository.swift */; };
 		8D81E161CCD796A4BD558382 /* TestPartner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5607AF86E6B5DA32B91136B6 /* TestPartner.swift */; };
 		8DA69CF70DA4F7B2FA86D3F2 /* PlaceSearchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EF5AC0E5465E709F9F1814D /* PlaceSearchController.swift */; };
+		9381E1880681F62CA1F55033 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = C28A03436A972E37C1394EC9 /* Sentry */; };
 		945CD0EFC0BA56FC01958837 /* BalanceSimplifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08BD81EDCA6E65CC7B05C125 /* BalanceSimplifierTests.swift */; };
 		9989E533A949D6EFCA50F732 /* BalanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE8A1B337206BA768F605F5 /* BalanceTests.swift */; };
 		9B4011B594B12229FD7A8CDE /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 00A593E299BD43D1BF871E34 /* PostHog */; };
@@ -73,8 +76,9 @@
 		A3D3837FCD2233B631CAD203 /* LoamUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0074DD56D78CF70693398156 /* LoamUITests.swift */; };
 		A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C15AD0F34F080CB70FB979F /* LoamApp.swift */; };
 		A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */; };
+		AB48FC73157D6F0E678978C5 /* ProPaywall.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F4BD07622490320E4F0F158 /* ProPaywall.swift */; };
 		ACDEE6074DB240C61F8BF7F1 /* ExpenseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */; };
-		AD5212BA06EA685377D320E4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21BC58A6AC60D3347EDFACC0 /* Supabase */; };
+		AD5212BA06EA685377D320E4 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73A037BC2A3E8DB7E3ACD9FE /* RevenueCatUI */; };
 		BC595E14561F6D076C40E8C5 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07214E88835854CA791C14E /* BalanceStore.swift */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
 		CF1A3CBDC16DCE533EE59653 /* SplitExpenseSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87AE244F130211B61887F30 /* SplitExpenseSection.swift */; };
@@ -92,7 +96,6 @@
 		EC885C4695DC4841AD1668D2 /* SupabaseExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */; };
 		EDB3FB0BA21694BAD6E8AB1C /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19E1D23ED085FCA9A7BF769A /* ActivityView.swift */; };
 		F2C7F92037180D928A23DEB6 /* SplitValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3AA130246F214EF2F1E6209 /* SplitValidationTests.swift */; };
-		F3540CDF8143C9D908D2720C /* StoreKitStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FCB2D37CB3148229B212824 /* StoreKitStub.swift */; };
 		F36D26359DE8335DF3A19C8D /* ConnectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F215D3C3920731625D3EE6 /* ConnectionRepository.swift */; };
 		F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */; };
 		F5FF7A97367CF369F639062C /* PendingExpensesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E27DC7E441F9167DCEB57D /* PendingExpensesSheet.swift */; };
@@ -159,6 +162,7 @@
 		46CC7796E7D041351235A454 /* BalanceRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceRecord.swift; sourceTree = "<group>"; };
 		4AB5CC654AA22A57AADC24A8 /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
 		4EA6A778794AE887AAF81BA6 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		4F4BD07622490320E4F0F158 /* ProPaywall.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProPaywall.swift; sourceTree = "<group>"; };
 		54E27DC7E441F9167DCEB57D /* PendingExpensesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpensesSheet.swift; sourceTree = "<group>"; };
 		5607AF86E6B5DA32B91136B6 /* TestPartner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPartner.swift; sourceTree = "<group>"; };
 		56BB79807AD4FC553913CD02 /* LegacyDemoFixtureCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDemoFixtureCleanup.swift; sourceTree = "<group>"; };
@@ -177,7 +181,6 @@
 		7D2B225EA738D0900ECF5C69 /* ExpenseLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseLocation.swift; sourceTree = "<group>"; };
 		7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDetailSheet.swift; sourceTree = "<group>"; };
 		7E8C8F409F0CF628175F871A /* SupabaseConnectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConnectionRepository.swift; sourceTree = "<group>"; };
-		7FCB2D37CB3148229B212824 /* StoreKitStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitStub.swift; sourceTree = "<group>"; };
 		8076A22183ED487CFDEF936D /* RecurringMaterializerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringMaterializerTests.swift; sourceTree = "<group>"; };
 		8471BE14CD2D3FE30C85CA9F /* MonthlySpendHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlySpendHero.swift; sourceTree = "<group>"; };
 		85588239EC07E5388F8FDC37 /* LoamUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -204,6 +207,7 @@
 		B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareStatus.swift; sourceTree = "<group>"; };
 		BA8FD22752CACE19C604B0FD /* SplitExpenseMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseMode.swift; sourceTree = "<group>"; };
 		BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDateCodecTests.swift; sourceTree = "<group>"; };
+		BDC87E4454EB50A4BB3CDF92 /* SubscriptionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionStore.swift; sourceTree = "<group>"; };
 		C4D4F8162B4C53DEDDD87E91 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
 		D044ABEA612ACF723FCB7589 /* SupabaseBalanceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBalanceRepository.swift; sourceTree = "<group>"; };
@@ -232,8 +236,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				9B4011B594B12229FD7A8CDE /* PostHog in Frameworks */,
-				53733B401CC61047A6770B27 /* Sentry in Frameworks */,
-				AD5212BA06EA685377D320E4 /* Supabase in Frameworks */,
+				53733B401CC61047A6770B27 /* RevenueCat in Frameworks */,
+				AD5212BA06EA685377D320E4 /* RevenueCatUI in Frameworks */,
+				9381E1880681F62CA1F55033 /* Sentry in Frameworks */,
+				7326C39296D12B70AB7C7609 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -350,7 +356,7 @@
 			children = (
 				0A41DDF8012F3E8B600FD54F /* Auth */,
 				A64F5718641EC616AD4D43F7 /* DeepLinks */,
-				D6C23B4009C88F2999C07192 /* StoreKit */,
+				84D2147BAF88479699EF6841 /* Subscriptions */,
 				62F1CB0A3659025B41BD37A0 /* Telemetry */,
 			);
 			path = System;
@@ -400,6 +406,14 @@
 			path = Telemetry;
 			sourceTree = "<group>";
 		};
+		7259E0E2DCDAF031EAEB77DB /* Pro */ = {
+			isa = PBXGroup;
+			children = (
+				4F4BD07622490320E4F0F158 /* ProPaywall.swift */,
+			);
+			path = Pro;
+			sourceTree = "<group>";
+		};
 		7B47F43276E11DEDE59ECF19 /* LoamUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -418,6 +432,14 @@
 				5B3E9747997F48DEB84582E5 /* ExpenseRecord.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		84D2147BAF88479699EF6841 /* Subscriptions */ = {
+			isa = PBXGroup;
+			children = (
+				BDC87E4454EB50A4BB3CDF92 /* SubscriptionStore.swift */,
+			);
+			path = Subscriptions;
 			sourceTree = "<group>";
 		};
 		A64F5718641EC616AD4D43F7 /* DeepLinks */ = {
@@ -480,14 +502,6 @@
 			path = Domain;
 			sourceTree = "<group>";
 		};
-		D6C23B4009C88F2999C07192 /* StoreKit */ = {
-			isa = PBXGroup;
-			children = (
-				7FCB2D37CB3148229B212824 /* StoreKitStub.swift */,
-			);
-			path = StoreKit;
-			sourceTree = "<group>";
-		};
 		DF5953F2AC2F9D7468A09F38 /* Data */ = {
 			isa = PBXGroup;
 			children = (
@@ -522,6 +536,7 @@
 				486DA699C34AF42E12AB88E7 /* Auth */,
 				A7DFDEE741C3EE86CC156D48 /* Balances */,
 				00C5FC9B4ADC4F1ADA441288 /* Home */,
+				7259E0E2DCDAF031EAEB77DB /* Pro */,
 				C52490EC258E788E4090D312 /* Profile */,
 				368706140AA70A6F0620FF3F /* Root */,
 			);
@@ -603,6 +618,8 @@
 			name = Loam;
 			packageProductDependencies = (
 				00A593E299BD43D1BF871E34 /* PostHog */,
+				8391E5400EB4018D21691EE1 /* RevenueCat */,
+				73A037BC2A3E8DB7E3ACD9FE /* RevenueCatUI */,
 				C28A03436A972E37C1394EC9 /* Sentry */,
 				21BC58A6AC60D3347EDFACC0 /* Supabase */,
 			);
@@ -642,6 +659,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				50DB89FE8CA18CDF91ECDA22 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				E4E17280AD2A15C47A603C13 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				C19829A1E56FC5C25983CA87 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				055A5C1168ED6EEDE75B7E21 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
@@ -781,6 +799,7 @@
 				68242700360ED70E1E345E54 /* PendingExpenseCard.swift in Sources */,
 				F5FF7A97367CF369F639062C /* PendingExpensesSheet.swift in Sources */,
 				8DA69CF70DA4F7B2FA86D3F2 /* PlaceSearchController.swift in Sources */,
+				AB48FC73157D6F0E678978C5 /* ProPaywall.swift in Sources */,
 				094C1BE9805A819C5B7384FE /* ProfileView.swift in Sources */,
 				492940B3AEF2AA1E876FFC40 /* ProposeEditSheet.swift in Sources */,
 				DD08DEF35DF7DA66E8A7F4AE /* Recurring.swift in Sources */,
@@ -792,7 +811,7 @@
 				9C17EC91858B01F4269B3A96 /* SplitExpenseSheet.swift in Sources */,
 				4D29C94A68060E5A7429306C /* SplitFormSeed.swift in Sources */,
 				E945AE88CDBEC7522D37D688 /* SplitPartnerOption.swift in Sources */,
-				F3540CDF8143C9D908D2720C /* StoreKitStub.swift in Sources */,
+				464225EB57698979D84999AA /* SubscriptionStore.swift in Sources */,
 				186CE143959250B4610B0458 /* SupabaseActivityRepository.swift in Sources */,
 				7A801B98D5482C7621B591C3 /* SupabaseBalanceRepository.swift in Sources */,
 				33F1ED5603B3BB1925385A6D /* SupabaseClientProvider.swift in Sources */,
@@ -1369,6 +1388,14 @@
 				minimumVersion = 9.24.0;
 			};
 		};
+		E4E17280AD2A15C47A603C13 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.91.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1381,6 +1408,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 055A5C1168ED6EEDE75B7E21 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		73A037BC2A3E8DB7E3ACD9FE /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E4E17280AD2A15C47A603C13 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
+		8391E5400EB4018D21691EE1 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E4E17280AD2A15C47A603C13 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
 		};
 		C28A03436A972E37C1394EC9 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;

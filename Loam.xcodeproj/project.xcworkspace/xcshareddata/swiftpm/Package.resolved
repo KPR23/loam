@@ -1,5 +1,5 @@
 {
-  "originHash" : "139e31a894d4d8b52baa3f0e73d57282a5bb3c062fec4eadfe54efcff1412e63",
+  "originHash" : "f6784ff9a65037701258ac5ba681398a8e23b78aac799b7e8b0b1ca41ad5686a",
   "pins" : [
     {
       "identity" : "posthog-ios",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "27fcbed2c03cee304d534c975065a4d89b69275c",
         "version" : "3.82.0"
+      }
+    },
+    {
+      "identity" : "purchases-ios-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RevenueCat/purchases-ios-spm.git",
+      "state" : {
+        "revision" : "d654b8b85143c29e5bb73d0ff92f5f5766fbbedc",
+        "version" : "5.91.0"
       }
     },
     {

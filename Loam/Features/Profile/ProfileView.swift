@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import RevenueCatUI
 import SafariServices
 import Supabase
 import UIKit
@@ -203,6 +204,8 @@ struct ProfileView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
+
+                LoamProSection()
 
                 Section("Account") {
                     NavigationLink {
@@ -487,6 +490,40 @@ private struct CompactProfileLabelStyle: LabelStyle {
         HStack(spacing: 8) {
             configuration.icon
             configuration.title
+        }
+    }
+}
+
+/// Free accounts open the paywall; Pro accounts manage their plan in RevenueCat's Customer Center.
+private struct LoamProSection: View {
+    @EnvironmentObject private var subscriptions: SubscriptionStore
+    @State private var showsPaywall = false
+    @State private var showsCustomerCenter = false
+
+    var body: some View {
+        if subscriptions.isAvailable {
+            Section {
+                Button {
+                    if subscriptions.isPro {
+                        showsCustomerCenter = true
+                    } else {
+                        showsPaywall = true
+                    }
+                } label: {
+                    ProfileRow(
+                        subscriptions.isPro ? "Loam Pro" : "Upgrade to Loam Pro",
+                        symbol: "sparkles",
+                        color: .yellow,
+                        detail: subscriptions.isPro ? "Manage" : nil
+                    )
+                }
+                .proPaywall(isPresented: $showsPaywall)
+                .presentCustomerCenter(isPresented: $showsCustomerCenter)
+            } footer: {
+                if !subscriptions.isPro {
+                    Text("Unlimited connections, recurring expenses and notes.")
+                }
+            }
         }
     }
 }

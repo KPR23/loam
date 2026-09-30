@@ -6,3 +6,7 @@ POSTHOG_HOST = https:/$()/eu.i.posthog.com
 SENTRY_DSN = https:/$()/0e0e726194a581b5afab7405a491bb15@o4512135437942784.ingest.de.sentry.io/4512135445413968
 SUPABASE_URL = https:/$()/iazyvupjvtuiezugurvo.supabase.co
 SUPABASE_ANON_KEY = sb_publishable_EDBOAPJzAaWIO566_-3W5A_vMKI0JXd
+
+// RevenueCat public Apple SDK key (appl_…). Left empty, purchases are off and
+// every account stays on the free plan. Debug overrides it with the Test Store key.
+REVENUECAT_API_KEY =
