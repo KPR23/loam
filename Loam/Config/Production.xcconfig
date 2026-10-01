@@ -7,4 +7,4 @@ SENTRY_DSN = https:/$()/0e0e726194a581b5afab7405a491bb15@o4512135437942784.inges
 SUPABASE_URL = https:/$()/nffogbutnyevhhwnpgip.supabase.co
 SUPABASE_ANON_KEY = sb_publishable_aqRL55vWyTCfBG6KckShpg_z6hlZYD_
 // RevenueCat public Apple SDK key (appl_…) for App Store builds. Never a Test Store key.
-REVENUECAT_API_KEY =
+REVENUECAT_API_KEY = appl_ENsKxclJTrNmtVEXRhvmlviNrff
