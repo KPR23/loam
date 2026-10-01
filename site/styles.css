@@ -1,0 +1,171 @@
+:root {
+  --canvas: #f2f2f7;
+  --card: #ffffff;
+  --ink: #1c1c1e;
+  --muted: #6c6c70;
+  --accent: #007aff;
+  --separator: rgba(60, 60, 67, 0.12);
+  --radius: 12px;
+  --font: system-ui, -apple-system, "SF Pro Rounded", "Segoe UI", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light only;
+  background: #f2f2f7;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: #f2f2f7;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.wrap {
+  width: min(36rem, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2.5rem 0 3.5rem;
+}
+
+.brand {
+  display: inline-block;
+  margin-bottom: 2rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.brand:hover {
+  text-decoration: none;
+  color: var(--accent);
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.lede,
+.updated {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.panel {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 1.15rem 1.2rem;
+}
+
+.panel p {
+  margin: 0;
+}
+
+.panel p + p {
+  margin-top: 0.85rem;
+}
+
+.links {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.card-link {
+  display: block;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius);
+  background: var(--card);
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-link:hover {
+  text-decoration: none;
+}
+
+.card-link strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.15rem;
+}
+
+.card-link span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.email {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.nav-back {
+  display: inline-block;
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+footer {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--separator);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+h2 {
+  margin: 1.75rem 0 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.panel ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.panel li + li {
+  margin-top: 0.4rem;
+}
+
+.panel p + ul,
+.panel ul + p {
+  margin-top: 0.85rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
