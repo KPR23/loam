@@ -9,4 +9,4 @@ SUPABASE_ANON_KEY = sb_publishable_EDBOAPJzAaWIO566_-3W5A_vMKI0JXd
 
 // RevenueCat public Apple SDK key (appl_…). Left empty, purchases are off and
 // every account stays on the free plan. Debug overrides it with the Test Store key.
-REVENUECAT_API_KEY =
+REVENUECAT_API_KEY = appl_ENsKxclJTrNmtVEXRhvmlviNrff
