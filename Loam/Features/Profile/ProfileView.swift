@@ -519,10 +519,6 @@ private struct LoamProSection: View {
                 }
                 .proPaywall(isPresented: $showsPaywall)
                 .presentCustomerCenter(isPresented: $showsCustomerCenter)
-            } footer: {
-                if !subscriptions.isPro {
-                    Text("Unlimited connections, recurring expenses and notes.")
-                }
             }
         }
     }
