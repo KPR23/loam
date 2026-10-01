@@ -91,7 +91,7 @@ Only publishable keys belong in the app. Use a secret/service-role key only in a
 Apple processes payments; RevenueCat validates receipts and owns the `loam_pro` entitlement. Loam Free covers personal tracking and one connection. Pro unlocks inviting more connections, recurring expenses and notes. Only the person creating an invite needs Pro: redeeming a code is always free.
 
 - `REVENUECAT_API_KEY`: Debug uses the RevenueCat Test Store key. `Staging.xcconfig` (TestFlight) and `Production.xcconfig` need the public Apple key (`appl_…`). The SDK crashes Release builds that use a `test_` key. With no key, purchases are off and everyone stays on Free.
-- Dashboard: products `monthly`, `yearly` (two-week trial) and `lifetime`, all attached to `loam_pro`, in the current offering as the monthly, annual and lifetime packages. The paywall and Customer Center are designed there too.
+- Dashboard: products `monthly`, `yearly` (two-week trial) and `lifetime`, all attached to `loam_pro`, in the current offering as the monthly, annual and lifetime packages. Customer Center is designed there too; the paywall is built in `ProPaywall.swift` and reads prices and trials from the offering. It hides the lifetime package for now.
 - Backend: the app logs customers in with the lowercase Supabase user ID. `create_connection_invitation` checks `private.pro_entitlement`, which the `revenuecat-webhook` and `sync-pro-entitlement` functions fill from RevenueCat's REST API. Set the GitHub secrets `REVENUECAT_SECRET_API_KEY` (a v1 secret key) and `REVENUECAT_WEBHOOK_AUTH`. Point the RevenueCat webhook at `<project>/functions/v1/revenuecat-webhook` and set its Authorization header to the exact `REVENUECAT_WEBHOOK_AUTH` value.
 
 ### 5. Xcode Cloud / TestFlight
