@@ -52,11 +52,11 @@ final class SubscriptionStore: ObservableObject {
         isPro = false
         customerInfo = nil
         isSwitchingAccount = true
-        defer { if requestedUserId == .some(userId) { isSwitchingAccount = false } }
         do {
             if let userId {
                 let (info, _) = try await Purchases.shared.logIn(userId.uuidString.lowercased())
                 guard requestedUserId == .some(userId) else { return }
+                isSwitchingAccount = false
                 apply(info)
                 // Purchases made before sign-in move to this account; let the backend see them.
                 if isPro { await syncBackendEntitlement() }
@@ -65,9 +65,12 @@ final class SubscriptionStore: ObservableObject {
                     ? try await Purchases.shared.customerInfo()
                     : try await Purchases.shared.logOut()
                 guard requestedUserId == .some(nil) else { return }
+                isSwitchingAccount = false
                 apply(info)
             }
         } catch {
+            // RevenueCat still reports the previous account, so its updates stay ignored
+            // and this one stays on Free until a retry succeeds (the app retries on foreground).
             if requestedUserId == .some(userId) { requestedUserId = .none }
             LoamErrorCapture.capture("subscriptions.identify_failed")
         }
