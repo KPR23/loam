@@ -78,13 +78,15 @@ case "${1:-}" in
     shift
     [[ $# -gt 0 ]] || die "usage: release.sh pick <commit>…"
     branch="$(release_branch)"
+    # A detached checkout (e.g. a tag) has no branch name, so fall back to its commit.
     previous="$(git branch --show-current)"
+    previous_commit="$(git rev-parse HEAD)"
     git diff --quiet && git diff --cached --quiet || die "commit or stash your changes first"
     git switch --quiet "$branch" 2> /dev/null || git switch --quiet --track "origin/$branch"
     git pull --quiet --ff-only
     git cherry-pick -x "$@"
     git push --quiet origin "$branch"
-    git switch --quiet "$previous"
+    if [[ -n $previous ]]; then git switch --quiet "$previous"; else git switch --quiet --detach "$previous_commit"; fi
     echo "Pushed the fix to $branch. Approve the production deploy, then submit the new build."
     ;;
 
