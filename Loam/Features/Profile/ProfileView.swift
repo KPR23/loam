@@ -502,7 +502,7 @@ private struct CompactProfileLabelStyle: LabelStyle {
     }
 }
 
-/// The upgrade prompt at the top of Profile. Only free accounts see it.
+/// The upgrade banner at the top of Profile. Only free accounts see it.
 private struct ProUpgradeSection: View {
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var showsPaywall = false
@@ -511,18 +511,61 @@ private struct ProUpgradeSection: View {
         if subscriptions.isAvailable && !subscriptions.isPro {
             Section {
                 Button { showsPaywall = true } label: {
-                    HStack {
-                        Text("Upgrade to Loam Pro")
-                            .font(.body)
-                            .foregroundStyle(HomeTheme.text)
-                        Spacer(minLength: 8)
-                        ProMark(height: 24)
-                            .accessibilityHidden(true)
-                    }
+                    ProUpgradeBanner()
                 }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
                 .proPaywall(isPresented: $showsPaywall)
             }
         }
+    }
+}
+
+/// A clay tile in the PRO mark's style: a pale accent face lit from the top left,
+/// with a slightly darker edge showing below it.
+private struct ProUpgradeBanner: View {
+    var body: some View {
+        let accent = HomeTheme.accent
+        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Upgrade to Loam Pro")
+                    .font(.system(.title3, design: .rounded).weight(.heavy))
+                    .foregroundStyle(
+                        accent.shadow(.inner(color: .white.opacity(0.55), radius: 1, x: 0.5, y: 1))
+                    )
+                Text("Share every bill, with everyone")
+                    .font(.subheadline)
+                    .foregroundStyle(accent.opacity(0.75))
+            }
+            Spacer(minLength: 8)
+            ProMark(height: 34)
+                .shadow(color: accent.opacity(0.18), radius: 6, y: 4)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, minHeight: 104)
+        .background {
+            ZStack {
+                // Thickness: a slightly darker copy just below the face.
+                shape
+                    .fill(ProMark.pastel(of: accent, whiteness: 0.72))
+                    .offset(y: 4)
+                // Face: lit from the top left, shaded toward the bottom right, like soft plastic.
+                shape
+                    .fill(
+                        ProMark.pastel(of: accent)
+                            .shadow(.inner(color: .white.opacity(0.9), radius: 6, x: 3, y: 4))
+                            .shadow(.inner(color: accent.opacity(0.22), radius: 10, x: -4, y: -6))
+                    )
+            }
+        }
+        .padding(.bottom, 4)
+        .contentShape(shape)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 }
 

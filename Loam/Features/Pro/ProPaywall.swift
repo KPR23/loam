@@ -430,7 +430,7 @@ struct ProMark: View {
     }
 
     /// The accent mixed toward white, for the clay body.
-    private static func pastel(of color: Color, whiteness: CGFloat = 0.84) -> Color {
+    static func pastel(of color: Color, whiteness: CGFloat = 0.84) -> Color {
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
         UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
         let mix = { (channel: CGFloat) in channel + (1 - channel) * whiteness }
