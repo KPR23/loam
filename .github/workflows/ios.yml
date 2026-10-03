@@ -22,11 +22,11 @@ concurrency:
 
 jobs:
   # A compile check on every PR, so a broken build shows up before an rc tag reaches Xcode Cloud.
-  # Tests stay behind the label to save macOS minutes. Adding a label reruns the workflow,
-  # and the test job builds anyway, so labeled events skip this job.
+  # Tests stay behind the label to save macOS minutes. Adding a label reruns the workflow and
+  # cancels this job, so it only skips a labeled run when the test job builds instead.
   build:
     name: Build
-    if: github.event.action != 'labeled'
+    if: github.event.action != 'labeled' || !contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
     runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 20
 
