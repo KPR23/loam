@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
+import { appleClientSecretExpiry, appleClientSecretNeedsRenewal } from "../_shared/apple_client_secret.ts";
 
 function constantTimeEqual(left: string, right: string): boolean {
   const encoder = new TextEncoder();
@@ -29,6 +30,8 @@ Deno.serve(async (request) => {
   const emailEnabled = Deno.env.get("DELETION_EMAIL_ENABLED") === "true";
   if (emailEnabled && Number(health.email_failures) > 0) alerts.push("terminal_email_delivery_failure");
   if (health.oldest_pending && now - Date.parse(health.oldest_pending) > 15 * 60_000) alerts.push("request_pending_over_15m");
-  const body = { ok: alerts.length === 0, alerts, email_enabled: emailEnabled, last_heartbeat: health.last_heartbeat, last_notifier_heartbeat: health.last_notifier_heartbeat, oldest_pending: health.oldest_pending, terminal_failures: Number(health.terminal_failures), email_failures: Number(health.email_failures), retry_count: Number(health.retry_count), stage_counts: health.stage_counts ?? {}, pending_count: Number(health.pending_count) };
+  const appleClientSecret = Deno.env.get("APPLE_CLIENT_SECRET");
+  if (appleClientSecretNeedsRenewal(appleClientSecret)) alerts.push("apple_client_secret_expiring");
+  const body = { ok: alerts.length === 0, alerts, email_enabled: emailEnabled, last_heartbeat: health.last_heartbeat, last_notifier_heartbeat: health.last_notifier_heartbeat, oldest_pending: health.oldest_pending, terminal_failures: Number(health.terminal_failures), email_failures: Number(health.email_failures), retry_count: Number(health.retry_count), stage_counts: health.stage_counts ?? {}, pending_count: Number(health.pending_count), apple_client_secret_expires_at: appleClientSecretExpiry(appleClientSecret)?.toISOString() ?? null };
   return Response.json(body, { status: alerts.length ? 503 : 200 });
 });
