@@ -21,13 +21,13 @@ Configure an external uptime/heartbeat service to make an HTTPS `GET` every minu
 
 `https://<project-ref>.supabase.co/functions/v1/account-deletion-monitor`
 
-Send `X-Deletion-Monitor-Key: <DELETION_MONITOR_KEY>`. Treat any response other than HTTP 200 as an alert. The endpoint returns HTTP 503 for either missing five-minute worker heartbeat, any terminal deletion failure, or a request pending for more than fifteen minutes. It includes whether email is enabled (always false for now), last worker and notifier heartbeats, pending count, oldest request, and failure counts. Keep the monitor outside Supabase so a stopped `pg_cron` scheduler is still detected.
+Send `X-Deletion-Monitor-Key: <DELETION_MONITOR_KEY>`. Treat any response other than HTTP 200 as an alert. The endpoint returns HTTP 503 for either missing five-minute worker heartbeat, any terminal deletion failure, a request pending for more than fifteen minutes, or an `APPLE_CLIENT_SECRET` within 30 days of expiry (`apple_client_secret_expiring`, with the date in `apple_client_secret_expires_at`). It includes whether email is enabled (always false for now), last worker and notifier heartbeats, pending count, oldest request, and failure counts. Keep the monitor outside Supabase so a stopped `pg_cron` scheduler is still detected.
 
 Set a five-minute first-check grace period after deployment, then page the operator configured in that external monitoring service on any non-200 response.
 
 ## Renewing the Apple client secret
 
-`APPLE_CLIENT_SECRET` is a JWT signed with the Sign in with Apple key `GXS83A2F8N`, and Apple caps it at six months. Without a valid one, the worker can't revoke the user's Apple token and deletions stall.
+`APPLE_CLIENT_SECRET` is a JWT signed with the Sign in with Apple key `GXS83A2F8N`, and Apple caps it at six months. Without a valid one, the worker can't revoke the user's Apple token and deletions stall. The monitor alerts 30 days before expiry, deploys warn from 30 days and fail inside 7.
 
 The key is `~/.appstoreconnect/private_keys/AuthKey_GXS83A2F8N.p8` on the maintainer's Mac. Apple doesn't allow downloading it again, so keep that file backed up. To renew, sign a new 180-day secret and store it in both environments:
 
