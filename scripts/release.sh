@@ -63,7 +63,7 @@ case "${1:-}" in
     git rev-parse --verify --quiet "origin/$branch" > /dev/null && die "$branch already exists"
     git tag --list "v$version" | grep -q . && die "v$version is already tagged; bump MARKETING_VERSION on main first"
     git push --quiet origin "origin/main:refs/heads/$branch"
-    echo "Pushed $branch. Approve the production deploy in GitHub Actions, then submit Xcode Cloud's build for review."
+    echo "Pushed $branch, which deploys production now. Once that run and Xcode Cloud's build finish, submit the build for review."
 
     next="$(next_minor "$version")"
     bump="chore/version-$next"
@@ -87,7 +87,7 @@ case "${1:-}" in
     git cherry-pick -x "$@"
     git push --quiet origin "$branch"
     if [[ -n $previous ]]; then git switch --quiet "$previous"; else git switch --quiet --detach "$previous_commit"; fi
-    echo "Pushed the fix to $branch. Approve the production deploy, then submit the new build."
+    echo "Pushed the fix to $branch, which deploys production now. Once that run finishes, submit the new build."
     ;;
 
   ship)
