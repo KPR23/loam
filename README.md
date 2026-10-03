@@ -98,34 +98,40 @@ Apple processes payments; RevenueCat validates receipts and owns the `loam_pro` 
 
 The shared `Loam` scheme archives with the `Production` configuration. The `Loam-TestFlight` scheme archives with the `TestFlight` configuration, so TestFlight builds use staging while App Store distribution builds use production.
 
-Database migrations are deployed by `.github/workflows/supabase.yml`: pushes to `main` apply pending migrations to staging, and pushes to a `release/**` branch apply them to production. Configure these GitHub Actions secrets before enabling the workflow:
+Database migrations and edge functions are deployed by `.github/workflows/supabase.yml`: pushes to `main` deploy staging, and pushes to a `release/**` branch deploy production. Each GitHub environment (`staging`, `production`) needs:
 
-- `SUPABASE_ACCESS_TOKEN`
-- `SUPABASE_STAGING_DB_PASSWORD`
-- `SUPABASE_PRODUCTION_DB_PASSWORD`
+- the `SUPABASE_PROJECT_REF` variable, naming its Supabase project
+- its DB password secret (`SUPABASE_STAGING_DB_PASSWORD` or `SUPABASE_PRODUCTION_DB_PASSWORD`) and the function secrets the deploy job validates
+- `SUPABASE_ACCESS_TOKEN`, which can live at the repository level
 
-Keep production migration deployment behind a required GitHub `production` environment approval if you want a manual gate. Apply and test migrations on staging before cutting a release branch.
+Every function under `supabase/functions` deploys automatically, so a new function needs no workflow change.
 
 Xcode Cloud sets the build number, so `CURRENT_PROJECT_VERSION` in `project.yml` only applies to local builds. `MARKETING_VERSION` must match the version in App Store Connect.
 
+Xcode Cloud workflows are configured in App Store Connect, not in this repo. Keep them matching the table below: `Loam-TestFlight` starts on tags matching `rc/*`, and `Loam` starts on branches matching `release/*`.
+
 ### 6. Releasing
 
-`main` is the trunk. Every release is a short-lived branch, and tags mark what shipped.
+`main` is the trunk. Every release is a short-lived branch, and tags mark what shipped. `scripts/release.sh` runs each step.
 
 | Ref | Deploys |
 |---|---|
 | push to `main` | staging migrations and functions, the support site |
 | tag `rc/x.y.z-N` | Xcode Cloud archives `Loam-TestFlight` (staging) for internal TestFlight |
 | push to `release/x.y.z` | production migrations and functions, then Xcode Cloud archives `Loam` (production) for the App Store |
-| tag `vx.y.z` | nothing; marks the build Apple approved |
+| tag `vx.y.z` | a GitHub release with generated notes; marks the build Apple approved |
 
-1. Set `MARKETING_VERSION` to `x.y.z` on `main` and create version `x.y.z` in App Store Connect.
-2. Test with `rc/x.y.z-N` tags until the build is ready.
-3. Branch `release/x.y.z` from `main` and push it. Wait for the production deploy and the Xcode Cloud build, then submit that build for review.
-4. If Apple rejects it, fix on `release/x.y.z` and push again for a new build. Bring the fix to `main` too.
-5. Once approved, tag the reviewed commit `vx.y.z`, push the tag and merge `release/x.y.z` into `main`.
+1. Create version `x.y.z` in App Store Connect. `main` already carries it in `MARKETING_VERSION`.
+2. `scripts/release.sh rc` tags the next `rc/x.y.z-N` on `origin/main`. Repeat until the TestFlight build is ready.
+3. `scripts/release.sh cut` pushes `release/x.y.z`, which deploys production, and opens a PR moving `main` to the next minor version. Wait for the deploy and the Xcode Cloud build, then submit that build for review.
+4. If Apple rejects it, merge the fix into `main` first, then `scripts/release.sh pick <commit>` cherry-picks it onto the release branch for a new build. Fixes never land on the release branch alone, so it never merges back.
+5. Once approved, `scripts/release.sh ship` tags `vx.y.z`, publishes the GitHub release and deletes the branch.
 
-Hotfixes branch `release/x.y.(z+1)` from the `vx.y.z` tag.
+Hotfixes: `scripts/release.sh hotfix` branches `release/x.y.(z+1)` from the latest `vx.y.z` tag and sets its version. Merge the fix into `main`, `pick` it, submit, then `ship`.
+
+Every push to a release branch migrates production at once. GitHub only offers required reviewers on environments with a paid plan for private repos, so there is no approval gate: push to release branches through the script. Production migrates before Apple approves the build, while the App Store version still runs against it, so migrations must be backward compatible. Add columns, tables and functions in one release and remove the old ones in a later release.
+
+`main` accepts changes through pull requests that pass `verify-database` and `test-functions`. Merges rebase or squash, so history stays linear, and merged branches are deleted. Release branches reject force pushes.
 
 **Export compliance:** `Info.plist` sets `ITSAppUsesNonExemptEncryption = false` (HTTPS/Supabase only — no custom crypto). That skips the manual “App Encryption Documentation” step in App Store Connect and prevents TestFlight post-actions from hanging while waiting for compliance.
 
