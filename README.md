@@ -101,6 +101,7 @@ The shared `Loam` scheme archives with the `Production` configuration. The `Loam
 Database migrations and edge functions are deployed by `.github/workflows/supabase.yml`: pushes to `main` deploy staging, and pushes to a `release/**` branch deploy production. Each GitHub environment (`staging`, `production`) needs:
 
 - the `SUPABASE_PROJECT_REF` variable, naming its Supabase project
+- in `staging` only, the `ANALYTICS_ENABLED` variable set to `false`, because only App Store builds send analytics; `production` then needs the PostHog secrets and staging doesn't
 - its DB password secret (`SUPABASE_STAGING_DB_PASSWORD` or `SUPABASE_PRODUCTION_DB_PASSWORD`) and the function secrets the deploy job validates
 - `SUPABASE_ACCESS_TOKEN`, which can live at the repository level
 
