@@ -37,6 +37,9 @@ jobs:
           fi
           echo "$HOME/bin" >> "$GITHUB_PATH"
           echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
+      - name: Pin the Postgres image
+        # v2.99.0 defaults to 17.6.1.107, which segfaults when a role calls a function it can't execute.
+        run: mkdir -p supabase/.temp && printf 17.6.1.166 > supabase/.temp/postgres-version
       - name: Replay migrations on a clean database
         # The self-hosted runner is too slow for storage to pass the CLI's health-check window,
         # so it skips services the database tests never touch.
