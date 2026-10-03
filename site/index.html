@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Loam — KPR's Lab</title>
-    <meta name="description" content="Privacy Policy, Terms of Use and Support for the Loam iOS app." />
+    <meta name="description" content="Loam tracks what you spend and who owes whom. Join the waitlist for the iOS launch." />
+    <meta property="og:title" content="Loam" />
+    <meta property="og:description" content="Personal spending and shared balances for iOS. Join the waitlist." />
+    <meta name="twitter:card" content="summary" />
     <meta name="color-scheme" content="light" />
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -14,6 +17,17 @@
 
       <h1>Loam</h1>
       <p class="lede">Personal spending and shared balances for iOS.</p>
+
+      <form class="panel waitlist" id="waitlist" novalidate>
+        <label for="waitlist-email"><strong>Join the waitlist</strong></label>
+        <p class="muted">Get one email when Loam launches. Nothing else.</p>
+        <div class="waitlist-row">
+          <input id="waitlist-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+          <button type="submit">Notify me</button>
+        </div>
+        <p class="waitlist-status" role="status" aria-live="polite"></p>
+        <p class="muted">See the <a href="/loam/privacy/">Privacy Policy</a> for how we use your email.</p>
+      </form>
 
       <nav class="links" aria-label="Legal pages">
         <a class="card-link" href="/loam/privacy/">
@@ -36,5 +50,41 @@
 
       <footer>Kacper Zabłudowski / KPR's Lab</footer>
     </main>
+    <script>
+      // The publishable key only allows calling join_waitlist; signups land in a private table.
+      const supabaseUrl = "https://wheesnckvlylwwrvzcly.supabase.co";
+      const supabaseKey = "sb_publishable_46r1lQV6zVXKT418GCWjow_7il0iT_R";
+      const form = document.getElementById("waitlist");
+      const status = form.querySelector(".waitlist-status");
+      const button = form.querySelector("button");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const email = form.email.value.trim();
+        if (!form.email.checkValidity() || !email) {
+          status.textContent = "Enter a valid email address.";
+          return;
+        }
+        button.disabled = true;
+        status.textContent = "Joining…";
+        try {
+          const response = await fetch(`${supabaseUrl}/rest/v1/rpc/join_waitlist`, {
+            method: "POST",
+            headers: { apikey: supabaseKey, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              p_email: email,
+              p_source: new URLSearchParams(location.search).get("ref") || document.referrer.split("/")[2] || null,
+            }),
+          });
+          if (!response.ok) throw new Error(String(response.status));
+          form.reset();
+          status.textContent = "You’re on the list. See you at launch.";
+        } catch {
+          status.textContent = "Something went wrong. Try again in a moment.";
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
   </body>
 </html>
