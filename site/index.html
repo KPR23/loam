@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Loam — KPR's Lab</title>
-    <meta name="description" content="Loam tracks what you spend and who owes whom. Join the waitlist for the iOS launch." />
+    <meta name="description" content="Loam tracks what you spend and who owes whom. Join the waitlist for early access and a free week of Loam Pro." />
     <meta property="og:title" content="Loam" />
-    <meta property="og:description" content="Personal spending and shared balances for iOS. Join the waitlist." />
+    <meta property="og:description" content="Personal spending and shared balances for iOS. Get early access and a free week of Loam Pro." />
     <meta name="twitter:card" content="summary" />
     <meta name="color-scheme" content="light" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -22,14 +22,16 @@
       <p class="lede">Personal spending and shared balances for iOS.</p>
 
       <form class="panel waitlist" id="waitlist" novalidate>
-        <label for="waitlist-email"><strong>Join the waitlist</strong></label>
-        <p class="muted">Get one email when Loam launches. Nothing else.</p>
+        <label for="waitlist-email"><strong>Get early access</strong></label>
+        <p class="muted">Try new features and releases before anyone else, and get a week of Loam Pro free as
+          a thank-you.</p>
         <div class="waitlist-row">
           <input id="waitlist-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
-          <button type="submit">Notify me</button>
+          <button type="submit">Join</button>
         </div>
         <p class="waitlist-status" role="status" aria-live="polite"></p>
-        <p class="muted">See the <a href="/loam/privacy/">Privacy Policy</a> for how we use your email.</p>
+        <p class="muted">Your invite arrives as an email from Apple’s TestFlight, not from us, so keep an eye out
+          for it. See the <a href="/loam/privacy/">Privacy Policy</a> for how we use your email.</p>
       </form>
 
       <nav class="links" aria-label="Legal pages">
@@ -81,7 +83,7 @@
           });
           if (!response.ok) throw new Error(String(response.status));
           form.reset();
-          status.textContent = "You’re on the list. See you at launch.";
+          status.textContent = "You’re on the list. Watch for your TestFlight invite.";
         } catch {
           status.textContent = "Something went wrong. Try again in a moment.";
         } finally {
