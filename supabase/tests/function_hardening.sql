@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..3' as plan;
+select '1..4' as plan;
 
 do $$ declare bad text; begin
  select string_agg(p.oid::regprocedure::text,', ') into bad
@@ -41,4 +41,13 @@ do $$ declare bad text; begin
  assert bad is null,'Private functions executable by clients: '||bad;
 end $$;
 select 'ok 3 - only policy helpers in private are executable by clients' as result;
+
+-- PUBLIC's EXECUTE reaches anon too, so every new public function needs an explicit revoke.
+do $$ declare bad text; begin
+ select string_agg(p.oid::regprocedure::text,', ') into bad
+ from pg_proc p where p.pronamespace='public'::regnamespace
+   and has_function_privilege('anon',p.oid,'EXECUTE') and p.proname<>'join_waitlist';
+ assert bad is null,'Public functions executable without signing in: '||bad;
+end $$;
+select 'ok 4 - only the waitlist is callable without signing in' as result;
 rollback;
