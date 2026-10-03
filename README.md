@@ -98,15 +98,34 @@ Apple processes payments; RevenueCat validates receipts and owns the `loam_pro` 
 
 The shared `Loam` scheme archives with the `Production` configuration. The `Loam-TestFlight` scheme archives with the `TestFlight` configuration, so TestFlight builds use staging while App Store distribution builds use production.
 
-Database migrations are deployed by `.github/workflows/supabase.yml`: pushes to `dev` apply pending migrations to staging, and pushes to `main` apply pending migrations to production. Configure these GitHub Actions secrets before enabling the workflow:
+Database migrations are deployed by `.github/workflows/supabase.yml`: pushes to `main` apply pending migrations to staging, and pushes to a `release/**` branch apply them to production. Configure these GitHub Actions secrets before enabling the workflow:
 
 - `SUPABASE_ACCESS_TOKEN`
 - `SUPABASE_STAGING_DB_PASSWORD`
 - `SUPABASE_PRODUCTION_DB_PASSWORD`
 
-Keep production migration deployment behind a required GitHub `production` environment approval if you want a manual gate. Apply and test migrations on staging before merging them to `main`.
+Keep production migration deployment behind a required GitHub `production` environment approval if you want a manual gate. Apply and test migrations on staging before cutting a release branch.
 
-Local builds use the committed `CURRENT_PROJECT_VERSION` in `project.yml`.
+Xcode Cloud sets the build number, so `CURRENT_PROJECT_VERSION` in `project.yml` only applies to local builds. `MARKETING_VERSION` must match the version in App Store Connect.
+
+### 6. Releasing
+
+`main` is the trunk. Every release is a short-lived branch, and tags mark what shipped.
+
+| Ref | Deploys |
+|---|---|
+| push to `main` | staging migrations and functions, the support site |
+| tag `rc/x.y.z-N` | Xcode Cloud archives `Loam-TestFlight` (staging) for internal TestFlight |
+| push to `release/x.y.z` | production migrations and functions, then Xcode Cloud archives `Loam` (production) for the App Store |
+| tag `vx.y.z` | nothing; marks the build Apple approved |
+
+1. Set `MARKETING_VERSION` to `x.y.z` on `main` and create version `x.y.z` in App Store Connect.
+2. Test with `rc/x.y.z-N` tags until the build is ready.
+3. Branch `release/x.y.z` from `main` and push it. Wait for the production deploy and the Xcode Cloud build, then submit that build for review.
+4. If Apple rejects it, fix on `release/x.y.z` and push again for a new build. Bring the fix to `main` too.
+5. Once approved, tag the reviewed commit `vx.y.z`, push the tag and merge `release/x.y.z` into `main`.
+
+Hotfixes branch `release/x.y.(z+1)` from the `vx.y.z` tag.
 
 **Export compliance:** `Info.plist` sets `ITSAppUsesNonExemptEncryption = false` (HTTPS/Supabase only — no custom crypto). That skips the manual “App Encryption Documentation” step in App Store Connect and prevents TestFlight post-actions from hanging while waiting for compliance.
 
