@@ -112,8 +112,17 @@ jobs:
           fi
           echo "$HOME/bin" >> "$GITHUB_PATH"
           echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
-      - name: Require the project ref
-        run: test -n "$PROJECT_REF" || { echo "Set the SUPABASE_PROJECT_REF variable on this environment." >&2; exit 1; }
+      # The app's xcconfig is the other source of the project ref. A mismatch would migrate one
+      # project while the build ships against another.
+      - name: Check the project ref matches the app
+        env:
+          XCCONFIG: Loam/Config/${{ github.ref_name == 'main' && 'Staging' || 'Production' }}.xcconfig
+        run: |
+          test -n "$PROJECT_REF" || { echo "Set the SUPABASE_PROJECT_REF variable on this environment." >&2; exit 1; }
+          grep '^SUPABASE_URL' "$XCCONFIG" | grep -Fq "/$PROJECT_REF.supabase.co" || {
+            echo "SUPABASE_PROJECT_REF ($PROJECT_REF) does not match SUPABASE_URL in $XCCONFIG." >&2
+            exit 1
+          }
       - name: Link project
         run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
       - name: Validate and install function secrets
