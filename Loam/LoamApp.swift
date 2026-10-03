@@ -56,15 +56,18 @@ struct LoamApp: App {
             .task {
                 LegacyDemoFixtureCleanup.removeIfNeeded()
                 await authSession.bootstrap()
+                // Analytics resume at launch as the last account left them; a launch that
+                // ends signed out changes no user ID, so settle it here.
+                Telemetry.setUser(accountId)
             }
             .task(id: authSession.userId) {
                 await connectionStore.refresh(userId: authSession.userId)
             }
-            .task(id: subscriptionAccountId) {
-                await subscriptionStore.identify(userId: subscriptionAccountId)
+            .task(id: accountId) {
+                await subscriptionStore.identify(userId: accountId)
             }
-            .onChange(of: authSession.userId) { _, userId in
-                Telemetry.setUser(authSession.usesDemoMode ? nil : userId)
+            .onChange(of: authSession.userId) { _, _ in
+                Telemetry.setUser(accountId)
             }
             .onChange(of: timeZoneIdentifier) { oldIdentifier, _ in
                 Task {
@@ -79,14 +82,14 @@ struct LoamApp: App {
                     Task {
                         await authSession.refreshDeletionStatus()
                         await connectionStore.refresh(userId: authSession.userId)
-                        await subscriptionStore.identify(userId: subscriptionAccountId)
+                        await subscriptionStore.identify(userId: accountId)
                     }
                 }
             }
     }
 
-    /// Demo IDs are not real accounts, so their purchases stay on an anonymous customer.
-    private var subscriptionAccountId: UUID? {
+    /// Demo IDs are not real accounts, so their purchases and telemetry stay anonymous.
+    private var accountId: UUID? {
         authSession.usesDemoMode ? nil : authSession.userId
     }
 }
