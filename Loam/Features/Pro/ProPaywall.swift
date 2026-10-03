@@ -42,8 +42,6 @@ private struct ProPaywallView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
-
     private var selected: Package? {
         packages.first { $0.identifier == selectedId }
     }
@@ -227,7 +225,9 @@ private struct ProPaywallView: View {
                 }
                 .disabled(isBusy)
 
-                Link("Terms of Use", destination: Self.termsURL)
+                // Short labels keep all three on one line on the smallest iPhones.
+                Link("Terms", destination: LegalPages.termsOfUse)
+                Link("Privacy", destination: LegalPages.privacyPolicy)
             }
             .padding(.top, 6)
             .font(.footnote.weight(.medium))
