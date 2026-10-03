@@ -21,6 +21,10 @@ select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
 select set_config('test.code',(select code from public.create_connection_invitation()),true);
 select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
 do $$ begin assert (select error_code is null from public.redeem_connection_code(current_setting('test.code'))),'First redeem failed'; end $$;
+-- B now has a connection, so inviting again needs Pro.
+reset role;
+select public.record_pro_entitlement(current_setting('test.b')::uuid,true,null);
+set local role authenticated;
 select set_config('test.code',(select code from public.create_connection_invitation()),true);
 select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
 do $$ begin
