@@ -76,6 +76,9 @@ Deno.serve(async (request) => {
           if (removeError) throw new Error("avatar_remove_failed");
         }
         await advance(admin, job, files?.length ? "delete_avatars" : "delete_analytics", true);
+      } else if (job.stage === "delete_analytics" && Deno.env.get("ANALYTICS_ENABLED") === "false") {
+        // Only App Store builds send analytics, so this environment has nothing to erase.
+        await advance(admin, job, "delete_auth", true);
       } else if (job.stage === "delete_analytics") {
         const projectId = Deno.env.get("POSTHOG_PROJECT_ID"), apiKey = Deno.env.get("POSTHOG_PERSONAL_API_KEY");
         if (!projectId || !apiKey) throw new Error("posthog_configuration_missing");
