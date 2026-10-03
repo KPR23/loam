@@ -126,9 +126,12 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 }
 
 struct ProfileView: View {
-    private enum FeaturebaseDestination: String, Identifiable {
+    /// Pages Profile opens in an in-app browser.
+    private enum WebDestination: String, Identifiable {
         case changelog
         case feedback
+        case privacyPolicy
+        case termsOfUse
 
         var id: String { rawValue }
 
@@ -138,6 +141,10 @@ struct ProfileView: View {
                 URL(string: "https://kprslab.featurebase.app/changelog")!
             case .feedback:
                 URL(string: "https://kprslab.featurebase.app")!
+            case .privacyPolicy:
+                LegalPages.privacyPolicy
+            case .termsOfUse:
+                LegalPages.termsOfUse
             }
         }
     }
@@ -154,7 +161,7 @@ struct ProfileView: View {
     @State private var analyticsConsent = false
     @State private var showsSignOut = false
     @State private var isSigningOut = false
-    @State private var featurebaseDestination: FeaturebaseDestination?
+    @State private var webDestination: WebDestination?
     @State private var showsConnectionCodePrompt = false
 
     var body: some View {
@@ -251,13 +258,13 @@ struct ProfileView: View {
 
                 Section {
                     Button {
-                        featurebaseDestination = .changelog
+                        webDestination = .changelog
                     } label: {
                         ProfileRow("Changelog", symbol: "newspaper", color: .purple)
                     }
                     .accessibilityHint("Opens Loam's changelog")
                     Button {
-                        featurebaseDestination = .feedback
+                        webDestination = .feedback
                     } label: {
                         ProfileRow("Give feedback", symbol: "star", color: .orange)
                     }
@@ -271,6 +278,18 @@ struct ProfileView: View {
                     } label: {
                         ProfileRow("About the app", symbol: "app.badge", color: .purple)
                     }
+                    Button {
+                        webDestination = .privacyPolicy
+                    } label: {
+                        ProfileRow("Privacy Policy", symbol: "hand.raised", color: .blue)
+                    }
+                    .accessibilityHint("Opens Loam's privacy policy")
+                    Button {
+                        webDestination = .termsOfUse
+                    } label: {
+                        ProfileRow("Terms of Use", symbol: "doc.text", color: .gray)
+                    }
+                    .accessibilityHint("Opens Loam's terms of use")
                 }
 
                 Section {
@@ -331,7 +350,7 @@ struct ProfileView: View {
             } message: {
                 Text("You can sign back in whenever you’re ready.")
             }
-            .sheet(item: $featurebaseDestination) { destination in
+            .sheet(item: $webDestination) { destination in
                 SafariView(url: destination.url)
                     .ignoresSafeArea()
             }

@@ -80,6 +80,7 @@
 		ACDEE6074DB240C61F8BF7F1 /* ExpenseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */; };
 		AD5212BA06EA685377D320E4 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73A037BC2A3E8DB7E3ACD9FE /* RevenueCatUI */; };
 		B2F75633AB5044BB813FD2A1 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */; };
+		B69CB7C679EF32139B0D1051 /* LegalPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CEBE465F07788ACD889DE61 /* LegalPages.swift */; };
 		BC595E14561F6D076C40E8C5 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07214E88835854CA791C14E /* BalanceStore.swift */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
 		CF1A3CBDC16DCE533EE59653 /* SplitExpenseSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87AE244F130211B61887F30 /* SplitExpenseSection.swift */; };
@@ -149,6 +150,7 @@
 		230D7634A0B21CFBD5ABD83B /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceSimplifier.swift; sourceTree = "<group>"; };
 		2945E6BB2BB8D085C50A455A /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
+		2CEBE465F07788ACD889DE61 /* LegalPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalPages.swift; sourceTree = "<group>"; };
 		2F0DE1D0BCC3A80DCC995B92 /* LocalExpenseRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExpenseRepositoryTests.swift; sourceTree = "<group>"; };
 		2FB9AB5930F0CF7A98C86DEC /* ExpenseEditProposal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseEditProposal.swift; sourceTree = "<group>"; };
 		311E61CE00D043E5896AF6E2 /* BalancesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalancesView.swift; sourceTree = "<group>"; };
@@ -304,6 +306,7 @@
 				B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */,
 				D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */,
 				A74E2AB24186B00FD500CE4D /* Formatters.swift */,
+				2CEBE465F07788ACD889DE61 /* LegalPages.swift */,
 				F6CD835D39E131CEAA0B24E8 /* Money.swift */,
 				5EF5AC0E5465E709F9F1814D /* PlaceSearchController.swift */,
 				20C428C07622150791184237 /* Recurring.swift */,
@@ -792,6 +795,7 @@
 				20488F784A448D5470EF4707 /* HomeTheme.swift in Sources */,
 				FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */,
 				7D1E0A1752A4A9F354C2F806 /* LegacyDemoFixtureCleanup.swift in Sources */,
+				B69CB7C679EF32139B0D1051 /* LegalPages.swift in Sources */,
 				A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */,
 				16FE4CEDBA2F073370C476C9 /* LocalActivityRepository.swift in Sources */,
 				379E7F4AEA0164D1B6E740E7 /* LocalBalanceRepository.swift in Sources */,
