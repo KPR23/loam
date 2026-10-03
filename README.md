@@ -110,6 +110,8 @@ Xcode Cloud sets the build number, so `CURRENT_PROJECT_VERSION` in `project.yml`
 
 Xcode Cloud workflows are configured in App Store Connect, not in this repo. Keep them matching the table below: `Loam-TestFlight` starts on tags matching `rc/*`, and `Loam` starts on branches matching `release/*`.
 
+After each archive, `ci_scripts/ci_post_xcodebuild.sh` uploads the dSYMs to Sentry, so both workflows need a secret `SENTRY_AUTH_TOKEN` environment variable holding a Sentry organization token. Without it the archive fails rather than shipping a build Sentry can't symbolicate.
+
 ### 6. Releasing
 
 `main` is the trunk. Every release is a short-lived branch, and tags mark what shipped. `scripts/release.sh` runs each step.
