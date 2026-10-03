@@ -143,16 +143,10 @@ jobs:
       # Secrets are checked first so a missing one stops the deploy before any migration runs.
       - name: Apply migrations
         run: supabase db push
-      - name: Deploy deletion functions
-        run: |
-          supabase functions deploy delete-account --project-ref "$PROJECT_REF"
-          supabase functions deploy account-deletion-worker --project-ref "$PROJECT_REF"
-          supabase functions deploy account-deletion-monitor --project-ref "$PROJECT_REF"
-          supabase functions deploy account-deletion-notifier --project-ref "$PROJECT_REF"
-      - name: Deploy subscription functions
-        run: |
-          supabase functions deploy revenuecat-webhook --project-ref "$PROJECT_REF"
-          supabase functions deploy sync-pro-entitlement --project-ref "$PROJECT_REF"
+      # Deploys every function under supabase/functions. Bundling through the API skips Docker,
+      # which crashed with exit 135 on the self-hosted runner.
+      - name: Deploy functions
+        run: supabase functions deploy --project-ref "$PROJECT_REF" --use-api
       - name: Provision Vault and scheduler
         run: |
           body="$(jq -n --arg url "$PROJECT_URL" --arg worker "$DELETION_WORKER_KEY" --arg notifier "$DELETION_NOTIFIER_KEY" '{p_project_url:$url,p_worker_key:$worker,p_notifier_key:$notifier}')"
