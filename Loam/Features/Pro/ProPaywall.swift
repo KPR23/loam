@@ -371,56 +371,62 @@ private struct PaywallAlert {
     let message: String
 }
 
-/// The paywall's hero: the app's PRO mark as a soft clay tile, a pale accent pill with
-/// puffy accent lettering, that drifts and tilts slightly. Holds still with Reduce Motion.
+/// The paywall's hero: the PRO mark, drifting and tilting slightly. Holds still with Reduce Motion.
 private struct ProEmblem: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private static let size = CGSize(width: 90, height: 40)
 
     var body: some View {
         TimelineView(.animation(paused: reduceMotion)) { context in
             let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
             let lift = sin(t * 1.1) * 2.5
 
-            emblem
+            ProMark()
                 .rotation3DEffect(.degrees(sin(t * 0.8) * 3), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
                 .rotation3DEffect(.degrees(cos(t * 0.6) * 5), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
                 .shadow(color: .black.opacity(0.12), radius: 12 - lift, y: 10 - lift)
                 .offset(y: -lift)
         }
-        .frame(width: Self.size.width + 24, height: Self.size.height + 24)
+        .frame(width: ProMark.baseSize.width + 24, height: ProMark.baseSize.height + 24)
         .accessibilityHidden(true)
     }
+}
 
-    private var emblem: some View {
+/// The app's PRO mark as a soft clay tile: a pale accent pill with puffy accent lettering.
+/// `height` scales the whole mark; the paywall hero uses the full 40 pt.
+struct ProMark: View {
+    static let baseSize = CGSize(width: 90, height: 40)
+
+    var height: CGFloat = baseSize.height
+
+    var body: some View {
         let accent = HomeTheme.accent
         let clay = Self.pastel(of: accent)
+        let scale = height / Self.baseSize.height
 
-        return ZStack {
+        ZStack {
             // Thickness: a slightly darker copy just below the face.
             Capsule()
                 .fill(Self.pastel(of: accent, whiteness: 0.72))
-                .offset(y: 3)
+                .offset(y: 3 * scale)
 
             // Face: lit from the top left, shaded toward the bottom right, like soft plastic.
             Capsule()
                 .fill(
                     clay
-                        .shadow(.inner(color: .white.opacity(0.9), radius: 4, x: 2, y: 3))
-                        .shadow(.inner(color: accent.opacity(0.28), radius: 6, x: -3, y: -4))
+                        .shadow(.inner(color: .white.opacity(0.9), radius: 4 * scale, x: 2 * scale, y: 3 * scale))
+                        .shadow(.inner(color: accent.opacity(0.28), radius: 6 * scale, x: -3 * scale, y: -4 * scale))
                 )
 
             Text("PRO")
-                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                .tracking(1.5)
+                .font(.system(size: 22 * scale, weight: .heavy, design: .rounded))
+                .tracking(1.5 * scale)
                 .foregroundStyle(
                     accent
-                        .shadow(.inner(color: .white.opacity(0.55), radius: 1.5, x: 1, y: 1.5))
-                        .shadow(.drop(color: accent.opacity(0.35), radius: 2, y: 2))
+                        .shadow(.inner(color: .white.opacity(0.55), radius: 1.5 * scale, x: scale, y: 1.5 * scale))
+                        .shadow(.drop(color: accent.opacity(0.35), radius: 2 * scale, y: 2 * scale))
                 )
         }
-        .frame(width: Self.size.width, height: Self.size.height)
+        .frame(width: Self.baseSize.width * scale, height: height)
     }
 
     /// The accent mixed toward white, for the clay body.
