@@ -19,7 +19,6 @@ final class AuthSession: ObservableObject {
     @Published private(set) var userId: UUID?
     @Published private(set) var displayName: String?
     @Published private(set) var email: String?
-    @Published private(set) var connectedProviders: Set<String> = []
     @Published var lastError: String?
     @Published private(set) var deletionPending = false
     @Published private(set) var deletionStatus: DeletionStatus = .none
@@ -460,7 +459,6 @@ final class AuthSession: ObservableObject {
         userId = nil
         displayName = nil
         email = nil
-        connectedProviders = []
         usesDemoMode = false
         ExpenseRepositoryFactory.setUsesLocalStorage(false)
         state = .signedOut
@@ -473,7 +471,6 @@ final class AuthSession: ObservableObject {
         userId = id
         self.displayName = displayName
         email = nil
-        connectedProviders = []
         Self.persistDemoSession(userId: id, displayName: displayName)
         state = .signedIn
     }
@@ -501,7 +498,6 @@ final class AuthSession: ObservableObject {
         ExpenseRepositoryFactory.setUsesLocalStorage(SupabaseClientProvider.shared == nil)
         userId = user.id
         email = user.email
-        connectedProviders = Set((user.identities ?? []).map(\.provider))
         deletionPending = DeletionReceipt.exists(for: user.id)
         deletionStatus = DeletionReceipt.savedStatus(for: user.id) ?? (deletionPending ? .submissionUncertain : .none)
         if let meta = user.userMetadata["full_name"], !"\(meta)".isEmpty {
