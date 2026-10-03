@@ -2,7 +2,7 @@ name: iOS
 
 on:
   pull_request:
-    branches: [dev, main]
+    branches: [main, "release/**"]
     types: [opened, synchronize, reopened, labeled]
     # Only these paths feed the app build, so other changes skip the macOS job.
     paths:

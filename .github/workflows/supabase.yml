@@ -2,16 +2,17 @@ name: Supabase migrations
 
 on:
   push:
-    branches: [dev, main]
+    branches: [main, "release/**"]
   # Deploy jobs are gated on the branch name, so pull requests only verify.
   pull_request:
-    branches: [dev, main]
+    branches: [main, "release/**"]
 
 permissions:
   contents: read
 
 concurrency:
-  group: supabase-${{ github.ref_name }}
+  # Every release branch deploys to production, so they share one queue.
+  group: supabase-${{ startsWith(github.ref_name, 'release/') && 'production' || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -65,7 +66,7 @@ jobs:
 
   deploy-staging:
     needs: [verify-database, test-functions]
-    if: github.ref_name == 'dev'
+    if: github.ref_name == 'main'
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     environment: staging
     env:
@@ -162,9 +163,11 @@ jobs:
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/revenuecat-webhook" --header 'Authorization: deployment-probe-invalid')"
           test "$status" = 401
 
+  # A release branch deploys production before its App Store build goes to review, so
+  # the reviewed build already talks to the migrated backend.
   deploy-production:
     needs: [verify-database, test-functions]
-    if: github.ref_name == 'main'
+    if: startsWith(github.ref_name, 'release/')
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     environment: production
     env:
