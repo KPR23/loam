@@ -20,6 +20,7 @@ enum Telemetry {
         #if !DEBUG
         startSentry()
         #endif
+        startPostHog()
     }
 
     /// Pass `nil` when signed out or in local demo mode, whose IDs are not real accounts.
@@ -71,6 +72,9 @@ enum Telemetry {
         }
 
         let config = PostHogConfig(projectToken: token, host: host)
+        // Nothing is sent until a signed-in user opts in. The SDK keeps the last opt-in or
+        // opt-out across launches, so a consenting user's app opens are captured from launch.
+        config.optOut = true
         config.personProfiles = .identifiedOnly
         config.captureApplicationLifecycleEvents = true
         // SwiftUI screens appear as generic hosting controllers; screens are named by hand.
@@ -92,32 +96,23 @@ enum Telemetry {
         config.sessionReplayConfig.captureLogs = false
 
         PostHogSDK.shared.setup(config)
-        // The SDK remembers an earlier opt-out; the consent setting is the source of truth.
-        PostHogSDK.shared.optIn()
         PostHogSDK.shared.register(["environment": environment])
         postHogStarted = true
     }
 
     private static func applyAnalyticsConsent() {
-        let consentedUserId = userId.flatMap { id in
-            UserDefaults.standard.bool(forKey: analyticsConsentKey(for: id)) ? id : nil
-        }
+        guard postHogStarted else { return }
+        let postHog = PostHogSDK.shared
 
-        guard let consentedUserId else {
-            guard postHogStarted else { return }
-            let postHog = PostHogSDK.shared
+        guard let userId, UserDefaults.standard.bool(forKey: analyticsConsentKey(for: userId)) else {
             // Drop the previous user's identity before capture stops.
             if postHog.getDistinctId() != postHog.getAnonymousId() { postHog.reset() }
             postHog.optOut()
             return
         }
 
-        if postHogStarted {
-            PostHogSDK.shared.optIn()
-        } else {
-            startPostHog()
-        }
-        identify(consentedUserId)
+        postHog.optIn()
+        identify(userId)
     }
 
     private static func identify(_ id: String) {
