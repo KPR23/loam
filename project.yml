@@ -9,7 +9,6 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    TARGETED_DEVICE_FAMILY: "1"
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_CFBundleDisplayName: Loam
     MARKETING_VERSION: "1.1.0"
@@ -55,6 +54,11 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: Loam/Loam.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # iPhone only. XcodeGen's iOS preset sets "1,2" on each target, which outranks a
+        # project-level value, so this has to live on the target.
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
         # The Sentry upload script reads dSYMs outside the script sandbox.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
     postBuildScripts:
