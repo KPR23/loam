@@ -787,54 +787,6 @@ private struct PersonalDetailsView: View {
     }
 }
 
-private struct ConnectedAccountsView: View {
-    @EnvironmentObject private var authSession: AuthSession
-    var body: some View {
-        List {
-            Section {
-                provider("Apple", id: "apple")
-                provider("Google", id: "google")
-                ForEach(authSession.connectedProviders.subtracting(["apple", "google"]).sorted(), id: \.self) { provider in
-                    self.provider(provider.capitalized, id: provider)
-                }
-            } footer: {
-                Text("Your connected sign-in methods appear here. Connecting additional accounts is coming soon.")
-            }
-        }
-        .navigationTitle("Connected accounts")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func provider(_ title: String, id: String) -> some View {
-        LabeledContent {
-            Text(authSession.connectedProviders.contains(id) ? "Connected" : "Not connected")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        } label: {
-            Label {
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.primary)
-            } icon: {
-                if id == "google" {
-                    Image("GoogleG")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 15, height: 15)
-                        .frame(width: 20, height: 20)
-                } else {
-                    Image(systemName: id == "apple" ? "apple.logo" : "envelope")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(id == "apple" ? Color.primary : Color.blue)
-                        .frame(width: 20, height: 20)
-                }
-            }
-            .labelStyle(CompactProfileLabelStyle())
-        }
-        .alignmentGuide(.listRowSeparatorLeading) { dimensions in dimensions[.leading] }
-    }
-}
-
 private struct DefaultCurrencySettingsView: View {
     @AppStorage(AppPreferences.defaultCurrencyKey) private var currency = "PLN"
 
