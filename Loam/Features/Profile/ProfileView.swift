@@ -205,7 +205,7 @@ struct ProfileView: View {
                     .listRowSeparator(.hidden)
                 }
 
-                LoamProSection()
+                ProUpgradeSection()
 
                 Section("Account") {
                     NavigationLink {
@@ -219,6 +219,7 @@ struct ProfileView: View {
                     Button { showsConnectionCodePrompt = true } label: {
                         ProfileRow("Enter a code", symbol: "key", color: .orange)
                     }
+                    SubscriptionRow()
                 }
 
                 if authSession.deletionPending {
@@ -494,33 +495,111 @@ private struct CompactProfileLabelStyle: LabelStyle {
     }
 }
 
-/// Free accounts open the paywall; Pro accounts manage their plan in RevenueCat's Customer Center.
-private struct LoamProSection: View {
+/// The upgrade prompt at the top of Profile. Only free accounts see it.
+private struct ProUpgradeSection: View {
+    @EnvironmentObject private var subscriptions: SubscriptionStore
+    @State private var showsPaywall = false
+
+    var body: some View {
+        if subscriptions.isAvailable && !subscriptions.isPro {
+            Section {
+                Button { showsPaywall = true } label: {
+                    HStack {
+                        Text("Upgrade to Loam Pro")
+                            .font(.body)
+                            .foregroundStyle(HomeTheme.text)
+                        Spacer(minLength: 8)
+                        ProMark(height: 24)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .proPaywall(isPresented: $showsPaywall)
+            }
+        }
+    }
+}
+
+/// Always shown, so every account can check its plan.
+private struct SubscriptionRow: View {
+    @EnvironmentObject private var subscriptions: SubscriptionStore
+
+    var body: some View {
+        NavigationLink {
+            SubscriptionView()
+        } label: {
+            ProfileRow(
+                "Subscription",
+                symbol: "creditcard",
+                color: .pink,
+                detail: subscriptions.isPro ? "Loam Pro" : "Free"
+            )
+        }
+    }
+}
+
+/// The account's plan. Free accounts can open the paywall from here; Pro accounts
+/// manage their plan in RevenueCat's Customer Center.
+private struct SubscriptionView: View {
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var showsPaywall = false
     @State private var showsCustomerCenter = false
 
     var body: some View {
-        if subscriptions.isAvailable {
+        List {
             Section {
-                Button {
-                    if subscriptions.isPro {
-                        showsCustomerCenter = true
-                    } else {
-                        showsPaywall = true
+                VStack(spacing: 12) {
+                    ProMark(height: 32)
+                        .saturation(subscriptions.isPro ? 1 : 0)
+                        .opacity(subscriptions.isPro ? 1 : 0.6)
+                        .accessibilityHidden(true)
+                    VStack(spacing: 4) {
+                        Text(subscriptions.isPro ? "You’re on Loam Pro" : "You’re not subscribed")
+                            .font(.system(.title2, design: .rounded).weight(.semibold))
+                        Text(statusDetail)
+                            .font(.subheadline)
+                            .foregroundStyle(HomeTheme.secondary)
                     }
-                } label: {
-                    ProfileRow(
-                        subscriptions.isPro ? "Loam Pro" : "Upgrade to Loam Pro",
-                        symbol: "sparkles",
-                        color: .yellow,
-                        detail: subscriptions.isPro ? "Manage" : nil
-                    )
                 }
-                .proPaywall(isPresented: $showsPaywall)
-                .presentCustomerCenter(isPresented: $showsCustomerCenter)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+
+            Section {
+                if subscriptions.isPro {
+                    Button { showsCustomerCenter = true } label: {
+                        ProfileRow("Manage subscription", symbol: "gearshape", color: .gray)
+                    }
+                } else {
+                    Button { showsPaywall = true } label: {
+                        ProfileRow("Upgrade to Loam Pro", symbol: "arrow.up.circle", color: .blue)
+                    }
+                }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background)
+        .navigationTitle("Subscription")
+        .navigationBarTitleDisplayMode(.inline)
+        .proPaywall(isPresented: $showsPaywall)
+        .presentCustomerCenter(isPresented: $showsCustomerCenter)
+    }
+
+    private var statusDetail: String {
+        guard subscriptions.isPro else {
+            return "You’re on the free plan. Upgrade to share every bill, with everyone."
+        }
+        guard let entitlement = subscriptions.customerInfo?.entitlements[SubscriptionStore.entitlementId],
+              let expiration = entitlement.expirationDate
+        else { return "Thanks for supporting Loam." }
+        let date = expiration.formatted(date: .long, time: .omitted)
+        if entitlement.periodType == .trial {
+            return entitlement.willRenew ? "Free trial, Pro starts on \(date)." : "Free trial, ends on \(date)."
+        }
+        return entitlement.willRenew ? "Renews on \(date)." : "Ends on \(date)."
     }
 }
 
@@ -959,4 +1038,5 @@ private struct ProfileDeveloperView: View {
     ProfileView()
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
+        .environmentObject(SubscriptionStore())
 }
