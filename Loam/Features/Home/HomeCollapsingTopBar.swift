@@ -10,16 +10,9 @@ private struct HomeGlassCapsuleButton<Label: View>: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.capsule)
         } else {
-            Button(action: action) {
-                label()
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(HomeTheme.surface.opacity(0.9))
-                    )
-            }
-            .buttonStyle(.plain)
+            Button(action: action, label: label)
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
         }
     }
 }
@@ -53,7 +46,7 @@ struct HomeCollapsingTopBar: View {
     }
 
     private var monthPickerButton: some View {
-        HomeGlassCapsuleButton(action: onPickMonth) {
+        HomeGlassCapsuleButton(action: { LoamFeedback.tap(); onPickMonth() }) {
             monthPickerLabel
         }
         .accessibilityLabel("Selected month, \(period.displayTitle)")
@@ -78,7 +71,7 @@ struct HomeCollapsingTopBar: View {
     private var collapsedAmount: some View {
         let amountValue = Double(amount.amountMinor) / 100.0
 
-        return HStack(alignment: .center, spacing: 5) {
+        return HStack(alignment: .lastTextBaseline, spacing: 4) {
             Text(MoneyFormatter.heroAmount(from: amount))
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .monospacedDigit()
@@ -108,23 +101,17 @@ struct HomeTopBarCalendarButton: View {
 
     var body: some View {
         if #available(iOS 26, *) {
-            Button(action: onPickMonth) {
+            Button(action: { LoamFeedback.tap(); onPickMonth() }) {
                 Image(systemName: "calendar")
             }
             .accessibilityLabel("Selected month, \(period.displayTitle)")
             .accessibilityHint("Opens month picker")
         } else {
-            Button(action: onPickMonth) {
+            Button(action: { LoamFeedback.tap(); onPickMonth() }) {
                 Image(systemName: "calendar")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(HomeTheme.text)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        Circle()
-                            .fill(HomeTheme.surface.opacity(0.95))
-                    )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
             .accessibilityLabel("Selected month, \(period.displayTitle)")
             .accessibilityHint("Opens month picker")
         }
@@ -162,6 +149,17 @@ struct MonthPickerSheet: View {
         .month(year: selectedYear, month: selectedMonth)
     }
 
+    private var isCurrentMonthSelected: Bool {
+        selectedPeriod == .currentMonth
+    }
+
+    private func selectCurrentMonth() {
+        let calendar = AppPreferences.calendar
+        let now = Date()
+        selectedYear = calendar.component(.year, from: now)
+        selectedMonth = calendar.component(.month, from: now)
+    }
+
     var body: some View {
         NavigationStack {
             HStack(spacing: 0) {
@@ -188,6 +186,12 @@ struct MonthPickerSheet: View {
             .navigationTitle("Choose month")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("This month") {
+                        selectCurrentMonth()
+                    }
+                    .disabled(isCurrentMonthSelected)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         onSelect(selectedPeriod)
@@ -197,6 +201,8 @@ struct MonthPickerSheet: View {
                 }
             }
         }
+        .sensoryFeedback(.selection, trigger: selectedMonth)
+        .sensoryFeedback(.selection, trigger: selectedYear)
         .presentationDetents([.height(320)])
         .presentationDragIndicator(.visible)
     }

@@ -35,6 +35,20 @@
                ReferencedContainer = "container:Loam.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "6BB283D16BEB6299DCFA1EC5"
+               BuildableName = "LoamUITests.xctest"
+               BlueprintName = "LoamUITests"
+               ReferencedContainer = "container:Loam.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -61,6 +75,17 @@
                BlueprintIdentifier = "38C741AEE51B5DD4542905E5"
                BuildableName = "LoamTests.xctest"
                BlueprintName = "LoamTests"
+               ReferencedContainer = "container:Loam.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "6BB283D16BEB6299DCFA1EC5"
+               BuildableName = "LoamUITests.xctest"
+               BlueprintName = "LoamUITests"
                ReferencedContainer = "container:Loam.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -112,7 +137,7 @@
       buildConfiguration = "Debug">
    </AnalyzeAction>
    <ArchiveAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Production"
       revealArchiveInOrganizer = "YES">
    </ArchiveAction>
 </Scheme>

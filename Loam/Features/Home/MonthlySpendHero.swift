@@ -54,16 +54,17 @@ struct MonthlySpendHero: View {
             }
             .frame(height: 260)
 
-            if sharedShare.amountMinor > 0 {
-                Text("of which \(MoneyFormatter.string(from: sharedShare)) is shared")
+            if let sharedCaption {
+                Text(sharedCaption)
                     .font(.footnote)
                     .foregroundStyle(HomeTheme.secondary)
                     .multilineTextAlignment(.center)
+                    .opacity(1 - easedCollapse)
             }
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("You spent \(MoneyFormatter.string(from: amount)) this month")
+        .accessibilityLabel(accessibilityTitle)
         .accessibilityValue(accessibilityBreakdownValue)
         .task(id: categoryBreakdown) {
             await animateReveal(to: hasCategoryMix ? 1 : 0)
@@ -72,6 +73,23 @@ struct MonthlySpendHero: View {
             guard hasCategoryMix, displayedReveal < 1 else { return }
             Task { await animateReveal(to: 1) }
         }
+    }
+
+    /// Nil when nothing is shared or the amounts are in different currencies.
+    private var sharedCaption: String? {
+        guard sharedShare.amountMinor > 0,
+              amount.amountMinor > 0,
+              sharedShare.currencyCode == amount.currencyCode else { return nil }
+        if sharedShare.amountMinor >= amount.amountMinor {
+            return "all of it is shared"
+        }
+        return "of which \(MoneyFormatter.string(from: sharedShare)) is shared"
+    }
+
+    private var accessibilityTitle: String {
+        let spent = "You spent \(MoneyFormatter.string(from: amount)) this month"
+        guard let sharedCaption else { return spent }
+        return "\(spent), \(sharedCaption)"
     }
 
     private var accessibilityBreakdownValue: String {

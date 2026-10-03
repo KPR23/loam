@@ -3,12 +3,26 @@ import SwiftUI
 struct MainTabView: View {
     enum AppTab: Hashable {
         case expenses
-        case household
+        case balances
+        case activity
         case profile
+
+        var screenName: String {
+            switch self {
+            case .expenses: "Expenses"
+            case .balances: "Balances"
+            case .activity: "Activity"
+            case .profile: "Profile"
+            }
+        }
     }
 
+    @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var activityStore: ActivityStore
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .expenses
     @State private var expensesReloadToken = 0
+    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
 
     var body: some View {
         Group {
@@ -17,6 +31,15 @@ struct MainTabView: View {
             } else {
                 legacyTabView
             }
+        }
+        .sensoryFeedback(.selection, trigger: selection)
+        .onChange(of: selection, initial: true) { _, tab in
+            Telemetry.screen(tab.screenName)
+            // Activity marks itself read; elsewhere, pick up events that arrived meanwhile.
+            if tab != .activity { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
         }
     }
 
@@ -27,15 +50,20 @@ struct MainTabView: View {
                 HomeView(arcReloadToken: expensesReloadToken)
             }
 
-            Tab("Household", systemImage: "house", value: AppTab.household) {
-                HouseholdView()
+            Tab("Balances", systemImage: "arrow.left.arrow.right", value: AppTab.balances) {
+                BalancesView()
             }
+
+            Tab("Activity", systemImage: "clock.arrow.circlepath", value: AppTab.activity) {
+                ActivityView()
+            }
+            .badge(activityStore.unreadCount)
 
             Tab("Profile", systemImage: "person", value: AppTab.profile) {
                 ProfileView()
             }
         }
-        .tint(HomeTheme.accent)
+        .tint(accentColor.color)
         .onChange(of: selection) { _, newValue in
             if newValue == .expenses {
                 expensesReloadToken += 1
@@ -51,11 +79,18 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.expenses)
 
-            HouseholdView()
+            BalancesView()
                 .tabItem {
-                    Label("Household", systemImage: "house")
+                    Label("Balances", systemImage: "arrow.left.arrow.right")
                 }
-                .tag(AppTab.household)
+                .tag(AppTab.balances)
+
+            ActivityView()
+                .tabItem {
+                    Label("Activity", systemImage: "clock.arrow.circlepath")
+                }
+                .tag(AppTab.activity)
+                .badge(activityStore.unreadCount)
 
             ProfileView()
                 .tabItem {
@@ -63,7 +98,7 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.profile)
         }
-        .tint(HomeTheme.accent)
+        .tint(accentColor.color)
         .onChange(of: selection) { _, newValue in
             if newValue == .expenses {
                 expensesReloadToken += 1
@@ -76,5 +111,6 @@ struct MainTabView: View {
     MainTabView()
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
-        .environmentObject(HouseholdStore())
+        .environmentObject(BalanceStore())
+        .environmentObject(ActivityStore())
 }

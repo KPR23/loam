@@ -12,13 +12,29 @@ settings:
     TARGETED_DEVICE_FAMILY: "1"
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_CFBundleDisplayName: Loam
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "6"
-    DEVELOPMENT_TEAM: ""
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "7"
+    DEVELOPMENT_TEAM: XXJA67J9AN
+configs:
+  Debug: debug
+  Release: release
+  TestFlight: release
+  Production: release
 configFiles:
-  Debug: Loam/Config/Config.xcconfig
-  Release: Loam/Config/Config.xcconfig
+  Debug: Loam/Config/Debug.xcconfig
+  Release: Loam/Config/Release.xcconfig
+  TestFlight: Loam/Config/Staging.xcconfig
+  Production: Loam/Config/Production.xcconfig
 packages:
+  posthog-ios:
+    url: https://github.com/PostHog/posthog-ios
+    from: "3.82.0"
+  purchases-ios-spm:
+    url: https://github.com/RevenueCat/purchases-ios-spm.git
+    from: "5.91.0"
+  sentry-cocoa:
+    url: https://github.com/getsentry/sentry-cocoa
+    from: "9.24.0"
   supabase-swift:
     url: https://github.com/supabase/supabase-swift
     from: "2.0.0"
@@ -39,7 +55,36 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: Loam/Loam.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The Sentry upload script reads dSYMs outside the script sandbox.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        # Sentry needs dSYMs to symbolicate crashes from every configuration.
+        DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+    postBuildScripts:
+      - name: Upload Debug Symbols to Sentry
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}
+        script: |
+          # This script is responsible for uploading debug symbols and source context for Sentry.
+          if which sentry-cli >/dev/null; then
+            export SENTRY_ORG=kprs-lab
+            export SENTRY_PROJECT=apple-ios
+            ERROR=$(sentry-cli debug-files upload --include-sources "$DWARF_DSYM_FOLDER_PATH" 2>&1 >/dev/null)
+            if [ ! $? -eq 0 ]; then
+              echo "warning: sentry-cli - $ERROR"
+            fi
+          else
+            echo "warning: sentry-cli not installed, download from https://github.com/getsentry/sentry-cli/releases"
+          fi
     dependencies:
+      - package: posthog-ios
+        product: PostHog
+      - package: purchases-ios-spm
+        product: RevenueCat
+      - package: purchases-ios-spm
+        product: RevenueCatUI
+      - package: sentry-cocoa
+        product: Sentry
       - package: supabase-swift
         product: Supabase
     entitlements:
@@ -58,14 +103,42 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.loam.LoamTests
         GENERATE_INFOPLIST_FILE: YES
+  LoamUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: LoamUITests
+    dependencies:
+      - target: Loam
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.loam.LoamUITests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Loam
 schemes:
   Loam:
     build:
       targets:
         Loam: all
         LoamTests: [test]
+        LoamUITests: [test]
     test:
       targets:
         - LoamTests
+        - LoamUITests
     run:
       config: Debug
+    archive:
+      config: Production
+  Loam-TestFlight:
+    build:
+      targets:
+        Loam: all
+        LoamTests: [test]
+        LoamUITests: [test]
+    test:
+      targets:
+        - LoamTests
+        - LoamUITests
+    archive:
+      config: TestFlight

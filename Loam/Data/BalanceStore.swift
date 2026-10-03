@@ -1,0 +1,43 @@
+import Foundation
+
+@MainActor
+final class BalanceStore: ObservableObject {
+    @Published private(set) var snapshot = BalanceSnapshot.empty
+    @Published private(set) var isLoading = false
+    @Published var lastError: String?
+
+    func refresh(userId: UUID?) async {
+        guard let userId else { snapshot = .empty; return }
+        isLoading = true; defer { isLoading = false }
+        do { snapshot = try await BalanceRepositoryFactory.make().fetchBalances(for: userId); lastError = nil }
+        catch { lastError = error.localizedDescription }
+    }
+
+    func repay(to personId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, userId: UUID) async throws {
+        try await LoamErrorCapture.withCapture("balance.repayment_create_failed") {
+            try await BalanceRepositoryFactory.make().createRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note, paidAt: paidAt, operationId: UUID())
+        }
+        Telemetry.capture(.repaymentRecorded)
+        await recordLocalRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note)
+        await refresh(userId: userId)
+    }
+
+    /// The backend records repayment activity itself; demo storage needs a local row.
+    private func recordLocalRepayment(from userId: UUID, to personId: UUID, amountMinor: Int, currencyCode: String, note: String?) async {
+        guard ExpenseRepositoryFactory.usesLocalStorage else { return }
+        let trimmedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let event = ActivityEvent(
+            kind: .repaymentRecorded,
+            actorId: userId,
+            actorName: SplitPartnerOption.displayName(for: userId, fallback: "You"),
+            recipientId: personId,
+            recipientName: SplitPartnerOption.displayName(for: personId),
+            expenseTitle: trimmedNote.isEmpty ? "Repayment" : trimmedNote,
+            category: .other,
+            affectedShareMinor: amountMinor,
+            expenseTotalMinor: amountMinor,
+            currency: currencyCode
+        )
+        try? await ActivityRepositoryFactory.make().record(event, audience: [userId, personId])
+    }
+}

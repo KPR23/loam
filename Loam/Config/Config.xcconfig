@@ -1,8 +1,0 @@
-// Committed base configuration for Debug/Release.
-// Local overrides: copy Secrets.xcconfig.example → Secrets.xcconfig (gitignored).
-// Xcode Cloud: ci_post_clone.sh writes Secrets.xcconfig from environment variables.
-
-SUPABASE_URL = https:/$()/YOUR_PROJECT.supabase.co
-SUPABASE_ANON_KEY = your-anon-key
-
-#include? "Secrets.xcconfig"

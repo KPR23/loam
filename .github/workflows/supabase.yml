@@ -1,0 +1,265 @@
+name: Supabase migrations
+
+on:
+  push:
+    branches: [main, "release/**"]
+  # Deploy jobs are gated on the branch name, so pull requests only verify.
+  pull_request:
+    branches: [main, "release/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  # Every release branch deploys to production, so they share one queue.
+  group: supabase-${{ startsWith(github.ref_name, 'release/') && 'production' || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify-database:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        # The self-hosted runner preinstalls the Go CLI: its CPU cannot run the Bun build.
+        if: runner.environment == 'github-hosted'
+        with:
+          version: 2.99.0
+      - name: Use the runner's Supabase CLI and rootless Docker
+        if: runner.environment == 'self-hosted'
+        run: |
+          # Pins the preinstalled binary to supabase-go from the v2.99.0 release, like setup-cli does.
+          # Compared manually (not `sha256sum -c`) since the runner's sha256sum doesn't support long flags.
+          actual="$(sha256sum "$HOME/bin/supabase" | cut -d ' ' -f 1)"
+          expected="2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50"
+          if [ "$actual" != "$expected" ]; then
+            echo "Checksum mismatch for $HOME/bin/supabase: expected $expected, got $actual" >&2
+            exit 1
+          fi
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
+      - name: Pin the Postgres image
+        # v2.99.0 defaults to 17.6.1.107, which segfaults when a role calls a function it can't execute.
+        run: mkdir -p supabase/.temp && printf 17.6.1.166 > supabase/.temp/postgres-version
+      - name: Replay migrations on a clean database
+        # The self-hosted runner is too slow for storage to pass the CLI's health-check window,
+        # so it skips services the database tests never touch.
+        run: >-
+          supabase start ${{ runner.environment == 'self-hosted'
+          && '--ignore-health-check -x studio,logflare,vector,imgproxy,mailpit,edge-runtime,realtime,postgres-meta'
+          || '' }}
+      - name: Verify authorization and financial invariants
+        run: supabase test db
+      - name: Stop local services
+        if: always()
+        run: supabase stop --no-backup
+
+  test-functions:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+      - name: Test edge functions
+        run: deno test supabase/functions
+
+  deploy-staging:
+    needs: [verify-database, test-functions]
+    if: github.ref_name == 'main'
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DELETION_WORKER_KEY: ${{ secrets.DELETION_WORKER_KEY }}
+      DELETION_MONITOR_KEY: ${{ secrets.DELETION_MONITOR_KEY }}
+      DELETION_NOTIFIER_KEY: ${{ secrets.DELETION_NOTIFIER_KEY }}
+      DELETION_CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.DELETION_CREDENTIAL_ENCRYPTION_KEY }}
+      APPLE_CLIENT_ID: ${{ secrets.APPLE_CLIENT_ID }}
+      APPLE_CLIENT_SECRET: ${{ secrets.APPLE_CLIENT_SECRET }}
+      POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
+      POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      DELETION_EMAIL_FROM: ${{ secrets.DELETION_EMAIL_FROM }}
+      REVENUECAT_SECRET_API_KEY: ${{ secrets.REVENUECAT_SECRET_API_KEY }}
+      REVENUECAT_WEBHOOK_AUTH: ${{ secrets.REVENUECAT_WEBHOOK_AUTH }}
+      PROJECT_REF: iazyvupjvtuiezugurvo
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        # The self-hosted runner preinstalls the Go CLI: its CPU cannot run the Bun build.
+        if: runner.environment == 'github-hosted'
+        with:
+          version: 2.99.0
+      - name: Use the runner's Supabase CLI and rootless Docker
+        if: runner.environment == 'self-hosted'
+        run: |
+          # Pins the preinstalled binary to supabase-go from the v2.99.0 release, like setup-cli does.
+          # Compared manually (not `sha256sum -c`) since the runner's sha256sum doesn't support long flags.
+          actual="$(sha256sum "$HOME/bin/supabase" | cut -d ' ' -f 1)"
+          expected="2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50"
+          if [ "$actual" != "$expected" ]; then
+            echo "Checksum mismatch for $HOME/bin/supabase: expected $expected, got $actual" >&2
+            exit 1
+          fi
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
+      - name: Link staging project
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Apply staging migrations
+        run: supabase db push
+      - name: Validate and install staging function secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SUPABASE_SERVICE_ROLE_KEY DELETION_WORKER_KEY DELETION_NOTIFIER_KEY DELETION_MONITOR_KEY DELETION_CREDENTIAL_ENCRYPTION_KEY APPLE_CLIENT_ID APPLE_CLIENT_SECRET POSTHOG_PROJECT_ID POSTHOG_PERSONAL_API_KEY REVENUECAT_SECRET_API_KEY REVENUECAT_WEBHOOK_AUTH; do
+            if [[ -z "${!name:-}" ]]; then echo "Missing required GitHub environment secret: $name" >&2; exit 1; fi
+          done
+          if [[ -n "$RESEND_API_KEY" && -z "$DELETION_EMAIL_FROM" ]] || [[ -z "$RESEND_API_KEY" && -n "$DELETION_EMAIL_FROM" ]]; then
+            echo "Set both optional email secrets (RESEND_API_KEY and DELETION_EMAIL_FROM), or leave both empty." >&2
+            exit 1
+          fi
+          email_enabled=false
+          if [[ -n "$RESEND_API_KEY" ]]; then email_enabled=true; fi
+          secret_file="$RUNNER_TEMP/loam-staging-function-secrets"
+          umask 077
+          printf 'SUPABASE_SERVICE_ROLE_KEY=%s\nDELETION_WORKER_KEY=%s\nDELETION_NOTIFIER_KEY=%s\nDELETION_MONITOR_KEY=%s\nDELETION_CREDENTIAL_ENCRYPTION_KEY=%s\nAPPLE_CLIENT_ID=%s\nAPPLE_CLIENT_SECRET=%s\nPOSTHOG_PROJECT_ID=%s\nPOSTHOG_PERSONAL_API_KEY=%s\nDELETION_EMAIL_ENABLED=%s\nREVENUECAT_SECRET_API_KEY=%s\nREVENUECAT_WEBHOOK_AUTH=%s\n' \
+            "$SUPABASE_SERVICE_ROLE_KEY" "$DELETION_WORKER_KEY" "$DELETION_NOTIFIER_KEY" "$DELETION_MONITOR_KEY" "$DELETION_CREDENTIAL_ENCRYPTION_KEY" "$APPLE_CLIENT_ID" "$APPLE_CLIENT_SECRET" "$POSTHOG_PROJECT_ID" "$POSTHOG_PERSONAL_API_KEY" "$email_enabled" "$REVENUECAT_SECRET_API_KEY" "$REVENUECAT_WEBHOOK_AUTH" > "$secret_file"
+          if [[ -n "$RESEND_API_KEY" ]]; then
+            printf 'RESEND_API_KEY=%s\nDELETION_EMAIL_FROM=%s\n' "$RESEND_API_KEY" "$DELETION_EMAIL_FROM" >> "$secret_file"
+          fi
+          supabase secrets set --project-ref "$PROJECT_REF" --env-file "$secret_file"
+          rm -f "$secret_file"
+      - name: Deploy deletion functions
+        run: |
+          supabase functions deploy delete-account --project-ref "$PROJECT_REF"
+          supabase functions deploy account-deletion-worker --project-ref "$PROJECT_REF"
+          supabase functions deploy account-deletion-monitor --project-ref "$PROJECT_REF"
+          supabase functions deploy account-deletion-notifier --project-ref "$PROJECT_REF"
+      - name: Deploy subscription functions
+        run: |
+          supabase functions deploy revenuecat-webhook --project-ref "$PROJECT_REF"
+          supabase functions deploy sync-pro-entitlement --project-ref "$PROJECT_REF"
+      - name: Provision staging Vault and scheduler
+        env:
+          PROJECT_URL: https://iazyvupjvtuiezugurvo.supabase.co
+        run: |
+          body="$(jq -n --arg url "$PROJECT_URL" --arg worker "$DELETION_WORKER_KEY" --arg notifier "$DELETION_NOTIFIER_KEY" '{p_project_url:$url,p_worker_key:$worker,p_notifier_key:$notifier}')"
+          curl --fail --silent --show-error --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_account_deletion_scheduler" \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header 'Content-Type: application/json' --data "$body"
+      - name: Verify protected worker deployment
+        env:
+          PROJECT_URL: https://iazyvupjvtuiezugurvo.supabase.co
+        run: |
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-worker" --header 'X-Deletion-Worker-Key: deployment-probe-invalid')"
+          test "$status" = 401
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-notifier" --header 'X-Deletion-Notifier-Key: deployment-probe-invalid')"
+          test "$status" = 401
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request GET "$PROJECT_URL/functions/v1/account-deletion-monitor" --header 'X-Deletion-Monitor-Key: deployment-probe-invalid')"
+          test "$status" = 401
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/revenuecat-webhook" --header 'Authorization: deployment-probe-invalid')"
+          test "$status" = 401
+
+  # A release branch deploys production before its App Store build goes to review, so
+  # the reviewed build already talks to the migrated backend.
+  deploy-production:
+    needs: [verify-database, test-functions]
+    if: startsWith(github.ref_name, 'release/')
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DELETION_WORKER_KEY: ${{ secrets.DELETION_WORKER_KEY }}
+      DELETION_MONITOR_KEY: ${{ secrets.DELETION_MONITOR_KEY }}
+      DELETION_NOTIFIER_KEY: ${{ secrets.DELETION_NOTIFIER_KEY }}
+      DELETION_CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.DELETION_CREDENTIAL_ENCRYPTION_KEY }}
+      APPLE_CLIENT_ID: ${{ secrets.APPLE_CLIENT_ID }}
+      APPLE_CLIENT_SECRET: ${{ secrets.APPLE_CLIENT_SECRET }}
+      POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
+      POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      DELETION_EMAIL_FROM: ${{ secrets.DELETION_EMAIL_FROM }}
+      REVENUECAT_SECRET_API_KEY: ${{ secrets.REVENUECAT_SECRET_API_KEY }}
+      REVENUECAT_WEBHOOK_AUTH: ${{ secrets.REVENUECAT_WEBHOOK_AUTH }}
+      PROJECT_REF: nffogbutnyevhhwnpgip
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        # The self-hosted runner preinstalls the Go CLI: its CPU cannot run the Bun build.
+        if: runner.environment == 'github-hosted'
+        with:
+          version: 2.99.0
+      - name: Use the runner's Supabase CLI and rootless Docker
+        if: runner.environment == 'self-hosted'
+        run: |
+          # Pins the preinstalled binary to supabase-go from the v2.99.0 release, like setup-cli does.
+          # Compared manually (not `sha256sum -c`) since the runner's sha256sum doesn't support long flags.
+          actual="$(sha256sum "$HOME/bin/supabase" | cut -d ' ' -f 1)"
+          expected="2ae25b607c29d21444525ced42596529eca5b806e64d325a49655401a0220b50"
+          if [ "$actual" != "$expected" ]; then
+            echo "Checksum mismatch for $HOME/bin/supabase: expected $expected, got $actual" >&2
+            exit 1
+          fi
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
+      - name: Link production project
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Apply production migrations
+        run: supabase db push
+      - name: Validate and install production function secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SUPABASE_SERVICE_ROLE_KEY DELETION_WORKER_KEY DELETION_NOTIFIER_KEY DELETION_MONITOR_KEY DELETION_CREDENTIAL_ENCRYPTION_KEY APPLE_CLIENT_ID APPLE_CLIENT_SECRET POSTHOG_PROJECT_ID POSTHOG_PERSONAL_API_KEY REVENUECAT_SECRET_API_KEY REVENUECAT_WEBHOOK_AUTH; do
+            if [[ -z "${!name:-}" ]]; then echo "Missing required GitHub environment secret: $name" >&2; exit 1; fi
+          done
+          if [[ -n "$RESEND_API_KEY" && -z "$DELETION_EMAIL_FROM" ]] || [[ -z "$RESEND_API_KEY" && -n "$DELETION_EMAIL_FROM" ]]; then
+            echo "Set both optional email secrets (RESEND_API_KEY and DELETION_EMAIL_FROM), or leave both empty." >&2
+            exit 1
+          fi
+          email_enabled=false
+          if [[ -n "$RESEND_API_KEY" ]]; then email_enabled=true; fi
+          secret_file="$RUNNER_TEMP/loam-production-function-secrets"
+          umask 077
+          printf 'SUPABASE_SERVICE_ROLE_KEY=%s\nDELETION_WORKER_KEY=%s\nDELETION_NOTIFIER_KEY=%s\nDELETION_MONITOR_KEY=%s\nDELETION_CREDENTIAL_ENCRYPTION_KEY=%s\nAPPLE_CLIENT_ID=%s\nAPPLE_CLIENT_SECRET=%s\nPOSTHOG_PROJECT_ID=%s\nPOSTHOG_PERSONAL_API_KEY=%s\nDELETION_EMAIL_ENABLED=%s\nREVENUECAT_SECRET_API_KEY=%s\nREVENUECAT_WEBHOOK_AUTH=%s\n' \
+            "$SUPABASE_SERVICE_ROLE_KEY" "$DELETION_WORKER_KEY" "$DELETION_NOTIFIER_KEY" "$DELETION_MONITOR_KEY" "$DELETION_CREDENTIAL_ENCRYPTION_KEY" "$APPLE_CLIENT_ID" "$APPLE_CLIENT_SECRET" "$POSTHOG_PROJECT_ID" "$POSTHOG_PERSONAL_API_KEY" "$email_enabled" "$REVENUECAT_SECRET_API_KEY" "$REVENUECAT_WEBHOOK_AUTH" > "$secret_file"
+          if [[ -n "$RESEND_API_KEY" ]]; then
+            printf 'RESEND_API_KEY=%s\nDELETION_EMAIL_FROM=%s\n' "$RESEND_API_KEY" "$DELETION_EMAIL_FROM" >> "$secret_file"
+          fi
+          supabase secrets set --project-ref "$PROJECT_REF" --env-file "$secret_file"
+          rm -f "$secret_file"
+      - name: Deploy deletion functions
+        run: |
+          supabase functions deploy delete-account --project-ref "$PROJECT_REF"
+          supabase functions deploy account-deletion-worker --project-ref "$PROJECT_REF"
+          supabase functions deploy account-deletion-monitor --project-ref "$PROJECT_REF"
+          supabase functions deploy account-deletion-notifier --project-ref "$PROJECT_REF"
+      - name: Deploy subscription functions
+        run: |
+          supabase functions deploy revenuecat-webhook --project-ref "$PROJECT_REF"
+          supabase functions deploy sync-pro-entitlement --project-ref "$PROJECT_REF"
+      - name: Provision production Vault and scheduler
+        env:
+          PROJECT_URL: https://nffogbutnyevhhwnpgip.supabase.co
+        run: |
+          body="$(jq -n --arg url "$PROJECT_URL" --arg worker "$DELETION_WORKER_KEY" --arg notifier "$DELETION_NOTIFIER_KEY" '{p_project_url:$url,p_worker_key:$worker,p_notifier_key:$notifier}')"
+          curl --fail --silent --show-error --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_account_deletion_scheduler" \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header 'Content-Type: application/json' --data "$body"
+      - name: Verify protected worker deployment
+        env:
+          PROJECT_URL: https://nffogbutnyevhhwnpgip.supabase.co
+        run: |
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-worker" --header 'X-Deletion-Worker-Key: deployment-probe-invalid')"
+          test "$status" = 401
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-notifier" --header 'X-Deletion-Notifier-Key: deployment-probe-invalid')"
+          test "$status" = 401
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request GET "$PROJECT_URL/functions/v1/account-deletion-monitor" --header 'X-Deletion-Monitor-Key: deployment-probe-invalid')"
+          test "$status" = 401
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/revenuecat-webhook" --header 'Authorization: deployment-probe-invalid')"
+          test "$status" = 401

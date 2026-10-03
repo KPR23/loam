@@ -1,4 +1,43 @@
 import SwiftUI
+import UIKit
+
+enum AppAccentColor: String, CaseIterable, Identifiable {
+    case blue, purple, pink, orange, green
+
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+
+    var color: Color {
+        switch self {
+        case .blue: .blue
+        case .purple: .purple
+        case .pink: .pink
+        case .orange: .orange
+        case .green: .green
+        }
+    }
+
+    private var uiColor: UIColor {
+        switch self {
+        case .blue: .systemBlue
+        case .purple: .systemPurple
+        case .pink: .systemPink
+        case .orange: .systemOrange
+        case .green: .systemGreen
+        }
+    }
+
+    /// A compact, original-color image so menu actions do not inherit the selected tint.
+    var menuDot: UIImage {
+        let dotSize: CGFloat = 12
+        // The trailing transparent space remains intact in Picker's selected-value label.
+        let size = CGSize(width: 22, height: dotSize)
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            uiColor.setFill()
+            UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: dotSize, height: dotSize)).fill()
+        }.withRenderingMode(.alwaysOriginal)
+    }
+}
 
 enum HomeTheme {
     static let background = Color(.systemGroupedBackground)
@@ -7,11 +46,101 @@ enum HomeTheme {
     static let secondary = Color.secondary
     static let tertiary = Color(.tertiaryLabel)
 
-    /// Monochrome brand accent — neutral chrome; color lives in charts & categories.
-    static let accent = Color.primary
+    /// The user-selected accent, shared by tabs, actions, and controls.
+    static var accent: Color {
+        let rawValue = UserDefaults.standard.string(forKey: "loam.accentColor")
+        return (AppAccentColor(rawValue: rawValue ?? "") ?? .blue).color
+    }
+
+    /// Blue tint for the first recurring expense indicator on Home.
+    static let recurringHighlight = Color(red: 0.15, green: 0.50, blue: 0.98)
 
     /// Unfilled arc tiles.
     static let tileEmpty = Color(.quaternaryLabel).opacity(0.45)
 
     static let rowRadius: CGFloat = 14
+}
+
+/// Trailing close control for browse/list sheets (X top-right).
+/// Forms should use `ToolbarItem(placement: .cancellationAction) { Button("Cancel") }` instead.
+struct SheetCloseButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            LoamFeedback.tap()
+            action()
+        } label: {
+            Label("Close", systemImage: "xmark")
+        }
+        .labelStyle(.iconOnly)
+    }
+}
+
+/// Menu / context-menu SF Symbols stay accent-tinted even with `role: .destructive`.
+/// Bake systemRed into an always-original image so UIMenu cannot recolor the icon.
+struct DestructiveMenuLabel: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(uiImage: Self.redSymbol(systemImage))
+        }
+    }
+
+    private static func redSymbol(_ name: String) -> UIImage {
+        let image = UIImage(systemName: name) ?? UIImage()
+        return image.withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+    }
+}
+
+/// Feedback belongs to deliberate actions, never view appearance or background refreshes.
+@MainActor
+enum LoamFeedback {
+    static func tap() {
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.6)
+    }
+
+    static func error() {
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+    }
+
+    static func selection() {
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+}
+
+/// Native buttons retain their activation/accessibility behavior; only the label animates.
+struct LoamPressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.975 : 1)
+            .opacity(configuration.isPressed ? 0.72 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.8),
+                       value: configuration.isPressed)
+    }
+}
+
+/// Keep the action's width stable while communicating an in-flight save.
+struct SavingActionLabel: View {
+    let title: String
+    let isSaving: Bool
+
+    var body: some View {
+        Text(title)
+            .opacity(isSaving ? 0 : 1)
+            .overlay {
+                if isSaving { ProgressView().accessibilityHidden(true) }
+            }
+            .accessibilityLabel(isSaving ? "Saving" : title)
+    }
 }

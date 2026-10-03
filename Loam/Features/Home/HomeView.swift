@@ -1,12 +1,5 @@
 import SwiftUI
 
-private struct SplitExpensePresentation: Identifiable {
-    let expense: ExpenseRecord
-    let myUserId: UUID
-
-    var id: UUID { expense.id }
-}
-
 struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
@@ -17,8 +10,11 @@ struct HomeView: View {
     @State private var showMonthPicker = false
     @State private var collapseProgress: CGFloat = 0
     @State private var arcReveal: Double = 0
-    @State private var expensePendingDelete: ExpenseRecord?
-    @State private var expensePendingSplit: SplitExpensePresentation?
+    @State private var actionRequest: ExpenseActionRequest?
+    @State private var selectedExpense: ExpenseRecord?
+    @State private var showAllPendingExpenses = false
+
+    private let homePendingPreviewLimit = 2
 
     var body: some View {
         NavigationStack {
@@ -38,12 +34,16 @@ struct HomeView: View {
                     .listRowBackground(Color.clear)
                 }
 
+                pendingAcceptanceSection
+                incomingProposalsSection
                 expenseList
             }
             .listStyle(.insetGrouped)
             .coordinateSpace(name: "homeScroll")
             .trackHomeScrollCollapse($collapseProgress)
             .contentMargins(.top, 2, for: .scrollContent)
+            // Keep the last expense row scrollable above the floating + button.
+            .contentMargins(.bottom, AddExpenseFABLayout.listBottomContentInset, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
@@ -76,8 +76,8 @@ struct HomeView: View {
                 AddExpenseFAB {
                     showAddExpense = true
                 }
-                .padding(.trailing, 20)
-                .padding(.bottom, 12)
+                .padding(.trailing, AddExpenseFABLayout.trailingPadding)
+                .padding(.bottom, AddExpenseFABLayout.bottomPadding)
             }
         }
         .sheet(isPresented: $showAddExpense) {
@@ -89,33 +89,104 @@ struct HomeView: View {
                 Task { await expenseStore.setPeriod(newPeriod, userId: userId) }
             }
         }
-        .sheet(item: $expensePendingSplit) { presentation in
-            SplitExpenseSheet(expense: presentation.expense, myUserId: presentation.myUserId)
+        .sheet(isPresented: $showAllPendingExpenses) {
+            if let userId = authSession.userId {
+                PendingExpensesSheet(myUserId: userId)
+            }
         }
-        .alert(
-            "Delete this expense?",
-            isPresented: Binding(
-                get: { expensePendingDelete != nil },
-                set: { if !$0 { expensePendingDelete = nil } }
-            )
-        ) {
-            if let expense = expensePendingDelete, expense.isShared, canSplit(expense) {
-                Button("Edit split") {
-                    expensePendingDelete = nil
-                    presentSplit(for: expense)
+        .expenseActionsHost(selectedExpense: $selectedExpense, request: $actionRequest)
+    }
+
+    @ViewBuilder
+    private var pendingAcceptanceSection: some View {
+        if let userId = authSession.userId {
+            let allPending = expenseStore.pendingAcceptanceExpenses
+            if !allPending.isEmpty {
+                let preview = Array(allPending.prefix(homePendingPreviewLimit))
+                let remainingCount = allPending.count - preview.count
+
+                Section {
+                    ForEach(preview) { expense in
+                        PendingExpenseListRow(
+                            expense: expense,
+                            myUserId: userId,
+                            onProposeEdit: {
+                                actionRequest = .proposeEdit(expense)
+                            },
+                            onShowDetails: {
+                                selectedExpense = expense
+                            }
+                        )
+                    }
+
+                    if remainingCount > 0 {
+                        Button {
+                            showAllPendingExpenses = true
+                        } label: {
+                            HStack {
+                                Text("See all")
+                                    .font(.subheadline.weight(.medium))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(HomeTheme.tertiary)
+                            }
+                        }
+                        .tint(HomeTheme.text)
+                        .accessibilityHint("Shows all expenses awaiting your approval")
+                    }
+                } header: {
+                    PendingAcceptanceFormatting.sectionHeader(
+                        expenses: allPending,
+                        userId: userId,
+                        previewLimit: homePendingPreviewLimit
+                    )
                 }
             }
-            Button("Delete", role: .destructive) {
-                guard let expense = expensePendingDelete, let userId = authSession.userId else { return }
-                Task { await expenseStore.delete(id: expense.id, userId: userId) }
-                expensePendingDelete = nil
-            }
-            Button("Cancel", role: .cancel) {
-                expensePendingDelete = nil
-            }
-        } message: {
-            if let expense = expensePendingDelete {
-                Text(deleteConfirmationMessage(for: expense))
+        }
+    }
+
+    @ViewBuilder
+    private var incomingProposalsSection: some View {
+        if let userId = authSession.userId {
+            let proposals = expenseStore.incomingProposals(for: userId)
+            if !proposals.isEmpty {
+                Section {
+                    ForEach(proposals) { proposal in
+                        if let expense = expenseStore.expense(forProposal: proposal) {
+                            EditProposalSummaryCard(
+                                proposal: proposal,
+                                expense: expense,
+                                proposerName: SplitPartnerOption.displayName(for: proposal.proposedBy),
+                                onAccept: {
+                                    Task {
+                                        await expenseStore.respondToProposal(
+                                            proposalId: proposal.id,
+                                            userId: userId,
+                                            accept: true
+                                        )
+                                    }
+                                },
+                                onReject: {
+                                    Task {
+                                        await expenseStore.respondToProposal(
+                                            proposalId: proposal.id,
+                                            userId: userId,
+                                            accept: false
+                                        )
+                                    }
+                                },
+                                onShowDetails: {
+                                    selectedExpense = expense
+                                }
+                            )
+                        }
+                    }
+                } header: {
+                    Text("Suggested edits")
+                        .font(.subheadline.weight(.semibold))
+                        .textCase(nil)
+                }
             }
         }
     }
@@ -138,8 +209,10 @@ struct HomeView: View {
                     ForEach(section.expenses) { expense in
                         expenseRow(expense)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    expensePendingDelete = expense
+                                // Avoid `role: .destructive` — it triggers immediate row removal
+                                // before the confirmation alert; tint keeps the delete styling.
+                                Button {
+                                    presentDeleteConfirmation(for: expense)
                                 } label: {
                                     Label {
                                         Text("Delete")
@@ -151,6 +224,19 @@ struct HomeView: View {
                                 .tint(.red)
                             }
                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                if canEdit(expense) {
+                                    Button {
+                                        presentEdit(for: expense)
+                                    } label: {
+                                        Label {
+                                            Text("Edit")
+                                                .fontWeight(.semibold)
+                                        } icon: {
+                                            Image(systemName: "pencil")
+                                        }
+                                    }
+                                    .tint(HomeTheme.recurringHighlight)
+                                }
                                 if canSplit(expense) {
                                     Button {
                                         presentSplit(for: expense)
@@ -159,7 +245,7 @@ struct HomeView: View {
                                             Text(expense.isShared ? "Edit split" : "Split")
                                                 .fontWeight(.semibold)
                                         } icon: {
-                                            Image(systemName: "person.2")
+                                            Image(systemName: expense.sharedSplitSystemImage(for: authSession.userId))
                                         }
                                     }
                                     .tint(HomeTheme.accent)
@@ -168,6 +254,20 @@ struct HomeView: View {
                     }
                 } header: {
                     daySectionHeader(date: section.date, expenses: section.expenses)
+                }
+            }
+        }
+
+        if !expenseStore.failingRecurringRules.isEmpty {
+            Section {
+                ForEach(expenseStore.failingRecurringRules) { rule in
+                    Label {
+                        Text("\u{201C}\(rule.displayTitle)\u{201D} didn't repeat: \(rule.generationFailure ?? ""). Edit or stop it to continue.")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
                 }
             }
         }
@@ -182,8 +282,12 @@ struct HomeView: View {
     }
 
     private var expensesByDay: [(date: Date, expenses: [ExpenseRecord])] {
-        let calendar = Calendar.current
-        let grouped = Dictionary(grouping: expenseStore.expenses) { expense in
+        let calendar = AppPreferences.calendar
+        let listedExpenses = expenseStore.expenses.filter { expense in
+            guard let userId = authSession.userId else { return true }
+            return !expense.isPendingAcceptance(for: userId)
+        }
+        let grouped = Dictionary(grouping: listedExpenses) { expense in
             calendar.startOfDay(for: expense.spentAt)
         }
         return grouped
@@ -204,7 +308,7 @@ struct HomeView: View {
                 .foregroundStyle(HomeTheme.secondary)
             Spacer()
             Text(MoneyFormatter.string(from: dayTotal(for: expenses)))
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .fontWeight(.regular)
                 .foregroundStyle(HomeTheme.secondary)
                 .monospacedDigit()
@@ -213,8 +317,9 @@ struct HomeView: View {
     }
 
     private func daySectionTitle(for date: Date) -> String {
-        let calendar = Calendar.current
-        let dayMonth = date.formatted(.dateTime.day().month(.abbreviated))
+        let calendar = AppPreferences.calendar
+        let style = Date.FormatStyle(timeZone: calendar.timeZone)
+        let dayMonth = date.formatted(style.day().month(.abbreviated))
 
         let prefix: String
         if calendar.isDateInToday(date) {
@@ -222,7 +327,7 @@ struct HomeView: View {
         } else if calendar.isDateInYesterday(date) {
             prefix = "Yesterday"
         } else {
-            prefix = date.formatted(.dateTime.weekday(.wide))
+            prefix = date.formatted(style.weekday(.wide))
         }
 
         return "\(prefix), \(dayMonth)"
@@ -233,88 +338,78 @@ struct HomeView: View {
             return expenses.first?.money ?? Money(amountMinor: 0, currencyCode: "PLN")
         }
         let minor = expenses.reduce(0) { partial, expense in
-            partial + (expense.shares.first(where: { $0.userId == userId })?.amountMinor ?? 0)
+            partial + expense.acceptedShareMinor(for: userId)
         }
         let currency = expenses.first?.currency ?? "PLN"
         return Money(amountMinor: minor, currencyCode: currency)
     }
 
     private func expenseRow(_ expense: ExpenseRecord) -> some View {
-        let mine = authSession.userId.map { expense.share(for: $0) } ?? expense.money
-
-        return LabeledContent {
-            VStack(alignment: .trailing, spacing: 2) {
-                HStack(spacing: 5) {
-                    if expense.isShared {
-                        Image(systemName: "person.2.fill")
-                            .font(.caption)
-                            .foregroundStyle(HomeTheme.secondary)
-                            .accessibilityHidden(true)
-                    }
-                    Text(MoneyFormatter.string(from: mine))
-                        .monospacedDigit()
-                }
-                if expense.isShared {
-                    Text("of \(MoneyFormatter.string(from: expense.money))")
-                        .font(.caption2)
-                        .foregroundStyle(HomeTheme.secondary)
-                }
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(
-                expense.isShared
-                    ? "Your share \(MoneyFormatter.string(from: mine)), shared expense"
-                    : MoneyFormatter.string(from: mine)
-            )
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                categoryLabel(expense)
-                if let note = expense.note, !note.isEmpty {
-                    Text(note)
-                        .font(.caption)
-                        .foregroundStyle(HomeTheme.secondary)
-                }
-            }
+        HomeExpenseRow(
+            expense: expense,
+            myUserId: authSession.userId,
+            highlightsRecurringIcon: expenseStore.isInitialRecurringOccurrence(expense)
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            selectedExpense = expense
         }
         .contextMenu {
+            if canEdit(expense) {
+                Button("Edit", systemImage: "pencil") {
+                    presentEdit(for: expense)
+                }
+            }
             if canSplit(expense) {
-                Button(expense.isShared ? "Edit split" : "Split", systemImage: "person.2") {
+                Button(
+                    expense.isShared ? "Edit split" : "Split",
+                    systemImage: expense.sharedSplitSystemImage(for: authSession.userId)
+                ) {
                     presentSplit(for: expense)
                 }
             }
-            Button("Delete", systemImage: "trash", role: .destructive) {
-                expensePendingDelete = expense
+            Button(role: .destructive) {
+                presentDeleteConfirmation(for: expense)
+            } label: {
+                DestructiveMenuLabel(title: "Delete", systemImage: "trash")
             }
         }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Shows expense details")
     }
 
     private func canSplit(_ expense: ExpenseRecord) -> Bool {
-        expense.recurringId == nil
-            && TestPartner.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+        SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+    }
+
+    private func canEdit(_ expense: ExpenseRecord) -> Bool {
+        guard let userId = authSession.userId else { return false }
+        return expense.createdBy == userId
     }
 
     private func presentSplit(for expense: ExpenseRecord) {
-        guard let userId = authSession.userId else { return }
-        expensePendingSplit = SplitExpensePresentation(expense: expense, myUserId: userId)
+        actionRequest = .split(expense)
     }
 
-    private func deleteConfirmationMessage(for expense: ExpenseRecord) -> String {
-        var message = "\(expense.category.displayName) · \(MoneyFormatter.string(from: expense.money))"
-        if expense.isShared {
-            message += "\n\nThis will also remove the expense for \(TestPartner.displayName)."
-        }
-        return message
+    private func presentEdit(for expense: ExpenseRecord) {
+        actionRequest = .edit(expense)
     }
 
-    private func categoryLabel(_ expense: ExpenseRecord) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: expense.category.systemImage)
-                .font(.callout)
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(expense.category.color)
-                .frame(width: 22, alignment: .center)
-            Text(expense.category.displayName)
-        }
+    private func presentDeleteConfirmation(for expense: ExpenseRecord) {
+        actionRequest = .delete(expense)
+    }
+}
+
+private enum AddExpenseFABLayout {
+    static let diameter: CGFloat = 56
+    static let trailingPadding: CGFloat = 20
+    static let bottomPadding: CGFloat = 12
+    /// Extra gap so the last row isn’t tucked under the FAB when scrolled to the end.
+    static let listClearance: CGFloat = 20
+
+    static var listBottomContentInset: CGFloat {
+        diameter + bottomPadding + listClearance
     }
 }
 
@@ -322,15 +417,18 @@ private struct AddExpenseFAB: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            LoamFeedback.tap()
+            action()
+        } label: {
             Image(systemName: "plus")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(Color(.systemBackground))
-                .frame(width: 56, height: 56)
+                .frame(width: AddExpenseFABLayout.diameter, height: AddExpenseFABLayout.diameter)
                 .background(Circle().fill(Color.primary))
                 .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(LoamPressStyle())
         .accessibilityLabel("Add expense")
     }
 }

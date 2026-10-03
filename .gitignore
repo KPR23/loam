@@ -5,7 +5,8 @@ DerivedData/
 *.xcworkspace/xcuserdata
 xcuserdata/
 
-# Secrets
+# Xcode Cloud may generate this for CURRENT_PROJECT_VERSION only.
+# Supabase keys live in Loam/Config/Config.xcconfig (committed).
 Loam/Config/Secrets.xcconfig
 .env
 .env.*
@@ -25,3 +26,5 @@ supabase/.temp
 .agents/
 .cursor/
 skills-lock.json
+
+.sentryclirc

@@ -1,61 +1,25 @@
 import SwiftUI
 
 private struct SplitFormState: Equatable {
+    var selectedPartnerUserIds: Set<UUID>
     var splitMode: SplitExpenseMode
     var paidByUserId: UUID
     var myPercentage: Int
     var myExactAmountText: String
+    var participantPercentages: [UUID: Int]
+    var participantAmountTexts: [UUID: String]
 
     static func from(expense: ExpenseRecord, myUserId: UUID) -> SplitFormState {
-        let partnerUserId = TestPartner.userId
-        let myShare = expense.shares.first(where: { $0.userId == myUserId })?.amountMinor ?? expense.amountMinor
-        let partnerShare = expense.shares.first(where: { $0.userId == partnerUserId })?.amountMinor
-
-        if expense.isShared,
-           let partnerShare,
-           myShare * 2 == expense.amountMinor,
-           partnerShare * 2 == expense.amountMinor {
-            return SplitFormState(
-                splitMode: .equal,
-                paidByUserId: expense.paidBy,
-                myPercentage: 50,
-                myExactAmountText: ""
-            )
-        }
-
-        if expense.isShared, expense.amountMinor > 0 {
-            let storedShares = expense.shares.map {
-                SplitCalculator.Share(userId: $0.userId, amountMinor: $0.amountMinor)
-            }
-            if let pct = SplitCalculator.matchingTwoPersonPercentage(
-                totalMinor: expense.amountMinor,
-                myUserId: myUserId,
-                partnerUserId: partnerUserId,
-                paidByUserId: expense.paidBy,
-                storedShares: storedShares
-            ) {
-                return SplitFormState(
-                    splitMode: .percentage,
-                    paidByUserId: expense.paidBy,
-                    myPercentage: pct,
-                    myExactAmountText: ""
-                )
-            }
-            return SplitFormState(
-                splitMode: .exactAmount,
-                paidByUserId: expense.paidBy,
-                myPercentage: 50,
-                myExactAmountText: MoneyFormatter.typingAmount(
-                    from: Money(amountMinor: myShare, currencyCode: expense.currency)
-                )
-            )
-        }
-
+        let partnerUserIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId)
+        let seed = SplitFormSeed.from(expense: expense, myUserId: myUserId)
         return SplitFormState(
-            splitMode: .equal,
+            selectedPartnerUserIds: partnerUserIds,
+            splitMode: seed.splitMode,
             paidByUserId: expense.paidBy,
-            myPercentage: 50,
-            myExactAmountText: ""
+            myPercentage: seed.myPercentage,
+            myExactAmountText: seed.myExactAmountText,
+            participantPercentages: seed.participantPercentages,
+            participantAmountTexts: seed.participantAmountTexts
         )
     }
 }
@@ -66,12 +30,36 @@ struct SplitExpenseSheet: View {
 
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
-    @EnvironmentObject private var householdStore: HouseholdStore
+    @EnvironmentObject private var connectionStore: ConnectionStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var formState: SplitFormState
     @State private var isSaving = false
     @State private var errorMessage: String?
+
+    private var splitPartners: [SplitPartnerOption] {
+        if SupabaseConfig.isConfigured { return connectionStore.connections.filter { $0.userId != myUserId } }
+        #if DEBUG
+        return SplitPartnerOption.available(
+            for: myUserId,
+            savedMainAccount: authSession.savedMainAccountPartnerOption
+        )
+        #else
+        return SplitPartnerOption.available(for: myUserId)
+        #endif
+    }
+
+    private var selectedSplitPartners: [SplitPartnerOption] {
+        splitPartners.filter { formState.selectedPartnerUserIds.contains($0.userId) }
+    }
+
+    private var recentSplitPartners: [SplitPartnerOption] {
+        SplitPartnerOption.recent(
+            available: splitPartners,
+            myUserId: myUserId,
+            seedingFrom: expenseStore.expenses
+        )
+    }
 
     init(expense: ExpenseRecord, myUserId: UUID) {
         self.expense = expense
@@ -82,18 +70,8 @@ struct SplitExpenseSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    LabeledContent("Amount") {
-                        Text(MoneyFormatter.string(from: expense.money))
-                            .monospacedDigit()
-                    }
-                    LabeledContent("Category") {
-                        Text(expense.category.displayName)
-                    }
-                    LabeledContent("Date") {
-                        Text(expense.spentAt.formatted(date: .abbreviated, time: .omitted))
-                    }
-                    if let note = expense.note, !note.isEmpty {
+                if let note = expense.note, !note.isEmpty {
+                    Section {
                         LabeledContent("Note") {
                             Text(note)
                         }
@@ -104,29 +82,38 @@ struct SplitExpenseSheet: View {
                     totalMinor: expense.amountMinor,
                     myUserId: myUserId,
                     myDisplayName: authSession.displayName ?? "You",
-                    partnerUserId: TestPartner.userId,
-                    partnerDisplayName: TestPartner.displayName,
-                    isSplit: .constant(true),
+                    availablePartners: splitPartners,
+                    currencyCode: expense.currency,
+                    recentPartners: recentSplitPartners,
+                    requiresPartner: true,
+                    selectedPartnerUserIds: $formState.selectedPartnerUserIds,
                     splitMode: $formState.splitMode,
                     paidByUserId: $formState.paidByUserId,
-                    myPercentage: $formState.myPercentage,
-                    myExactAmountText: $formState.myExactAmountText
+                    participantPercentages: $formState.participantPercentages,
+                    participantAmountTexts: $formState.participantAmountTexts
                 )
             }
+            .task { await connectionStore.refresh(userId: myUserId) }
+            .disabled(isSaving)
+            .interactiveDismissDisabled(isSaving)
             .navigationTitle(expense.isShared ? "Edit split" : "Split expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { LoamFeedback.tap(); dismiss() }
+                        .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button {
                         Task { await save() }
+                    } label: {
+                        SavingActionLabel(title: "Save", isSaving: isSaving)
                     }
                     .fontWeight(.semibold)
-                    .disabled(isSaving)
+                    .disabled(isSaving || validationError != nil)
                 }
             }
+            .sensoryFeedback(.error, trigger: errorMessage) { _, newValue in newValue != nil }
             .alert("Couldn’t save split", isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
@@ -139,12 +126,8 @@ struct SplitExpenseSheet: View {
     }
 
     private func save() async {
-        if let validationError = SplitExpenseSection.validationError(
-            totalMinor: expense.amountMinor,
-            splitMode: formState.splitMode,
-            myPercentage: formState.myPercentage,
-            myExactAmountText: formState.myExactAmountText
-        ) {
+        guard !isSaving else { return }
+        if let validationError {
             errorMessage = validationError
             return
         }
@@ -153,24 +136,39 @@ struct SplitExpenseSheet: View {
         defer { isSaving = false }
 
         do {
-            let household = try await householdStore.ensureTestHousehold(
-                userId: myUserId,
-                userDisplayName: authSession.displayName ?? "You"
-            )
+            let partners = selectedSplitPartners
             try await expenseStore.applySplit(
                 to: expense.id,
                 userId: myUserId,
-                householdId: household.id,
                 splitMode: formState.splitMode,
                 paidBy: formState.paidByUserId,
-                partnerUserId: TestPartner.userId,
+                partnerUserIds: partners.map(\.userId),
                 myPercentage: formState.myPercentage,
-                myExactAmountMinor: Money(majorString: formState.myExactAmountText)?.amountMinor
+                myExactAmountMinor: Money(majorString: formState.myExactAmountText)?.amountMinor,
+                participantPercentages: formState.participantPercentages,
+                participantExactAmountMinors: participantExactAmountMinors
             )
+            LoamFeedback.success()
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private var validationError: String? {
+        SplitExpenseSection.validationError(
+            totalMinor: expense.amountMinor,
+            selectedPartnerCount: formState.selectedPartnerUserIds.count,
+            requiresPartner: true,
+            splitMode: formState.splitMode,
+            participantUserIds: [myUserId] + Array(formState.selectedPartnerUserIds),
+            participantPercentages: formState.participantPercentages,
+            participantAmountTexts: formState.participantAmountTexts
+        )
+    }
+
+    private var participantExactAmountMinors: [UUID: Int] {
+        formState.participantAmountTexts.compactMapValues { Money(majorString: $0)?.amountMinor }
     }
 }
 
@@ -189,5 +187,4 @@ struct SplitExpenseSheet: View {
     )
     .environmentObject(AuthSession())
     .environmentObject(ExpenseStore())
-    .environmentObject(HouseholdStore())
 }
