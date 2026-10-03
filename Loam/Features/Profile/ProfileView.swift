@@ -143,6 +143,7 @@ struct ProfileView: View {
     }
 
     @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isUploadingPhoto = false
     @State private var photoError: String?
@@ -189,8 +190,14 @@ struct ProfileView: View {
                             }
                         }
                         VStack(spacing: 4) {
-                            Text(authSession.displayName ?? "You")
-                                .font(.system(.title, design: .rounded).weight(.semibold))
+                            HStack(spacing: 8) {
+                                Text(authSession.displayName ?? "You")
+                                    .font(.system(.title, design: .rounded).weight(.semibold))
+                                if subscriptions.isPro {
+                                    ProMark(height: 22)
+                                        .accessibilityLabel("Loam Pro")
+                                }
+                            }
                             Text(authSession.email ?? "Your own little corner of Loam.")
                                 .font(.subheadline)
                                 .foregroundStyle(HomeTheme.secondary)
