@@ -404,10 +404,6 @@ struct ProfileView: View {
                 } label: {
                     ProfileRow("Default currency", symbol: "dollarsign.arrow.circlepath", color: .green, detail: defaultCurrency.uppercased())
                 }
-            } else {
-                ProfileRow("Default currency", symbol: "dollarsign.arrow.circlepath", color: .green, detail: AppPreferences.defaultCurrencyCode)
-                    .opacity(0.5)
-                    .accessibilityHint("Other currencies aren't available yet")
             }
             NavigationLink {
                 TimeZoneSettingsView()
@@ -416,10 +412,6 @@ struct ProfileView: View {
             }
         } header: {
             Text("Preferences")
-        } footer: {
-            if !AppPreferences.allowsCurrencySelection {
-                Text("Other currencies are coming soon. All expenses use \(AppPreferences.defaultCurrencyCode) for now.")
-            }
         }
     }
 
