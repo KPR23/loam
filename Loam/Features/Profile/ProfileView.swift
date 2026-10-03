@@ -252,7 +252,7 @@ struct ProfileView: View {
 
                 themeSection
                 preferencesSection
-                if let userId = authSession.userId, !authSession.usesDemoMode {
+                if let userId = authSession.userId, !authSession.usesDemoMode, Telemetry.isAnalyticsAvailable {
                     privacySection(userId: userId)
                 }
 
