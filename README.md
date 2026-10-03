@@ -146,6 +146,8 @@ Info.plist keys (via build settings from xcconfig):
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 
+Only `Production.xcconfig` sets the PostHog keys, so Debug and TestFlight builds send no analytics and the PostHog project (216307) holds App Store users only. The `POSTHOG_PROJECT_ID` secret in the `production` environment must name that project, or account deletion erases nothing.
+
 ## Architecture
 
 ```
