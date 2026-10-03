@@ -60,11 +60,15 @@ struct AuthView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
                 }
-            } else {
+            }
+
+            #if DEBUG
+            if SupabaseConfig.isConfigured {
                 Text("Connected to Supabase")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            #endif
 
             #if DEBUG
             if SupabaseConfig.allowsTestAccounts, !TestAccount.configured.isEmpty {
