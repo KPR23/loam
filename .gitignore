@@ -25,7 +25,6 @@ supabase/.temp
 # Editor / agent tooling (not part of the app)
 .agents/
 .cursor/
-skills-lock.json
 .claude/worktrees/
 .claude/settings.local.json
 
