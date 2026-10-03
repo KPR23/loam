@@ -65,6 +65,10 @@ targets:
         inputFiles:
           - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}
         script: |
+          # Xcode Cloud uploads from ci_scripts/ci_post_xcodebuild.sh.
+          if [ -n "${CI:-}" ]; then
+            exit 0
+          fi
           # This script is responsible for uploading debug symbols and source context for Sentry.
           if which sentry-cli >/dev/null; then
             export SENTRY_ORG=kprs-lab
