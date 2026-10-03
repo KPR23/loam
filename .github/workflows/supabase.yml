@@ -108,8 +108,6 @@ jobs:
           echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
       - name: Link staging project
         run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
-      - name: Apply staging migrations
-        run: supabase db push
       - name: Validate and install staging function secrets
         shell: bash
         run: |
@@ -132,6 +130,9 @@ jobs:
           fi
           supabase secrets set --project-ref "$PROJECT_REF" --env-file "$secret_file"
           rm -f "$secret_file"
+      # Secrets are checked first so a missing one stops the deploy before any migration runs.
+      - name: Apply staging migrations
+        run: supabase db push
       - name: Deploy deletion functions
         run: |
           supabase functions deploy delete-account --project-ref "$PROJECT_REF"
@@ -209,8 +210,6 @@ jobs:
           echo "DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock" >> "$GITHUB_ENV"
       - name: Link production project
         run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
-      - name: Apply production migrations
-        run: supabase db push
       - name: Validate and install production function secrets
         shell: bash
         run: |
@@ -233,6 +232,9 @@ jobs:
           fi
           supabase secrets set --project-ref "$PROJECT_REF" --env-file "$secret_file"
           rm -f "$secret_file"
+      # Secrets are checked first so a missing one stops the deploy before any migration runs.
+      - name: Apply production migrations
+        run: supabase db push
       - name: Deploy deletion functions
         run: |
           supabase functions deploy delete-account --project-ref "$PROJECT_REF"
