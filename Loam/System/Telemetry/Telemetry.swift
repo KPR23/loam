@@ -2,11 +2,11 @@ import Foundation
 import PostHog
 import Sentry
 
-/// Sentry reports crashes and handled errors for every user. PostHog analytics and session
-/// replay run only for a signed-in user who opted in, so nothing reaches PostHog without that
-/// user's consent. Consent is stored per account: another account signing in on the same
-/// device starts opted out. Both tools share the Supabase user ID so a crash can be matched
-/// to the user's path in PostHog.
+/// Sentry reports crashes and handled errors for every user of a TestFlight or App Store
+/// build. PostHog analytics and session replay run only for a signed-in user who opted in,
+/// so nothing reaches PostHog without that user's consent. Consent is stored per account:
+/// another account signing in on the same device starts opted out. Both tools share the
+/// Supabase user ID so a crash can be matched to the user's path in PostHog.
 @MainActor
 enum Telemetry {
     private static let analyticsConsentKeyPrefix = "loam.analyticsConsent."
@@ -15,7 +15,11 @@ enum Telemetry {
     private static var userId: String?
 
     static func start() {
+        // Xcode already shows a Debug build's crashes, and its debugger pauses would reach
+        // Sentry as app hangs, so only TestFlight and App Store builds report.
+        #if !DEBUG
         startSentry()
+        #endif
     }
 
     /// Pass `nil` when signed out or in local demo mode, whose IDs are not real accounts.
