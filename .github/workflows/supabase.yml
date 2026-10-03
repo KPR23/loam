@@ -186,7 +186,7 @@ jobs:
       DELETION_EMAIL_FROM: ${{ secrets.DELETION_EMAIL_FROM }}
       REVENUECAT_SECRET_API_KEY: ${{ secrets.REVENUECAT_SECRET_API_KEY }}
       REVENUECAT_WEBHOOK_AUTH: ${{ secrets.REVENUECAT_WEBHOOK_AUTH }}
-      PROJECT_REF: nffogbutnyevhhwnpgip
+      PROJECT_REF: wheesnckvlylwwrvzcly
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
       - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
@@ -245,7 +245,7 @@ jobs:
           supabase functions deploy sync-pro-entitlement --project-ref "$PROJECT_REF"
       - name: Provision production Vault and scheduler
         env:
-          PROJECT_URL: https://nffogbutnyevhhwnpgip.supabase.co
+          PROJECT_URL: https://wheesnckvlylwwrvzcly.supabase.co
         run: |
           body="$(jq -n --arg url "$PROJECT_URL" --arg worker "$DELETION_WORKER_KEY" --arg notifier "$DELETION_NOTIFIER_KEY" '{p_project_url:$url,p_worker_key:$worker,p_notifier_key:$notifier}')"
           curl --fail --silent --show-error --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_account_deletion_scheduler" \
@@ -253,7 +253,7 @@ jobs:
             --header 'Content-Type: application/json' --data "$body"
       - name: Verify protected worker deployment
         env:
-          PROJECT_URL: https://nffogbutnyevhhwnpgip.supabase.co
+          PROJECT_URL: https://wheesnckvlylwwrvzcly.supabase.co
         run: |
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-worker" --header 'X-Deletion-Worker-Key: deployment-probe-invalid')"
           test "$status" = 401
