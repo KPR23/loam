@@ -7,7 +7,7 @@ Add these secrets to the GitHub Actions `staging` environment:
 - `SUPABASE_ACCESS_TOKEN`, `SUPABASE_STAGING_DB_PASSWORD`, `SUPABASE_SERVICE_ROLE_KEY`
 - `DELETION_WORKER_KEY`, `DELETION_NOTIFIER_KEY`, `DELETION_MONITOR_KEY` (each at least 32 random characters and distinct)
 - `DELETION_CREDENTIAL_ENCRYPTION_KEY` (base64 encoded 32-byte key; keep stable so retained credentials remain decryptable)
-- `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`
+- `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` (see [Renewing the Apple client secret](#renewing-the-apple-client-secret))
 - `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` (a personal API key limited to the `person:write` and `session_recording:write` scopes on that project). The worker deletes the user's PostHog person, events and recordings before deleting their auth account. Staging and production share one PostHog project, so both environments use the same values.
 - No completion email is sent. The deploy sets `DELETION_EMAIL_ENABLED=false`, so new deletion requests retain no email address, the notifier only records its heartbeat, and the monitor response includes `email_enabled: false`. Account deletion and in-app status work without it.
 
@@ -24,6 +24,20 @@ Configure an external uptime/heartbeat service to make an HTTPS `GET` every minu
 Send `X-Deletion-Monitor-Key: <DELETION_MONITOR_KEY>`. Treat any response other than HTTP 200 as an alert. The endpoint returns HTTP 503 for either missing five-minute worker heartbeat, any terminal deletion failure, or a request pending for more than fifteen minutes. It includes whether email is enabled (always false for now), last worker and notifier heartbeats, pending count, oldest request, and failure counts. Keep the monitor outside Supabase so a stopped `pg_cron` scheduler is still detected.
 
 Set a five-minute first-check grace period after deployment, then page the operator configured in that external monitoring service on any non-200 response.
+
+## Renewing the Apple client secret
+
+`APPLE_CLIENT_SECRET` is a JWT signed with the Sign in with Apple key `GXS83A2F8N`, and Apple caps it at six months. Without a valid one, the worker can't revoke the user's Apple token and deletions stall.
+
+The key is `~/.appstoreconnect/private_keys/AuthKey_GXS83A2F8N.p8` on the maintainer's Mac. Apple doesn't allow downloading it again, so keep that file backed up. To renew, sign a new 180-day secret and store it in both environments:
+
+```bash
+for env in staging production; do
+  node scripts/apple-client-secret.mjs ~/.appstoreconnect/private_keys/AuthKey_GXS83A2F8N.p8 | gh secret set APPLE_CLIENT_SECRET --env "$env"
+done
+```
+
+The next deploy installs it. To install it in a project before then, run `supabase secrets set --project-ref <project-ref> APPLE_CLIENT_SECRET="$(node scripts/apple-client-secret.mjs <key>)"`.
 
 ## Recovery
 
