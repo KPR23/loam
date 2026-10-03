@@ -22,6 +22,7 @@ struct AuthView: View {
 
             SignInWithAppleButton(.signIn) { request in
                 request.requestedScopes = [.fullName, .email]
+                request.nonce = authSession.prepareAppleSignInNonce()
             } onCompletion: { result in
                 Task {
                     switch result {
