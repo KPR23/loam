@@ -1,5 +1,6 @@
 import Foundation
 import AuthenticationServices
+import CryptoKit
 import Security
 import Supabase
 
@@ -32,6 +33,10 @@ final class AuthSession: ObservableObject {
     private(set) var usesDemoMode = false
 
     private var authChangesTask: Task<Void, Never>?
+
+    /// The raw nonce of the Sign in with Apple request in flight. Apple signs its hash into
+    /// the ID token and Supabase checks the pair, so an intercepted token can't be replayed.
+    private var appleNonce: String?
 
     #if DEBUG
     private struct SavedMainAccount: Equatable {
@@ -117,8 +122,17 @@ final class AuthSession: ObservableObject {
         }
     }
 
+    /// Starts a Sign in with Apple request; set the result as the request's `nonce`.
+    func prepareAppleSignInNonce() -> String {
+        let nonce = UUID().uuidString + UUID().uuidString
+        appleNonce = nonce
+        return SHA256.hash(data: Data(nonce.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
     func signInWithApple(credential: ASAuthorizationAppleIDCredential) async {
         lastError = nil
+        let nonce = appleNonce
+        appleNonce = nil
 
         if usesDemoMode || SupabaseClientProvider.shared == nil {
             activateDemoSession(
@@ -137,7 +151,7 @@ final class AuthSession: ObservableObject {
 
         do {
             let session = try await client.auth.signInWithIdToken(
-                credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken)
+                credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce)
             )
 
             var appleName: String?
