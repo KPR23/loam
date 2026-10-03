@@ -26,5 +26,7 @@ supabase/.temp
 .agents/
 .cursor/
 skills-lock.json
+.claude/worktrees/
+.claude/settings.local.json
 
 .sentryclirc
