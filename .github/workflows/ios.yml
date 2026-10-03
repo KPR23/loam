@@ -21,6 +21,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A compile check on every PR, so a broken build shows up before an rc tag reaches Xcode Cloud.
+  # Tests stay behind the label to save macOS minutes. Adding a label reruns the workflow,
+  # and the test job builds anyway, so labeled events skip this job.
+  build:
+    name: Build
+    if: github.event.action != 'labeled'
+    runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Loam.xcodeproj \
+            -scheme Loam \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO \
+            -skipPackagePluginValidation
+
   build-and-test:
     name: Build & Test
     if: contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
