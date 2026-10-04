@@ -17,8 +17,11 @@ struct ActivityView: View {
                     Section { HStack { Spacer(); ProgressView("Loading activity…"); Spacer() }.padding(.vertical, 28) }
                 } else if activityStore.events.isEmpty {
                     Section {
-                        ContentUnavailableView("You're all caught up", systemImage: "checkmark.circle",
-                                               description: Text("New activity on shared expenses shows up here. Read items stay in each expense's history."))
+                        LoamEmptyState(
+                            title: "You're all caught up",
+                            message: "When a friend splits an expense with you, suggests an edit, or records a repayment, it shows up here for you to review. Read items stay in each expense's history.",
+                            systemImage: "tray"
+                        )
                     }
                 } else {
                     if !requests.isEmpty {
