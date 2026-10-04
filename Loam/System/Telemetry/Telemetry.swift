@@ -153,11 +153,33 @@ enum Telemetry {
 enum ProductEvent {
     case expenseCreated(shared: Bool, recurring: Bool, participantCount: Int)
     case repaymentRecorded
+    case emptyStateViewed(EmptyStateScreen)
+    case emptyStateActionTapped(EmptyStateScreen)
+    case addExpenseOpened(source: AddExpenseSource)
+    case friendConnected
+
+    /// A tab whose list can be empty. `balancesSettled` is Balances for a user who already has friends.
+    enum EmptyStateScreen: String {
+        case expenses
+        case pastMonth = "past_month"
+        case balances
+        case balancesSettled = "balances_settled"
+        case activity
+    }
+
+    enum AddExpenseSource: String {
+        case fab
+        case emptyState = "empty_state"
+    }
 
     var name: String {
         switch self {
         case .expenseCreated: "expense created"
         case .repaymentRecorded: "repayment recorded"
+        case .emptyStateViewed: "empty state viewed"
+        case .emptyStateActionTapped: "empty state action tapped"
+        case .addExpenseOpened: "add expense opened"
+        case .friendConnected: "friend connected"
         }
     }
 
@@ -165,7 +187,11 @@ enum ProductEvent {
         switch self {
         case let .expenseCreated(shared, recurring, participantCount):
             ["shared": shared, "recurring": recurring, "participant_count": participantCount]
-        case .repaymentRecorded:
+        case let .emptyStateViewed(screen), let .emptyStateActionTapped(screen):
+            ["screen": screen.rawValue]
+        case let .addExpenseOpened(source):
+            ["source": source.rawValue]
+        case .repaymentRecorded, .friendConnected:
             nil
         }
     }

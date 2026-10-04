@@ -74,6 +74,7 @@ struct HomeView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 AddExpenseFAB {
+                    Telemetry.capture(.addExpenseOpened(source: .fab))
                     showAddExpense = true
                 }
                 .padding(.trailing, AddExpenseFABLayout.trailingPadding)
@@ -289,18 +290,22 @@ struct HomeView: View {
                 systemImage: "creditcard"
             ) {
                 Button {
+                    Telemetry.capture(.emptyStateActionTapped(.expenses))
+                    Telemetry.capture(.addExpenseOpened(source: .emptyState))
                     showAddExpense = true
                 } label: {
                     Label("Add an expense", systemImage: "plus")
                         .fontWeight(.semibold)
                 }
             }
+            .onAppear { Telemetry.capture(.emptyStateViewed(.expenses)) }
         } else {
             LoamEmptyState(
                 title: "No expenses in \(expenseStore.period.displayTitle)",
                 message: "Nothing was logged this month. Tap the month at the top to see another one.",
                 systemImage: "calendar"
             )
+            .onAppear { Telemetry.capture(.emptyStateViewed(.pastMonth)) }
         }
     }
 
