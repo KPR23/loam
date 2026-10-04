@@ -5,12 +5,21 @@ final class BalanceStore: ObservableObject {
     @Published private(set) var snapshot = BalanceSnapshot.empty
     @Published private(set) var isLoading = false
     @Published var lastError: String?
+    private var accountId: UUID?
 
     func refresh(userId: UUID?) async {
-        guard let userId else { snapshot = .empty; return }
+        // Never show one account's balances to the next one on this device.
+        if userId != accountId { snapshot = .empty; lastError = nil; accountId = userId }
+        guard let userId else { return }
         isLoading = true; defer { isLoading = false }
-        do { snapshot = try await BalanceRepositoryFactory.make().fetchBalances(for: userId); lastError = nil }
-        catch { lastError = error.localizedDescription }
+        do {
+            let fetched = try await BalanceRepositoryFactory.make().fetchBalances(for: userId)
+            guard accountId == userId else { return }
+            snapshot = fetched; lastError = nil
+        } catch {
+            guard accountId == userId else { return }
+            lastError = error.localizedDescription
+        }
     }
 
     func repay(to personId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, userId: UUID) async throws {
