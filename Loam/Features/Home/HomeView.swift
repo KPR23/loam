@@ -200,8 +200,7 @@ struct HomeView: View {
             }
         } else if expenseStore.expenses.isEmpty {
             Section {
-                Text("No expenses yet. Add one in a few taps.")
-                    .foregroundStyle(HomeTheme.secondary)
+                emptyState
             }
         } else {
             ForEach(expensesByDay, id: \.date) { section in
@@ -278,6 +277,30 @@ struct HomeView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        if expenseStore.period == .currentMonth {
+            LoamEmptyState(
+                title: "No expenses this month yet",
+                message: "Log what you spend and Loam totals your month by category. Split any expense with a friend to keep track of who owes whom.",
+                systemImage: "creditcard"
+            ) {
+                Button {
+                    showAddExpense = true
+                } label: {
+                    Label("Add an expense", systemImage: "plus")
+                        .fontWeight(.semibold)
+                }
+            }
+        } else {
+            LoamEmptyState(
+                title: "No expenses in \(expenseStore.period.displayTitle)",
+                message: "Nothing was logged this month. Tap the month at the top to see another one.",
+                systemImage: "calendar"
+            )
         }
     }
 
