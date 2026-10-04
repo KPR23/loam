@@ -3,6 +3,7 @@ import SwiftUI
 struct BalancesView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var balanceStore: BalanceStore
+    @EnvironmentObject private var connectionStore: ConnectionStore
     @Environment(\.scenePhase) private var scenePhase
     @State private var repaymentTarget: PersonBalance?
     @State private var amountText = ""
@@ -10,6 +11,7 @@ struct BalancesView: View {
     @State private var paidAt = Date()
     @State private var isSaving = false
     @State private var repaymentError: String?
+    @State private var showAddFriend = false
 
     var body: some View {
         NavigationStack {
@@ -70,6 +72,16 @@ struct BalancesView: View {
             .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await balanceStore.refresh(userId: authSession.userId) } } }
         }
         .sheet(item: $repaymentTarget) { target in repaymentSheet(target) }
+        .sheet(isPresented: $showAddFriend) {
+            NavigationStack {
+                AddFriendView { _ in }
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { showAddFriend = false }
+                        }
+                    }
+            }
+        }
         .alert("Couldn’t load balances", isPresented: Binding(
             get: { balanceStore.lastError != nil },
             set: { if !$0 { balanceStore.lastError = nil } }
@@ -159,23 +171,28 @@ struct BalancesView: View {
         .accessibilityElement(children: .combine)
     }
 
+    @ViewBuilder
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "person.2")
-                .font(.system(size: 26, weight: .medium))
-                .foregroundStyle(HomeTheme.accent)
-                .padding(.bottom, 4)
-                .accessibilityHidden(true)
-            Text("All settled up")
-                .font(.system(.headline, design: .rounded))
-                .foregroundStyle(HomeTheme.text)
-            Text("Balances appear here once shared expenses are accepted.")
-                .font(.subheadline)
-                .foregroundStyle(HomeTheme.secondary)
-                .multilineTextAlignment(.center)
+        if connectionStore.connections.isEmpty {
+            LoamEmptyState(
+                title: "No balances yet",
+                message: "Connect with a friend using a code, then split an expense with them. Once they accept it, who owes whom shows up here.",
+                systemImage: "person.2"
+            ) {
+                Button {
+                    showAddFriend = true
+                } label: {
+                    Label("Add a friend", systemImage: "person.badge.plus")
+                        .fontWeight(.semibold)
+                }
+            }
+        } else {
+            LoamEmptyState(
+                title: "All settled up",
+                message: "Nobody owes anything right now. When a friend accepts an expense you split, the balance shows up here.",
+                systemImage: "checkmark.circle"
+            )
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
     }
 
     private func repaymentSheet(_ target: PersonBalance) -> some View {
@@ -221,5 +238,5 @@ struct BalancesView: View {
 private extension String { var nilIfBlank: String? { trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self } }
 
 #Preview {
-    BalancesView().environmentObject(AuthSession()).environmentObject(BalanceStore())
+    BalancesView().environmentObject(AuthSession()).environmentObject(BalanceStore()).environmentObject(ConnectionStore())
 }
