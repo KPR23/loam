@@ -8,6 +8,7 @@ struct BalancesView: View {
     @State private var note = ""
     @State private var paidAt = Date()
     @State private var isSaving = false
+    @State private var repaymentError: String?
 
     var body: some View {
         NavigationStack {
@@ -35,6 +36,7 @@ struct BalancesView: View {
                                     amountText = ""
                                     note = ""
                                     paidAt = Date()
+                                    repaymentError = nil
                                 } label: {
                                     personRow(balance)
                                 }
@@ -192,6 +194,15 @@ struct BalancesView: View {
                     Button { Task { await saveRepayment(target) } } label: { SavingActionLabel(title: "Save", isSaving: isSaving) }.disabled(isSaving || (Money(majorString: amountText, currencyCode: target.currencyCode)?.amountMinor ?? 0) <= 0)
                 }
             }
+            // Presented from the sheet: an alert on the list behind it can't appear while the sheet is up.
+            .alert("Couldn’t record repayment", isPresented: Binding(
+                get: { repaymentError != nil },
+                set: { if !$0 { repaymentError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(repaymentError ?? "")
+            }
         }
     }
 
@@ -200,7 +211,7 @@ struct BalancesView: View {
         guard let userId = authSession.userId, let money = Money(majorString: amountText, currencyCode: target.currencyCode) else { return }
         isSaving = true; defer { isSaving = false }
         do { try await balanceStore.repay(to: target.personId, amountMinor: money.amountMinor, currencyCode: target.currencyCode, note: note.nilIfBlank, paidAt: paidAt, userId: userId); LoamFeedback.success(); repaymentTarget = nil }
-        catch { LoamFeedback.error(); balanceStore.lastError = error.localizedDescription }
+        catch { LoamFeedback.error(); repaymentError = error.localizedDescription }
     }
 }
 
