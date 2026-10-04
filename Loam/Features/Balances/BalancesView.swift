@@ -180,18 +180,21 @@ struct BalancesView: View {
                 systemImage: "person.2"
             ) {
                 Button {
+                    Telemetry.capture(.emptyStateActionTapped(.balances))
                     showAddFriend = true
                 } label: {
                     Label("Add a friend", systemImage: "person.badge.plus")
                         .fontWeight(.semibold)
                 }
             }
+            .onAppear { Telemetry.capture(.emptyStateViewed(.balances)) }
         } else {
             LoamEmptyState(
                 title: "All settled up",
                 message: "Nobody owes anything right now. When a friend accepts an expense you split, the balance shows up here.",
                 systemImage: "checkmark.circle"
             )
+            .onAppear { Telemetry.capture(.emptyStateViewed(.balancesSettled)) }
         }
     }
 
