@@ -3,6 +3,7 @@ import SwiftUI
 struct BalancesView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var balanceStore: BalanceStore
+    @Environment(\.scenePhase) private var scenePhase
     @State private var repaymentTarget: PersonBalance?
     @State private var amountText = ""
     @State private var note = ""
@@ -65,6 +66,8 @@ struct BalancesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .task(id: authSession.userId) { await balanceStore.refresh(userId: authSession.userId) }
             .refreshable { await balanceStore.refresh(userId: authSession.userId) }
+            // Others accept shares and record repayments while the app is in the background.
+            .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await balanceStore.refresh(userId: authSession.userId) } } }
         }
         .sheet(item: $repaymentTarget) { target in repaymentSheet(target) }
         .alert("Couldn’t load balances", isPresented: Binding(
