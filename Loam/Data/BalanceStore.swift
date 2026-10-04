@@ -17,7 +17,8 @@ final class BalanceStore: ObservableObject {
             guard accountId == userId else { return }
             snapshot = fetched; lastError = nil
         } catch {
-            guard accountId == userId else { return }
+            // Leaving the tab cancels the load; that is not a failure.
+            guard accountId == userId, !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
             lastError = error.localizedDescription
         }
     }
