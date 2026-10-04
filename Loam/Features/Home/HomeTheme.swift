@@ -144,3 +144,46 @@ struct SavingActionLabel: View {
             .accessibilityLabel(isSaving ? "Saving" : title)
     }
 }
+
+/// A list's empty state: says what belongs here, how it gets there, and offers the first step.
+struct LoamEmptyState<Action: View>: View {
+    let title: String
+    let message: String
+    let systemImage: String
+    @ViewBuilder var action: Action
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: systemImage)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(HomeTheme.accent)
+                .frame(width: 64, height: 64)
+                .background(HomeTheme.accent.opacity(0.14), in: Circle())
+                .accessibilityHidden(true)
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                    .foregroundStyle(HomeTheme.text)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(HomeTheme.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .multilineTextAlignment(.center)
+            .accessibilityElement(children: .combine)
+            action
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .padding(.horizontal, 8)
+    }
+}
+
+extension LoamEmptyState where Action == EmptyView {
+    init(title: String, message: String, systemImage: String) {
+        self.init(title: title, message: message, systemImage: systemImage) { EmptyView() }
+    }
+}
