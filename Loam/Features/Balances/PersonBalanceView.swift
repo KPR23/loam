@@ -16,6 +16,8 @@ struct PersonBalanceView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var history: [BalanceHistoryEntry] = []
     @State private var hasLoaded = false
+    /// Bumped by every load; only the newest may update the screen.
+    @State private var historyRequest = 0
     @State private var loadError: String?
     @State private var showsRepayment = false
 
@@ -188,14 +190,21 @@ struct PersonBalanceView: View {
         return grouped.keys.sorted(by: >).map { ($0, grouped[$0] ?? []) }
     }
 
+    /// Loads overlap (foreground, balance changes, pull to refresh), so a slower earlier
+    /// request must not replace rows a newer one already showed, such as a new repayment.
     private func loadHistory() async {
         guard let userId = authSession.userId else { return }
+        historyRequest += 1
+        let request = historyRequest
         do {
-            history = try await balanceStore.history(with: person.personId, userId: userId)
+            let loaded = try await balanceStore.history(with: person.personId, userId: userId)
+            guard request == historyRequest else { return }
+            history = loaded
             loadError = nil
         } catch {
             // Leaving the screen cancels the load; that is not a failure.
-            guard !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
+            guard request == historyRequest,
+                  !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
             loadError = error.localizedDescription
         }
         hasLoaded = true
