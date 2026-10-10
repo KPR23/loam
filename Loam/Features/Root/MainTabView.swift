@@ -50,7 +50,7 @@ struct MainTabView: View {
                 HomeView(arcReloadToken: expensesReloadToken)
             }
 
-            Tab("Balances", systemImage: "arrow.left.arrow.right", value: AppTab.balances) {
+            Tab("Balances", systemImage: "person.line.dotted.person", value: AppTab.balances) {
                 BalancesView()
             }
 
@@ -81,7 +81,7 @@ struct MainTabView: View {
 
             BalancesView()
                 .tabItem {
-                    Label("Balances", systemImage: "arrow.left.arrow.right")
+                    Label("Balances", systemImage: "person.line.dotted.person")
                 }
                 .tag(AppTab.balances)
 
