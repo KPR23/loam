@@ -525,12 +525,24 @@ final class ExpenseStore: ObservableObject {
         userId: UUID,
         action: ExpenseShareResponseAction
     ) async {
-        let targets: [(id: UUID, expense: ExpenseRecord)] = expenseIds.compactMap { id in
+        var targets: [(id: UUID, expense: ExpenseRecord)] = expenseIds.compactMap { id in
             guard let expense = knownExpense(id: id),
                   expense.isPendingAcceptance(for: userId) else { return nil }
             return (id, expense)
         }
         guard !targets.isEmpty else { return }
+
+        // Trusting a creator also accepts everything else they are still waiting on you for.
+        if action == .acceptWithTrust {
+            let trustedCreators = Set(targets.map(\.expense.createdBy))
+            let handled = Set(targets.map(\.id))
+            let alsoPending = expenses.filter { expense in
+                trustedCreators.contains(expense.createdBy)
+                    && !handled.contains(expense.id)
+                    && expense.isPendingAcceptance(for: userId)
+            }
+            targets += alsoPending.map { ($0.id, $0) }
+        }
 
         for (id, _) in targets {
             applyOptimisticShareResponse(expenseId: id, userId: userId, action: action)
