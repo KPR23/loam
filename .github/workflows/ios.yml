@@ -27,8 +27,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ios-${{ github.workflow }}-${{ github.ref }}
-  # A newer push to main or a release branch must not cancel the test run for the one before it.
+  # A group keeps one running and one pending run and drops older pending ones, so every push gets
+  # its own group to make sure each merge is tested.
+  group: ios-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
