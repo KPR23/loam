@@ -23,9 +23,11 @@ begin
   -- Turning it on also answers the requests already waiting, whatever their date,
   -- and records each answer the way respond_to_expense_share does.
   if coalesce(p_enabled,false) then
-    select coalesce(array_agg(expense_id),'{}') into v_ids from public.expense_share where user_id=v_uid and status='pending';
-    update public.expense_share set status='accepted',responded_at=now(),accepted_via_trust=true
-    where user_id=v_uid and status='pending';
+    -- Only shares this statement actually changed are logged; one rejected meanwhile stays out.
+    with accepted as (
+      update public.expense_share set status='accepted',responded_at=now(),accepted_via_trust=true
+      where user_id=v_uid and status='pending' returning expense_id
+    ) select coalesce(array_agg(expense_id),'{}') into v_ids from accepted;
     foreach v_id in array v_ids loop
       select * into e from public.expense where id=v_id;
       perform private.log_expense_event('accepted',e,private.expense_shares(v_id),v_uid,array[v_uid,e.created_by]);
