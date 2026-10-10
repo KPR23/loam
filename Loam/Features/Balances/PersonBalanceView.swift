@@ -103,12 +103,18 @@ struct PersonBalanceView: View {
     @ViewBuilder
     private var standing: some View {
         if balances.isEmpty {
-            Label("All settled up", systemImage: "checkmark.seal.fill")
-                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                .foregroundStyle(.green)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.green.opacity(0.12), in: Capsule())
+            HStack(spacing: 5) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .accessibilityHidden(true)
+                Text("All settled up")
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+            }
+            .foregroundStyle(.green)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
+            .background(Color.green.opacity(0.12), in: Capsule())
+            .accessibilityElement(children: .combine)
         } else {
             VStack(spacing: 10) {
                 ForEach(balances) { balance in
@@ -281,8 +287,8 @@ private struct BalanceHistoryRow: View {
                 .frame(width: 26, height: 26)
                 .accessibilityHidden(true)
         } else {
-            Image(systemName: entry.kind == .reversal ? "arrow.uturn.backward" : "banknote")
-                .font(.system(size: 16, weight: .semibold))
+            Image(systemName: entry.kind == .reversal ? "arrow.uturn.backward.circle.fill" : "arrow.left.arrow.right.circle.fill")
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(entry.kind == .reversal ? HomeTheme.tertiary : BalanceTone.color(for: -entry.amountMinor))
                 .frame(width: 26, height: 26)
                 .accessibilityHidden(true)
