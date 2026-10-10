@@ -41,11 +41,14 @@ select 'ok 2 - an opted-in recipient accepts new and changed amounts' as result;
 
 select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
 select public.set_auto_accept_expenses(false);
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+select public.save_expense(pg_temp.expense(jsonb_build_object('amount_minor',1200,'shares',jsonb_build_array(jsonb_build_object('user_id',current_setting('test.a'),'amount_minor',500),jsonb_build_object('user_id',current_setting('test.b'),'amount_minor',700)))),pg_temp.version());
+do $$ begin assert pg_temp.status_of_b()='pending','A changed amount stayed accepted with the setting off'; end $$;
+select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
 select public.respond_to_expense_share(current_setting('test.e')::uuid,'reject');
 select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
-select public.save_expense(pg_temp.expense(jsonb_build_object('amount_minor',1100,'note','Receipt','shares',jsonb_build_array(
- jsonb_build_object('user_id',current_setting('test.a'),'amount_minor',500),jsonb_build_object('user_id',current_setting('test.b'),'amount_minor',600)))),pg_temp.version());
-do $$ begin assert pg_temp.status_of_b()='rejected','Turning the setting off must not change answers'; end $$;
+select public.save_expense(pg_temp.expense(jsonb_build_object('amount_minor',1200,'note','Receipt','shares',jsonb_build_array(jsonb_build_object('user_id',current_setting('test.a'),'amount_minor',500),jsonb_build_object('user_id',current_setting('test.b'),'amount_minor',700)))),pg_temp.version());
+do $$ begin assert pg_temp.status_of_b()='rejected','Unrelated edit erased a rejection'; end $$;
 reset role;
 select 'ok 3 - a rejected share stays rejected' as result;
 rollback;
