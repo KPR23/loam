@@ -24,8 +24,10 @@ struct RepaymentSheet: View {
         _selectedId = State(initialValue: (selected ?? debts.first)?.id ?? "")
     }
 
+    /// Nil once the chosen balance is gone (settled elsewhere, say). Never falls back to someone
+    /// else, or an amount typed for one person could be recorded against another.
     private var target: PersonBalance? {
-        debts.first { $0.id == selectedId } ?? debts.first
+        debts.first { $0.id == selectedId }
     }
 
     private var parsedMoney: Money? {
@@ -65,6 +67,25 @@ struct RepaymentSheet: View {
                     controls
                         .padding(.horizontal, 16)
                         .padding(.bottom, 16)
+                } else {
+                    LoamEmptyState(
+                        title: debts.isEmpty ? "Nothing left to repay" : "That balance changed",
+                        message: debts.isEmpty
+                            ? "You don’t owe anyone right now."
+                            : "It was settled or updated while you were away. Choose who you paid.",
+                        systemImage: "checkmark.circle"
+                    ) {
+                        if !debts.isEmpty {
+                            Menu {
+                                recipientOptions
+                            } label: {
+                                Label("Choose who you paid", systemImage: "person.crop.circle")
+                                    .fontWeight(.semibold)
+                            }
+                            .menuStyle(.button)
+                        }
+                    }
+                    .frame(maxHeight: .infinity)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -87,7 +108,8 @@ struct RepaymentSheet: View {
                 guard !Task.isCancelled else { return }
                 amountFocused = true
             }
-            .onChange(of: selectedId) { _, _ in amountText = "" }
+            // A new recipient or currency, or the old one disappearing, starts the amount over.
+            .onChange(of: target?.id) { _, _ in amountText = "" }
             .alert("Couldn’t record repayment", isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
@@ -105,11 +127,7 @@ struct RepaymentSheet: View {
     private func recipientPicker(_ target: PersonBalance) -> some View {
         if debts.count > 1 {
             Menu {
-                Picker("Pay", selection: $selectedId) {
-                    ForEach(debts) { debt in
-                        Text("\(debt.displayName) · \(MoneyFormatter.string(from: debt.money))").tag(debt.id)
-                    }
-                }
+                recipientOptions
             } label: {
                 recipientChip(target, showsChevron: true)
             }
@@ -118,6 +136,14 @@ struct RepaymentSheet: View {
         } else {
             recipientChip(target, showsChevron: false)
                 .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var recipientOptions: some View {
+        Picker("Pay", selection: $selectedId) {
+            ForEach(debts) { debt in
+                Text("\(debt.displayName) · \(MoneyFormatter.string(from: debt.money))").tag(debt.id)
+            }
         }
     }
 
