@@ -6,6 +6,11 @@ on:
   # Deploy jobs are gated on the branch name, so pull requests only verify.
   pull_request:
     branches: [main, "release/**"]
+    # Only these paths feed the backend, so iOS-only changes skip the Docker stack.
+    paths:
+      - supabase/**
+      - .github/workflows/supabase.yml
+      - .github/actions/setup-supabase/**
 
 permissions:
   contents: read
