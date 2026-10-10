@@ -2,7 +2,7 @@ import SwiftUI
 import Supabase
 
 /// Preferences switch that accepts every expense someone shares with this account. The
-/// database applies it to new shares; turning it on also accepts the requests already waiting.
+/// database applies it to new shares and, when it is turned on, to the requests already waiting.
 struct AutoAcceptExpensesToggle: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
@@ -74,10 +74,8 @@ struct AutoAcceptExpensesToggle: View {
         do {
             try await client.rpc("set_auto_accept_expenses", params: Params(pEnabled: enabled)).execute()
             isOn = enabled
-            if enabled {
-                let waiting = expenseStore.pendingAcceptanceExpenses.map(\.id)
-                await expenseStore.respondToShares(expenseIds: waiting, userId: userId, action: .accept)
-            }
+            // The server also accepted the requests already waiting.
+            if enabled { await expenseStore.refresh(userId: userId) }
         } catch {
             LoamErrorCapture.capture("profile.auto_accept_failed")
             self.error = error.localizedDescription
