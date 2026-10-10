@@ -78,7 +78,7 @@ final class PushNotificationStore: ObservableObject {
     func deviceWillSignOut() async {
         // No new registrations from here on, and any running one finishes before the token is removed.
         isSigningOut = true
-        while let running = registration { await running.value }
+        await waitForRegistration()
         guard let token = deviceToken, userId != nil, let repository = makeRepository() else { return }
         try? await repository.unregisterDevice(token: token)
         registeredKey = nil
@@ -122,7 +122,7 @@ final class PushNotificationStore: ObservableObject {
 
     private func syncRegistration() async {
         // One request at a time; whoever waited re-checks, since the running one may have done the job.
-        while let running = registration { await running.value }
+        await waitForRegistration()
         guard !isSigningOut, permission == .allowed, let userId, let token = deviceToken else { return }
         let key = "\(userId.uuidString):\(token)"
         guard key != registeredKey, let repository = makeRepository() else { return }
@@ -139,7 +139,16 @@ final class PushNotificationStore: ObservableObject {
         }
         registration = task
         await task.value
-        registration = nil
+        if registration == task { registration = nil }
+    }
+
+    /// Waiting on a finished task returns without suspending, so a waiter that resumes before the
+    /// owner clears `registration` would spin on the main actor forever. Each waiter clears it itself.
+    private func waitForRegistration() async {
+        while let running = registration {
+            await running.value
+            if registration == running { registration = nil }
+        }
     }
 
     static func hex(_ data: Data) -> String {
