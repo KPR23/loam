@@ -16,7 +16,8 @@ protocol NotificationCenterClient {
     func requestPermission() async -> Bool
     func registerForRemoteNotifications()
     func setBadge(_ count: Int) async
-    func removeDelivered(identifiers: [String])
+    /// Removes delivered pushes whose payload `event_id` is in `eventIds`.
+    func removeDelivered(eventIds: Set<UUID>) async
     func removeAllDelivered()
 }
 
@@ -48,7 +49,13 @@ struct SystemNotificationCenter: NotificationCenterClient {
         try? await center.setBadgeCount(count)
     }
 
-    func removeDelivered(identifiers: [String]) {
+    func removeDelivered(eventIds: Set<UUID>) async {
+        // Request identifiers on delivered pushes are chosen by iOS, so match on the payload.
+        let identifiers = await center.deliveredNotifications().compactMap { notification -> String? in
+            guard let raw = notification.request.content.userInfo["event_id"] as? String,
+                  let id = UUID(uuidString: raw), eventIds.contains(id) else { return nil }
+            return notification.request.identifier
+        }
         guard !identifiers.isEmpty else { return }
         center.removeDeliveredNotifications(withIdentifiers: identifiers)
     }

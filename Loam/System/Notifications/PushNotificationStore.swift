@@ -24,8 +24,9 @@ final class PushNotificationStore: ObservableObject {
     private var deviceToken: String?
     /// "user:token" last accepted by the backend, so repeat launches don't re-register.
     private var registeredKey: String?
-    /// Orders saves so a slow earlier one can't overwrite a newer switch.
-    private var saveGeneration = 0
+    /// What the server last confirmed; a failed save falls back to it.
+    private var savedPreferences = NotificationPreferences()
+    private var isSaving = false
 
     init(
         center: NotificationCenterClient = SystemNotificationCenter(),
@@ -50,6 +51,7 @@ final class PushNotificationStore: ObservableObject {
         self.userId = userId
         registeredKey = nil
         preferences = NotificationPreferences()
+        savedPreferences = preferences
         preferencesState = .idle
         guard userId != nil else {
             await center.setBadge(0)
@@ -122,8 +124,10 @@ final class PushNotificationStore: ObservableObject {
         preferencesState = .loading
         do {
             let loaded = try await repository.fetchPreferences()
-            guard self.userId == userId else { return }
+            // A save in flight owns the switches; its result is newer than this read.
+            guard self.userId == userId, !isSaving else { return }
             preferences = loaded
+            savedPreferences = loaded
             preferencesState = .loaded
         } catch {
             guard self.userId == userId else { return }
@@ -133,17 +137,23 @@ final class PushNotificationStore: ObservableObject {
 
     func setPreference(_ category: NotificationCategory, enabled: Bool) async {
         guard let userId, let repository = makeRepository(), preferences[category] != enabled else { return }
-        let previous = preferences
         preferences[category] = enabled
-        saveGeneration += 1
-        let generation = saveGeneration
-        let snapshot = preferences
-        do {
-            try await repository.savePreferences(snapshot)
-        } catch {
-            guard self.userId == userId, generation == saveGeneration else { return }
-            preferences = previous
-            lastError = "Couldn't save your notification settings. Try again."
+        // One save at a time, so an older request can't land after a newer one.
+        // The running loop picks up switches flipped while it waits on the network.
+        guard !isSaving else { return }
+        isSaving = true
+        defer { isSaving = false }
+        while self.userId == userId, preferences != savedPreferences {
+            let snapshot = preferences
+            do {
+                try await repository.savePreferences(snapshot)
+                savedPreferences = snapshot
+            } catch {
+                guard self.userId == userId else { return }
+                preferences = savedPreferences
+                lastError = "Couldn't save your notification settings. Try again."
+                return
+            }
         }
     }
 
@@ -154,9 +164,10 @@ final class PushNotificationStore: ObservableObject {
         await center.setBadge(unreadCount)
     }
 
-    /// Clears the banners for events the user has dealt with. The backend uses the event ID as the collapse ID.
-    func clearDelivered(eventIds: [UUID]) {
-        center.removeDelivered(identifiers: eventIds.map { $0.uuidString })
+    /// Clears the banners for events the user has dealt with, matched on the payload's `event_id`.
+    func clearDelivered(eventIds: [UUID]) async {
+        guard !eventIds.isEmpty else { return }
+        await center.removeDelivered(eventIds: Set(eventIds))
     }
 
     // MARK: - Taps
