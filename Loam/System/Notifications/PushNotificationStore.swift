@@ -26,7 +26,13 @@ final class PushNotificationStore: ObservableObject {
     private var registeredKey: String?
     /// What the server last confirmed; a failed save falls back to it.
     private var savedPreferences = NotificationPreferences()
-    private var isSaving = false
+    /// Bumped whenever the account changes, so work started for an earlier account can tell it is stale.
+    private var session = 0
+    /// The session whose save loop is running, if any.
+    private var savingSession: Int?
+    /// The registration request in flight; sign-out waits for it so it can't land after the unregister.
+    private var registration: Task<Void, Never>?
+    private var isSigningOut = false
 
     init(
         center: NotificationCenterClient = SystemNotificationCenter(),
@@ -49,6 +55,8 @@ final class PushNotificationStore: ObservableObject {
             return
         }
         self.userId = userId
+        session += 1
+        isSigningOut = false
         registeredKey = nil
         preferences = NotificationPreferences()
         savedPreferences = preferences
@@ -65,9 +73,18 @@ final class PushNotificationStore: ObservableObject {
     /// Call before the session ends so the backend stops pushing to this phone for the account.
     /// Best effort: offline sign-out leaves the token until the next account registers it.
     func deviceWillSignOut() async {
+        // No new registrations from here on, and any running one finishes before the token is removed.
+        isSigningOut = true
+        while let running = registration { await running.value }
         guard let token = deviceToken, userId != nil, let repository = makeRepository() else { return }
         try? await repository.unregisterDevice(token: token)
         registeredKey = nil
+    }
+
+    /// The sign-out didn't happen, so the account keeps its device.
+    func signOutFailed() async {
+        isSigningOut = false
+        await refreshPermission()
     }
 
     // MARK: - Permission and registration
@@ -101,16 +118,25 @@ final class PushNotificationStore: ObservableObject {
     }
 
     private func syncRegistration() async {
-        guard permission == .allowed, let userId, let token = deviceToken else { return }
+        // One request at a time; whoever waited re-checks, since the running one may have done the job.
+        while let running = registration { await running.value }
+        guard !isSigningOut, permission == .allowed, let userId, let token = deviceToken else { return }
         let key = "\(userId.uuidString):\(token)"
         guard key != registeredKey, let repository = makeRepository() else { return }
-        do {
-            try await repository.registerDevice(token: token, environment: environment)
-            if self.userId == userId { registeredKey = key }
-        } catch {
-            // Retried on the next foreground.
-            LoamErrorCapture.capture("push.register_device_failed")
+        let current = session
+        let environment = environment
+        let task = Task { @MainActor [weak self] in
+            do {
+                try await repository.registerDevice(token: token, environment: environment)
+                if self?.session == current { self?.registeredKey = key }
+            } catch {
+                // Retried on the next foreground.
+                LoamErrorCapture.capture("push.register_device_failed")
+            }
         }
+        registration = task
+        await task.value
+        registration = nil
     }
 
     static func hex(_ data: Data) -> String {
@@ -120,36 +146,42 @@ final class PushNotificationStore: ObservableObject {
     // MARK: - Preferences
 
     func loadPreferences() async {
-        guard let userId, let repository = makeRepository() else { return }
+        guard userId != nil, let repository = makeRepository() else { return }
+        let current = session
         preferencesState = .loading
         do {
             let loaded = try await repository.fetchPreferences()
+            guard session == current else { return }
             // A save in flight owns the switches; its result is newer than this read.
-            guard self.userId == userId, !isSaving else { return }
-            preferences = loaded
-            savedPreferences = loaded
+            if savingSession != current {
+                preferences = loaded
+                savedPreferences = loaded
+            }
             preferencesState = .loaded
         } catch {
-            guard self.userId == userId else { return }
+            guard session == current else { return }
             preferencesState = .failed
         }
     }
 
     func setPreference(_ category: NotificationCategory, enabled: Bool) async {
-        guard let userId, let repository = makeRepository(), preferences[category] != enabled else { return }
+        guard userId != nil, let repository = makeRepository(), preferences[category] != enabled else { return }
         preferences[category] = enabled
-        // One save at a time, so an older request can't land after a newer one.
+        // One save at a time per account, so an older request can't land after a newer one.
         // The running loop picks up switches flipped while it waits on the network.
-        guard !isSaving else { return }
-        isSaving = true
-        defer { isSaving = false }
-        while self.userId == userId, preferences != savedPreferences {
+        let current = session
+        guard savingSession != current else { return }
+        savingSession = current
+        defer { if savingSession == current { savingSession = nil } }
+        while session == current, preferences != savedPreferences {
             let snapshot = preferences
             do {
                 try await repository.savePreferences(snapshot)
+                // The account may have changed while saving; its state is not ours to touch.
+                guard session == current else { return }
                 savedPreferences = snapshot
             } catch {
-                guard self.userId == userId else { return }
+                guard session == current else { return }
                 preferences = savedPreferences
                 lastError = "Couldn't save your notification settings. Try again."
                 return
