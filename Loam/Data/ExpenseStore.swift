@@ -537,8 +537,12 @@ final class ExpenseStore: ObservableObject {
         if action == .acceptWithTrust {
             let trustedCreators = Set(targets.map(\.expense.createdBy))
             var candidates = expenses + detachedExpenses
-            if let fetched = try? await primaryRepository.fetchPendingAcceptance(for: userId) {
-                candidates += fetched
+            do {
+                candidates += try await primaryRepository.fetchPendingAcceptance(for: userId)
+            } catch {
+                // The chosen expenses are still answered; only the older ones can't be found.
+                LoamErrorCapture.capture("expense.pending_lookup_failed")
+                lastError = "Couldn't check for older requests from this person. They are still waiting for your answer."
             }
             var handled = Set(targets.map(\.id))
             for expense in candidates where trustedCreators.contains(expense.createdBy)
