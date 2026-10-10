@@ -22,6 +22,9 @@ protocol NotificationCenterClient {
 
 @MainActor
 struct SystemNotificationCenter: NotificationCenterClient {
+    // Used as a default argument, which is evaluated outside the main actor.
+    nonisolated init() {}
+
     private var center: UNUserNotificationCenter { .current() }
 
     func permission() async -> NotificationPermission {
