@@ -7,6 +7,7 @@ struct FriendsView: View {
     @EnvironmentObject private var connectionStore: ConnectionStore
     @EnvironmentObject private var authSession: AuthSession
     @State private var showsConnectionCodePrompt = false
+    @State private var showsPlaceholderPrompt = false
     @State private var searchText = ""
     @State private var friendPendingRemoval: SplitPartnerOption?
     @State private var removalError: String?
@@ -26,10 +27,13 @@ struct FriendsView: View {
                 Button { showsConnectionCodePrompt = true } label: {
                     Label("Enter a code", systemImage: "key")
                 }
+                Button { showsPlaceholderPrompt = true } label: {
+                    Label("Add someone without an account", systemImage: "person.badge.plus")
+                }
             } header: {
                 Text("Add a friend")
             } footer: {
-                Text("Connecting lets you share expenses. It does not reveal personal expenses or automatically approve a split.")
+                Text("Connecting lets you share expenses. It does not reveal personal expenses or automatically approve a split. People without an account are only tracked by you.")
             }
 
             Section {
@@ -45,6 +49,11 @@ struct FriendsView: View {
                             AvatarView(userId: friend.userId, size: 36, name: friend.displayName)
                             Text(friend.displayName)
                             Spacer(minLength: 0)
+                            if friend.isPlaceholder {
+                                Text("No account")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .swipeActions(edge: .trailing) {
                             Button("Remove", role: .destructive) { friendPendingRemoval = friend }
@@ -68,6 +77,7 @@ struct FriendsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search friends")
         .connectionCodePrompt(isPresented: $showsConnectionCodePrompt)
+        .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { _ in }
         .task { await connectionStore.refresh(userId: authSession.userId) }
         .refreshable { await connectionStore.refresh(userId: authSession.userId) }
         .confirmationDialog(
@@ -84,7 +94,9 @@ struct FriendsView: View {
                 }
             }
         } message: {
-            Text("You won’t be able to share new expenses until you connect again. Expenses you already shared stay in your history.")
+            Text(friendPendingRemoval?.isPlaceholder == true
+                 ? "Anything they owe or are owed is settled, and expenses you already shared stay in your history."
+                 : "You won’t be able to share new expenses until you connect again. Expenses you already shared stay in your history.")
         }
         .alert("Couldn’t remove friend", isPresented: Binding(get: { removalError != nil }, set: { if !$0 { removalError = nil } })) {
             Button("OK") { removalError = nil }
@@ -220,7 +232,50 @@ private struct ConnectionCodePrompt: ViewModifier {
     private func redeem() async { isWorking = true; defer { isWorking = false }; do { let friend = try await connectionStore.redeem(code: normalizedCode); inviterName = nil; onConnected?(friend) } catch { self.error = error.localizedDescription } }
 }
 
+/// Asks for a name and adds someone without an account as a friend.
+private struct PlaceholderFriendPrompt: ViewModifier {
+    @EnvironmentObject private var connectionStore: ConnectionStore
+    @Binding var isPresented: Bool
+    let onCreated: (SplitPartnerOption) -> Void
+    @State private var name = ""
+    @State private var error: String?
+
+    func body(content: Content) -> some View {
+        content
+            .alert("Add someone without an account", isPresented: $isPresented) {
+                TextField("Name", text: $name)
+                    .textInputAutocapitalization(.words)
+                Button("Cancel", role: .cancel) {}
+                Button("Add") { Task { await create() } }
+                    .disabled(trimmedName.isEmpty)
+            } message: {
+                Text("They appear in your friends like anyone else, and every expense you split with them is accepted right away.")
+            }
+            .alert("Couldn’t add them", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+                Button("OK") { error = nil }
+            } message: {
+                Text(error ?? "")
+            }
+            .onChange(of: isPresented) { _, shown in
+                if shown { name = ""; error = nil }
+            }
+    }
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private func create() async {
+        let chosen = trimmedName
+        guard !chosen.isEmpty else { return }
+        do { onCreated(try await connectionStore.createPlaceholder(name: chosen)) }
+        catch { self.error = error.localizedDescription }
+    }
+}
+
 extension View {
+    func placeholderFriendPrompt(isPresented: Binding<Bool>, onCreated: @escaping (SplitPartnerOption) -> Void) -> some View {
+        modifier(PlaceholderFriendPrompt(isPresented: isPresented, onCreated: onCreated))
+    }
+
     func connectionCodePrompt(isPresented: Binding<Bool>, onConnected: ((SplitPartnerOption) -> Void)? = nil) -> some View {
         modifier(ConnectionCodePrompt(isPresented: isPresented, onConnected: onConnected))
     }
