@@ -98,7 +98,8 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
 
     func removeRecognizer() {
         dismissalTap.view?.removeGestureRecognizer(dismissalTap)
-        NotificationCenter.default.removeObserver(self)
+        // Not in deinit on purpose: didMoveToWindow re-observes after every move.
+        NotificationCenter.default.removeObserver(self) // swiftlint:disable:this notification_center_detachment
         hideKeyboardButton.removeFromSuperview()
         hideButtonBottomConstraint = nil
     }

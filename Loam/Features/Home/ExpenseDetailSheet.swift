@@ -598,7 +598,6 @@ struct ExpenseDetailSheet: View {
     .environmentObject(ActivityStore())
 }
 
-
 /// An action on an expense started outside its detail screen (swipe actions,
 /// context menus). Handled by `expenseActionsHost`.
 enum ExpenseActionRequest: Equatable {
