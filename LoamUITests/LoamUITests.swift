@@ -17,7 +17,7 @@ final class LoamUITests: XCTestCase {
 
     func testDemoSignInLandsOnAnEmptyMonth() {
         signInToDemo()
-        XCTAssertTrue(app.staticTexts["No expenses yet. Add one in a few taps."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["No expenses this month yet"].waitForExistence(timeout: 5))
     }
 
     func testAddButtonsStayDisabledUntilThereIsAnAmount() {
@@ -67,7 +67,7 @@ final class LoamUITests: XCTestCase {
         typeAmount("40")
         app.navigationBars.buttons["Cancel"].tap()
 
-        XCTAssertTrue(app.staticTexts["No expenses yet. Add one in a few taps."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["No expenses this month yet"].waitForExistence(timeout: 5))
     }
 
     func testDeletingAnExpenseEmptiesTheMonth() {
@@ -82,7 +82,7 @@ final class LoamUITests: XCTestCase {
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         confirm.buttons["Delete"].tap()
 
-        XCTAssertTrue(app.staticTexts["No expenses yet. Add one in a few taps."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["No expenses this month yet"].waitForExistence(timeout: 5))
     }
 
     func testDemoExpensesSurviveARelaunch() {
@@ -102,7 +102,7 @@ final class LoamUITests: XCTestCase {
         signInToDemo()
 
         tab("Balances").tap()
-        XCTAssertTrue(app.staticTexts["All settled up"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["No balances yet"].waitForExistence(timeout: 5))
 
         tab("Activity").tap()
         XCTAssertTrue(app.staticTexts["You're all caught up"].waitForExistence(timeout: 5))
