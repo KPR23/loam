@@ -30,6 +30,8 @@ final class PushNotificationStore: ObservableObject {
     private var session = 0
     /// The session whose save loop is running, if any.
     private var savingSession: Int?
+    /// Bumped on every switch change, so a read that started earlier can tell it is out of date.
+    private var preferencesRevision = 0
     /// The registration request in flight; sign-out waits for it so it can't land after the unregister.
     private var registration: Task<Void, Never>?
     private var isSigningOut = false
@@ -56,6 +58,7 @@ final class PushNotificationStore: ObservableObject {
         }
         self.userId = userId
         session += 1
+        preferencesRevision += 1
         isSigningOut = false
         registeredKey = nil
         preferences = NotificationPreferences()
@@ -148,12 +151,13 @@ final class PushNotificationStore: ObservableObject {
     func loadPreferences() async {
         guard userId != nil, let repository = makeRepository() else { return }
         let current = session
+        let revision = preferencesRevision
         preferencesState = .loading
         do {
             let loaded = try await repository.fetchPreferences()
             guard session == current else { return }
-            // A save in flight owns the switches; its result is newer than this read.
-            if savingSession != current {
+            // A switch changed since this read began, so the reply may predate it.
+            if preferencesRevision == revision, savingSession != current {
                 preferences = loaded
                 savedPreferences = loaded
             }
@@ -167,6 +171,7 @@ final class PushNotificationStore: ObservableObject {
     func setPreference(_ category: NotificationCategory, enabled: Bool) async {
         guard userId != nil, let repository = makeRepository(), preferences[category] != enabled else { return }
         preferences[category] = enabled
+        preferencesRevision += 1
         // One save at a time per account, so an older request can't land after a newer one.
         // The running loop picks up switches flipped while it waits on the network.
         let current = session
