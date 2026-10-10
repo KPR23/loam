@@ -20,7 +20,7 @@ enum OnboardingPage: Int, CaseIterable, Identifiable {
         case .welcome: "Track what you spend and share bills with friends, all in one place."
         case .month: "Every expense lights up the arc in its category's color."
         case .split: "Add a shared expense once. Your friend accepts it and Loam keeps the balance."
-        case .permissions: "Both are optional. You can change them anytime in Settings."
+        case .permissions: "It's optional. You can change it anytime in Settings."
         }
     }
 
