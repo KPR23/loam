@@ -396,6 +396,10 @@ verify_jwt = false
 [functions.sync-pro-entitlement]
 verify_jwt = false
 
+# Called by the activity_event trigger with the shared PUSH_NOTIFICATION_KEY.
+[functions.send-push]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

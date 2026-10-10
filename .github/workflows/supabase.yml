@@ -89,6 +89,12 @@ jobs:
       POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
       REVENUECAT_SECRET_API_KEY: ${{ secrets.REVENUECAT_SECRET_API_KEY }}
       REVENUECAT_WEBHOOK_AUTH: ${{ secrets.REVENUECAT_WEBHOOK_AUTH }}
+      # Push notifications stay off until PUSH_NOTIFICATION_KEY is set; then the APNs values are required too.
+      PUSH_NOTIFICATION_KEY: ${{ secrets.PUSH_NOTIFICATION_KEY }}
+      APNS_KEY_P8: ${{ secrets.APNS_KEY_P8 }}
+      APNS_KEY_ID: ${{ secrets.APNS_KEY_ID }}
+      APNS_TEAM_ID: ${{ secrets.APNS_TEAM_ID }}
+      APNS_BUNDLE_ID: ${{ vars.APNS_BUNDLE_ID || 'app.loam.Loam' }}
       # Only App Store builds send analytics, so staging sets this variable to false and keeps no
       # credential that can delete PostHog data.
       ANALYTICS_ENABLED: ${{ vars.ANALYTICS_ENABLED || 'true' }}
@@ -134,6 +140,7 @@ jobs:
           set -euo pipefail
           required=(SUPABASE_SERVICE_ROLE_KEY DELETION_WORKER_KEY DELETION_NOTIFIER_KEY DELETION_MONITOR_KEY DELETION_CREDENTIAL_ENCRYPTION_KEY APPLE_CLIENT_ID APPLE_CLIENT_SECRET REVENUECAT_SECRET_API_KEY REVENUECAT_WEBHOOK_AUTH)
           if [[ $ANALYTICS_ENABLED == true ]]; then required+=(POSTHOG_PROJECT_ID POSTHOG_PERSONAL_API_KEY); fi
+          if [[ -n $PUSH_NOTIFICATION_KEY ]]; then required+=(APNS_KEY_P8 APNS_KEY_ID APNS_TEAM_ID); fi
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then echo "Missing required GitHub environment secret: $name" >&2; exit 1; fi
           done
@@ -156,6 +163,11 @@ jobs:
             "$SUPABASE_SERVICE_ROLE_KEY" "$DELETION_WORKER_KEY" "$DELETION_NOTIFIER_KEY" "$DELETION_MONITOR_KEY" "$DELETION_CREDENTIAL_ENCRYPTION_KEY" "$APPLE_CLIENT_ID" "$APPLE_CLIENT_SECRET" "$ANALYTICS_ENABLED" "$REVENUECAT_SECRET_API_KEY" "$REVENUECAT_WEBHOOK_AUTH" > "$secret_file"
           if [[ $ANALYTICS_ENABLED == true ]]; then
             printf 'POSTHOG_PROJECT_ID=%s\nPOSTHOG_PERSONAL_API_KEY=%s\n' "$POSTHOG_PROJECT_ID" "$POSTHOG_PERSONAL_API_KEY" >> "$secret_file"
+          fi
+          if [[ -n $PUSH_NOTIFICATION_KEY ]]; then
+            # The .p8 is multi-line; env files take it as one escaped line.
+            printf 'PUSH_NOTIFICATION_KEY=%s\nAPNS_KEY_ID=%s\nAPNS_TEAM_ID=%s\nAPNS_BUNDLE_ID=%s\nAPNS_KEY_P8=%s\n' \
+              "$PUSH_NOTIFICATION_KEY" "$APNS_KEY_ID" "$APNS_TEAM_ID" "$APNS_BUNDLE_ID" "${APNS_KEY_P8//$'\n'/\\n}" >> "$secret_file"
           fi
           supabase secrets set --project-ref "$PROJECT_REF" --env-file "$secret_file"
           rm -f "$secret_file"
@@ -183,6 +195,13 @@ jobs:
           curl --fail --silent --show-error --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_account_deletion_scheduler" \
             --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             --header 'Content-Type: application/json' --data "$body"
+      - name: Provision push notifications
+        if: env.PUSH_NOTIFICATION_KEY != ''
+        run: |
+          body="$(jq -n --arg url "$PROJECT_URL" --arg key "$PUSH_NOTIFICATION_KEY" '{p_project_url:$url,p_push_key:$key}')"
+          curl --fail --silent --show-error --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_push_notifications" \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header 'Content-Type: application/json' --data "$body"
       - name: Verify protected worker deployment
         run: |
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-worker" --header 'X-Deletion-Worker-Key: deployment-probe-invalid')"
@@ -193,3 +212,6 @@ jobs:
           test "$status" = 401
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/revenuecat-webhook" --header 'Authorization: deployment-probe-invalid')"
           test "$status" = 401
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/send-push" --header 'X-Push-Key: deployment-probe-invalid')"
+          # 503 while push is unconfigured; 401 once the key is installed.
+          test "$status" = 401 || { test -z "$PUSH_NOTIFICATION_KEY" && test "$status" = 503; }
