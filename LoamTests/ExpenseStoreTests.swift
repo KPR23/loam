@@ -110,6 +110,20 @@ final class ExpenseStoreTests: LocalStorageTestCase {
         XCTAssertTrue(stillPending.isEmpty)
     }
 
+    func testTrustingKeepsTheWarningWhenOlderRequestsCouldNotBeLookedUp() async throws {
+        let creatorStore = ExpenseStore()
+        try await creatorStore.addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
+
+        let partnerStore = ExpenseStore()
+        await partnerStore.refresh(userId: partner)
+        partnerStore.pendingAcceptanceLookup = { _ in throw URLError(.notConnectedToInternet) }
+        let shown = try XCTUnwrap(partnerStore.pendingAcceptanceExpenses.first)
+        await partnerStore.respondToShare(expenseId: shown.id, userId: partner, action: .acceptWithTrust)
+
+        XCTAssertTrue(partnerStore.pendingAcceptanceExpenses.isEmpty, "The chosen expense is still accepted")
+        XCTAssertEqual(partnerStore.lastError, "Couldn't check for older requests from this person. They are still waiting for your answer.")
+    }
+
     func testEditingTheSplitOfAnAcceptedExpenseFindsIt() async throws {
         let creatorStore = ExpenseStore()
         try await creatorStore.addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])

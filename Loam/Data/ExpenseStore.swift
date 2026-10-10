@@ -14,6 +14,8 @@ final class ExpenseStore: ObservableObject {
     @Published private(set) var summary: MonthSpendSummary = .zero()
     @Published private(set) var isLoading = false
     @Published var lastError: String?
+    /// Replaces the backend lookup of every expense still waiting on a user, so tests can make it fail.
+    var pendingAcceptanceLookup: ((UUID) async throws -> [ExpenseRecord])?
 
     @Published private(set) var period: DatePeriod = .currentMonth
 
@@ -532,17 +534,24 @@ final class ExpenseStore: ObservableObject {
         }
         guard !targets.isEmpty else { return }
 
+        // Refreshing clears `lastError`, so the lookup warning is restored after it.
+        var lookupWarning: String?
+
         // Trusting a creator also accepts everything else they are still waiting on you for,
         // including months other than the one on screen.
         if action == .acceptWithTrust {
             let trustedCreators = Set(targets.map(\.expense.createdBy))
             var candidates = expenses + detachedExpenses
             do {
-                candidates += try await primaryRepository.fetchPendingAcceptance(for: userId)
+                if let lookup = pendingAcceptanceLookup {
+                    candidates += try await lookup(userId)
+                } else {
+                    candidates += try await primaryRepository.fetchPendingAcceptance(for: userId)
+                }
             } catch {
                 // The chosen expenses are still answered; only the older ones can't be found.
                 LoamErrorCapture.capture("expense.pending_lookup_failed")
-                lastError = "Couldn't check for older requests from this person. They are still waiting for your answer."
+                lookupWarning = "Couldn't check for older requests from this person. They are still waiting for your answer."
             }
             var handled = Set(targets.map(\.id))
             for expense in candidates where trustedCreators.contains(expense.createdBy)
@@ -587,6 +596,7 @@ final class ExpenseStore: ObservableObject {
             lastError = error.localizedDescription
             await refresh(userId: userId)
         }
+        if let lookupWarning, lastError == nil { lastError = lookupWarning }
     }
 
     private func applyOptimisticShareResponse(
