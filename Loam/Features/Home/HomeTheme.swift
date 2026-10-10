@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 enum AppAccentColor: String, CaseIterable, Identifiable {
-    case blue, purple, pink, orange, green
+    case blue, purple, pink, orange, green, black
 
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
@@ -14,6 +14,8 @@ enum AppAccentColor: String, CaseIterable, Identifiable {
         case .pink: .pink
         case .orange: .orange
         case .green: .green
+        // The system's default label color: black in light mode, white in dark mode.
+        case .black: .primary
         }
     }
 
@@ -24,6 +26,7 @@ enum AppAccentColor: String, CaseIterable, Identifiable {
         case .pink: .systemPink
         case .orange: .systemOrange
         case .green: .systemGreen
+        case .black: .label
         }
     }
 
