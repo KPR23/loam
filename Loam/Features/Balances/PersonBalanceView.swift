@@ -79,6 +79,7 @@ struct PersonBalanceView: View {
                     showsRepayment = true
                 } label: {
                     Label("Record repayment", systemImage: "arrow.up.right")
+                        .labelStyle(.prominentButton)
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: 280, minHeight: 44)
                 }
