@@ -9,7 +9,7 @@
 --   the inbox stays the source of truth.
 
 create table private.push_device (
-  token text primary key check (token ~ '^[0-9a-f]{32,400}$'),
+  token text primary key check (token ~ '^[0-9a-f]{32,200}$'),
   user_id uuid not null references auth.users(id) on delete cascade,
   environment text not null check (environment in ('sandbox','production')),
   updated_at timestamptz not null default now()
@@ -49,7 +49,7 @@ language plpgsql security definer set search_path='' as $$
 declare v_token text:=lower(trim(coalesce(p_token,'')));
 begin
   if not public.current_account_is_active() then raise exception 'Not authenticated'; end if;
-  if v_token !~ '^[0-9a-f]{32,400}$' or p_environment not in ('sandbox','production') then
+  if v_token !~ '^[0-9a-f]{32,200}$' or p_environment not in ('sandbox','production') then
     raise exception 'Invalid device' using errcode='22023';
   end if;
   insert into private.push_device(token,user_id,environment) values(v_token,auth.uid(),p_environment)
