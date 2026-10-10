@@ -7,6 +7,7 @@ struct OnboardingView: View {
     var onFinish: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var permissions = OnboardingPermissions()
     @State private var page: OnboardingPage = .welcome
 
@@ -49,6 +50,10 @@ struct OnboardingView: View {
         .background(HomeTheme.background)
         .animation(reduceMotion ? nil : .snappy, value: page)
         .task { await permissions.refresh() }
+        .onChange(of: scenePhase) { _, phase in
+            // People who turned notifications on in Settings come back to a checkmark.
+            if phase == .active { Task { await permissions.refresh() } }
+        }
     }
 
     private func advance() {
