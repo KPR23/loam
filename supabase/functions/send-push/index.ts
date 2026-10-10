@@ -51,6 +51,7 @@ Deno.serve(async (request) => {
       "thread-id": context.expense_id ?? context.repayment_id ?? context.user_id,
     },
     event_id: eventId,
+    user_id: context.user_id,
     kind: context.kind,
     ...(context.expense_id ? { expense_id: context.expense_id } : {}),
   };
