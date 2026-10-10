@@ -150,7 +150,7 @@ struct AddExpenseView: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(Color.accentColor)
-                            .background(Color.white, in: Capsule())
+                            .background(Color(.secondarySystemGroupedBackground), in: Capsule())
                             .disabled(!canContinue)
                             .accessibilityHint("Saves this expense without opening details")
                             .frame(width: buttonWidth, height: 44)
