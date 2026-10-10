@@ -138,6 +138,14 @@ final class WireFormatTests: LocalStorageTestCase {
         """.utf8))
         XCTAssertEqual(entries.first?.kind, .repayment)
         XCTAssertEqual(entries.first?.amountMinor, -500)
+        XCTAssertNil(entries.first?.currencyCode)
+
+        let purchase = try JSONDecoder().decode([BalanceHistoryEntry].self, from: Data("""
+        [{"id":"\(UUID())","kind":"purchase","title":"groceries","amount_minor":900,"occurred_at":0,"status":"accepted","currency":"EUR","category":"groceries"}]
+        """.utf8))
+        XCTAssertEqual(purchase.first?.currencyCode, "EUR")
+        XCTAssertEqual(purchase.first?.category, .groceries)
+        XCTAssertEqual(purchase.first?.displayTitle, "Groceries")
     }
 
     func testLocallySavedRecordsFromOlderVersionsStillLoad() throws {

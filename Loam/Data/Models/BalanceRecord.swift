@@ -81,13 +81,38 @@ struct BalanceHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let kind: Kind
     let title: String
+    /// Signed by its effect on the viewer: positive when the other person ends up owing more.
     let amountMinor: Int
     let occurredAt: Date
     let status: ExpenseShareStatus?
+    /// Older servers omit these; callers fall back to the balance's currency.
+    let currencyCode: String?
+    let categoryName: String?
+
+    var category: ExpenseCategory? { categoryName.flatMap(ExpenseCategory.init(rawValue:)) }
+
+    /// The server falls back to the raw category when an expense has no title.
+    var displayTitle: String {
+        if kind == .purchase, let category, title == category.rawValue { return category.displayName }
+        return title
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, kind, title, status
         case amountMinor = "amount_minor"
         case occurredAt = "occurred_at"
+        case currencyCode = "currency"
+        case categoryName = "category"
+    }
+
+    init(id: UUID, kind: Kind, title: String, amountMinor: Int, occurredAt: Date, status: ExpenseShareStatus?, currencyCode: String?, categoryName: String?) {
+        self.id = id
+        self.kind = kind
+        self.title = title
+        self.amountMinor = amountMinor
+        self.occurredAt = occurredAt
+        self.status = status
+        self.currencyCode = currencyCode
+        self.categoryName = categoryName
     }
 }

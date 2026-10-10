@@ -23,6 +23,11 @@ final class BalanceStore: ObservableObject {
         }
     }
 
+    /// Every shared expense and repayment between the viewer and one person, newest first.
+    func history(with personId: UUID, userId: UUID) async throws -> [BalanceHistoryEntry] {
+        try await BalanceRepositoryFactory.make().fetchHistory(for: userId, personId: personId)
+    }
+
     func repay(to personId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, userId: UUID) async throws {
         try await LoamErrorCapture.withCapture("balance.repayment_create_failed") {
             try await BalanceRepositoryFactory.make().createRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note, paidAt: paidAt, operationId: UUID())

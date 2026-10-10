@@ -72,6 +72,21 @@ final class LocalBalanceRepositoryTests: LocalStorageTestCase {
         XCTAssertEqual(afterReversal, -2000)
     }
 
+    func testHistoryListsSharesAndRepaymentsSignedForTheViewer() async throws {
+        try await store(dinner(paidBy: friend, owed: 2000, currency: "EUR"))
+        let repository = LocalBalanceRepository()
+        try await repository.createRepayment(from: me, to: friend, amountMinor: 500, currencyCode: "EUR", note: "Cash", paidAt: Date().addingTimeInterval(60), operationId: UUID())
+
+        let mine = try await repository.fetchHistory(for: me, personId: friend)
+        XCTAssertEqual(mine.map(\.kind), [.repayment, .purchase])
+        XCTAssertEqual(mine.map(\.amountMinor), [500, -2000])
+        XCTAssertEqual(mine.map(\.currencyCode), ["EUR", "EUR"])
+        XCTAssertEqual(mine.last?.displayTitle, "Dining")
+
+        let theirs = try await repository.fetchHistory(for: friend, personId: me)
+        XCTAssertEqual(theirs.map(\.amountMinor), [-500, 2000])
+    }
+
     func testRepaymentsCannotExceedTheDebtOrBeEmpty() async throws {
         try await store(dinner(paidBy: friend, owed: 1000))
         let repository = LocalBalanceRepository()

@@ -38,7 +38,37 @@ actor LocalBalanceRepository: BalanceRepository {
         })
     }
 
-    func fetchHistory(for userId: UUID, personId: UUID) async throws -> [BalanceHistoryEntry] { [] }
+    /// Mirrors the `balance_history` RPC: every share and repayment between the two people, newest first.
+    func fetchHistory(for userId: UUID, personId: UUID) async throws -> [BalanceHistoryEntry] {
+        var entries: [BalanceHistoryEntry] = []
+        for expense in try loadExpenses() {
+            for share in expense.shares where (expense.paidBy == userId && share.userId == personId) || (expense.paidBy == personId && share.userId == userId) {
+                entries.append(BalanceHistoryEntry(
+                    id: expense.id,
+                    kind: .purchase,
+                    title: expense.title ?? expense.category.rawValue,
+                    amountMinor: expense.paidBy == userId ? share.amountMinor : -share.amountMinor,
+                    occurredAt: expense.spentAt,
+                    status: share.status,
+                    currencyCode: expense.currency.uppercased(),
+                    categoryName: expense.category.rawValue
+                ))
+            }
+        }
+        for payment in try loadRepayments() where (payment.fromUserId == userId && payment.toUserId == personId) || (payment.toUserId == userId && payment.fromUserId == personId) {
+            entries.append(BalanceHistoryEntry(
+                id: payment.id,
+                kind: payment.isReversed ? .reversal : .repayment,
+                title: payment.note ?? "Repayment",
+                amountMinor: payment.toUserId == userId ? -payment.amountMinor : payment.amountMinor,
+                occurredAt: payment.paidAt,
+                status: nil,
+                currencyCode: payment.currencyCode.uppercased(),
+                categoryName: nil
+            ))
+        }
+        return entries.sorted { $0.occurredAt > $1.occurredAt }
+    }
 
     func createRepayment(from userId: UUID, to personId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, operationId: UUID) async throws {
         guard amountMinor > 0 else { throw BalanceRepositoryError.invalidAmount }
