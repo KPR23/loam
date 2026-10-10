@@ -54,7 +54,7 @@ struct MainTabView: View {
                 BalancesView()
             }
 
-            Tab("Activity", systemImage: "clock.arrow.circlepath", value: AppTab.activity) {
+            Tab("Activity", systemImage: "bell", value: AppTab.activity) {
                 ActivityView()
             }
             .badge(activityStore.unreadCount)
@@ -87,7 +87,7 @@ struct MainTabView: View {
 
             ActivityView()
                 .tabItem {
-                    Label("Activity", systemImage: "clock.arrow.circlepath")
+                    Label("Activity", systemImage: "bell")
                 }
                 .tag(AppTab.activity)
                 .badge(activityStore.unreadCount)
