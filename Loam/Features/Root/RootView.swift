@@ -11,8 +11,8 @@ struct RootView: View {
             case .loading:
                 ProgressView("Loading…")
             case .signedOut:
-                // UI tests drive sign-in directly.
-                if hasCompletedOnboarding || LaunchEnvironment.isUITesting {
+                // A pending deletion's status lives on the sign-in screen. UI tests drive sign-in directly.
+                if hasCompletedOnboarding || authSession.deletionPending || LaunchEnvironment.isUITesting {
                     AuthView()
                         .transition(.opacity)
                 } else {
@@ -26,8 +26,17 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.2), value: authSession.state)
         .animation(.easeInOut(duration: 0.35), value: hasCompletedOnboarding)
         .onChange(of: authSession.state, initial: true) { _, state in
-            // People who signed in before onboarding existed shouldn't meet it after signing out.
-            if state == .signedIn { hasCompletedOnboarding = true }
+            switch state {
+            case .loading:
+                // Decided before any signed-out screen shows, so returning people never glimpse onboarding.
+                if !hasCompletedOnboarding, OnboardingHistory.hasUsedLoam() {
+                    hasCompletedOnboarding = true
+                }
+            case .signedIn:
+                hasCompletedOnboarding = true
+            case .signedOut:
+                break
+            }
         }
         .background(KeyboardDismissalInstaller())
     }
