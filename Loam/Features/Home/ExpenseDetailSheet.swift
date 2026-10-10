@@ -438,10 +438,12 @@ struct ExpenseDetailSheet: View {
     }
 
     private func responseLabel(_ title: String, systemImage: String, color: Color, compact: Bool = false) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(compact ? .caption.weight(.medium) : .subheadline.weight(.medium))
-            .foregroundStyle(color)
-            .labelStyle(.titleAndIcon)
+        HStack(spacing: 4) {
+            Image(systemName: systemImage)
+            Text(title)
+        }
+        .font(compact ? .caption.weight(.medium) : .subheadline.weight(.medium))
+        .foregroundStyle(color)
     }
 
     // MARK: - History
