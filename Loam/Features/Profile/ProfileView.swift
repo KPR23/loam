@@ -269,9 +269,23 @@ struct ProfileView: View {
                         if authSession.deletionStatus == .complete {
                             Button("Dismiss confirmation") { authSession.dismissDeletionConfirmation() }
                         } else {
-                            Button("Check deletion status") { Task { await authSession.refreshDeletionStatus() } }
+                            Button {
+                                Task { await authSession.refreshDeletionStatus() }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Text(authSession.isCheckingDeletionStatus ? "Checking…" : "Check deletion status")
+                                    if authSession.isCheckingDeletionStatus { ProgressView() }
+                                }
+                            }
+                            .disabled(authSession.isCheckingDeletionStatus)
+                            if let checkedAt = authSession.deletionCheckedAt {
+                                Text("Last checked \(checkedAt.formatted(date: .omitted, time: .standard))")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                     }
+                    .task { await authSession.watchDeletionStatus() }
                 }
 
                 themeSection

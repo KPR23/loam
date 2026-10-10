@@ -23,6 +23,8 @@ final class AuthSession: ObservableObject {
     @Published private(set) var deletionPending = false
     @Published private(set) var deletionStatus: DeletionStatus = .none
     @Published private(set) var deletionUpdatedAt: Date?
+    @Published private(set) var isCheckingDeletionStatus = false
+    @Published private(set) var deletionCheckedAt: Date?
 
     enum DeletionStatus: String, Codable, Equatable {
         case none, submissionUncertain, processing, needsAttention, complete, unavailable
@@ -370,7 +372,23 @@ final class AuthSession: ObservableObject {
         }
     }
 
+    /// Keeps the status fresh while a deletion is still running, so nobody has to keep tapping
+    /// "Check status". Cancelled with the view that started it.
+    func watchDeletionStatus() async {
+        while !Task.isCancelled {
+            await refreshDeletionStatus()
+            guard deletionPending, deletionStatus != .complete, deletionStatus != .needsAttention else { return }
+            try? await Task.sleep(for: .seconds(10))
+        }
+    }
+
     func refreshDeletionStatus() async {
+        guard !isCheckingDeletionStatus else { return }
+        isCheckingDeletionStatus = true
+        defer {
+            isCheckingDeletionStatus = false
+            deletionCheckedAt = Date()
+        }
         let receipt = userId.flatMap { DeletionReceipt.pendingReceipt(for: $0) }
             ?? (userId == nil ? DeletionReceipt.pendingReceipt() : nil)
         guard let receipt else {

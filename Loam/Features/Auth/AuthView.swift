@@ -144,11 +144,25 @@ struct AuthView: View {
                     .buttonStyle(.borderedProminent)
                     .buttonBorderShape(.capsule)
             } else {
-                Button("Check status") { Task { await authSession.refreshDeletionStatus() } }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                Button {
+                    Task { await authSession.refreshDeletionStatus() }
+                } label: {
+                    HStack(spacing: 8) {
+                        if authSession.isCheckingDeletionStatus { ProgressView() }
+                        Text(authSession.isCheckingDeletionStatus ? "Checking…" : "Check status")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .disabled(authSession.isCheckingDeletionStatus)
+                if let checkedAt = authSession.deletionCheckedAt {
+                    Text("Last checked \(checkedAt.formatted(date: .omitted, time: .standard))")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
+        .task { await authSession.watchDeletionStatus() }
         .padding(16)
         .frame(maxWidth: .infinity)
         .background(HomeTheme.surface, in: RoundedRectangle(cornerRadius: 20))
