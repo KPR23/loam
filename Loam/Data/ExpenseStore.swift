@@ -532,16 +532,20 @@ final class ExpenseStore: ObservableObject {
         }
         guard !targets.isEmpty else { return }
 
-        // Trusting a creator also accepts everything else they are still waiting on you for.
+        // Trusting a creator also accepts everything else they are still waiting on you for,
+        // including months other than the one on screen.
         if action == .acceptWithTrust {
             let trustedCreators = Set(targets.map(\.expense.createdBy))
-            let handled = Set(targets.map(\.id))
-            let alsoPending = expenses.filter { expense in
-                trustedCreators.contains(expense.createdBy)
-                    && !handled.contains(expense.id)
-                    && expense.isPendingAcceptance(for: userId)
+            var candidates = expenses + detachedExpenses
+            if let fetched = try? await primaryRepository.fetchPendingAcceptance(for: userId) {
+                candidates += fetched
             }
-            targets += alsoPending.map { ($0.id, $0) }
+            var handled = Set(targets.map(\.id))
+            for expense in candidates where trustedCreators.contains(expense.createdBy)
+                && expense.isPendingAcceptance(for: userId)
+                && handled.insert(expense.id).inserted {
+                targets.append((expense.id, expense))
+            }
         }
 
         for (id, _) in targets {

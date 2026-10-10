@@ -3,6 +3,8 @@ import Foundation
 protocol ExpenseRepository: Sendable {
     func fetchExpenses(for userId: UUID, in period: DatePeriod) async throws -> [ExpenseRecord]
     func fetchExpenses(ids: [UUID]) async throws -> [ExpenseRecord]
+    /// Expenses still waiting for `userId` to answer, whatever month they fall in.
+    func fetchPendingAcceptance(for userId: UUID) async throws -> [ExpenseRecord]
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord
     /// Saves a new recurring rule together with its first occurrence, so a
     /// failed seed leaves no rule and generation never races the seed.

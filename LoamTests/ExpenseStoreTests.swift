@@ -78,15 +78,36 @@ final class ExpenseStoreTests: LocalStorageTestCase {
         for amount in [1000, 2000, 3000] {
             try await creatorStore.addSplit(amountMinor: amount, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
         }
+        // Another creator's request must stay pending, and that creator must not become trusted.
+        try await ExpenseStore().addSplit(amountMinor: 4000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: TestUser.carol, splitMode: .equal, paidBy: TestUser.carol, partnerUserIds: [partner])
 
         let partnerStore = ExpenseStore()
         await partnerStore.refresh(userId: partner)
-        let first = try XCTUnwrap(partnerStore.pendingAcceptanceExpenses.first)
+        let first = try XCTUnwrap(partnerStore.pendingAcceptanceExpenses.first { $0.createdBy == me })
         await partnerStore.respondToShare(expenseId: first.id, userId: partner, action: .acceptWithTrust)
 
-        XCTAssertTrue(partnerStore.pendingAcceptanceExpenses.isEmpty)
+        XCTAssertEqual(partnerStore.pendingAcceptanceExpenses.map(\.createdBy), [TestUser.carol])
         XCTAssertEqual(partnerStore.summary.totalMine.amountMinor, 3000)
+        let trusted = try await LocalExpenseRepository().fetchTrustedUserIds(for: partner)
+        XCTAssertEqual(trusted, [me])
         XCTAssertNil(partnerStore.lastError)
+    }
+
+    func testTrustingACreatorAlsoAcceptsTheirPendingExpensesFromOtherMonths() async throws {
+        let creatorStore = ExpenseStore()
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: today)!
+        for date in [Date(), lastMonth] {
+            try await creatorStore.addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: date, userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
+        }
+
+        let partnerStore = ExpenseStore()
+        await partnerStore.refresh(userId: partner)
+        let shown = try XCTUnwrap(partnerStore.pendingAcceptanceExpenses.first)
+        XCTAssertEqual(partnerStore.pendingAcceptanceExpenses.count, 1, "Only this month is loaded")
+        await partnerStore.respondToShare(expenseId: shown.id, userId: partner, action: .acceptWithTrust)
+
+        let stillPending = try await LocalExpenseRepository().fetchPendingAcceptance(for: partner)
+        XCTAssertTrue(stillPending.isEmpty)
     }
 
     func testEditingTheSplitOfAnAcceptedExpenseFindsIt() async throws {
@@ -99,6 +120,8 @@ final class ExpenseStoreTests: LocalStorageTestCase {
         await partnerStore.respondToShare(expenseId: expenseId, userId: partner, action: .accept)
 
         await creatorStore.refresh(userId: me)
+        let accepted = try XCTUnwrap(creatorStore.expenses.first)
+        XCTAssertEqual(accepted.shareStatus(for: partner), .accepted)
         try await creatorStore.applySplit(to: expenseId, userId: me, splitMode: .percentage, paidBy: me, partnerUserIds: [partner], myPercentage: 0)
 
         let updated = try XCTUnwrap(creatorStore.expenses.first)

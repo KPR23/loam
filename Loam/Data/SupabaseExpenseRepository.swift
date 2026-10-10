@@ -31,6 +31,22 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             }
     }
 
+    func fetchPendingAcceptance(for userId: UUID) async throws -> [ExpenseRecord] {
+        struct PendingShareRow: Decodable {
+            let expenseId: UUID
+            enum CodingKeys: String, CodingKey { case expenseId = "expense_id" }
+        }
+        let rows: [PendingShareRow] = try await client
+            .from("expense_share")
+            .select("expense_id")
+            .eq("user_id", value: userId)
+            .eq("status", value: ExpenseShareStatus.pending.rawValue)
+            .execute()
+            .value
+        return try await fetchExpenses(ids: rows.map(\.expenseId))
+            .filter { $0.isPendingAcceptance(for: userId) }
+    }
+
     func createRecurringExpense(_ expense: ExpenseRecord, rule: RecurringRuleRecord) async throws -> ExpenseRecord {
         try validate(expense)
         let id: UUID = try await client.rpc("create_recurring_expense", params: CreateRecurringExpenseParams(
