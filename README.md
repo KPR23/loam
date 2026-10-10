@@ -149,6 +149,19 @@ Info.plist keys (via build settings from xcconfig):
 
 Only `Production.xcconfig` sets the PostHog keys, so Debug and TestFlight builds send no analytics and the PostHog project (216307) holds App Store users only. The `POSTHOG_PROJECT_ID` secret in the `production` environment must name that project, or account deletion erases nothing.
 
+
+### Push notifications
+
+Every unread Activity event is pushed to the recipient's devices by the `send-push` edge function. A trigger on `activity_event` calls it through `pg_net`; it applies the recipient's per-category switches, sends through APNs and removes tokens APNs reports dead. Pushes stay off until the environment has these (GitHub secrets, plus the optional `APNS_BUNDLE_ID` variable, default `app.loam.Loam`):
+
+| Secret | Value |
+| --- | --- |
+| `PUSH_NOTIFICATION_KEY` | Random string of 32+ characters shared by the trigger and the function |
+| `APNS_KEY_P8` | Contents of the APNs auth key (`.p8`) from the Apple developer account |
+| `APNS_KEY_ID` / `APNS_TEAM_ID` | That key's ID and the team ID |
+
+The deploy installs them as function secrets and stores the key in Vault with `configure_push_notifications`. The App ID needs the Push Notifications capability; Debug builds register sandbox tokens and TestFlight/App Store builds production ones.
+
 ## Architecture
 
 ```
