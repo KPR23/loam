@@ -12,9 +12,10 @@ on:
       - Loam.xcodeproj/**
       - project.yml
       - .github/workflows/ios.yml
-  # Every merge and release branch gets the full tests, so an unlabeled PR can't reach an rc tag untested.
+  # Release branches get the full tests, so an unlabeled PR can't reach an rc tag untested.
+  # main doesn't: PRs touching the app already build, and tests run when labeled.
   push:
-    branches: [main, "release/**"]
+    branches: ["release/**"]
     paths:
       - Loam/**
       - LoamTests/**
@@ -66,12 +67,12 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             -skipPackagePluginValidation
 
-  # Tests stay behind the label on a PR to save macOS minutes; every push runs them.
+  # Tests stay behind the label on a PR to save macOS minutes; release branch pushes run them.
   build-and-test:
     name: Build & Test
     if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
     runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
