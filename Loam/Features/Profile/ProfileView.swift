@@ -75,6 +75,8 @@ final class AvatarStore: ObservableObject {
 struct AvatarView: View {
     let userId: UUID?
     let size: CGFloat
+    /// Without a photo, shows this name's initials on a tint picked from the user ID.
+    var name: String? = nil
 
     @ObservedObject private var avatars = AvatarStore.shared
 
@@ -98,11 +100,32 @@ struct AvatarView: View {
         }
     }
 
+    @ViewBuilder
     private var fallback: some View {
-        Image(systemName: "person.crop.circle.fill")
-            .resizable()
-            .scaledToFit()
-            .foregroundStyle(HomeTheme.secondary)
+        if let initials {
+            Text(initials)
+                .font(.system(size: size * 0.38, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(LinearGradient(colors: [tint.opacity(0.75), tint], startPoint: .topLeading, endPoint: .bottomTrailing))
+        } else {
+            Image(systemName: "person.crop.circle.fill")
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(HomeTheme.secondary)
+        }
+    }
+
+    private var initials: String? {
+        let letters = (name ?? "").split(separator: " ").prefix(2).compactMap(\.first)
+        return letters.isEmpty ? nil : String(letters).uppercased()
+    }
+
+    /// Stable across launches, unlike `hashValue`.
+    private var tint: Color {
+        let palette: [Color] = [.blue, .purple, .pink, .orange, .green, .teal, .indigo]
+        let seed = userId?.uuidString.unicodeScalars.reduce(0) { $0 + Int($1.value) } ?? 0
+        return palette[seed % palette.count]
     }
 }
 
