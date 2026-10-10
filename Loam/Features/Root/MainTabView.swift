@@ -23,6 +23,7 @@ struct MainTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .expenses
     @State private var expensesReloadToken = 0
+    @State private var showsAnalyticsPrompt = false
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
 
     var body: some View {
@@ -44,6 +45,22 @@ struct MainTabView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
+        }
+        .task(id: authSession.userId) {
+            guard let userId = authSession.userId,
+                  !authSession.usesDemoMode,
+                  Telemetry.isAnalyticsAvailable,
+                  !Telemetry.hasAnsweredAnalyticsPrompt(for: userId)
+            else { return }
+            showsAnalyticsPrompt = true
+        }
+        .sheet(isPresented: $showsAnalyticsPrompt) {
+            AnalyticsConsentSheet { granted in
+                if let userId = authSession.userId {
+                    Telemetry.setAnalyticsConsent(granted, for: userId)
+                }
+                showsAnalyticsPrompt = false
+            }
         }
     }
 

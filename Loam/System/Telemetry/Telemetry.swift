@@ -11,6 +11,7 @@ import Sentry
 @MainActor
 enum Telemetry {
     private static let analyticsConsentKeyPrefix = "loam.analyticsConsent."
+    private static let analyticsAnsweredKeyPrefix = "loam.analyticsAnswered."
 
     private static var postHogStarted = false
     private static var userId: String?
@@ -41,8 +42,15 @@ enum Telemetry {
         UserDefaults.standard.bool(forKey: analyticsConsentKey(for: normalizedId(id)))
     }
 
+    /// True once this account has chosen, in the first-run prompt or the Privacy setting.
+    static func hasAnsweredAnalyticsPrompt(for id: UUID) -> Bool {
+        UserDefaults.standard.bool(forKey: analyticsAnsweredKeyPrefix + normalizedId(id))
+    }
+
     static func setAnalyticsConsent(_ granted: Bool, for id: UUID) {
-        UserDefaults.standard.set(granted, forKey: analyticsConsentKey(for: normalizedId(id)))
+        let id = normalizedId(id)
+        UserDefaults.standard.set(granted, forKey: analyticsConsentKey(for: id))
+        UserDefaults.standard.set(true, forKey: analyticsAnsweredKeyPrefix + id)
         applyAnalyticsConsent()
     }
 

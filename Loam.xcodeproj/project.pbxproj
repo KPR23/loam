@@ -96,9 +96,10 @@
 		AB48FC73157D6F0E678978C5 /* ProPaywall.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F4BD07622490320E4F0F158 /* ProPaywall.swift */; };
 		ACDEE6074DB240C61F8BF7F1 /* ExpenseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */; };
 		AD5212BA06EA685377D320E4 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73A037BC2A3E8DB7E3ACD9FE /* RevenueCatUI */; };
+		B15A5DE17E5C3637738DD0C8 /* AnalyticsConsentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52FC4772F62136A8CAD907F /* AnalyticsConsentSheet.swift */; };
 		B2F75633AB5044BB813FD2A1 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */; };
-		B5C583A33F2526F24215AC48 /* RepaymentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5614B3035CE6B96ADF47AE16 /* RepaymentSheet.swift */; };
 		B33A3689396BC774061E3F84 /* PushNotificationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69044BCBD7D53253A1EE6FBB /* PushNotificationStore.swift */; };
+		B5C583A33F2526F24215AC48 /* RepaymentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5614B3035CE6B96ADF47AE16 /* RepaymentSheet.swift */; };
 		B69CB7C679EF32139B0D1051 /* LegalPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CEBE465F07788ACD889DE61 /* LegalPages.swift */; };
 		BC595E14561F6D076C40E8C5 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07214E88835854CA791C14E /* BalanceStore.swift */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
@@ -244,6 +245,7 @@
 		A01FE9F5D1352AD66B6BF4B1 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
 		A08A73A1CF023A5DDE2B32C0 /* DeepLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandler.swift; sourceTree = "<group>"; };
 		A15EBCA64BB0DC3FC7F19BF3 /* EditProposalReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProposalReviewCard.swift; sourceTree = "<group>"; };
+		A52FC4772F62136A8CAD907F /* AnalyticsConsentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsConsentSheet.swift; sourceTree = "<group>"; };
 		A609DF87CDFA5FA17F506EBF /* OnboardingPermissionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPermissionList.swift; sourceTree = "<group>"; };
 		A74E2AB24186B00FD500CE4D /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		A87AE244F130211B61887F30 /* SplitExpenseSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseSection.swift; sourceTree = "<group>"; };
@@ -597,6 +599,14 @@
 			path = Domain;
 			sourceTree = "<group>";
 		};
+		DBC4A22A4E3B9AC250EE5719 /* Privacy */ = {
+			isa = PBXGroup;
+			children = (
+				A52FC4772F62136A8CAD907F /* AnalyticsConsentSheet.swift */,
+			);
+			path = Privacy;
+			sourceTree = "<group>";
+		};
 		DF5953F2AC2F9D7468A09F38 /* Data */ = {
 			isa = PBXGroup;
 			children = (
@@ -633,6 +643,7 @@
 				A7DFDEE741C3EE86CC156D48 /* Balances */,
 				00C5FC9B4ADC4F1ADA441288 /* Home */,
 				30AC75807E5C3897B875CBB2 /* Onboarding */,
+				DBC4A22A4E3B9AC250EE5719 /* Privacy */,
 				7259E0E2DCDAF031EAEB77DB /* Pro */,
 				C52490EC258E788E4090D312 /* Profile */,
 				368706140AA70A6F0620FF3F /* Root */,
@@ -854,6 +865,7 @@
 				EDB3FB0BA21694BAD6E8AB1C /* ActivityView.swift in Sources */,
 				A385DC89F56B32C668A7375C /* AddExpenseView.swift in Sources */,
 				467725D06126E3596075B358 /* AmountEntryField.swift in Sources */,
+				B15A5DE17E5C3637738DD0C8 /* AnalyticsConsentSheet.swift in Sources */,
 				D65A26025578725DA81C1FB5 /* AppDelegate.swift in Sources */,
 				DC095034852A514D28B3744F /* AppPreferences.swift in Sources */,
 				5197538023662FCC33542AE3 /* AppleDeletionAuthorization.swift in Sources */,
