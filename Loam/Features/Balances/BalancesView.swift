@@ -119,8 +119,7 @@ struct BalancesView: View {
             LoamFeedback.tap()
             showsRepayment = true
         } label: {
-            Label("Record repayment", systemImage: "arrow.up.right")
-                .labelStyle(.prominentButton)
+            Text("Record repayment")
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 44)
         }

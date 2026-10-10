@@ -78,8 +78,7 @@ struct PersonBalanceView: View {
                     LoamFeedback.tap()
                     showsRepayment = true
                 } label: {
-                    Label("Record repayment", systemImage: "arrow.up.right")
-                        .labelStyle(.prominentButton)
+                    Text("Record repayment")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: 280, minHeight: 44)
                 }
