@@ -8,6 +8,7 @@
 --   private.save_expense_as, so the existing "keep an unchanged answer" rules still
 --   decide whether an old response survives an edit, and an explicit rejection of an
 --   unchanged amount stays rejected.
+-- * Enabling the switch accepts every pending share of the account at once.
 -- * The share is recorded as accepted through trust, so Activity shows it as
 --   auto-accepted and the sender learns it needed no answer.
 
@@ -18,6 +19,11 @@ language plpgsql security definer set search_path='' as $$
 begin
   if not public.current_account_is_active() then raise exception 'Not authenticated'; end if;
   update public.profile set auto_accept_expenses=coalesce(p_enabled,false) where id=auth.uid();
+  -- Turning it on also answers the requests already waiting, whatever their date.
+  if coalesce(p_enabled,false) then
+    update public.expense_share set status='accepted',responded_at=now(),accepted_via_trust=true
+    where user_id=auth.uid() and status='pending';
+  end if;
 end $$;
 revoke all on function public.set_auto_accept_expenses(boolean) from public,anon;
 grant execute on function public.set_auto_accept_expenses(boolean) to authenticated;

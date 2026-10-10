@@ -38,7 +38,7 @@ struct AnalyticsConsentSheet: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 28)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
 
                 Button { onAnswer(false) } label: {

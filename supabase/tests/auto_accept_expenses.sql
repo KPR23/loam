@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..3' as plan;
+select '1..4' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.e',gen_random_uuid()::text,true);
 insert into auth.users(id,email) values(current_setting('test.a')::uuid,'auto-a@example.invalid'),
@@ -51,4 +51,15 @@ select public.save_expense(pg_temp.expense(jsonb_build_object('amount_minor',120
 do $$ begin assert pg_temp.status_of_b()='rejected','Unrelated edit erased a rejection'; end $$;
 reset role;
 select 'ok 3 - a rejected share stays rejected' as result;
+
+-- Enabling the switch answers requests that were already waiting.
+set local role authenticated;
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+select public.save_expense(pg_temp.expense(jsonb_build_object('amount_minor',1300,'shares',jsonb_build_array(jsonb_build_object('user_id',current_setting('test.a'),'amount_minor',500),jsonb_build_object('user_id',current_setting('test.b'),'amount_minor',800)))),pg_temp.version());
+do $$ begin assert pg_temp.status_of_b()='pending','Changed amount should wait again'; end $$;
+select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
+select public.set_auto_accept_expenses(true);
+do $$ begin assert pg_temp.status_of_b()='accepted','Waiting request was not accepted when enabling'; end $$;
+reset role;
+select 'ok 4 - enabling accepts requests already waiting' as result;
 rollback;

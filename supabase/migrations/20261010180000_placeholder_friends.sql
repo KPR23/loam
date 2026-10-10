@@ -50,6 +50,8 @@ language plpgsql security definer set search_path='' as $$
 begin
   if not public.current_account_is_active() then raise exception 'Not authenticated'; end if;
   if p_user_id is null or p_user_id=auth.uid() then raise exception 'Friend not found'; end if;
+  -- Serialize removals of one person so overlapping calls can't settle the same balance twice.
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text,8));
   if exists(select 1 from public.profile p where p.id=p_user_id and p.managed_by=auth.uid() and p.deleted_at is null) then
     -- Nobody can repay for a placeholder, so removing it settles whatever is left.
     insert into public.repayment(from_user,to_user,amount_minor,currency,note,paid_at,operation_id)

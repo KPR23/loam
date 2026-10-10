@@ -161,7 +161,7 @@ struct ShareConnectionCodeView: View {
     }
     /// The server enforces the same limit; checking first just opens the paywall sooner.
     private var needsPro: Bool {
-        !subscriptions.isPro && connectionStore.connections.count >= SubscriptionStore.freeConnectionLimit
+        !subscriptions.isPro && connectionStore.connections.filter { !$0.isPlaceholder }.count >= SubscriptionStore.freeConnectionLimit
     }
     private func create() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; await createInvitation() }
     private func loadOrCreate() async {

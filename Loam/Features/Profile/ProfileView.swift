@@ -20,6 +20,8 @@ final class AvatarStore: ObservableObject {
     private var images: [UUID: UIImage] = [:]
     private var paths: [UUID: String]
     private var checkedAt: [UUID: Date] = [:]
+    /// Bumped whenever a photo is stored or dropped, so a slower download can tell it is outdated.
+    private var generations: [UUID: Int] = [:]
 
     private init() {
         let saved = UserDefaults.standard.dictionary(forKey: Self.pathsKey) as? [String: String] ?? [:]
@@ -45,12 +47,14 @@ final class AvatarStore: ObservableObject {
             let avatarPath: String?
             enum CodingKeys: String, CodingKey { case avatarPath = "avatar_path" }
         }
+        let generation = generations[userId, default: 0]
         do {
             let row: Row = try await client.from("profile")
                 .select("avatar_path")
                 .eq("id", value: userId)
                 .single()
                 .execute().value
+            guard generations[userId, default: 0] == generation else { return }
             guard let path = row.avatarPath else {
                 checkedAt[userId] = Date()
                 forget(userId)
@@ -61,7 +65,7 @@ final class AvatarStore: ObservableObject {
                 return
             }
             let data = try await client.storage.from("avatars").download(path: path)
-            guard let image = UIImage(data: data) else { return }
+            guard let image = UIImage(data: data), generations[userId, default: 0] == generation else { return }
             checkedAt[userId] = Date()
             store(image, data: data, path: path, for: userId)
         } catch {
@@ -105,6 +109,7 @@ final class AvatarStore: ObservableObject {
         let previousPath = paths[userId]
         images[userId] = image
         paths[userId] = path
+        generations[userId, default: 0] += 1
         revision += 1
         persistPaths()
         let url = Self.fileURL(for: path)
@@ -117,6 +122,7 @@ final class AvatarStore: ObservableObject {
 
     private func forget(_ userId: UUID) {
         images.removeValue(forKey: userId)
+        generations[userId, default: 0] += 1
         revision += 1
         guard let path = paths.removeValue(forKey: userId) else { return }
         persistPaths()
