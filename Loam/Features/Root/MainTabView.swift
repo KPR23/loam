@@ -19,6 +19,7 @@ struct MainTabView: View {
 
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var activityStore: ActivityStore
+    @EnvironmentObject private var pushStore: PushNotificationStore
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .expenses
     @State private var expensesReloadToken = 0
@@ -37,6 +38,9 @@ struct MainTabView: View {
             Telemetry.screen(tab.screenName)
             // Activity marks itself read; elsewhere, pick up events that arrived meanwhile.
             if tab != .activity { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
+        }
+        .onChange(of: pushStore.pendingRoute, initial: true) { _, route in
+            if route != nil { selection = .activity }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
@@ -113,4 +117,5 @@ struct MainTabView: View {
         .environmentObject(ExpenseStore())
         .environmentObject(BalanceStore())
         .environmentObject(ActivityStore())
+        .environmentObject(PushNotificationStore.shared)
 }

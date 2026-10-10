@@ -55,6 +55,7 @@ final class ActivityStore: ObservableObject {
         let ids = Set(read.map(\.id))
         let rowIds = ids.flatMap { foldedIds[$0] ?? [$0] }
         events.removeAll { ids.contains($0.id) }
+        PushNotificationStore.shared.clearDelivered(eventIds: rowIds)
         // The server caps the count, so a capped badge waits for the real number.
         if unreadCount < Self.unreadCountCap { unreadCount = max(0, unreadCount - rowIds.count) }
         do {

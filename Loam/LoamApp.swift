@@ -4,6 +4,7 @@ import Foundation
 
 @main
 struct LoamApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("loam.appearance") private var appearance: AppAppearance = .system
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
@@ -14,6 +15,7 @@ struct LoamApp: App {
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var connectionStore = ConnectionStore()
     @StateObject private var subscriptionStore = SubscriptionStore()
+    @StateObject private var pushStore = PushNotificationStore.shared
 
     init() {
         #if DEBUG
@@ -53,6 +55,7 @@ struct LoamApp: App {
             .environmentObject(activityStore)
             .environmentObject(connectionStore)
             .environmentObject(subscriptionStore)
+            .environmentObject(pushStore)
             .task {
                 LegacyDemoFixtureCleanup.removeIfNeeded()
                 await authSession.bootstrap()
@@ -65,6 +68,15 @@ struct LoamApp: App {
             }
             .task(id: accountId) {
                 await subscriptionStore.identify(userId: accountId)
+            }
+            .task(id: accountId) {
+                await pushStore.activate(userId: accountId)
+            }
+            .task(id: pushBadge) {
+                await pushStore.updateBadge(unreadCount: activityStore.unreadCount)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .loamPushReceived)) { _ in
+                Task { await activityStore.refresh(userId: authSession.userId) }
             }
             .onChange(of: authSession.userId) { _, _ in
                 Telemetry.setUser(accountId)
@@ -83,10 +95,14 @@ struct LoamApp: App {
                         await authSession.refreshDeletionStatus()
                         await connectionStore.refresh(userId: authSession.userId)
                         await subscriptionStore.identify(userId: accountId)
+                        await pushStore.refreshPermission()
                     }
                 }
             }
     }
+
+    /// The badge follows the Activity count once iOS allows it.
+    private var pushBadge: String { "\(activityStore.unreadCount)-\(pushStore.permission == .allowed)-\(accountId?.uuidString ?? "")" }
 
     /// Demo IDs are not real accounts, so their purchases and telemetry stay anonymous.
     private var accountId: UUID? {
