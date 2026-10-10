@@ -35,7 +35,7 @@ struct PersonBalanceView: View {
         List {
             Section {
                 header
-                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 12, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 20, leading: 0, bottom: 16, trailing: 0))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             }
@@ -48,6 +48,21 @@ struct PersonBalanceView: View {
         .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle(person.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // The name and face appear once, up here, so the page below can lead with the balance.
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 8) {
+                    AvatarView(userId: person.personId, size: 28, name: person.displayName)
+                        .accessibilityHidden(true)
+                    Text(person.displayName)
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(HomeTheme.text)
+                        .lineLimit(1)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
+            }
+        }
         // Reload whenever balances change, e.g. after a repayment or a pull to refresh.
         .task(id: balanceStore.snapshot) { await loadHistory() }
         .refreshable {
@@ -62,15 +77,7 @@ struct PersonBalanceView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 14) {
-            AvatarView(userId: person.personId, size: 84, name: person.displayName)
-                .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
-
-            Text(person.displayName)
-                .font(.system(.title2, design: .rounded).weight(.bold))
-                .foregroundStyle(HomeTheme.text)
-                .multilineTextAlignment(.center)
-
+        VStack(spacing: 16) {
             standing
 
             if !debts.isEmpty {
@@ -84,7 +91,6 @@ struct PersonBalanceView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.capsule)
-                .padding(.top, 4)
                 .accessibilityHint("Records money you paid \(person.displayName) outside Loam")
             }
         }
@@ -110,14 +116,14 @@ struct PersonBalanceView: View {
                             .foregroundStyle(BalanceTone.color(for: balance.amountMinor))
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text(MoneyFormatter.heroAmount(from: balance.money))
-                                .font(.system(size: 44, weight: .bold, design: .rounded))
+                                .font(.system(size: 52, weight: .bold, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundStyle(HomeTheme.text)
                                 .contentTransition(.numericText(value: Double(balance.money.amountMinor)))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)
                             Text(balance.currencyCode)
-                                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
                                 .foregroundStyle(HomeTheme.secondary)
                         }
                     }
@@ -163,7 +169,7 @@ struct PersonBalanceView: View {
             ForEach(monthGroups, id: \.month) { group in
                 Section {
                     ForEach(group.entries) { entry in
-                        BalanceHistoryRow(entry: entry, personName: person.displayName, fallbackCurrency: fallbackCurrency)
+                        BalanceHistoryRow(entry: entry, fallbackCurrency: fallbackCurrency)
                     }
                 } header: {
                     Text(group.month.formatted(.dateTime.month(.wide).year()))
@@ -205,7 +211,6 @@ enum BalanceTone {
 
 private struct BalanceHistoryRow: View {
     let entry: BalanceHistoryEntry
-    let personName: String
     let fallbackCurrency: String
 
     /// Pending and declined shares, and reversed repayments, don't move the balance.
@@ -230,9 +235,9 @@ private struct BalanceHistoryRow: View {
                     .font(.system(.body, design: .rounded).weight(.medium))
                     .foregroundStyle(HomeTheme.text)
                     .lineLimit(2)
-                Text(subtitle)
+                Text(entry.occurredAt.formatted(.dateTime.day().month(.abbreviated)))
                     .font(.caption)
-                    .foregroundStyle(subtitleColor)
+                    .foregroundStyle(HomeTheme.secondary)
             }
 
             Spacer(minLength: 8)
@@ -243,9 +248,9 @@ private struct BalanceHistoryRow: View {
                     .monospacedDigit()
                     .strikethrough(!counts)
                     .foregroundStyle(counts ? HomeTheme.text : HomeTheme.tertiary)
-                Text(entry.occurredAt.formatted(.dateTime.day().month(.abbreviated)))
-                    .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(HomeTheme.secondary)
+                Text(status)
+                    .font(.system(.caption, design: .rounded).weight(.medium))
+                    .foregroundStyle(statusColor)
             }
         }
         .padding(.vertical, 2)
@@ -270,22 +275,23 @@ private struct BalanceHistoryRow: View {
         }
     }
 
-    private var subtitle: String {
+    /// Short enough to sit under the amount; the page title already names the person.
+    private var status: String {
         switch entry.kind {
         case .purchase:
             switch entry.status {
-            case .pending: return "Awaiting acceptance"
+            case .pending: return "Awaiting"
             case .rejected: return "Declined"
             default: return entry.amountMinor > 0 ? "You lent" : "You borrowed"
             }
         case .repayment:
-            return entry.amountMinor > 0 ? "You paid \(personName)" : "\(personName) paid you"
+            return entry.amountMinor > 0 ? "You paid" : "Paid you"
         case .reversal:
-            return "Repayment reversed"
+            return "Reversed"
         }
     }
 
-    private var subtitleColor: Color {
+    private var statusColor: Color {
         switch entry.kind {
         case .purchase:
             switch entry.status {
