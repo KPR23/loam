@@ -52,6 +52,8 @@ struct AddExpenseView: View {
         self.existingExpense = existingExpense
         guard let expense = existingExpense else { return }
 
+        // Editing is one form with the amount and category included, so there is no amount step.
+        _step = State(initialValue: .details)
         let myUserId = expense.createdBy
         let partnerUserIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: myUserId)
         let splitSeed = SplitFormSeed.from(expense: expense, myUserId: myUserId)
@@ -115,7 +117,7 @@ struct AddExpenseView: View {
         case .amount:
             return isEditing ? "Edit expense" : "Add expense"
         case .details:
-            return "Details"
+            return isEditing ? "Edit expense" : "Details"
         }
     }
 
@@ -193,6 +195,22 @@ struct AddExpenseView: View {
     private var detailsStep: some View {
         Form {
             Section {
+                if isEditing {
+                    LabeledContent("Amount") {
+                        HStack(spacing: 6) {
+                            TextField("0", text: sanitizedAmountBinding)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .monospacedDigit()
+                                .focused($amountFocused)
+                            Text(currencyCode)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    ExpenseCategoryPicker(category: $category)
+                }
+
                 TextField("Title (optional)", text: $title)
                     .textInputAutocapitalization(.sentences)
                     .focused($titleFocused)
@@ -344,13 +362,21 @@ struct AddExpenseView: View {
 
         case .details:
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    LoamFeedback.tap()
-                    step = .amount
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
+                if isEditing {
+                    Button("Cancel") {
+                        LoamFeedback.tap()
+                        dismiss()
+                    }
+                    .disabled(isSaving)
+                } else {
+                    Button {
+                        LoamFeedback.tap()
+                        step = .amount
+                    } label: {
+                        Label("Back", systemImage: "chevron.left")
+                    }
+                    .disabled(isSaving)
                 }
-                .disabled(isSaving)
             }
 
             ToolbarItem(placement: .confirmationAction) {
@@ -360,12 +386,19 @@ struct AddExpenseView: View {
                     SavingActionLabel(title: "Save", isSaving: isSaving)
                 }
                 .fontWeight(.semibold)
-                .disabled(isSaving)
+                .disabled(isSaving || (isEditing && !canContinue))
             }
         }
     }
 
     // MARK: - Helpers
+
+    private var sanitizedAmountBinding: Binding<String> {
+        Binding(
+            get: { amountText },
+            set: { amountText = Money.sanitizeTypingInput($0) }
+        )
+    }
 
     private var splitPartners: [SplitPartnerOption] {
         guard let userId = authSession.userId else { return [] }
@@ -535,8 +568,10 @@ struct AddExpenseView: View {
         }
         guard let money = parsedMoney, money.amountMinor > 0 else {
             errorMessage = "Enter a valid amount."
-            step = .amount
-            await focusAmountField()
+            if !isEditing {
+                step = .amount
+                await focusAmountField()
+            }
             return
         }
 
