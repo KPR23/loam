@@ -95,6 +95,7 @@
 		ACDEE6074DB240C61F8BF7F1 /* ExpenseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8EA24441B30B190387B850 /* ExpenseDetailSheet.swift */; };
 		AD5212BA06EA685377D320E4 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73A037BC2A3E8DB7E3ACD9FE /* RevenueCatUI */; };
 		B2F75633AB5044BB813FD2A1 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */; };
+		B5C583A33F2526F24215AC48 /* RepaymentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5614B3035CE6B96ADF47AE16 /* RepaymentSheet.swift */; };
 		B69CB7C679EF32139B0D1051 /* LegalPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CEBE465F07788ACD889DE61 /* LegalPages.swift */; };
 		BC595E14561F6D076C40E8C5 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07214E88835854CA791C14E /* BalanceStore.swift */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
@@ -190,6 +191,7 @@
 		506247FF8FC45BE14B15B178 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		54E27DC7E441F9167DCEB57D /* PendingExpensesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpensesSheet.swift; sourceTree = "<group>"; };
 		5607AF86E6B5DA32B91136B6 /* TestPartner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPartner.swift; sourceTree = "<group>"; };
+		5614B3035CE6B96ADF47AE16 /* RepaymentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepaymentSheet.swift; sourceTree = "<group>"; };
 		56BB79807AD4FC553913CD02 /* LegacyDemoFixtureCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDemoFixtureCleanup.swift; sourceTree = "<group>"; };
 		57BBA68141252EFE7127CA56 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		591C0E16AC62C2272FA783EA /* ExpenseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseStore.swift; sourceTree = "<group>"; };
@@ -514,6 +516,7 @@
 			isa = PBXGroup;
 			children = (
 				311E61CE00D043E5896AF6E2 /* BalancesView.swift */,
+				5614B3035CE6B96ADF47AE16 /* RepaymentSheet.swift */,
 			);
 			path = Balances;
 			sourceTree = "<group>";
@@ -883,6 +886,7 @@
 				094C1BE9805A819C5B7384FE /* ProfileView.swift in Sources */,
 				492940B3AEF2AA1E876FFC40 /* ProposeEditSheet.swift in Sources */,
 				DD08DEF35DF7DA66E8A7F4AE /* Recurring.swift in Sources */,
+				B5C583A33F2526F24215AC48 /* RepaymentSheet.swift in Sources */,
 				33C83051AA7FF1FDA79F0241 /* RootView.swift in Sources */,
 				F7D1E2A7318C3E027F56FBCA /* SettlementMode.swift in Sources */,
 				F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */,
