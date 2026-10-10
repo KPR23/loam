@@ -4,7 +4,7 @@ description: Installs the pinned Supabase CLI on a GitHub-hosted runner, or veri
 runs:
   using: composite
   steps:
-    - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+    - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
       # The self-hosted runner preinstalls the Go CLI: its CPU cannot run the Bun build.
       if: runner.environment == 'github-hosted'
       with:
