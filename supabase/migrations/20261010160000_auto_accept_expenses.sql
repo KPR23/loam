@@ -16,13 +16,20 @@ alter table public.profile add column auto_accept_expenses boolean not null defa
 
 create function public.set_auto_accept_expenses(p_enabled boolean) returns void
 language plpgsql security definer set search_path='' as $$
+declare v_uid uuid:=auth.uid(); v_id uuid; e public.expense;
 begin
   if not public.current_account_is_active() then raise exception 'Not authenticated'; end if;
-  update public.profile set auto_accept_expenses=coalesce(p_enabled,false) where id=auth.uid();
-  -- Turning it on also answers the requests already waiting, whatever their date.
+  update public.profile set auto_accept_expenses=coalesce(p_enabled,false) where id=v_uid;
+  -- Turning it on also answers the requests already waiting, whatever their date,
+  -- and records each answer the way respond_to_expense_share does.
   if coalesce(p_enabled,false) then
-    update public.expense_share set status='accepted',responded_at=now(),accepted_via_trust=true
-    where user_id=auth.uid() and status='pending';
+    for v_id in
+      update public.expense_share set status='accepted',responded_at=now(),accepted_via_trust=true
+      where user_id=v_uid and status='pending' returning expense_id
+    loop
+      select * into e from public.expense where id=v_id;
+      perform private.log_expense_event('accepted',e,private.expense_shares(v_id),v_uid,array[v_uid,e.created_by]);
+    end loop;
   end if;
 end $$;
 revoke all on function public.set_auto_accept_expenses(boolean) from public,anon;
