@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.github/actions/setup-supabase
       - name: Pin the Postgres image
         # v2.99.0 defaults to 17.6.1.107, which segfaults when a role calls a function it can't execute.
@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: v2.x
@@ -92,7 +92,7 @@ jobs:
       PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
       PROJECT_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.github/actions/setup-supabase
       # The app's xcconfig is the other source of the project ref. A mismatch would migrate one
       # project while the build ships against another.
