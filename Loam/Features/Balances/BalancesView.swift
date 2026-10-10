@@ -181,7 +181,7 @@ struct BalancesView: View {
 
 // MARK: - Hero
 
-/// The net position across everyone, with how it splits between what's owed in each direction.
+/// The net position across everyone.
 private struct BalancesHero: View {
     let snapshot: BalanceSnapshot
 
@@ -212,8 +212,6 @@ private struct BalancesHero: View {
         if let primary = positions.first {
             VStack(spacing: 18) {
                 net(primary)
-                breakdown(primary)
-                    .padding(.horizontal, 20)
                 if positions.count > 1 {
                     otherCurrencies(Array(positions.dropFirst()))
                 }
@@ -253,55 +251,6 @@ private struct BalancesHero: View {
         if netMinor > 0 { return "You’re owed overall" }
         if netMinor < 0 { return "You owe overall" }
         return "You’re even overall"
-    }
-
-    private func breakdown(_ position: CurrencyPosition) -> some View {
-        VStack(spacing: 12) {
-            GeometryReader { proxy in
-                let total = max(position.owedMinor + position.oweMinor, 1)
-                let gap: CGFloat = position.owedMinor > 0 && position.oweMinor > 0 ? 4 : 0
-                let available = proxy.size.width - gap
-                HStack(spacing: gap) {
-                    if position.owedMinor > 0 {
-                        Capsule()
-                            .fill(Color.green.gradient)
-                            .frame(width: available * CGFloat(position.owedMinor) / CGFloat(total))
-                    }
-                    if position.oweMinor > 0 {
-                        Capsule()
-                            .fill(Color.orange.gradient)
-                            .frame(width: available * CGFloat(position.oweMinor) / CGFloat(total))
-                    }
-                }
-            }
-            .frame(height: 8)
-            .accessibilityHidden(true)
-
-            HStack(alignment: .top) {
-                legend("Owed to you", minor: position.owedMinor, currencyCode: position.currencyCode, color: .green, alignment: .leading)
-                Spacer(minLength: 12)
-                legend("You owe", minor: position.oweMinor, currencyCode: position.currencyCode, color: .orange, alignment: .trailing)
-            }
-        }
-    }
-
-    private func legend(_ title: String, minor: Int, currencyCode: String, color: Color, alignment: HorizontalAlignment) -> some View {
-        let money = Money(amountMinor: minor, currencyCode: currencyCode)
-        return VStack(alignment: alignment, spacing: 2) {
-            HStack(spacing: 6) {
-                Circle().fill(color).frame(width: 7, height: 7)
-                Text(title)
-            }
-            .font(.system(.caption, design: .rounded).weight(.medium))
-            .foregroundStyle(HomeTheme.secondary)
-            Text(MoneyFormatter.string(from: money))
-                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(minor > 0 ? HomeTheme.text : HomeTheme.tertiary)
-                .contentTransition(.numericText(value: Double(minor)))
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(MoneyFormatter.string(from: money))")
     }
 
     private func otherCurrencies(_ others: [CurrencyPosition]) -> some View {
