@@ -144,7 +144,18 @@ jobs:
             -clonedSourcePackagesDirPath .spm \
             CODE_SIGNING_ALLOWED=NO \
             -skipPackagePluginValidation \
-            -collect-test-diagnostics never
+            -collect-test-diagnostics never \
+            -resultBundlePath "$RUNNER_TEMP/Loam.xcresult"
+
+      # Diagnostics are off, so the result bundle is what shows why a CI-only failure happened.
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/Loam.xcresult
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Delete iOS simulator
         if: always() && steps.simulator.outputs.device_id != ''
