@@ -501,6 +501,7 @@ struct ProfileView: View {
             } label: {
                 ProfileRow("Time zone", symbol: "globe", color: .teal, detail: AppPreferences.timeZoneName(timeZoneIdentifier))
             }
+            CategoriesRow()
             if !authSession.usesDemoMode {
                 AutoAcceptExpensesToggle()
             }
@@ -683,6 +684,32 @@ private struct ProUpgradeBanner: View {
         .contentShape(shape)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Pro opens the category editor; Free accounts see the paywall.
+private struct CategoriesRow: View {
+    @EnvironmentObject private var subscriptions: SubscriptionStore
+    @State private var showsPaywall = false
+
+    var body: some View {
+        if subscriptions.isPro {
+            NavigationLink {
+                CategorySettingsView()
+            } label: {
+                ProfileRow("Categories", symbol: "square.grid.2x2", color: .orange)
+            }
+        } else {
+            Button { showsPaywall = true } label: {
+                HStack {
+                    ProfileRow("Categories", symbol: "square.grid.2x2", color: .orange)
+                    Spacer(minLength: 8)
+                    ProBadge()
+                }
+            }
+            .accessibilityHint("Custom categories need Loam Pro")
+            .proPaywall(isPresented: $showsPaywall)
+        }
     }
 }
 
