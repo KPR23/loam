@@ -575,9 +575,15 @@ private struct ProUpgradeSection: View {
 /// A clay tile in the PRO mark's style: a pale accent face lit from the top left,
 /// with a slightly darker edge showing below it.
 private struct ProUpgradeBanner: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         let accent = HomeTheme.accent
+        let isDark = colorScheme == .dark
         let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        // A pale face glares against dark surfaces, so dark mode shades the accent toward black instead.
+        let face = isDark ? ProMark.shaded(of: accent, blackness: 0.62) : ProMark.pastel(of: accent)
+        let edge = isDark ? ProMark.shaded(of: accent, blackness: 0.78) : ProMark.pastel(of: accent, whiteness: 0.72)
 
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
@@ -601,14 +607,14 @@ private struct ProUpgradeBanner: View {
             ZStack {
                 // Thickness: a slightly darker copy just below the face.
                 shape
-                    .fill(ProMark.pastel(of: accent, whiteness: 0.72))
+                    .fill(edge)
                     .offset(y: 4)
                 // Face: lit from the top left, shaded toward the bottom right, like soft plastic.
                 shape
                     .fill(
-                        ProMark.pastel(of: accent)
-                            .shadow(.inner(color: .white.opacity(0.9), radius: 6, x: 3, y: 4))
-                            .shadow(.inner(color: accent.opacity(0.22), radius: 10, x: -4, y: -6))
+                        face
+                            .shadow(.inner(color: .white.opacity(isDark ? 0.18 : 0.9), radius: 6, x: 3, y: 4))
+                            .shadow(.inner(color: (isDark ? Color.black : accent).opacity(0.22), radius: 10, x: -4, y: -6))
                     )
             }
         }

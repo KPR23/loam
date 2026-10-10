@@ -436,6 +436,14 @@ struct ProMark: View {
         let mix = { (channel: CGFloat) in channel + (1 - channel) * whiteness }
         return Color(red: mix(red), green: mix(green), blue: mix(blue))
     }
+
+    /// The accent mixed toward black, for surfaces that sit on dark backgrounds.
+    static func shaded(of color: Color, blackness: CGFloat) -> Color {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let mix = { (channel: CGFloat) in channel * (1 - blackness) }
+        return Color(red: mix(red), green: mix(green), blue: mix(blue))
+    }
 }
 
 /// Free vs. Pro, one row per gated feature.
