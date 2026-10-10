@@ -148,6 +148,22 @@ final class WireFormatTests: LocalStorageTestCase {
         XCTAssertEqual(purchase.first?.displayTitle, "Groceries")
     }
 
+    func testBalanceHistoryPurchaseCountsOnlyOnceThePayerHasAcceptedToo() throws {
+        func purchase(status: String, payerStatus: String?) throws -> BalanceHistoryEntry {
+            let payer = payerStatus.map { #","payer_status":"\#($0)""# } ?? ""
+            return try decode(BalanceHistoryEntry.self, """
+            {"id":"\(UUID())","kind":"purchase","title":"Dinner","amount_minor":-500,"occurred_at":0,"status":"\(status)"\(payer)}
+            """)
+        }
+
+        XCTAssertEqual(try purchase(status: "accepted", payerStatus: "pending").purchaseStatus, .pending)
+        XCTAssertEqual(try purchase(status: "accepted", payerStatus: "rejected").purchaseStatus, .rejected)
+        XCTAssertEqual(try purchase(status: "pending", payerStatus: "rejected").purchaseStatus, .rejected)
+        XCTAssertEqual(try purchase(status: "accepted", payerStatus: "accepted").purchaseStatus, .accepted)
+        // Older servers send no payer answer.
+        XCTAssertEqual(try purchase(status: "accepted", payerStatus: nil).purchaseStatus, .accepted)
+    }
+
     func testLocallySavedRecordsFromOlderVersionsStillLoad() throws {
         let repayment = try decode(RepaymentRecord.self, """
         {"id":"\(UUID())","fromUserId":"\(TestUser.alice)","toUserId":"\(TestUser.bob)","amountMinor":100,"paidAt":0,"createdAt":0}

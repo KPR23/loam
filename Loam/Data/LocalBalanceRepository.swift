@@ -50,6 +50,7 @@ actor LocalBalanceRepository: BalanceRepository {
                     amountMinor: expense.paidBy == userId ? share.amountMinor : -share.amountMinor,
                     occurredAt: expense.spentAt,
                     status: share.status,
+                    payerStatus: expense.shareRecord(for: expense.paidBy)?.status,
                     currencyCode: expense.currency.uppercased(),
                     categoryName: expense.category.rawValue
                 ))
@@ -63,6 +64,7 @@ actor LocalBalanceRepository: BalanceRepository {
                 amountMinor: payment.toUserId == userId ? -payment.amountMinor : payment.amountMinor,
                 occurredAt: payment.paidAt,
                 status: nil,
+                payerStatus: nil,
                 currencyCode: payment.currencyCode.uppercased(),
                 categoryName: nil
             ))

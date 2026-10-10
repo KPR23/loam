@@ -215,7 +215,7 @@ private struct BalanceHistoryRow: View {
     /// Pending and declined shares, and reversed repayments, don't move the balance.
     private var counts: Bool {
         switch entry.kind {
-        case .purchase: entry.status == nil || entry.status == .accepted
+        case .purchase: entry.purchaseStatus == .accepted
         case .repayment: true
         case .reversal: false
         }
@@ -284,7 +284,7 @@ private struct BalanceHistoryRow: View {
     private var status: String {
         switch entry.kind {
         case .purchase:
-            switch entry.status {
+            switch entry.purchaseStatus {
             case .pending: return "Awaiting"
             case .rejected: return "Declined"
             default: return entry.amountMinor > 0 ? "You lent" : "You borrowed"
@@ -299,7 +299,7 @@ private struct BalanceHistoryRow: View {
     private var statusColor: Color {
         switch entry.kind {
         case .purchase:
-            switch entry.status {
+            switch entry.purchaseStatus {
             case .pending: return .orange
             case .rejected: return HomeTheme.tertiary
             default: return BalanceTone.color(for: entry.amountMinor)

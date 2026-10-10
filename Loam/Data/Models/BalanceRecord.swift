@@ -85,7 +85,9 @@ struct BalanceHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     let amountMinor: Int
     let occurredAt: Date
     let status: ExpenseShareStatus?
-    /// Older servers omit these; callers fall back to the balance's currency.
+    /// The payer's answer on their own share; the balance counts a purchase only once both are accepted.
+    let payerStatus: ExpenseShareStatus?
+    /// Older servers omit these. A row without a currency shows its amount without one rather than a guess.
     let currencyCode: String?
     let categoryName: String?
 
@@ -97,21 +99,32 @@ struct BalanceHistoryEntry: Identifiable, Codable, Hashable, Sendable {
         return title
     }
 
+    /// Where a purchase stands for the balance, combining both answers the way the server does.
+    /// Older servers send no payer answer; the participant's answer is all there is then.
+    var purchaseStatus: ExpenseShareStatus {
+        let answers = [status ?? .accepted, payerStatus ?? .accepted]
+        if answers.contains(.rejected) { return .rejected }
+        if answers.contains(.pending) { return .pending }
+        return .accepted
+    }
+
     enum CodingKeys: String, CodingKey {
         case id, kind, title, status
         case amountMinor = "amount_minor"
         case occurredAt = "occurred_at"
         case currencyCode = "currency"
         case categoryName = "category"
+        case payerStatus = "payer_status"
     }
 
-    init(id: UUID, kind: Kind, title: String, amountMinor: Int, occurredAt: Date, status: ExpenseShareStatus?, currencyCode: String?, categoryName: String?) {
+    init(id: UUID, kind: Kind, title: String, amountMinor: Int, occurredAt: Date, status: ExpenseShareStatus?, payerStatus: ExpenseShareStatus?, currencyCode: String?, categoryName: String?) {
         self.id = id
         self.kind = kind
         self.title = title
         self.amountMinor = amountMinor
         self.occurredAt = occurredAt
         self.status = status
+        self.payerStatus = payerStatus
         self.currencyCode = currencyCode
         self.categoryName = categoryName
     }
