@@ -13,6 +13,7 @@ struct PersonBalanceView: View {
 
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var balanceStore: BalanceStore
+    @Environment(\.scenePhase) private var scenePhase
     @State private var history: [BalanceHistoryEntry] = []
     @State private var hasLoaded = false
     @State private var loadError: String?
@@ -60,6 +61,10 @@ struct PersonBalanceView: View {
         }
         // Reload whenever balances change, e.g. after a repayment or a pull to refresh.
         .task(id: balanceStore.snapshot) { await loadHistory() }
+        // A friend can accept or decline while the app is away without changing any balance.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await loadHistory() } }
+        }
         .refreshable {
             await balanceStore.refresh(userId: authSession.userId)
             await loadHistory()
