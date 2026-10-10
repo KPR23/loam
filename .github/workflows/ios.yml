@@ -12,21 +12,32 @@ on:
       - Loam.xcodeproj/**
       - project.yml
       - .github/workflows/ios.yml
+  # Every merge and release branch gets the full tests, so an unlabeled PR can't reach an rc tag untested.
+  push:
+    branches: [main, "release/**"]
+    paths:
+      - Loam/**
+      - LoamTests/**
+      - LoamUITests/**
+      - Loam.xcodeproj/**
+      - project.yml
+      - .github/workflows/ios.yml
 
 permissions:
   contents: read
 
 concurrency:
   group: ios-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push to main or a release branch must not cancel the test run for the one before it.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # A compile check on every PR, so a broken build shows up before an rc tag reaches Xcode Cloud.
-  # Tests stay behind the label to save macOS minutes. Adding a label reruns the workflow and
-  # cancels this job, so it only skips a labeled run when the test job builds instead.
+  # Adding a label reruns the workflow and cancels this job, so it only skips a labeled run when
+  # the test job builds instead.
   build:
     name: Build
-    if: github.event.action != 'labeled' || !contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
+    if: github.event_name == 'pull_request' && (github.event.action != 'labeled' || !contains(github.event.pull_request.labels.*.name, 'Run Build & Test'))
     runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 20
 
@@ -54,9 +65,10 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             -skipPackagePluginValidation
 
+  # Tests stay behind the label on a PR to save macOS minutes; every push runs them.
   build-and-test:
     name: Build & Test
-    if: contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
     runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 30
 
