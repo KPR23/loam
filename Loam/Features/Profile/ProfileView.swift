@@ -5,16 +5,41 @@ import SafariServices
 import Supabase
 import UIKit
 
+/// Avatars are cached in memory and on disk, keyed by the storage path. Every upload gets a new
+/// path, so a cached file is never stale: opening Profile shows the photo at once, and only a
+/// changed path downloads again.
 @MainActor
 final class AvatarStore: ObservableObject {
     static let shared = AvatarStore()
-    private static let signedURLLifetime = 5 * 60
+    private static let pathsKey = "loam.avatarPaths"
+    private static let recheckInterval: TimeInterval = 60
 
-    @Published private(set) var urls: [UUID: URL] = [:]
-    private var loadedAt: [UUID: Date] = [:]
+    /// Bumped when a photo changes, so views showing it redraw. Reading from disk does not bump it,
+    /// because views do that while drawing.
+    @Published private(set) var revision = 0
+    private var images: [UUID: UIImage] = [:]
+    private var paths: [UUID: String]
+    private var checkedAt: [UUID: Date] = [:]
+
+    private init() {
+        let saved = UserDefaults.standard.dictionary(forKey: Self.pathsKey) as? [String: String] ?? [:]
+        paths = Dictionary(uniqueKeysWithValues: saved.compactMap { key, value in
+            UUID(uuidString: key).map { ($0, value) }
+        })
+    }
+
+    /// The cached photo, read from disk the first time it is needed.
+    func image(for userId: UUID) -> UIImage? {
+        if let image = images[userId] { return image }
+        guard let path = paths[userId], let data = try? Data(contentsOf: Self.fileURL(for: path)),
+              let image = UIImage(data: data)
+        else { return nil }
+        images[userId] = image
+        return image
+    }
 
     func load(_ userId: UUID) async {
-        if let loadedAt = loadedAt[userId], Date().timeIntervalSince(loadedAt) < 60 { return }
+        if let checkedAt = checkedAt[userId], Date().timeIntervalSince(checkedAt) < Self.recheckInterval { return }
         guard let client = SupabaseClientProvider.shared else { return }
         struct Row: Decodable {
             let avatarPath: String?
@@ -26,17 +51,21 @@ final class AvatarStore: ObservableObject {
                 .eq("id", value: userId)
                 .single()
                 .execute().value
-            loadedAt[userId] = Date()
-            if let path = row.avatarPath {
-                urls[userId] = try await client.storage.from("avatars").createSignedURL(
-                    path: path,
-                    expiresIn: Self.signedURLLifetime
-                )
-            } else {
-                urls.removeValue(forKey: userId)
+            guard let path = row.avatarPath else {
+                checkedAt[userId] = Date()
+                forget(userId)
+                return
             }
+            if path == paths[userId], image(for: userId) != nil {
+                checkedAt[userId] = Date()
+                return
+            }
+            let data = try await client.storage.from("avatars").download(path: path)
+            guard let image = UIImage(data: data) else { return }
+            checkedAt[userId] = Date()
+            store(image, data: data, path: path, for: userId)
         } catch {
-            // A failed request can be retried when the view appears again.
+            // A failed request can be retried when the view appears again; the cached photo stays.
         }
     }
 
@@ -50,7 +79,6 @@ final class AvatarStore: ObservableObject {
             try await storage.upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
         }
         do {
-            let url = try await storage.createSignedURL(path: path, expiresIn: Self.signedURLLifetime)
             struct Change: Codable { let avatar_path: String }
             let _: Change = try await client.from("profile")
                 .update(Change(avatar_path: path))
@@ -58,17 +86,56 @@ final class AvatarStore: ObservableObject {
                 .select("avatar_path")
                 .single()
                 .execute().value
-            let previousPath = urls[userId]?.lastPathComponent
-            urls[userId] = url
-            loadedAt[userId] = Date()
-            if let previousPath {
-                _ = try? await storage.remove(paths: ["\(userId.uuidString.lowercased())/\(previousPath)"])
+            let previousPath = paths[userId]
+            if let image = UIImage(data: imageData) {
+                store(image, data: imageData, path: path, for: userId)
+            }
+            checkedAt[userId] = Date()
+            if let previousPath, previousPath != path {
+                _ = try? await storage.remove(paths: [previousPath])
             }
         } catch {
             LoamErrorCapture.capture("profile.avatar_metadata_save_failed")
             _ = try? await storage.remove(paths: [path])
             throw error
         }
+    }
+
+    private func store(_ image: UIImage, data: Data, path: String, for userId: UUID) {
+        let previousPath = paths[userId]
+        images[userId] = image
+        paths[userId] = path
+        revision += 1
+        persistPaths()
+        let url = Self.fileURL(for: path)
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
+        if let previousPath, previousPath != path {
+            try? FileManager.default.removeItem(at: Self.fileURL(for: previousPath))
+        }
+    }
+
+    private func forget(_ userId: UUID) {
+        images.removeValue(forKey: userId)
+        revision += 1
+        guard let path = paths.removeValue(forKey: userId) else { return }
+        persistPaths()
+        try? FileManager.default.removeItem(at: Self.fileURL(for: path))
+    }
+
+    private func persistPaths() {
+        UserDefaults.standard.set(
+            Dictionary(uniqueKeysWithValues: paths.map { ($0.key.uuidString, $0.value) }),
+            forKey: Self.pathsKey
+        )
+    }
+
+    /// Caches may be purged by the system, which just means a photo downloads again.
+    private static func fileURL(for path: String) -> URL {
+        let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        return base
+            .appendingPathComponent("avatars", isDirectory: true)
+            .appendingPathComponent(path.replacingOccurrences(of: "/", with: "_"))
     }
 }
 
@@ -82,12 +149,10 @@ struct AvatarView: View {
 
     var body: some View {
         Group {
-            if let userId, let url = avatars.urls[userId] {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    fallback
-                }
+            if let userId, let image = avatars.image(for: userId) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
             } else {
                 fallback
             }
