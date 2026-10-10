@@ -31,6 +31,15 @@ actor SupabaseConnectionRepository: ConnectionRepository {
         guard let name = rows.first?.inviterName else { throw ConnectionError.unavailable }
         return name
     }
+    func removeConnection(userId: UUID) async throws {
+        struct Params: Encodable { let pUserId: UUID; enum CodingKeys: String, CodingKey { case pUserId = "p_user_id" } }
+        do {
+            try await client.rpc("remove_connection", params: Params(pUserId: userId)).execute()
+        } catch let error as PostgrestError {
+            // The server explains why, for example that money is still owed.
+            throw ConnectionError.removalRejected(error.message)
+        }
+    }
     func redeem(code: String) async throws -> SplitPartnerOption {
         struct Params: Encodable { let pCode: String; enum CodingKeys: String, CodingKey { case pCode = "p_code" } }
         struct Row: Decodable { let userId: UUID?; let displayName: String?; let errorCode: String?; enum CodingKeys: String, CodingKey { case userId = "user_id", displayName = "display_name", errorCode = "error_code" } }
@@ -41,12 +50,13 @@ actor SupabaseConnectionRepository: ConnectionRepository {
     }
 }
 
-enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired
+enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired, removalRejected(String)
     var errorDescription: String? {
         switch self {
         case .unavailable: "That code is unavailable. Check it and try again."
         case .rateLimited: "Too many attempts. Try again in 15 minutes."
         case .proRequired: "Loam Pro is needed to invite more people."
+        case let .removalRejected(message): message
         }
     }
 }

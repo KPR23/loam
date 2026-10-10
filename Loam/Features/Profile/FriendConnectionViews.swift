@@ -1,23 +1,96 @@
 import SwiftUI
 import UIKit
 
-/// Shared Profile/picker flow. Connections enable shared expenses only.
-struct FriendConnectionHub: View {
+/// Everything about friends in one place: connect with new people, see who you're connected
+/// to, and remove someone. Connections enable shared expenses only.
+struct FriendsView: View {
     @EnvironmentObject private var connectionStore: ConnectionStore
     @EnvironmentObject private var authSession: AuthSession
     @State private var showsConnectionCodePrompt = false
+    @State private var searchText = ""
+    @State private var friendPendingRemoval: SplitPartnerOption?
+    @State private var removalError: String?
+
+    private var visibleFriends: [SplitPartnerOption] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return connectionStore.connections }
+        return connectionStore.connections.filter { $0.displayName.localizedCaseInsensitiveContains(query) }
+    }
+
     var body: some View {
         List {
-            Section { Text("Connecting lets you share expenses. It does not reveal personal expenses or automatically approve a split.").foregroundStyle(.secondary) }
-            Section("Connect with friends") {
-                NavigationLink("Share my code") { ShareConnectionCodeView() }
-                Button("Enter a code") { showsConnectionCodePrompt = true }
+            Section {
+                NavigationLink { ShareConnectionCodeView() } label: {
+                    Label("Share my code", systemImage: "square.and.arrow.up")
+                }
+                Button { showsConnectionCodePrompt = true } label: {
+                    Label("Enter a code", systemImage: "key")
+                }
+            } header: {
+                Text("Add a friend")
+            } footer: {
+                Text("Connecting lets you share expenses. It does not reveal personal expenses or automatically approve a split.")
+            }
+
+            Section {
+                if connectionStore.connections.isEmpty {
+                    Text(connectionStore.hasLoadedConnections ? "No friends yet." : "Loading…")
+                        .foregroundStyle(.secondary)
+                } else if visibleFriends.isEmpty {
+                    Text("No friends match “\(searchText)”.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(visibleFriends) { friend in
+                        HStack(spacing: 12) {
+                            AvatarView(userId: friend.userId, size: 36, name: friend.displayName)
+                            Text(friend.displayName)
+                            Spacer(minLength: 0)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button("Remove", role: .destructive) { friendPendingRemoval = friend }
+                        }
+                        .contextMenu {
+                            Button("Remove friend", systemImage: "person.badge.minus", role: .destructive) {
+                                friendPendingRemoval = friend
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text(connectionStore.connections.isEmpty ? "Friends" : "Friends (\(connectionStore.connections.count))")
+            } footer: {
+                if !connectionStore.connections.isEmpty {
+                    Text("Swipe a friend to remove them. Past shared expenses stay in your history.")
+                }
             }
         }
-        .navigationTitle("Connect with friends")
+        .navigationTitle("Friends")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search friends")
         .connectionCodePrompt(isPresented: $showsConnectionCodePrompt)
         .task { await connectionStore.refresh(userId: authSession.userId) }
+        .refreshable { await connectionStore.refresh(userId: authSession.userId) }
+        .confirmationDialog(
+            "Remove \(friendPendingRemoval?.displayName ?? "this friend")?",
+            isPresented: Binding(get: { friendPendingRemoval != nil }, set: { if !$0 { friendPendingRemoval = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Remove friend", role: .destructive) {
+                guard let friend = friendPendingRemoval else { return }
+                friendPendingRemoval = nil
+                Task {
+                    do { try await connectionStore.remove(friend) }
+                    catch { removalError = error.localizedDescription }
+                }
+            }
+        } message: {
+            Text("You won’t be able to share new expenses until you connect again. Expenses you already shared stay in your history.")
+        }
+        .alert("Couldn’t remove friend", isPresented: Binding(get: { removalError != nil }, set: { if !$0 { removalError = nil } })) {
+            Button("OK") { removalError = nil }
+        } message: {
+            Text(removalError ?? "")
+        }
     }
 }
 

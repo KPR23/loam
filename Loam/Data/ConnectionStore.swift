@@ -36,6 +36,11 @@ final class ConnectionStore: ObservableObject {
     func activeInvitation() async throws -> ConnectionInvitation? { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; return try await SupabaseConnectionRepository(client: client).activeInvitation() }
     func revokeInvitation() async throws { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; try await LoamErrorCapture.withCapture("connections.invitation_revoke_failed") { try await SupabaseConnectionRepository(client: client).revokeInvitation() } }
     func preview(code: String) async throws -> String { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; return try await SupabaseConnectionRepository(client: client).preview(code: code) }
+    func remove(_ friend: SplitPartnerOption) async throws {
+        guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }
+        try await LoamErrorCapture.withCapture("connections.remove_failed") { try await SupabaseConnectionRepository(client: client).removeConnection(userId: friend.userId) }
+        await refresh(userId: accountId)
+    }
     func redeem(code: String) async throws -> SplitPartnerOption { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; let friend = try await SupabaseConnectionRepository(client: client).redeem(code: code); Telemetry.capture(.friendConnected); await refresh(userId: accountId); return friend }
 }
 

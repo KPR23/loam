@@ -251,7 +251,6 @@ struct ProfileView: View {
     @State private var showsSignOut = false
     @State private var isSigningOut = false
     @State private var webDestination: WebDestination?
-    @State private var showsConnectionCodePrompt = false
 
     var body: some View {
         NavigationStack {
@@ -316,11 +315,8 @@ struct ProfileView: View {
                     } label: {
                         ProfileRow("Personal details", symbol: "person.text.rectangle", color: .blue)
                     }
-                    NavigationLink { ShareConnectionCodeView() } label: {
-                        ProfileRow("Share my code", symbol: "square.and.arrow.up", color: .teal)
-                    }
-                    Button { showsConnectionCodePrompt = true } label: {
-                        ProfileRow("Enter a code", symbol: "key", color: .orange)
+                    NavigationLink { FriendsView() } label: {
+                        ProfileRow("Friends", symbol: "person.2", color: .teal)
                     }
                     SubscriptionRow()
                 }
@@ -402,7 +398,6 @@ struct ProfileView: View {
                 #endif
             }
             .listStyle(.insetGrouped)
-            .connectionCodePrompt(isPresented: $showsConnectionCodePrompt)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background)
             .navigationTitle("Profile")
