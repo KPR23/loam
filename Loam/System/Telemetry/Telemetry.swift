@@ -44,7 +44,10 @@ enum Telemetry {
 
     /// True once this account has chosen, in the first-run prompt or the Privacy setting.
     static func hasAnsweredAnalyticsPrompt(for id: UUID) -> Bool {
-        UserDefaults.standard.bool(forKey: analyticsAnsweredKeyPrefix + normalizedId(id))
+        let id = normalizedId(id)
+        // Accounts that used the Privacy setting before the prompt existed have already chosen.
+        return UserDefaults.standard.bool(forKey: analyticsAnsweredKeyPrefix + id)
+            || UserDefaults.standard.object(forKey: analyticsConsentKey(for: id)) != nil
     }
 
     static func setAnalyticsConsent(_ granted: Bool, for id: UUID) {
