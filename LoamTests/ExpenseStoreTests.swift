@@ -89,6 +89,23 @@ final class ExpenseStoreTests: LocalStorageTestCase {
         XCTAssertNil(partnerStore.lastError)
     }
 
+    func testEditingTheSplitOfAnAcceptedExpenseFindsIt() async throws {
+        let creatorStore = ExpenseStore()
+        try await creatorStore.addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
+        let expenseId = try XCTUnwrap(creatorStore.expenses.first?.id)
+
+        let partnerStore = ExpenseStore()
+        await partnerStore.refresh(userId: partner)
+        await partnerStore.respondToShare(expenseId: expenseId, userId: partner, action: .accept)
+
+        await creatorStore.refresh(userId: me)
+        try await creatorStore.applySplit(to: expenseId, userId: me, splitMode: .percentage, paidBy: me, partnerUserIds: [partner], myPercentage: 0)
+
+        let updated = try XCTUnwrap(creatorStore.expenses.first)
+        XCTAssertEqual(updated.shareRecord(for: me)?.amountMinor, 0)
+        XCTAssertEqual(updated.shareRecord(for: partner)?.amountMinor, 1000)
+    }
+
     func testRejectedSplitDisappearsForThePartner() async throws {
         try await ExpenseStore().addSplit(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me, splitMode: .equal, paidBy: me, partnerUserIds: [partner])
 
