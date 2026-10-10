@@ -6,13 +6,16 @@ struct ActivityView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var activityStore: ActivityStore
     @EnvironmentObject private var expenseStore: ExpenseStore
+    @EnvironmentObject private var pushStore: PushNotificationStore
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedExpense: ExpenseRecord?
     @State private var unavailableMessage: String?
+    @AppStorage("loam.notificationPromptDismissed") private var promptDismissed = false
 
     var body: some View {
         NavigationStack {
             List {
+                if showsNotificationPrompt { notificationPrompt }
                 if activityStore.isLoading && activityStore.events.isEmpty {
                     Section { HStack { Spacer(); ProgressView("Loading activity…"); Spacer() }.padding(.vertical, 28) }
                 } else if activityStore.events.isEmpty {
@@ -71,6 +74,10 @@ struct ActivityView: View {
             }
         }
         .expenseActionsHost(selectedExpense: $selectedExpense)
+        .onChange(of: pushStore.pendingRoute, initial: true) { _, route in
+            // Unstructured, so consuming the route doesn't cancel the lookup it starts.
+            if route != nil { Task { await openPendingRoute() } }
+        }
         .onChange(of: waitingCount) { oldValue, newValue in
             // An answer from anywhere reads its request; drop it from the inbox.
             guard newValue < oldValue else { return }
@@ -82,6 +89,48 @@ struct ActivityView: View {
             Task { await reload() }
         }
         .alert("Expense unavailable", isPresented: Binding(get: { unavailableMessage != nil }, set: { if !$0 { unavailableMessage = nil } })) { Button("OK", role: .cancel) {} } message: { Text(unavailableMessage ?? "") }
+    }
+
+    // MARK: - Notifications
+
+    private var showsNotificationPrompt: Bool {
+        pushStore.permission == .notDetermined && !promptDismissed && !authSession.usesDemoMode
+    }
+
+    /// Asked here, where the value is obvious, instead of at launch.
+    private var notificationPrompt: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                Label {
+                    Text("Get notified").font(.headline)
+                } icon: {
+                    Image(systemName: "bell.badge.fill").foregroundStyle(HomeTheme.accent)
+                }
+                Text("Hear about shared expenses, replies and repayments as they happen. You choose which ones in Profile.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("Turn on notifications") { Task { await pushStore.requestPermission() } }
+                        .buttonStyle(.borderedProminent)
+                    Button("Not now") { promptDismissed = true }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    /// A tapped push lands here: refresh, then open the expense it was about.
+    private func openPendingRoute() async {
+        guard let userId = authSession.userId, let route = pushStore.consumeRoute(for: userId) else { return }
+        await reload()
+        guard let expenseId = route.expenseId else { return }
+        if let fetched = await expenseStore.fetchExpense(id: expenseId, userId: userId) {
+            selectedExpense = fetched
+        } else {
+            unavailableMessage = "This expense was deleted or you no longer have access to it."
+        }
     }
 
     // MARK: - Rows

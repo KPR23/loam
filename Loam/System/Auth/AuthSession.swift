@@ -435,6 +435,8 @@ final class AuthSession: ObservableObject {
         let signedOutTestDevice = isTestAccountActive
         #endif
         if let client = SupabaseClientProvider.shared, !usesDemoMode {
+            // Needs the session, so it runs before the sign-out ends it.
+            await PushNotificationStore.shared.deviceWillSignOut()
             do {
                 try await client.auth.signOut()
             } catch {
