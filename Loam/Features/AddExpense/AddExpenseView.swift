@@ -244,7 +244,7 @@ struct AddExpenseView: View {
                         HStack(spacing: 12) {
                             Image(systemName: splitRowSystemImage)
                                 .font(.body.weight(.medium))
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(isSplit ? Color.accentColor : Color.secondary)
                                 .frame(width: 22)
 
                             Text("Split")
