@@ -35,11 +35,10 @@ concurrency:
 
 jobs:
   # A compile check on every PR, so a broken build shows up before an rc tag reaches Xcode Cloud.
-  # Adding a label reruns the workflow and cancels this job, so it only skips a labeled run when
-  # the test job builds instead.
+  # The test job builds too, so a labeled PR skips this job instead of compiling twice.
   build:
     name: Build
-    if: github.event_name == 'pull_request' && (github.event.action != 'labeled' || !contains(github.event.pull_request.labels.*.name, 'Run Build & Test'))
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
     runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 20
 
