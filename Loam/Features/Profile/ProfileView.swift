@@ -520,8 +520,15 @@ struct ProfileView: View {
             } label: {
                 ProfileRow("Time zone", symbol: "globe", color: .teal, detail: AppPreferences.timeZoneName(timeZoneIdentifier))
             }
+            if !authSession.usesDemoMode {
+                AutoAcceptExpensesToggle()
+            }
         } header: {
             Text("Preferences")
+        } footer: {
+            if !authSession.usesDemoMode {
+                Text("Accept every expense a friend shares with you automatically, without reviewing it first.")
+            }
         }
     }
 

@@ -39,6 +39,7 @@
 		40CE985228700649412B0057 /* SupabaseConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E49E2A84778450763BB7A2F /* SupabaseConfigTests.swift */; };
 		44BD31911071B1FA10E17446 /* OnboardingHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A0FE023D456F1920A75A8A /* OnboardingHistory.swift */; };
 		450CF8D24E4AAD123A859E79 /* EditProposalReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15EBCA64BB0DC3FC7F19BF3 /* EditProposalReviewCard.swift */; };
+		463087FAA76B1B44FD85B7A1 /* AutoAcceptExpensesToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D3E31E114A53A479154B4A /* AutoAcceptExpensesToggle.swift */; };
 		464225EB57698979D84999AA /* SubscriptionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDC87E4454EB50A4BB3CDF92 /* SubscriptionStore.swift */; };
 		467725D06126E3596075B358 /* AmountEntryField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E022CCCA207CD041727446B /* AmountEntryField.swift */; };
 		47D5C5EC4B5C399B1AD11AD7 /* BalanceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46CC7796E7D041351235A454 /* BalanceRecord.swift */; };
@@ -211,6 +212,7 @@
 		5E65040300B62601566B3542 /* OnboardingPageHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPageHeader.swift; sourceTree = "<group>"; };
 		5EF5AC0E5465E709F9F1814D /* PlaceSearchController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceSearchController.swift; sourceTree = "<group>"; };
 		63C47899F6ED4E7E4BA92DE9 /* Production.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Production.xcconfig; sourceTree = "<group>"; };
+		65D3E31E114A53A479154B4A /* AutoAcceptExpensesToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoAcceptExpensesToggle.swift; sourceTree = "<group>"; };
 		69044BCBD7D53253A1EE6FBB /* PushNotificationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationStore.swift; sourceTree = "<group>"; };
 		6BD805CDE31A24AD630A9703 /* AddExpenseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseView.swift; sourceTree = "<group>"; };
 		6C0334CD52C6BA2DB298B560 /* SplitPartnerOptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitPartnerOptionTests.swift; sourceTree = "<group>"; };
@@ -581,6 +583,7 @@
 		C52490EC258E788E4090D312 /* Profile */ = {
 			isa = PBXGroup;
 			children = (
+				65D3E31E114A53A479154B4A /* AutoAcceptExpensesToggle.swift */,
 				1BCD03B5C9F32D9021D06CB6 /* FriendConnectionViews.swift */,
 				B5DF03684963376A0DF44675 /* NotificationSettingsView.swift */,
 				31EC9FEA936CD6D772BB91A9 /* ProfileView.swift */,
@@ -871,6 +874,7 @@
 				5197538023662FCC33542AE3 /* AppleDeletionAuthorization.swift in Sources */,
 				D02FC6D36FA2D65A11C60DBA /* AuthSession.swift in Sources */,
 				3B0879A3E31BDEB3E9BB33AE /* AuthView.swift in Sources */,
+				463087FAA76B1B44FD85B7A1 /* AutoAcceptExpensesToggle.swift in Sources */,
 				47D5C5EC4B5C399B1AD11AD7 /* BalanceRecord.swift in Sources */,
 				65D547A7C01F992870BB3DEC /* BalanceRepository.swift in Sources */,
 				4CC7CD6399A63C76561174E0 /* BalanceSimplifier.swift in Sources */,
