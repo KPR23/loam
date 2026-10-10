@@ -3,6 +3,7 @@ import UIKit
 
 struct RootView: View {
     @EnvironmentObject private var authSession: AuthSession
+    @AppStorage(OnboardingView.completedKey) private var hasCompletedOnboarding = false
 
     var body: some View {
         Group {
@@ -10,12 +11,24 @@ struct RootView: View {
             case .loading:
                 ProgressView("Loading…")
             case .signedOut:
-                AuthView()
+                // UI tests drive sign-in directly.
+                if hasCompletedOnboarding || LaunchEnvironment.isUITesting {
+                    AuthView()
+                        .transition(.opacity)
+                } else {
+                    OnboardingView { hasCompletedOnboarding = true }
+                        .transition(.opacity)
+                }
             case .signedIn:
                 MainTabView()
             }
         }
         .animation(.easeInOut(duration: 0.2), value: authSession.state)
+        .animation(.easeInOut(duration: 0.35), value: hasCompletedOnboarding)
+        .onChange(of: authSession.state, initial: true) { _, state in
+            // People who signed in before onboarding existed shouldn't meet it after signing out.
+            if state == .signedIn { hasCompletedOnboarding = true }
+        }
         .background(KeyboardDismissalInstaller())
     }
 }

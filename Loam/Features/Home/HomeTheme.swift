@@ -130,6 +130,24 @@ struct LoamPressStyle: ButtonStyle {
     }
 }
 
+/// The full-width capsule for a screen's one main action, matching the paywall's purchase button.
+struct LoamPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(.headline, design: .rounded))
+            .foregroundStyle(Color(.systemBackground))
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(Color.primary, in: Capsule())
+            .contentShape(Capsule())
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.975 : 1)
+            .opacity(configuration.isPressed ? 0.72 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.8),
+                       value: configuration.isPressed)
+    }
+}
+
 /// Keep the action's width stable while communicating an in-flight save.
 struct SavingActionLabel: View {
     let title: String
