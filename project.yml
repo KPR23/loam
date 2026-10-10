@@ -45,6 +45,8 @@ targets:
       - path: Loam
         excludes:
           - "**/*.md"
+          # Local-only and gitignored; a reference would show as missing everywhere else.
+          - "Config/Secrets.xcconfig"
     resources:
       - path: Loam/Resources
     settings:
