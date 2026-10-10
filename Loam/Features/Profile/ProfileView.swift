@@ -174,6 +174,7 @@ struct ProfileView: View {
 
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var subscriptions: SubscriptionStore
+    @EnvironmentObject private var pushStore: PushNotificationStore
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isUploadingPhoto = false
     @State private var photoError: String?
@@ -428,6 +429,13 @@ struct ProfileView: View {
                     ProfileRow("Default currency", symbol: "dollarsign.arrow.circlepath", color: .green, detail: defaultCurrency.uppercased())
                 }
             }
+            if !authSession.usesDemoMode {
+                NavigationLink {
+                    NotificationSettingsView()
+                } label: {
+                    ProfileRow("Notifications", symbol: "bell.badge", color: .red, detail: notificationsDetail)
+                }
+            }
             NavigationLink {
                 TimeZoneSettingsView()
             } label: {
@@ -435,6 +443,14 @@ struct ProfileView: View {
             }
         } header: {
             Text("Preferences")
+        }
+    }
+
+    private var notificationsDetail: String? {
+        switch pushStore.permission {
+        case .allowed: "On"
+        case .denied: "Off"
+        case .unknown, .notDetermined: nil
         }
     }
 
