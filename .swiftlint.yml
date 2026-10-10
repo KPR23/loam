@@ -1,0 +1,20 @@
+disabled_rules:
+  # Size and style rules the codebase was not written against; they would drown out real findings.
+  - line_length
+  - trailing_comma
+  - nesting
+  - identifier_name
+  - type_body_length
+  - file_length
+  - function_body_length
+  - function_parameter_count
+  - cyclomatic_complexity
+  - large_tuple
+  - multiple_closures_with_trailing_closure
+  - implicit_optional_initialization
+  - statement_position
+
+included:
+  - Loam
+  - LoamTests
+  - LoamUITests
