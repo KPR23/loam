@@ -7,6 +7,10 @@ updates:
       - /.github/actions/setup-supabase
     schedule:
       interval: monthly
+    ignore:
+      # v3 installs the CLI through npm, and that install hangs on GitHub-hosted runners.
+      - dependency-name: supabase/setup-cli
+        update-types: ["version-update:semver-major"]
     groups:
       github-actions:
         patterns: ["*"]
