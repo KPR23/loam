@@ -14,7 +14,10 @@ final class SubscriptionStore: ObservableObject {
     /// Joining someone else's code is always free, so this never limits invitees.
     static let freeConnectionLimit = 1
 
-    @Published private(set) var isPro = false
+    @Published private(set) var isPro = false {
+        // Category customizations are a Pro feature, so they follow the plan.
+        didSet { CategoryCustomizer.shared.isActive = isPro }
+    }
     @Published private(set) var customerInfo: CustomerInfo?
     /// False when no RevenueCat key is set for this build; everyone stays on the free plan.
     let isAvailable = Purchases.isConfigured

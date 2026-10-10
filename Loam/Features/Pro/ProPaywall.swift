@@ -548,6 +548,12 @@ private struct ProFeature: Identifiable {
             pro: .included,
             accessibilityLabel: "Notes on expenses: Pro only"
         ),
+        ProFeature(
+            title: "Custom categories",
+            free: .missing,
+            pro: .included,
+            accessibilityLabel: "Custom categories: Pro only"
+        ),
     ]
 }
 

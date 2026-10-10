@@ -15,7 +15,20 @@ enum ExpenseCategory: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
+    /// Shown name, icon and color: the member's customization when Pro is active, else the built-in one.
     var displayName: String {
+        CategoryCustomizer.shared.appliedStyle(for: self)?.name ?? defaultDisplayName
+    }
+
+    var systemImage: String {
+        CategoryCustomizer.shared.appliedStyle(for: self)?.symbol ?? defaultSystemImage
+    }
+
+    var color: Color {
+        CategoryCustomizer.shared.appliedStyle(for: self)?.colorHex.flatMap(Color.init(hex:)) ?? defaultColor
+    }
+
+    var defaultDisplayName: String {
         switch self {
         case .groceries: return "Groceries"
         case .dining: return "Dining"
@@ -30,7 +43,7 @@ enum ExpenseCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
-    var systemImage: String {
+    var defaultSystemImage: String {
         switch self {
         case .groceries: return "cart.fill"
         case .dining: return "fork.knife.circle.fill"
@@ -45,7 +58,7 @@ enum ExpenseCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
-    var color: Color {
+    var defaultColor: Color {
         switch self {
         case .groceries: return Color(red: 102 / 255, green: 194 / 255, blue: 64 / 255)
         case .dining: return Color(red: 0.96, green: 0.40, blue: 0.32)
