@@ -47,13 +47,14 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Package checkouts are the slow, network-bound part of a cold run. Package.resolved pins
-      # them, so the cache only changes when a dependency does.
+      # them, so the cache only changes when a dependency does. Binary artifacts record absolute
+      # paths, so a cache saved on one kind of runner breaks the other and each gets its own.
       - name: Cache Swift packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .spm
-          key: spm-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-${{ runner.os }}-
+          key: spm-${{ runner.environment }}-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.environment }}-${{ runner.os }}-
 
       - name: Build
         run: |
@@ -81,13 +82,14 @@ jobs:
         run: xcodebuild -version
 
       # Package checkouts are the slow, network-bound part of a cold run. Package.resolved pins
-      # them, so the cache only changes when a dependency does.
+      # them, so the cache only changes when a dependency does. Binary artifacts record absolute
+      # paths, so a cache saved on one kind of runner breaks the other and each gets its own.
       - name: Cache Swift packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .spm
-          key: spm-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-${{ runner.os }}-
+          key: spm-${{ runner.environment }}-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.environment }}-${{ runner.os }}-
 
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj -clonedSourcePackagesDirPath .spm
