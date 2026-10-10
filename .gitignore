@@ -17,6 +17,8 @@ Loam/Config/Secrets.xcconfig
 # SPM
 .swiftpm/
 /Package.resolved
+# CI keeps its package checkouts here.
+.spm/
 
 # Supabase local
 supabase/.branches
