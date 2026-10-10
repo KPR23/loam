@@ -190,7 +190,7 @@ struct LoamEmptyState<Action: View>: View {
             .multilineTextAlignment(.center)
             .accessibilityElement(children: .combine)
             action
-                .labelStyle(EmptyStateActionLabelStyle())
+                .labelStyle(.prominentButton)
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .padding(.top, 4)
@@ -203,13 +203,18 @@ struct LoamEmptyState<Action: View>: View {
 
 /// List rows tint a `Label`'s icon with the accent, which hides it on a prominent button
 /// filled with that accent; laying the label out by hand keeps the button's foreground.
-private struct EmptyStateActionLabelStyle: LabelStyle {
+struct ProminentButtonLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 6) {
             configuration.icon
             configuration.title
         }
     }
+}
+
+extension LabelStyle where Self == ProminentButtonLabelStyle {
+    /// For a `Label` on a prominent button inside a List row.
+    static var prominentButton: ProminentButtonLabelStyle { ProminentButtonLabelStyle() }
 }
 
 extension LoamEmptyState where Action == EmptyView {
