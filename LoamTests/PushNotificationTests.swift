@@ -35,7 +35,7 @@ final class PushNotificationStoreTests: XCTestCase {
         var grantsOnRequest = true
         var registerCalls = 0
         var badges: [Int] = []
-        var removed: [String] = []
+        var removed: Set<UUID> = []
         var removedAll = 0
         func permission() async -> NotificationPermission { current }
         func requestPermission() async -> Bool {
@@ -44,7 +44,7 @@ final class PushNotificationStoreTests: XCTestCase {
         }
         func registerForRemoteNotifications() { registerCalls += 1 }
         func setBadge(_ count: Int) async { badges.append(count) }
-        func removeDelivered(identifiers: [String]) { removed += identifiers }
+        func removeDelivered(eventIds: Set<UUID>) async { removed.formUnion(eventIds) }
         func removeAllDelivered() { removedAll += 1 }
     }
 
@@ -54,6 +54,7 @@ final class PushNotificationStoreTests: XCTestCase {
         var stored = NotificationPreferences()
         var saved: [NotificationPreferences] = []
         var failsSave = false
+        var saveDelay: Duration = .zero
         var failsRegister = false
         func registerDevice(token: String, environment: PushEnvironment) async throws {
             if failsRegister { throw URLError(.notConnectedToInternet) }
@@ -62,6 +63,7 @@ final class PushNotificationStoreTests: XCTestCase {
         func unregisterDevice(token: String) async throws { unregistered.append(token) }
         func fetchPreferences() async throws -> NotificationPreferences { stored }
         func savePreferences(_ preferences: NotificationPreferences) async throws {
+            try await Task.sleep(for: saveDelay)
             if failsSave { throw URLError(.notConnectedToInternet) }
             saved.append(preferences)
         }
@@ -178,10 +180,23 @@ final class PushNotificationStoreTests: XCTestCase {
         XCTAssertEqual(center.badges, [3])
     }
 
-    func testReadEventsClearTheirBanners() {
+    func testReadEventsClearTheirBanners() async {
         let id = UUID()
-        makeStore().clearDelivered(eventIds: [id])
-        XCTAssertEqual(center.removed, [id.uuidString])
+        await makeStore().clearDelivered(eventIds: [id])
+        XCTAssertEqual(center.removed, [id])
+    }
+
+    func testQuickSuccessiveSwitchesSaveInOrder() async {
+        let store = makeStore()
+        await store.activate(userId: TestUser.alice)
+        repository.saveDelay = .milliseconds(50)
+        async let first: Void = store.setPreference(.changes, enabled: false)
+        try? await Task.sleep(for: .milliseconds(10))
+        await store.setPreference(.replies, enabled: false)
+        await first
+        let final = NotificationPreferences(requests: true, replies: false, changes: false, repayments: true)
+        XCTAssertEqual(store.preferences, final)
+        XCTAssertEqual(repository.saved.last, final, "An older save landed last")
     }
 
     func testTappedPushRoutesOnlyToItsOwnAccount() {
