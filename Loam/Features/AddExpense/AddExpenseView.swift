@@ -106,7 +106,6 @@ struct AddExpenseView: View {
         .sheet(isPresented: $isSplitSheetPresented) {
             splitConfigurationSheet
         }
-        .sensoryFeedback(.selection, trigger: amountText)
         .sensoryFeedback(.selection, trigger: isRepeating)
         .sensoryFeedback(.selection, trigger: repeatHasEndDate)
     }
@@ -186,44 +185,7 @@ struct AddExpenseView: View {
     }
 
     private var amountDisplay: some View {
-        ZStack {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(amountDisplayText)
-                    .font(.system(size: 64, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(parsedMoney != nil || !amountText.isEmpty ? .primary : .tertiary)
-                    .contentTransition(.numericText(value: amountDisplayValue))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-
-                Text(currencyCode)
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .animation(reduceMotion ? nil : .smooth(duration: 0.42), value: amountDisplayValue)
-
-            TextField("", text: sanitizedAmountBinding)
-                .keyboardType(.decimalPad)
-                .focused($amountFocused)
-                .opacity(0.015)
-                .accessibilityLabel("Amount")
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 28)
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            TapGesture().onEnded {
-                amountFocused = true
-            }
-        )
-    }
-
-    private var sanitizedAmountBinding: Binding<String> {
-        Binding(
-            get: { amountText },
-            set: { amountText = Money.sanitizeTypingInput($0) }
-        )
+        AmountEntryField(text: $amountText, currencyCode: currencyCode, focus: $amountFocused)
     }
 
     // MARK: - Details step
@@ -473,23 +435,6 @@ struct AddExpenseView: View {
 
     private var canContinue: Bool {
         (parsedMoney?.amountMinor ?? 0) > 0
-    }
-
-    private var amountDisplayValue: Double {
-        Double(parsedMoney?.amountMinor ?? 0) / 100.0
-    }
-
-    private var amountDisplayText: String {
-        if amountText.isEmpty {
-            return "0"
-        }
-        if amountText.hasSuffix(","), let money = Money(majorString: amountText) {
-            return MoneyFormatter.typingAmount(from: money) + ","
-        }
-        if let money = parsedMoney {
-            return MoneyFormatter.typingAmount(from: money)
-        }
-        return amountText
     }
 
     /// Turning Repeat on opens the paywall for accounts without Pro.
