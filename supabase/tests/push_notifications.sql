@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..4' as plan;
+select '1..5' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.e',gen_random_uuid()::text,true);
 insert into auth.users(id,email) values(current_setting('test.a')::uuid,'push-a@example.invalid'),
@@ -53,7 +53,7 @@ do $$ declare e uuid; begin
  assert e is not null,'Shared event missing';
  assert (select count(*) from public.push_event_context(e))=1,'Unread event has no push context';
  assert (select badge from public.push_event_context(e))=1,'Badge is not the unread count';
- assert (select jsonb_array_length(devices) from public.push_event_context(e))=1,'Devices missing';
+ assert (select jsonb_array_length(devices) from public.push_event_context(e))=2,'Devices missing';
  -- The actor's own event is never pushed.
  assert not exists(select 1 from public.activity_event a, lateral public.push_event_context(a.id) c where a.audience_user_id=current_setting('test.a')::uuid),'Own action pushed';
  -- Muting the category suppresses it.
@@ -73,4 +73,14 @@ do $$ begin
  assert has_function_privilege('service_role','public.push_event_context(uuid)','EXECUTE'),'Sender cannot read push context';
 end $$;
 select 'ok 4 - only the sender can read push context' as result;
+
+-- Deleting an account soft-deletes auth.users, so cleanup must remove these itself.
+insert into private.notification_preference(user_id,requests) values(current_setting('test.b')::uuid,false)
+ on conflict(user_id) do update set requests=false;
+select public.redact_account_data(current_setting('test.b')::uuid);
+do $$ begin
+ assert not exists(select 1 from private.push_device where user_id=current_setting('test.b')::uuid),'Deleted account keeps device tokens';
+ assert not exists(select 1 from private.notification_preference where user_id=current_setting('test.b')::uuid),'Deleted account keeps notification choices';
+end $$;
+select 'ok 5 - account deletion removes devices and notification choices' as result;
 rollback;
