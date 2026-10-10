@@ -26,11 +26,6 @@ struct PersonBalanceView: View {
         balances.filter { $0.amountMinor < 0 }
     }
 
-    /// Falls back to the balance's currency for servers that don't send one per row.
-    private var fallbackCurrency: String {
-        balances.first?.currencyCode ?? AppPreferences.defaultCurrencyCode
-    }
-
     var body: some View {
         List {
             Section {
@@ -169,7 +164,7 @@ struct PersonBalanceView: View {
             ForEach(monthGroups, id: \.month) { group in
                 Section {
                     ForEach(group.entries) { entry in
-                        BalanceHistoryRow(entry: entry, fallbackCurrency: fallbackCurrency)
+                        BalanceHistoryRow(entry: entry)
                     }
                 } header: {
                     Text(group.month.formatted(.dateTime.month(.wide).year()))
@@ -211,7 +206,6 @@ enum BalanceTone {
 
 private struct BalanceHistoryRow: View {
     let entry: BalanceHistoryEntry
-    let fallbackCurrency: String
 
     /// Pending and declined shares, and reversed repayments, don't move the balance.
     private var counts: Bool {
@@ -222,8 +216,13 @@ private struct BalanceHistoryRow: View {
         }
     }
 
-    private var money: Money {
-        Money(amountMinor: abs(entry.amountMinor), currencyCode: entry.currencyCode ?? fallbackCurrency)
+    /// Servers without per-row currencies get the bare number; guessing would mislabel
+    /// settled or mixed-currency history.
+    private var amountText: String {
+        if let currencyCode = entry.currencyCode {
+            return MoneyFormatter.string(from: Money(amountMinor: abs(entry.amountMinor), currencyCode: currencyCode))
+        }
+        return (Decimal(abs(entry.amountMinor)) / 100).formatted(.number.precision(.fractionLength(2)))
     }
 
     var body: some View {
@@ -243,11 +242,12 @@ private struct BalanceHistoryRow: View {
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(MoneyFormatter.string(from: money))
+                Text(amountText)
                     .font(.system(.body, design: .rounded).weight(.semibold))
                     .monospacedDigit()
                     .strikethrough(!counts)
                     .foregroundStyle(counts ? HomeTheme.text : HomeTheme.tertiary)
+                    .accessibilityLabel(entry.currencyCode == nil ? "\(amountText), currency unavailable" : amountText)
                 Text(status)
                     .font(.system(.caption, design: .rounded).weight(.medium))
                     .foregroundStyle(statusColor)
