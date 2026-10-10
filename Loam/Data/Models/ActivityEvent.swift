@@ -208,4 +208,3 @@ struct ActivityPage: Sendable {
     /// this client could not show, so paging never stalls on them.
     let nextCursor: UUID?
 }
-
