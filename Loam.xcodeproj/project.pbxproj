@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		03D450B1F293CE7B1F650960 /* Money.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6CD835D39E131CEAA0B24E8 /* Money.swift */; };
+		07F4700B2A2911B8E34B5A68 /* LoamArcMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4090C96B64F2484BBED4C783 /* LoamArcMark.swift */; };
 		094C1BE9805A819C5B7384FE /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31EC9FEA936CD6D772BB91A9 /* ProfileView.swift */; };
 		095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */; };
 		0C56CD5037B2181ECD76F37E /* BalancesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311E61CE00D043E5896AF6E2 /* BalancesView.swift */; };
@@ -163,6 +164,7 @@
 		38B664DBA46BD536B44E5F73 /* BudgetArcLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetArcLayoutTests.swift; sourceTree = "<group>"; };
 		3DE84AFEC1B640F27F3AF72B /* SplitExpenseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseSheet.swift; sourceTree = "<group>"; };
 		3E49E2A84778450763BB7A2F /* SupabaseConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfigTests.swift; sourceTree = "<group>"; };
+		4090C96B64F2484BBED4C783 /* LoamArcMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamArcMark.swift; sourceTree = "<group>"; };
 		45B398F7B4520CCEC146C3AD /* ExpenseShareAcceptance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseShareAcceptance.swift; sourceTree = "<group>"; };
 		46CC7796E7D041351235A454 /* BalanceRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BalanceRecord.swift; sourceTree = "<group>"; };
 		4AB5CC654AA22A57AADC24A8 /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
@@ -378,6 +380,7 @@
 			isa = PBXGroup;
 			children = (
 				6CA57745C8FB4E286749E44E /* AuthView.swift */,
+				4090C96B64F2484BBED4C783 /* LoamArcMark.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -807,6 +810,7 @@
 				7D1E0A1752A4A9F354C2F806 /* LegacyDemoFixtureCleanup.swift in Sources */,
 				B69CB7C679EF32139B0D1051 /* LegalPages.swift in Sources */,
 				A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */,
+				07F4700B2A2911B8E34B5A68 /* LoamArcMark.swift in Sources */,
 				16FE4CEDBA2F073370C476C9 /* LocalActivityRepository.swift in Sources */,
 				379E7F4AEA0164D1B6E740E7 /* LocalBalanceRepository.swift in Sources */,
 				9D4C5FC21BF1452BAA2D629D /* LocalExpenseRepository.swift in Sources */,
