@@ -440,6 +440,7 @@ final class AuthSession: ObservableObject {
             do {
                 try await client.auth.signOut()
             } catch {
+                await PushNotificationStore.shared.signOutFailed()
                 LoamErrorCapture.capture("auth.sign_out_failed")
                 lastError = error.localizedDescription
                 return

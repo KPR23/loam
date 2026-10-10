@@ -56,11 +56,15 @@ final class PushNotificationStoreTests: XCTestCase {
         var failsSave = false
         var saveDelay: Duration = .zero
         var failsRegister = false
+        var registerDelay: Duration = .zero
+        var events: [String] = []
         func registerDevice(token: String, environment: PushEnvironment) async throws {
+            try await Task.sleep(for: registerDelay)
             if failsRegister { throw URLError(.notConnectedToInternet) }
             registered.append((token, environment))
+            events.append("register")
         }
-        func unregisterDevice(token: String) async throws { unregistered.append(token) }
+        func unregisterDevice(token: String) async throws { unregistered.append(token); events.append("unregister") }
         func fetchPreferences() async throws -> NotificationPreferences { stored }
         func savePreferences(_ preferences: NotificationPreferences) async throws {
             try await Task.sleep(for: saveDelay)
@@ -147,6 +151,43 @@ final class PushNotificationStoreTests: XCTestCase {
         await store.activate(userId: TestUser.alice)
         await store.deviceWillSignOut()
         XCTAssertEqual(repository.unregistered, ["ab01ff"])
+    }
+
+    func testSignOutWaitsForARunningRegistration() async {
+        center.current = .allowed
+        let store = makeStore()
+        await store.activate(userId: TestUser.alice)
+        repository.registerDelay = .milliseconds(50)
+        async let registering: Void = store.didRegister(deviceToken: token)
+        try? await Task.sleep(for: .milliseconds(10))
+        await store.deviceWillSignOut()
+        await registering
+        XCTAssertEqual(repository.events, ["register", "unregister"], "The registration landed after the unregister")
+
+        await store.didRegister(deviceToken: Data([0x01, 0x02]))
+        XCTAssertEqual(repository.events, ["register", "unregister"], "Registered while signing out")
+    }
+
+    func testFailedSignOutRestoresRegistration() async {
+        center.current = .allowed
+        let store = makeStore()
+        await store.didRegister(deviceToken: token)
+        await store.activate(userId: TestUser.alice)
+        await store.deviceWillSignOut()
+        await store.signOutFailed()
+        XCTAssertEqual(repository.events, ["register", "unregister", "register"])
+    }
+
+    func testAccountSwitchDuringASaveStillLoadsTheNewAccount() async {
+        let store = makeStore()
+        await store.activate(userId: TestUser.alice)
+        repository.saveDelay = .milliseconds(50)
+        async let saving: Void = store.setPreference(.changes, enabled: false)
+        try? await Task.sleep(for: .milliseconds(10))
+        await store.activate(userId: TestUser.bob)
+        await saving
+        XCTAssertEqual(store.preferencesState, .loaded)
+        XCTAssertEqual(store.preferences, repository.stored, "The old account's save changed the new account's switches")
     }
 
     func testPreferencesLoadAndSave() async {
