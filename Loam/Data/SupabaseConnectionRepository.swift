@@ -7,8 +7,24 @@ actor SupabaseConnectionRepository: ConnectionRepository {
 
     func listConnections() async throws -> [SplitPartnerOption] {
         struct Row: Decodable { let userId: UUID; let displayName: String; enum CodingKeys: String, CodingKey { case userId = "user_id", displayName = "display_name" } }
+        struct PlaceholderRow: Decodable { let userId: UUID; enum CodingKeys: String, CodingKey { case userId = "user_id" } }
         let rows: [Row] = try await client.rpc("list_connections").execute().value
-        return rows.map { SplitPartnerOption(userId: $0.userId, displayName: $0.displayName) }
+        let placeholders: [PlaceholderRow] = try await client.rpc("list_placeholder_friends").execute().value
+        let placeholderIds = Set(placeholders.map(\.userId))
+        return rows.map {
+            SplitPartnerOption(userId: $0.userId, displayName: $0.displayName, isPlaceholder: placeholderIds.contains($0.userId))
+        }
+    }
+    func createPlaceholderFriend(name: String) async throws -> SplitPartnerOption {
+        struct Params: Encodable { let pName: String; enum CodingKeys: String, CodingKey { case pName = "p_name" } }
+        struct Row: Decodable { let userId: UUID; let displayName: String; enum CodingKeys: String, CodingKey { case userId = "user_id", displayName = "display_name" } }
+        do {
+            let rows: [Row] = try await client.rpc("create_placeholder_friend", params: Params(pName: name)).execute().value
+            guard let row = rows.first else { throw ConnectionError.unavailable }
+            return SplitPartnerOption(userId: row.userId, displayName: row.displayName, isPlaceholder: true)
+        } catch let error as PostgrestError {
+            throw ConnectionError.rejected(error.message)
+        }
     }
     func createInvitation() async throws -> ConnectionInvitation {
         struct Row: Decodable { let code: String?; let expiresAt: Date?; let errorCode: String?; enum CodingKeys: String, CodingKey { case code, expiresAt = "expires_at", errorCode = "error_code" } }
@@ -37,7 +53,7 @@ actor SupabaseConnectionRepository: ConnectionRepository {
             try await client.rpc("remove_connection", params: Params(pUserId: userId)).execute()
         } catch let error as PostgrestError {
             // The server explains why, for example that money is still owed.
-            throw ConnectionError.removalRejected(error.message)
+            throw ConnectionError.rejected(error.message)
         }
     }
     func redeem(code: String) async throws -> SplitPartnerOption {
@@ -50,13 +66,13 @@ actor SupabaseConnectionRepository: ConnectionRepository {
     }
 }
 
-enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired, removalRejected(String)
+enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired, rejected(String)
     var errorDescription: String? {
         switch self {
         case .unavailable: "That code is unavailable. Check it and try again."
         case .rateLimited: "Too many attempts. Try again in 15 minutes."
         case .proRequired: "Loam Pro is needed to invite more people."
-        case let .removalRejected(message): message
+        case let .rejected(message): message
         }
     }
 }

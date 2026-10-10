@@ -19,6 +19,7 @@ struct SplitExpenseSection: View {
     @Binding var participantAmountTexts: [UUID: String]
 
     @State private var partnerSearchText = ""
+    @State private var showsPlaceholderPrompt = false
     /// Existing participants missing from `availablePartners` when the form
     /// opened: connections load asynchronously, and a co-participant may not
     /// be connected to the person editing. They stay listed, even after being
@@ -114,6 +115,11 @@ struct SplitExpenseSection: View {
             } label: {
                 Label("Add friend", systemImage: "person.badge.plus")
             }
+            if SupabaseConfig.isConfigured {
+                Button { showsPlaceholderPrompt = true } label: {
+                    Label("Add someone without an account", systemImage: "person.crop.circle.badge.plus")
+                }
+            }
         } header: {
             Text("People")
         } footer: {
@@ -123,6 +129,10 @@ struct SplitExpenseSection: View {
             if retainedPartners.isEmpty {
                 retainedPartners = unlistedSelectedPartners
             }
+        }
+        .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { friend in
+            selectedPartnerUserIds.insert(friend.userId)
+            onFriendConnected?(friend)
         }
 
         if isSearching {
