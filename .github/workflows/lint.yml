@@ -1,0 +1,44 @@
+name: Lint
+
+on:
+  pull_request:
+    branches: [main, "release/**"]
+    paths:
+      - "**/*.swift"
+      - .swiftlint.yml
+      - .github/workflows/lint.yml
+  push:
+    branches: [main]
+    paths:
+      - "**/*.swift"
+      - .swiftlint.yml
+      - .github/workflows/lint.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swiftlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # Linting is syntactic, so a Linux runner is enough and keeps it off the macOS minutes.
+      # Pinned and checksum-verified, like the Supabase CLI.
+      - name: Install SwiftLint
+        run: |
+          version=0.65.1
+          sha256=caeed6f4a679c35539ffaf124f6c4ab4a8416917f7d8796279dc52b74026059d
+          archive="$RUNNER_TEMP/swiftlint.zip"
+          curl --fail --silent --show-error --location --retry 3 --output "$archive" \
+            "https://github.com/realm/SwiftLint/releases/download/$version/swiftlint_linux_amd64.zip"
+          echo "$sha256  $archive" | sha256sum -c -
+          unzip -q "$archive" -d "$RUNNER_TEMP/swiftlint"
+          chmod +x "$RUNNER_TEMP/swiftlint/swiftlint"
+          echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
+      - name: Lint
+        run: swiftlint lint --strict --reporter github-actions-logging
