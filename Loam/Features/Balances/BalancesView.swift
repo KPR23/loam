@@ -120,6 +120,7 @@ struct BalancesView: View {
             showsRepayment = true
         } label: {
             Label("Record repayment", systemImage: "arrow.up.right")
+                .labelStyle(.prominentButton)
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 44)
         }
