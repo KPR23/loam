@@ -30,6 +30,10 @@ actor LocalExpenseRepository: ExpenseRepository {
         return try load().filter { wanted.contains($0.id) }
     }
 
+    func fetchPendingAcceptance(for userId: UUID) async throws -> [ExpenseRecord] {
+        try load().filter { $0.isPendingAcceptance(for: userId) }
+    }
+
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord {
         try validate(expense)
         var all = try load()
