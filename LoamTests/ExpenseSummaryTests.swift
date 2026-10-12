@@ -18,7 +18,7 @@ final class ExpenseSummaryTests: XCTestCase {
         XCTAssertEqual(summary.totalMine.amountMinor, 2500)
         XCTAssertEqual(summary.sharedShare.amountMinor, 0)
         XCTAssertEqual(summary.categoryBreakdown.count, 1)
-        XCTAssertEqual(summary.categoryBreakdown.first?.category, .groceries)
+        XCTAssertEqual(summary.categoryBreakdown.first?.category, .builtIn(.groceries))
         XCTAssertEqual(summary.categoryBreakdown.first?.amountMinor, 2500)
     }
 
@@ -181,6 +181,19 @@ final class ExpenseSummaryTests: XCTestCase {
             CategorySpendSlice(category: .groceries, amountMinor: 700),
             CategorySpendSlice(category: .dining, amountMinor: 300),
             CategorySpendSlice(category: .transport, amountMinor: 300),
+        ])
+    }
+
+    func testCustomCategoriesGetTheirOwnSlice() {
+        let pets = CustomCategory(id: UUID(), ownerId: user, name: "Pets", symbol: "pawprint.fill", colorHex: "9C7A55")
+        var vet = personalExpense(400, category: .other)
+        vet.spendCategory = .custom(pets)
+        let summary = ExpenseStore.makeSummary(expenses: [vet, personalExpense(100, category: .other)], userId: user)
+
+        XCTAssertEqual(vet.category, .other, "Custom categories are filed under Other")
+        XCTAssertEqual(summary.categoryBreakdown, [
+            CategorySpendSlice(category: .custom(pets), amountMinor: 400),
+            CategorySpendSlice(category: .other, amountMinor: 100),
         ])
     }
 

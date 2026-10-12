@@ -258,6 +258,8 @@ actor LocalExpenseRepository: ExpenseRepository {
             let previous = all[expenseIndex]
             all[expenseIndex].version = (all[expenseIndex].version ?? 1) + 1
             all[expenseIndex].amountMinor = proposal.amountMinor
+            // Proposals carry a built-in category; keeping Other keeps the creator's custom one.
+            if proposal.category != .other { all[expenseIndex].customCategory = nil }
             all[expenseIndex].category = proposal.category
             all[expenseIndex].title = proposal.title
             all[expenseIndex].note = proposal.note
@@ -314,6 +316,20 @@ actor LocalExpenseRepository: ExpenseRepository {
         guard !trust.contains(record) else { return }
         trust.append(record)
         try saveTrust(trust)
+    }
+
+    /// Shows a renamed custom category everywhere, or files a deleted one's expenses and rules under Other.
+    func replaceCustomCategory(id: UUID, with category: CustomCategory?) throws {
+        var all = try load()
+        for index in all.indices where all[index].customCategory?.id == id {
+            all[index].spendCategory = category.map(SpendCategory.custom) ?? .builtIn(.other)
+        }
+        try save(all)
+        var rules = try loadRecurring()
+        for index in rules.indices where rules[index].customCategory?.id == id {
+            rules[index].customCategory = category
+        }
+        try saveRecurring(rules)
     }
 
     private func validate(_ expense: ExpenseRecord) throws {

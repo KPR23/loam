@@ -37,6 +37,8 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    /// Embedded `custom_category` row, readable by everyone on the expense.
+    var customCategory: CustomCategory?
     var title: String?
     var note: String?
     var location: ExpenseLocation?
@@ -54,6 +56,7 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
         case amountMinor = "amount_minor"
         case currency
         case category
+        case customCategory = "custom_category"
         case title
         case note
         case location
@@ -75,6 +78,7 @@ struct ExpenseDTO: Codable, Sendable, Hashable {
             amountMinor: amountMinor,
             currency: currency,
             category: category,
+            customCategory: customCategory,
             title: title,
             note: note,
             location: location,
@@ -103,15 +107,36 @@ struct ExpenseInsertDTO: Encodable, Sendable {
     var spentAt: String
     var paidBy: UUID
     var recurringId: UUID?
+    var customCategoryId: UUID?
     var shares: [ProposalShareDTO]
     enum CodingKeys: String, CodingKey {
         case id, currency, category, title, note, location, shares
         case amountMinor = "amount_minor", spentAt = "spent_at", paidBy = "paid_by", recurringId = "recurring_id"
+        case customCategoryId = "custom_category_id"
     }
     init(from record: ExpenseRecord) {
         id = record.id; amountMinor = record.amountMinor; currency = record.currency
-        category = record.category; title = record.title; note = record.note; location = record.location
+        category = record.category; customCategoryId = record.customCategory?.id
+        title = record.title; note = record.note; location = record.location
         spentAt = CalendarDateCodec.string(from: record.spentAt); paidBy = record.paidBy; recurringId = record.recurringId
         shares = record.shares.map { ProposalShareDTO(userId: $0.userId, amountMinor: $0.amountMinor) }
+    }
+
+    /// `custom_category_id` is always sent, as null when there is none: the server
+    /// keeps the current custom category only when the key is missing (older builds).
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(amountMinor, forKey: .amountMinor)
+        try container.encode(currency, forKey: .currency)
+        try container.encode(category, forKey: .category)
+        try container.encodeIfPresent(title, forKey: .title)
+        try container.encodeIfPresent(note, forKey: .note)
+        try container.encodeIfPresent(location, forKey: .location)
+        try container.encode(spentAt, forKey: .spentAt)
+        try container.encode(paidBy, forKey: .paidBy)
+        try container.encodeIfPresent(recurringId, forKey: .recurringId)
+        try container.encode(customCategoryId, forKey: .customCategoryId)
+        try container.encode(shares, forKey: .shares)
     }
 }

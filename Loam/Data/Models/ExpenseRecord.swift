@@ -51,6 +51,8 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    /// The creator's own category; `category` is then `.other`.
+    var customCategory: CustomCategory?
     var title: String?
     var note: String?
     var location: ExpenseLocation?
@@ -69,6 +71,7 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         amountMinor: Int,
         currency: String = "PLN",
         category: ExpenseCategory,
+        customCategory: CustomCategory? = nil,
         title: String? = nil,
         note: String? = nil,
         location: ExpenseLocation? = nil,
@@ -84,7 +87,8 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
         self.id = id
         self.amountMinor = amountMinor
         self.currency = currency
-        self.category = category
+        self.category = customCategory == nil ? category : .other
+        self.customCategory = customCategory
         self.title = title
         self.note = note
         self.location = location
@@ -101,7 +105,15 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
     /// Prefer custom title; fall back to category name when blank.
     var displayTitle: String {
         let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? category.displayName : trimmed
+        return trimmed.isEmpty ? spendCategory.displayName : trimmed
+    }
+
+    var spendCategory: SpendCategory {
+        get { customCategory.map(SpendCategory.custom) ?? .builtIn(category) }
+        set {
+            category = newValue.builtInCategory
+            customCategory = newValue.customCategory
+        }
     }
 
     var hasCustomTitle: Bool {
@@ -163,8 +175,17 @@ struct ExpenseRecord: Identifiable, Codable, Hashable, Sendable {
 }
 
 struct CategorySpendSlice: Equatable, Sendable {
-    var category: ExpenseCategory
+    var category: SpendCategory
     var amountMinor: Int
+
+    init(category: SpendCategory, amountMinor: Int) {
+        self.category = category
+        self.amountMinor = amountMinor
+    }
+
+    init(category: ExpenseCategory, amountMinor: Int) {
+        self.init(category: .builtIn(category), amountMinor: amountMinor)
+    }
 }
 
 struct MonthSpendSummary: Sendable {

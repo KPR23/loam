@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		02EDC0B8136EA46F95700486 /* CategoryCustomizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 452162D374274ADBC8769979 /* CategoryCustomizer.swift */; };
 		03D450B1F293CE7B1F650960 /* Money.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6CD835D39E131CEAA0B24E8 /* Money.swift */; };
+		03F95FD08C3EB115517F9DA2 /* CustomCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56D68BA9EE7A91D6D0BBDA2 /* CustomCategory.swift */; };
 		07F4700B2A2911B8E34B5A68 /* LoamArcMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4090C96B64F2484BBED4C783 /* LoamArcMark.swift */; };
 		094C1BE9805A819C5B7384FE /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31EC9FEA936CD6D772BB91A9 /* ProfileView.swift */; };
 		095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */; };
@@ -254,6 +255,7 @@
 		A08A73A1CF023A5DDE2B32C0 /* DeepLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandler.swift; sourceTree = "<group>"; };
 		A15EBCA64BB0DC3FC7F19BF3 /* EditProposalReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProposalReviewCard.swift; sourceTree = "<group>"; };
 		A52FC4772F62136A8CAD907F /* AnalyticsConsentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsConsentSheet.swift; sourceTree = "<group>"; };
+		A56D68BA9EE7A91D6D0BBDA2 /* CustomCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCategory.swift; sourceTree = "<group>"; };
 		A609DF87CDFA5FA17F506EBF /* OnboardingPermissionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPermissionList.swift; sourceTree = "<group>"; };
 		A74E2AB24186B00FD500CE4D /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		A87AE244F130211B61887F30 /* SplitExpenseSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitExpenseSection.swift; sourceTree = "<group>"; };
@@ -364,6 +366,7 @@
 				0E27CDECAD1AC0216EB7FC75 /* CalendarDateCodec.swift */,
 				1BB3E318E7DB0B9CE3B246C1 /* Category.swift */,
 				452162D374274ADBC8769979 /* CategoryCustomizer.swift */,
+				A56D68BA9EE7A91D6D0BBDA2 /* CustomCategory.swift */,
 				98702872EF571671E266B171 /* ExchangeRates.swift */,
 				7D2B225EA738D0900ECF5C69 /* ExpenseLocation.swift */,
 				B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */,
@@ -897,6 +900,7 @@
 				EA7F745B3F2228B68018967E /* CategorySettingsView.swift in Sources */,
 				F36D26359DE8335DF3A19C8D /* ConnectionRepository.swift in Sources */,
 				3B6CDA37B5479DE4B4111523 /* ConnectionStore.swift in Sources */,
+				03F95FD08C3EB115517F9DA2 /* CustomCategory.swift in Sources */,
 				F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */,
 				450CF8D24E4AAD123A859E79 /* EditProposalReviewCard.swift in Sources */,
 				126EF1AD57B79B77088CF0D9 /* ExchangeRates.swift in Sources */,

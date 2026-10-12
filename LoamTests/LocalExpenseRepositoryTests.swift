@@ -414,3 +414,25 @@ final class LocalExpenseRepositoryTests: LocalStorageTestCase {
         XCTAssertEqual(reloaded.shares.count, 2)
     }
 }
+
+final class LocalCustomCategoryTests: LocalStorageTestCase {
+    func testDeletingACategoryFilesItsExpensesUnderOtherAndRenamingShowsEverywhere() async throws {
+        let repository = LocalCustomCategoryRepository()
+        var pets = CustomCategory(id: UUID(), ownerId: TestUser.alice, name: "Pets", symbol: "pawprint.fill", colorHex: "9C7A55")
+        try await repository.save(pets, userId: TestUser.alice)
+        var vet = personalExpense(400, category: .other)
+        vet.spendCategory = .custom(pets)
+        _ = try await LocalExpenseRepository().create(vet)
+
+        pets.name = "Animals"
+        try await repository.save(pets, userId: TestUser.alice)
+        var stored = try await LocalExpenseRepository().fetchExpenses(ids: [vet.id])
+        XCTAssertEqual(stored.first?.spendCategory.displayName, "Animals")
+
+        try await repository.delete(pets, userId: TestUser.alice)
+        stored = try await LocalExpenseRepository().fetchExpenses(ids: [vet.id])
+        XCTAssertEqual(stored.first?.spendCategory, .builtIn(.other))
+        let loaded = try await repository.load(userId: TestUser.alice)
+        XCTAssertTrue(loaded.categories.isEmpty)
+    }
+}
