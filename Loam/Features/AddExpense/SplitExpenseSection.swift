@@ -374,7 +374,9 @@ struct SplitExpenseSection: View {
                 Text("Shares are \(-remainingPercentage)% over 100%. Reduce one or more shares before continuing.")
             }
         case .exactAmount:
-            if remainingAmountMinor == 0 {
+            if totalMinor <= 0 {
+                Text("Enter the expense amount to split it.")
+            } else if remainingAmountMinor == 0 {
                 Text("The full expense amount of \(formattedAmount(totalMinor)) is distributed across \(peopleCount(selectedAmountMinors.values.filter { $0 > 0 }.count)).")
             } else if remainingAmountMinor > 0 {
                 Text("\(formattedAmount(remainingAmountMinor)) of this expense is still unassigned. Add it to one or more shares before continuing.")
