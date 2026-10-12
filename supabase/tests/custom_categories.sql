@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..6' as plan;
+select '1..7' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.c',gen_random_uuid()::text,true),set_config('test.cat',gen_random_uuid()::text,true),
  set_config('test.e',gen_random_uuid()::text,true),set_config('test.rule',gen_random_uuid()::text,true);
@@ -81,6 +81,25 @@ do $$ begin
 end $$;
 select 'ok 5 - recurring expenses keep the category, and deleting one files them under Other' as result;
 
+-- B suggests moving a Pets expense to Other; plain 'other' alone keeps Pets.
+reset role;
+insert into public.custom_category(id,owner_id,name,symbol,color_hex) values(current_setting('test.cat')::uuid,current_setting('test.a')::uuid,'Pets','pawprint.fill','9C7A55');
+set local role authenticated;
+select public.save_expense(pg_temp.expense('{"category":"other"}'),(select version from public.expense where id=current_setting('test.e')::uuid));
+select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
+select set_config('test.p1',public.create_expense_edit_proposal(current_setting('test.e')::uuid,(select version from public.expense where id=current_setting('test.e')::uuid),
+ pg_temp.expense('{"title":"Vet"}')-'id')::text,true);
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+select public.respond_to_edit_proposal(current_setting('test.p1')::uuid,true);
+do $$ begin assert pg_temp.custom_id()=current_setting('test.cat')::uuid,'A plain Other suggestion dropped the custom category'; end $$;
+select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
+select set_config('test.p2',public.create_expense_edit_proposal(current_setting('test.e')::uuid,(select version from public.expense where id=current_setting('test.e')::uuid),
+ pg_temp.expense('{"clears_custom_category":true}')-'id')::text,true);
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+select public.respond_to_edit_proposal(current_setting('test.p2')::uuid,true);
+do $$ begin assert pg_temp.custom_id() is null,'Accepting a move to Other kept the custom category'; end $$;
+select 'ok 6 - suggestions keep a custom category unless they move the expense to Other' as result;
+
 select public.set_hidden_categories(array['dining','other']::public.expense_category[]);
 do $$ begin
  assert (select array_agg(category)=array['dining']::public.expense_category[] from public.hidden_category),'Hidden categories not saved, or Other hidden';
@@ -92,5 +111,5 @@ do $$ begin
  assert not has_function_privilege('anon','public.save_custom_category(uuid,text,text,text)','EXECUTE'),'Anonymous users can add categories';
  assert not has_table_privilege('authenticated','public.custom_category','INSERT'),'Clients can write categories directly';
 end $$;
-select 'ok 6 - hidden categories are private, and writes go through the RPCs' as result;
+select 'ok 7 - hidden categories are private, and writes go through the RPCs' as result;
 rollback;

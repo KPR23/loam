@@ -137,6 +137,45 @@ begin
   return v_id;
 end $$;
 
+-- A suggestion can move an expense out of its custom category into Other.
+-- Proposals only carry built-in categories, and 'other' alone keeps the custom
+-- one (older builds send it for any custom category), so the move is explicit.
+alter table public.expense_edit_proposal add column clears_custom_category boolean not null default false;
+
+-- Same as before, plus clears_custom_category.
+create or replace function public.create_expense_edit_proposal(p_expense_id uuid,p_expected_version bigint,p_proposal jsonb) returns uuid
+language plpgsql security definer set search_path='' as $$
+declare e public.expense; v_id uuid; v_uid uuid:=auth.uid();
+begin
+  if not public.current_account_is_active() then raise exception 'Not authenticated'; end if;
+  select * into e from public.expense where id=p_expense_id for update;
+  if not found or e.created_by=v_uid or not exists(select 1 from public.expense_share where expense_id=e.id and user_id=v_uid)
+    then raise exception 'Expense not found'; end if;
+  if p_expected_version is distinct from e.version then raise exception 'Expense changed. Refresh and try again.'; end if;
+  perform private.validate_expense_payload(e.created_by,(p_proposal->>'paid_by')::uuid,(p_proposal->>'amount_minor')::integer,e.currency,p_proposal->'shares');
+  update public.expense_edit_proposal set status='withdrawn',responded_at=now() where expense_id=e.id and proposed_by=v_uid and status='pending';
+  insert into public.expense_edit_proposal(expense_id,proposed_by,base_version,currency,amount_minor,category,title,note,location,spent_at,paid_by,shares,message,clears_custom_category)
+  values(e.id,v_uid,e.version,e.currency,(p_proposal->>'amount_minor')::integer,(p_proposal->>'category')::public.expense_category,
+    p_proposal->>'title',p_proposal->>'note',nullif(p_proposal->'location','null'::jsonb),(p_proposal->>'spent_at')::date,
+    (p_proposal->>'paid_by')::uuid,p_proposal->'shares',p_proposal->>'message',
+    coalesce((p_proposal->>'clears_custom_category')::boolean,false) and e.custom_category_id is not null and p_proposal->>'category'='other')
+  returning id into v_id;
+  perform private.log_expense_event('proposal_created',e,private.expense_shares(e.id),v_uid,array[v_uid,e.created_by]);
+  return v_id;
+end $$;
+
+-- respond_to_edit_proposal saves the expense, then marks the proposal accepted.
+create function private.apply_accepted_proposal_category() returns trigger
+language plpgsql set search_path='' as $$
+begin
+  update public.expense set custom_category_id=null where id=new.expense_id and custom_category_id is not null;
+  return null;
+end $$;
+revoke all on function private.apply_accepted_proposal_category() from public,anon,authenticated;
+create trigger proposal_clears_custom_category after update of status on public.expense_edit_proposal
+  for each row when (new.status='accepted' and old.status<>'accepted' and new.clears_custom_category)
+  execute function private.apply_accepted_proposal_category();
+
 -- Free accounts keep the categories they made but can't add or change them.
 create function public.save_custom_category(p_id uuid,p_name text,p_symbol text,p_color_hex text) returns uuid
 language plpgsql security definer set search_path='' as $$

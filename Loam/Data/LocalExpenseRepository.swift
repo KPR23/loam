@@ -259,7 +259,7 @@ actor LocalExpenseRepository: ExpenseRepository {
             all[expenseIndex].version = (all[expenseIndex].version ?? 1) + 1
             all[expenseIndex].amountMinor = proposal.amountMinor
             // Proposals carry a built-in category; keeping Other keeps the creator's custom one.
-            if proposal.category != .other { all[expenseIndex].customCategory = nil }
+            if proposal.category != .other || proposal.clearsCustomCategory == true { all[expenseIndex].customCategory = nil }
             all[expenseIndex].category = proposal.category
             all[expenseIndex].title = proposal.title
             all[expenseIndex].note = proposal.note
