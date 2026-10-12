@@ -217,8 +217,10 @@ private struct ConnectionCodePrompt: ViewModifier {
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                 Button("Cancel", role: .cancel) {}
+                // Not disabled by the code's length: alert buttons don't reliably re-enable
+                // as the text field changes, so preview() checks the length instead.
                 Button("Continue") { Task { await preview() } }
-                    .disabled(normalizedCode.count != 8 || isWorking)
+                    .disabled(isWorking)
             } message: {
                 Text("Enter the eight-character code your friend shared with you.")
             }
@@ -242,7 +244,11 @@ private struct ConnectionCodePrompt: ViewModifier {
         )
     }
     private var normalizedCode: String { code.uppercased().filter { $0.isLetter || $0.isNumber } }
-    private func preview() async { isWorking = true; defer { isWorking = false }; do { inviterName = try await connectionStore.preview(code: normalizedCode) } catch { self.error = error.localizedDescription } }
+    private func preview() async {
+        guard normalizedCode.count == 8 else { error = "Codes are eight characters long. Check it and try again."; return }
+        isWorking = true; defer { isWorking = false }
+        do { inviterName = try await connectionStore.preview(code: normalizedCode) } catch { self.error = error.localizedDescription }
+    }
     private func redeem() async { isWorking = true; defer { isWorking = false }; do { let friend = try await connectionStore.redeem(code: normalizedCode); inviterName = nil; onConnected?(friend) } catch { self.error = error.localizedDescription } }
 }
 
