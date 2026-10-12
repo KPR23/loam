@@ -83,6 +83,7 @@ final class CustomCategoryStore {
     private(set) var categories: [CustomCategory] = []
     private(set) var hidden: Set<ExpenseCategory> = []
     private var userId: UUID?
+    @ObservationIgnored private var hiddenWrite: Task<Void, Error>?
 
     private init() {}
 
@@ -116,12 +117,21 @@ final class CustomCategoryStore {
         await load(userId: userId)
     }
 
+    /// Each call replaces the whole list on the server, so calls run one at a time and each
+    /// starts from the list the previous one saved; otherwise two quick removals would undo one another.
     func setHidden(_ category: ExpenseCategory, _ isHidden: Bool) async throws {
         guard let userId, category != .other else { return }
-        var updated = hidden
-        if isHidden { updated.insert(category) } else { updated.remove(category) }
-        try await repository.setHidden(updated, userId: userId)
-        hidden = updated
+        while let running = hiddenWrite { _ = await running.result }
+        let write = Task { [self] in
+            var updated = hidden
+            if isHidden { updated.insert(category) } else { updated.remove(category) }
+            try await repository.setHidden(updated, userId: userId)
+            guard self.userId == userId else { return }
+            hidden = updated
+        }
+        hiddenWrite = write
+        defer { if hiddenWrite == write { hiddenWrite = nil } }
+        try await write.value
     }
 
     private var repository: any CustomCategoryRepository {
