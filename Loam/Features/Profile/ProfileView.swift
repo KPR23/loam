@@ -455,12 +455,10 @@ struct ProfileView: View {
 
     private var preferencesSection: some View {
         Section {
-            if AppPreferences.allowsCurrencySelection {
-                NavigationLink {
-                    DefaultCurrencySettingsView()
-                } label: {
-                    ProfileRow("Default currency", symbol: "dollarsign.arrow.circlepath", color: .green, detail: defaultCurrency.uppercased())
-                }
+            NavigationLink {
+                DefaultCurrencySettingsView()
+            } label: {
+                ProfileRow("Default currency", symbol: "dollarsign.arrow.circlepath", color: .green, detail: AppPreferences.defaultCurrencyCode)
             }
             if !authSession.usesDemoMode {
                 NavigationLink {
@@ -975,7 +973,7 @@ private struct DefaultCurrencySettingsView: View {
                     .buttonStyle(.plain)
                 }
             } footer: {
-                Text("New expenses use this currency. Existing expenses are never converted or changed.")
+                Text("New expenses use this currency. Existing expenses keep the currency they were added in; monthly totals convert them at the exchange rate of the day they were spent.")
             }
         }
         .navigationTitle("Default currency")
