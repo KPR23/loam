@@ -186,9 +186,17 @@ struct BalancesView: View {
         .accessibilityHint("Not counted in balances until accepted")
     }
 
-    /// A person has a balance row per currency, so those rows pass theirs; the settled row shows every currency.
+    /// A person has a balance row per currency, so each row shows its own currency, and the
+    /// person's first row also takes currencies with nothing accepted yet. The settled row shows them all.
     private func awaitingNote(for personId: UUID, currencyCode: String? = nil) -> String? {
-        let awaiting = snapshot.awaiting(from: personId).filter { currencyCode == nil || $0.currencyCode.uppercased() == currencyCode?.uppercased() }
+        let rows = snapshot.balances.filter { $0.personId == personId }
+        let balanceCurrencies = Set(rows.map { $0.currencyCode.uppercased() })
+        let isFirstRow = rows.first?.currencyCode.uppercased() == currencyCode?.uppercased()
+        let awaiting = snapshot.awaiting(from: personId).filter { pending in
+            guard let currencyCode else { return true }
+            let pendingCurrency = pending.currencyCode.uppercased()
+            return pendingCurrency == currencyCode.uppercased() || (isFirstRow && !balanceCurrencies.contains(pendingCurrency))
+        }
         guard !awaiting.isEmpty else { return nil }
         let amounts = awaiting.map { MoneyFormatter.string(from: $0.money) }.joined(separator: " + ")
         return "\(amounts) awaiting acceptance"
