@@ -246,9 +246,6 @@ struct ProfileView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @EnvironmentObject private var pushStore: PushNotificationStore
-    @State private var selectedPhoto: PhotosPickerItem?
-    @State private var isUploadingPhoto = false
-    @State private var photoError: String?
     @AppStorage("loam.appearance") private var appearance: AppAppearance = .system
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
     @AppStorage(AppPreferences.defaultCurrencyKey) private var defaultCurrency = "PLN"
@@ -263,33 +260,7 @@ struct ProfileView: View {
             List {
                 Section {
                     VStack(spacing: 12) {
-                        ZStack(alignment: .bottomTrailing) {
-                            AvatarView(userId: authSession.userId, size: 72)
-
-                            if !authSession.usesDemoMode {
-                                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(HomeTheme.background)
-                                            .frame(width: 28, height: 28)
-                                        Circle()
-                                            .fill(HomeTheme.text)
-                                            .frame(width: 24, height: 24)
-                                        if isUploadingPhoto {
-                                            ProgressView()
-                                                .tint(HomeTheme.background)
-                                                .scaleEffect(0.7)
-                                        } else {
-                                            Image(systemName: "camera.fill")
-                                                .font(.system(size: 11, weight: .bold))
-                                                .foregroundStyle(HomeTheme.background)
-                                        }
-                                    }
-                                }
-                                .accessibilityLabel("Change profile photo")
-                                .disabled(isUploadingPhoto)
-                            }
-                        }
+                        AvatarView(userId: authSession.userId, size: 72)
                         // The PRO mark hangs off the photo's bottom edge, so it needs room below.
                         .overlay(alignment: .bottom) {
                             if subscriptions.isPro {
@@ -425,27 +396,6 @@ struct ProfileView: View {
             .background(HomeTheme.background)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .onChange(of: selectedPhoto) { _, photo in
-                guard let photo, let userId = authSession.userId else { return }
-                isUploadingPhoto = true
-                photoError = nil
-                Task {
-                    defer { isUploadingPhoto = false; selectedPhoto = nil }
-                    do {
-                        guard let data = try await photo.loadTransferable(type: Data.self),
-                              let image = UIImage(data: data),
-                              let jpeg = Self.avatarJPEG(from: image) else {
-                            throw NSError(domain: "LoamAvatar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not read that photo."])
-                        }
-                        try await AvatarStore.shared.upload(jpeg, for: userId)
-                    } catch { photoError = error.localizedDescription }
-                }
-            }
-            .alert("Profile photo", isPresented: Binding(get: { photoError != nil }, set: { if !$0 { photoError = nil } })) {
-                Button("OK") { photoError = nil }
-            } message: {
-                Text(photoError ?? "")
-            }
             .confirmationDialog("Sign out of Loam?", isPresented: $showsSignOut, titleVisibility: .visible) {
                 Button("Sign out", role: .destructive) {
                     isSigningOut = true
@@ -576,19 +526,6 @@ struct ProfileView: View {
                 .frame(width: 24, height: 24)
         }
         .labelStyle(CompactProfileLabelStyle())
-    }
-
-    private static func avatarJPEG(from image: UIImage) -> Data? {
-        let targetSize: CGFloat = 256
-        let scale = targetSize / min(image.size.width, image.size.height)
-        let scaled = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: targetSize, height: targetSize))
-        let cropped = renderer.image { _ in
-            image.draw(in: CGRect(x: (targetSize - scaled.width) / 2,
-                                  y: (targetSize - scaled.height) / 2,
-                                  width: scaled.width, height: scaled.height))
-        }
-        return cropped.jpegData(compressionQuality: 0.8)
     }
 
     private var deletionStatusTitle: String {
@@ -874,10 +811,16 @@ private struct PersonalDetailsView: View {
     @State private var showsDeleteConfirmation = false
     @State private var error: String?
     @State private var deletionAuthorization = AppleDeletionAuthorization()
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var isUploadingPhoto = false
+    @State private var photoError: String?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Form {
+            if !authSession.usesDemoMode {
+                photoSection
+            }
             Section {
                 LabeledContent("Name") {
                     TextField("Your name", text: $name)
@@ -910,6 +853,27 @@ private struct PersonalDetailsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .disabled(isSaving || isDeletingAccount)
         .onAppear { name = authSession.displayName ?? "" }
+        .onChange(of: selectedPhoto) { _, photo in
+            guard let photo, let userId = authSession.userId else { return }
+            isUploadingPhoto = true
+            photoError = nil
+            Task {
+                defer { isUploadingPhoto = false; selectedPhoto = nil }
+                do {
+                    guard let data = try await photo.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data),
+                          let jpeg = Self.avatarJPEG(from: image) else {
+                        throw NSError(domain: "LoamAvatar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not read that photo."])
+                    }
+                    try await AvatarStore.shared.upload(jpeg, for: userId)
+                } catch { photoError = error.localizedDescription }
+            }
+        }
+        .alert("Profile photo", isPresented: Binding(get: { photoError != nil }, set: { if !$0 { photoError = nil } })) {
+            Button("OK") { photoError = nil }
+        } message: {
+            Text(photoError ?? "")
+        }
         .confirmationDialog("Delete your account?", isPresented: $showsDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete account", role: .destructive) {
                 isDeletingAccount = true
@@ -948,6 +912,36 @@ private struct PersonalDetailsView: View {
                 .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name == authSession.displayName)
             }
         }
+    }
+}
+
+private extension PersonalDetailsView {
+    var photoSection: some View {
+        Section {
+            HStack(spacing: 16) {
+                AvatarView(userId: authSession.userId, size: 56, name: authSession.displayName)
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    HStack(spacing: 8) {
+                        Text("Change photo")
+                        if isUploadingPhoto { ProgressView() }
+                    }
+                }
+                .disabled(isUploadingPhoto)
+            }
+        }
+    }
+
+    static func avatarJPEG(from image: UIImage) -> Data? {
+        let targetSize: CGFloat = 256
+        let scale = targetSize / min(image.size.width, image.size.height)
+        let scaled = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: targetSize, height: targetSize))
+        let cropped = renderer.image { _ in
+            image.draw(in: CGRect(x: (targetSize - scaled.width) / 2,
+                                  y: (targetSize - scaled.height) / 2,
+                                  width: scaled.width, height: scaled.height))
+        }
+        return cropped.jpegData(compressionQuality: 0.8)
     }
 }
 
