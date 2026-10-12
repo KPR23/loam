@@ -25,12 +25,13 @@ final class ActivityStore: ObservableObject {
     }
 
     /// Opening Activity clears the badge; the events stay until they are marked read.
-    /// Only events already loaded count as seen, so newer ones keep the badge up.
+    /// Only events already loaded count as seen, so ones on later pages keep the badge up.
     func markSeen(userId: UUID) async {
         guard accountId == userId else { return }
-        guard let newest = events.map(\.occurredAt).max() else { return await refreshBadgeCount(userId: userId) }
-        badgeCount = 0
-        try? await ActivityRepositoryFactory.make().markSeen(through: newest, userId: userId)
+        let ids = events.flatMap { foldedIds[$0.id] ?? [$0.id] }
+        guard !ids.isEmpty else { return await refreshBadgeCount(userId: userId) }
+        if !canLoadMore { badgeCount = 0 }
+        try? await ActivityRepositoryFactory.make().markSeen(ids, userId: userId)
         await refreshBadgeCount(userId: userId)
     }
 
@@ -57,6 +58,7 @@ final class ActivityStore: ObservableObject {
         let current = generation
         defer { if generation == current { isLoading = false } }
         do { let page = try await ActivityRepositoryFactory.make().fetchUnreadEvents(for: userId, before: cursor); guard accountId == userId, generation == current else { return }; setEvents(events + page.events, keepingFolds: true); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil } catch { guard generation == current else { return }; lastError = error.localizedDescription }
+        if isInboxVisible, generation == current { await markSeen(userId: userId) }
     }
 
     /// Takes the events out of the inbox right away; a failed save puts them back.

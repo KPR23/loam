@@ -35,13 +35,14 @@ actor SupabaseActivityRepository: ActivityRepository {
         return try await client.rpc("activity_unseen_count").execute().value
     }
 
-    func markSeen(through: Date, userId: UUID) async throws {
+    func markSeen(_ eventIds: [UUID], userId: UUID) async throws {
         _ = userId
+        guard !eventIds.isEmpty else { return }
         struct Params: Encodable {
-            let through: Date
-            enum CodingKeys: String, CodingKey { case through = "p_through" }
+            let ids: [UUID]
+            enum CodingKeys: String, CodingKey { case ids = "p_ids" }
         }
-        try await client.rpc("mark_activity_seen", params: Params(through: through)).execute()
+        try await client.rpc("mark_activity_seen", params: Params(ids: eventIds)).execute()
     }
 
     func markRead(_ eventIds: [UUID], userId: UUID) async throws {

@@ -19,17 +19,17 @@ $$;
 revoke all on function public.activity_unseen_count() from public,anon,authenticated;
 grant execute on function public.activity_unseen_count() to authenticated;
 
--- Marks the caller's unread events up to p_through seen. Events that arrived
--- after the viewer loaded the inbox are newer, so they keep counting.
-create function public.mark_activity_seen(p_through timestamptz) returns void
+-- Marks the given unread events seen. Only events the viewer has loaded are
+-- passed, so ones still waiting on later pages or arriving later keep counting.
+create function public.mark_activity_seen(p_ids uuid[]) returns void
 language plpgsql security definer set search_path='' as $$
 begin
   if not public.current_account_is_active() then raise exception 'Not authenticated'; end if;
   update public.activity_event set seen_at=now()
-  where audience_user_id=auth.uid() and read_at is null and seen_at is null and occurred_at<=p_through;
+  where audience_user_id=auth.uid() and read_at is null and seen_at is null and id=any(p_ids);
 end $$;
-revoke all on function public.mark_activity_seen(timestamptz) from public,anon,authenticated;
-grant execute on function public.mark_activity_seen(timestamptz) to authenticated;
+revoke all on function public.mark_activity_seen(uuid[]) from public,anon,authenticated;
+grant execute on function public.mark_activity_seen(uuid[]) to authenticated;
 
 -- Same as before, but the badge counts only unseen events, like the tab.
 create or replace function public.push_event_context(p_event_id uuid) returns table(

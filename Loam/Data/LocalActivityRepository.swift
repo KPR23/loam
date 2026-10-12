@@ -77,9 +77,10 @@ actor LocalActivityRepository: ActivityRepository {
         min(load().filter { $0.countsTowardBadge(for: userId) }.count, 100)
     }
 
-    func markSeen(through: Date, userId: UUID) async throws {
+    func markSeen(_ eventIds: [UUID], userId: UUID) async throws {
+        let ids = Set(eventIds)
         var values = load()
-        for index in values.indices where values[index].countsTowardBadge(for: userId) && values[index].event.occurredAt <= through {
+        for index in values.indices where values[index].countsTowardBadge(for: userId) && ids.contains(values[index].event.id) {
             values[index].seenBy.append(userId)
         }
         try save(values)
