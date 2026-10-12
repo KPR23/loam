@@ -38,8 +38,22 @@ struct FriendsView: View {
 
             Section {
                 if connectionStore.connections.isEmpty {
-                    Text(connectionStore.hasLoadedConnections ? "No friends yet." : "Loading…")
-                        .foregroundStyle(.secondary)
+                    if connectionStore.hasLoadedConnections {
+                        Text("No friends yet.")
+                            .foregroundStyle(.secondary)
+                    } else if connectionStore.lastError != nil, !connectionStore.isLoading {
+                        // A failed load would otherwise read as loading forever.
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Couldn’t load your friends.")
+                                .foregroundStyle(.secondary)
+                            Button("Try again") {
+                                Task { await connectionStore.refresh(userId: authSession.userId) }
+                            }
+                        }
+                    } else {
+                        Text("Loading…")
+                            .foregroundStyle(.secondary)
+                    }
                 } else if visibleFriends.isEmpty {
                     Text("No friends match “\(searchText)”.")
                         .foregroundStyle(.secondary)
