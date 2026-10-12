@@ -122,6 +122,7 @@ final class CustomCategoryStore {
     func setHidden(_ category: ExpenseCategory, _ isHidden: Bool) async throws {
         guard let userId, category != .other else { return }
         while let running = hiddenWrite { _ = await running.result }
+        guard self.userId == userId else { return }
         let write = Task { [self] in
             var updated = hidden
             if isHidden { updated.insert(category) } else { updated.remove(category) }
