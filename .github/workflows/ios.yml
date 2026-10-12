@@ -107,21 +107,36 @@ jobs:
           )"
           DEVICE_ID="$(xcrun simctl create "Loam CI ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" "$DEVICE_TYPE" "$RUNTIME")"
           echo "device_id=${DEVICE_ID}" >> "$GITHUB_OUTPUT"
-          # Launching tests into a half-booted simulator fails with "server died".
-          xcrun simctl bootstatus "$DEVICE_ID" -b
-          xcrun simctl list devices | grep "${DEVICE_ID}"
+          # Booting takes minutes on a cold runner, so it runs while the app builds.
+          xcrun simctl boot "$DEVICE_ID"
 
-      - name: Build and test
-        # A failed test launch otherwise waits 10 minutes for simulator diagnostics.
+      - name: Build
         run: |
           set -o pipefail
-          xcodebuild test \
+          xcodebuild build-for-testing \
             -project Loam.xcodeproj \
             -scheme Loam \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
             -clonedSourcePackagesDirPath .spm \
             CODE_SIGNING_ALLOWED=NO \
             -skipPackagePluginValidation \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData"
+
+      - name: Wait for the simulator
+        # Launching tests into a half-booted simulator fails with "server died".
+        run: |
+          xcrun simctl bootstatus "${{ steps.simulator.outputs.device_id }}" -b
+          xcrun simctl list devices | grep "${{ steps.simulator.outputs.device_id }}"
+
+      - name: Test
+        # A failed test launch otherwise waits 10 minutes for simulator diagnostics.
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project Loam.xcodeproj \
+            -scheme Loam \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -collect-test-diagnostics never \
             -resultBundlePath "$RUNNER_TEMP/Loam.xcresult"
 
