@@ -290,15 +290,18 @@ struct ProfileView: View {
                                 .disabled(isUploadingPhoto)
                             }
                         }
-                        VStack(spacing: 4) {
-                            HStack(spacing: 8) {
-                                Text(authSession.displayName ?? "You")
-                                    .font(.system(.title, design: .rounded).weight(.semibold))
-                                if subscriptions.isPro {
-                                    ProMark(height: 22)
-                                        .accessibilityLabel("Loam Pro")
-                                }
+                        // The PRO mark hangs off the photo's bottom edge, so it needs room below.
+                        .overlay(alignment: .bottom) {
+                            if subscriptions.isPro {
+                                ProMark(height: 22)
+                                    .offset(y: 11)
+                                    .accessibilityLabel("Loam Pro")
                             }
+                        }
+                        .padding(.bottom, subscriptions.isPro ? 10 : 0)
+                        VStack(spacing: 4) {
+                            Text(authSession.displayName ?? "You")
+                                .font(.system(.title, design: .rounded).weight(.semibold))
                             Text(authSession.email ?? "Your own little corner of Loam.")
                                 .font(.subheadline)
                                 .foregroundStyle(HomeTheme.secondary)
