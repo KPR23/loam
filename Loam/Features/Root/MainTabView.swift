@@ -37,14 +37,21 @@ struct MainTabView: View {
         .sensoryFeedback(.selection, trigger: selection)
         .onChange(of: selection, initial: true) { _, tab in
             Telemetry.screen(tab.screenName)
-            // Activity marks itself read; elsewhere, pick up events that arrived meanwhile.
-            if tab != .activity { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
+            // Opening Activity marks its events seen; elsewhere, pick up events that arrived meanwhile.
+            activityStore.isInboxVisible = tab == .activity
+            Task {
+                if tab == .activity {
+                    await activityStore.refresh(userId: authSession.userId)
+                } else {
+                    await activityStore.refreshBadgeCount(userId: authSession.userId)
+                }
+            }
         }
         .onChange(of: pushStore.pendingRoute, initial: true) { _, route in
             if route != nil { selection = .activity }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await activityStore.refreshUnreadCount(userId: authSession.userId) } }
+            if phase == .active { Task { await activityStore.refreshBadgeCount(userId: authSession.userId) } }
         }
         .task(id: authSession.userId) {
             guard let userId = authSession.userId,
@@ -78,7 +85,7 @@ struct MainTabView: View {
             Tab("Activity", systemImage: "bell", value: AppTab.activity) {
                 ActivityView()
             }
-            .badge(activityStore.unreadCount)
+            .badge(activityStore.badgeCount)
 
             Tab("Profile", systemImage: "person", value: AppTab.profile) {
                 ProfileView()
@@ -111,7 +118,7 @@ struct MainTabView: View {
                     Label("Activity", systemImage: "bell")
                 }
                 .tag(AppTab.activity)
-                .badge(activityStore.unreadCount)
+                .badge(activityStore.badgeCount)
 
             ProfileView()
                 .tabItem {

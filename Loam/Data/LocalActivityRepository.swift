@@ -6,9 +6,10 @@ actor LocalActivityRepository: ActivityRepository {
         let event: ActivityEvent
         let audience: [UUID]
         var readBy: [UUID]
+        var seenBy: [UUID]
 
         init(event: ActivityEvent, audience: [UUID], readBy: [UUID]) {
-            self.event = event; self.audience = audience; self.readBy = readBy
+            self.event = event; self.audience = audience; self.readBy = readBy; self.seenBy = readBy
         }
 
         init(from decoder: Decoder) throws {
@@ -17,6 +18,11 @@ actor LocalActivityRepository: ActivityRepository {
             audience = try values.decode([UUID].self, forKey: .audience)
             // History recorded before the inbox existed starts out read.
             readBy = try values.decodeIfPresent([UUID].self, forKey: .readBy) ?? audience
+            seenBy = try values.decodeIfPresent([UUID].self, forKey: .seenBy) ?? readBy
+        }
+
+        func countsTowardBadge(for userId: UUID) -> Bool {
+            audience.contains(userId) && !readBy.contains(userId) && !seenBy.contains(userId)
         }
 
         /// Only people who can see the event can read it.
@@ -67,8 +73,16 @@ actor LocalActivityRepository: ActivityRepository {
         try save(values)
     }
 
-    func unreadCount(for userId: UUID) async throws -> Int {
-        min(load().filter { $0.audience.contains(userId) && !$0.readBy.contains(userId) }.count, 100)
+    func unseenCount(for userId: UUID) async throws -> Int {
+        min(load().filter { $0.countsTowardBadge(for: userId) }.count, 100)
+    }
+
+    func markSeen(through: Date, userId: UUID) async throws {
+        var values = load()
+        for index in values.indices where values[index].countsTowardBadge(for: userId) && values[index].event.occurredAt <= through {
+            values[index].seenBy.append(userId)
+        }
+        try save(values)
     }
 
     func markRead(_ eventIds: [UUID], userId: UUID) async throws {

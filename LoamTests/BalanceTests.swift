@@ -203,7 +203,7 @@ final class ActivityTests: LocalStorageTestCase {
 
         let alicePage = try await repository.fetchUnreadEvents(for: TestUser.alice, before: nil)
         let bobPage = try await repository.fetchUnreadEvents(for: TestUser.bob, before: nil)
-        let aliceCount = try await repository.unreadCount(for: TestUser.alice)
+        let aliceCount = try await repository.unseenCount(for: TestUser.alice)
         XCTAssertTrue(alicePage.events.isEmpty)
         XCTAssertEqual(aliceCount, 0)
         XCTAssertEqual(bobPage.events.count, 1)
@@ -232,14 +232,36 @@ final class ActivityTests: LocalStorageTestCase {
 
         let store = ActivityStore()
         await store.refresh(userId: TestUser.alice)
-        XCTAssertEqual(store.unreadCount, 1)
+        XCTAssertEqual(store.badgeCount, 1)
         await store.markRead(store.events, userId: TestUser.alice)
         XCTAssertTrue(store.events.isEmpty)
-        XCTAssertEqual(store.unreadCount, 0)
+        XCTAssertEqual(store.badgeCount, 0)
 
         await store.refresh(userId: TestUser.alice)
         XCTAssertTrue(store.events.isEmpty)
-        let bobCount = try await repository.unreadCount(for: TestUser.bob)
+        let bobCount = try await repository.unseenCount(for: TestUser.bob)
         XCTAssertEqual(bobCount, 1)
+    }
+
+    @MainActor
+    func testOpeningActivityClearsTheBadgeButKeepsEventsUnread() async throws {
+        let repository = LocalActivityRepository()
+        try await repository.record(event(.edited, at: 100, expenseId: UUID()), audience: [TestUser.alice, TestUser.bob])
+
+        let store = ActivityStore()
+        await store.refresh(userId: TestUser.alice)
+        XCTAssertEqual(store.badgeCount, 1)
+        store.isInboxVisible = true
+        await store.refresh(userId: TestUser.alice)
+        XCTAssertEqual(store.badgeCount, 0)
+        XCTAssertEqual(store.events.count, 1, "Seen events stay in the inbox until read")
+
+        // Something newer than what was on screen still counts.
+        store.isInboxVisible = false
+        try await repository.record(event(.edited, at: 200, expenseId: UUID()), audience: [TestUser.alice, TestUser.bob])
+        await store.refreshBadgeCount(userId: TestUser.alice)
+        XCTAssertEqual(store.badgeCount, 1)
+        let bobCount = try await repository.unseenCount(for: TestUser.bob)
+        XCTAssertEqual(bobCount, 2, "Seeing is per person")
     }
 }
