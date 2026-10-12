@@ -12,7 +12,7 @@ final class SubscriptionStore: ObservableObject {
 
     /// Free accounts may hold this many connections before inviting needs Pro.
     /// Joining someone else's code is always free, so this never limits invitees.
-    static let freeConnectionLimit = 1
+    nonisolated static let freeConnectionLimit = 1
 
     @Published private(set) var isPro = false {
         // Category customizations are a Pro feature, so they follow the plan.
