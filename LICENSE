@@ -1,0 +1,20 @@
+Copyright (c) 2026 Kacper Zabłudowski. All rights reserved.
+
+This repository is published for viewing only. No license is granted to use,
+copy, modify, merge, publish, distribute, sublicense, sell, build, or deploy
+this software, its design assets, or any part of it, in source or binary
+form, without the prior written permission of the copyright holder.
+
+Viewing the source on GitHub and forking it within GitHub as permitted by the
+GitHub Terms of Service does not grant any of the rights above.
+
+The "Loam" name, logo, and app icon are not licensed for any use.
+
+Third-party components keep their own licenses. In particular,
+.claude/skills/swiftui-pro is vendored from twostraws/swiftui-agent-skill
+under the MIT License.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED.
+
+Contact: kprcode@icloud.com
