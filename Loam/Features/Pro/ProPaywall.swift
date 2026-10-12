@@ -399,7 +399,7 @@ struct ProMark: View {
     var height: CGFloat = baseSize.height
 
     var body: some View {
-        let accent = HomeTheme.accent
+        let accent = HomeTheme.solidAccent
         let clay = Self.pastel(of: accent)
         let scale = height / Self.baseSize.height
 

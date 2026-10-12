@@ -37,7 +37,7 @@ struct OnboardingSplitPreview: View {
                     .font(.system(.headline, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
-                    .background(HomeTheme.accent.gradient, in: Circle())
+                    .background(HomeTheme.accentFill.gradient, in: Circle())
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Julia owes you")
                         .font(.subheadline)

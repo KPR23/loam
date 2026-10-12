@@ -248,7 +248,7 @@ struct HomeView: View {
                                             Image(systemName: expense.sharedSplitSystemImage(for: authSession.userId))
                                         }
                                     }
-                                    .tint(HomeTheme.accent)
+                                    .tint(HomeTheme.accentFill)
                                 }
                             }
                     }

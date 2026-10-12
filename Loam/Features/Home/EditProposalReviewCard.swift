@@ -100,6 +100,7 @@ struct EditProposalReviewCard: View {
                             .padding(.vertical, 8)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(HomeTheme.accentFill)
                 }
                 // List swallows taps on nested bordered buttons unless the row opts out.
                 .buttonStyle(.borderless)
@@ -234,6 +235,7 @@ struct EditProposalSummaryCard: View {
                             .padding(.vertical, 8)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(HomeTheme.accentFill)
                 }
                 // List swallows taps on nested bordered buttons unless the row opts out.
                 .buttonStyle(.borderless)

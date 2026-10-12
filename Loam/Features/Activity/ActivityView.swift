@@ -112,6 +112,7 @@ struct ActivityView: View {
                 HStack {
                     Button("Turn on notifications") { Task { await pushStore.requestPermission() } }
                         .buttonStyle(.borderedProminent)
+                        .tint(HomeTheme.accentFill)
                     Button("Not now") { promptDismissed = true }
                         .buttonStyle(.borderless)
                         .foregroundStyle(.secondary)
@@ -154,7 +155,7 @@ struct ActivityView: View {
         activityRow(event, request: nil)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button { markRead([event]) } label: { Label("Mark as read", systemImage: "checkmark.circle") }
-                    .tint(HomeTheme.accent)
+                    .tint(HomeTheme.accentFill)
             }
     }
 

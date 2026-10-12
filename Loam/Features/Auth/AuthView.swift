@@ -142,6 +142,7 @@ struct AuthView: View {
             if authSession.deletionStatus == .complete {
                 Button("Done") { authSession.dismissDeletionConfirmation() }
                     .buttonStyle(.borderedProminent)
+                    .tint(HomeTheme.accentFill)
                     .buttonBorderShape(.capsule)
             } else {
                 Button {
