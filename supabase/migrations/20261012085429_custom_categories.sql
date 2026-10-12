@@ -16,16 +16,17 @@ create index custom_category_owner_idx on public.custom_category(owner_id);
 alter table public.custom_category enable row level security;
 revoke all on public.custom_category from public,anon,authenticated;
 grant select on public.custom_category to authenticated;
--- The owner sees all of theirs; others see the ones on expenses they can read.
-create policy custom_category_read on public.custom_category for select to authenticated using (
-  (select public.current_account_is_active()) and (owner_id=(select auth.uid())
-    or exists(select 1 from public.expense e where e.custom_category_id=custom_category.id)));
 
 -- Deleting a category files its expenses back under Other.
 alter table public.expense add column custom_category_id uuid references public.custom_category(id) on delete set null;
 alter table public.recurring_rule add column custom_category_id uuid references public.custom_category(id) on delete set null;
 create index expense_custom_category_idx on public.expense(custom_category_id) where custom_category_id is not null;
 create index recurring_rule_custom_category_idx on public.recurring_rule(custom_category_id) where custom_category_id is not null;
+
+-- The owner sees all of theirs; others see the ones on expenses they can read.
+create policy custom_category_read on public.custom_category for select to authenticated using (
+  (select public.current_account_is_active()) and (owner_id=(select auth.uid())
+    or exists(select 1 from public.expense e where e.custom_category_id=custom_category.id)));
 
 -- Built-in categories a member removed from their picker. Their expenses keep them.
 create table public.hidden_category(
