@@ -4,6 +4,11 @@
 
 alter table public.activity_event add column seen_at timestamptz;
 
+-- Seen events stay unread, so the unread index keeps growing with them; badge
+-- counts search only the events that still count.
+create index activity_event_unseen_idx on public.activity_event(audience_user_id)
+  where read_at is null and seen_at is null;
+
 -- Capped at 100 so the tab badge stays cheap.
 create function public.activity_unseen_count() returns integer
 language sql stable security definer set search_path='' as $$
