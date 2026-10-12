@@ -3,7 +3,6 @@ name: iOS
 on:
   pull_request:
     branches: [main, "release/**"]
-    types: [opened, synchronize, reopened, labeled]
     # Only these paths feed the app build, so other changes skip the macOS job.
     paths:
       - Loam/**
@@ -12,8 +11,8 @@ on:
       - Loam.xcodeproj/**
       - project.yml
       - .github/workflows/ios.yml
-  # Release branches get the full tests, so an unlabeled PR can't reach an rc tag untested.
-  # main doesn't: PRs touching the app already build, and tests run when labeled.
+  # Release branches test again, since a cherry-picked fix lands there without a PR.
+  # main doesn't: every PR touching the app was tested before it merged.
   push:
     branches: ["release/**"]
     paths:
@@ -34,43 +33,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # A compile check on every PR, so a broken build shows up before an rc tag reaches Xcode Cloud.
-  # The test job builds too, so a labeled PR skips this job instead of compiling twice.
-  build:
-    name: Build
-    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
-    runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # Package checkouts are the slow, network-bound part of a cold run. Package.resolved pins
-      # them, so the cache only changes when a dependency does. Binary artifacts record absolute
-      # paths, so a cache saved on one kind of runner breaks the other and each gets its own.
-      - name: Cache Swift packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .spm
-          key: spm-${{ runner.environment }}-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-${{ runner.environment }}-${{ runner.os }}-
-
-      - name: Build
-        run: |
-          set -o pipefail
-          xcodebuild build \
-            -project Loam.xcodeproj \
-            -scheme Loam \
-            -destination "generic/platform=iOS Simulator" \
-            -clonedSourcePackagesDirPath .spm \
-            CODE_SIGNING_ALLOWED=NO \
-            -skipPackagePluginValidation
-
-  # Tests stay behind the label on a PR to save macOS minutes; release branch pushes run them.
+  # Every PR touching the app builds and tests it, so a broken build or test never reaches an rc tag.
   build-and-test:
     name: Build & Test
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'Run Build & Test')
     runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 15
 
