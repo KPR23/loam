@@ -24,6 +24,7 @@ struct AutoAcceptExpensesToggle: View {
                     .frame(width: 24, height: 24)
             }
         }
+        .tint(HomeTheme.accentFill)
         .disabled(!hasLoaded || isSaving)
         .task(id: authSession.userId) { await load() }
         .alert("Couldn’t update the setting", isPresented: Binding(

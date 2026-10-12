@@ -232,6 +232,7 @@ struct RepaymentSheet: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .tint(HomeTheme.accentFill)
             .buttonBorderShape(.capsule)
             .frame(height: 44)
             .disabled(!canSave || isSaving)

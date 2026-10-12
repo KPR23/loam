@@ -92,6 +92,7 @@ struct PersonBalanceView: View {
                         .frame(maxWidth: 280, minHeight: 44)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(HomeTheme.accentFill)
                 .buttonBorderShape(.capsule)
                 .accessibilityHint("Records money you paid \(person.displayName) outside Loam")
             }

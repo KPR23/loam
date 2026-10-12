@@ -547,6 +547,7 @@ struct ProfileView: View {
             Toggle(isOn: $analyticsConsent) {
                 ProfileRow("Share usage analytics", symbol: "chart.bar", color: .indigo)
             }
+            .tint(HomeTheme.accentFill)
             .task(id: userId) {
                 analyticsConsent = Telemetry.hasAnalyticsConsent(for: userId)
             }
@@ -666,8 +667,9 @@ private struct ProUpgradeBanner: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let accent = HomeTheme.accent
         let isDark = colorScheme == .dark
+        // The tile mixes the accent into its face, so black stays black, or white on dark surfaces.
+        let accent = HomeTheme.solidAccent == .black && isDark ? Color.white : HomeTheme.solidAccent
         let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
         // A pale face glares against dark surfaces, so dark mode shades the accent toward black instead.
         let face = isDark ? ProMark.shaded(of: accent, blackness: 0.62) : ProMark.pastel(of: accent)

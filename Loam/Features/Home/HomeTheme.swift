@@ -50,9 +50,19 @@ enum HomeTheme {
     static let tertiary = Color(.tertiaryLabel)
 
     /// The user-selected accent, shared by tabs, actions, and controls.
-    static var accent: Color {
-        let rawValue = UserDefaults.standard.string(forKey: "loam.accentColor")
-        return (AppAccentColor(rawValue: rawValue ?? "") ?? .blue).color
+    static var accent: Color { accentChoice.color }
+
+    /// The accent for fills that carry white text or icons: prominent buttons, swipe actions,
+    /// switches. The black accent turns white in dark mode, so there it fills dark grey instead.
+    static var accentFill: Color {
+        accentChoice == .black ? Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.32, alpha: 1) : .black }) : accent
+    }
+
+    /// The accent as a fixed color, for artwork that mixes it into tints and shades.
+    static var solidAccent: Color { accentChoice == .black ? .black : accent }
+
+    private static var accentChoice: AppAccentColor {
+        AppAccentColor(rawValue: UserDefaults.standard.string(forKey: "loam.accentColor") ?? "") ?? .blue
     }
 
     /// Blue tint for the first recurring expense indicator on Home.
@@ -195,6 +205,7 @@ struct LoamEmptyState<Action: View>: View {
             action
                 .labelStyle(.prominentButton)
                 .buttonStyle(.borderedProminent)
+                .tint(HomeTheme.accentFill)
                 .controlSize(.large)
                 .padding(.top, 4)
         }

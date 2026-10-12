@@ -24,6 +24,7 @@ struct NotificationSettingsView: View {
                                 .foregroundStyle(HomeTheme.accent)
                         }
                     }
+                    .tint(HomeTheme.accentFill)
                 }
             } header: {
                 Text("Notify me about")

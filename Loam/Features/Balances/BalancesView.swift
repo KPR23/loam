@@ -124,6 +124,7 @@ struct BalancesView: View {
                 .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.borderedProminent)
+        .tint(HomeTheme.accentFill)
         .buttonBorderShape(.capsule)
         .padding(.horizontal, 20)
         .accessibilityHint("Records money you paid someone outside Loam")

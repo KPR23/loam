@@ -168,6 +168,7 @@ struct AddExpenseView: View {
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(HomeTheme.accentFill)
                         .buttonBorderShape(.capsule)
                         .disabled(!canContinue)
                         .accessibilityLabel("Add details")
@@ -283,6 +284,7 @@ struct AddExpenseView: View {
                             if !subscriptions.isPro { ProBadge() }
                         }
                     }
+                    .tint(HomeTheme.accentFill)
 
                     if isRepeating {
                         Picker("Frequency", selection: $repeatPreset) {
@@ -304,6 +306,7 @@ struct AddExpenseView: View {
                         }
 
                         Toggle("Ends", isOn: $repeatHasEndDate)
+                            .tint(HomeTheme.accentFill)
 
                         if repeatHasEndDate {
                             DatePicker(

@@ -20,7 +20,7 @@ struct PendingExpenseActions: View {
                     .padding(.vertical, actionVerticalPadding)
             }
             .buttonStyle(.borderedProminent)
-            .tint(HomeTheme.accent)
+            .tint(HomeTheme.accentFill)
             .controlSize(.small)
 
             Menu {
