@@ -145,6 +145,10 @@ final class ExpenseSummaryTests: XCTestCase {
         let september = ExchangeRates(days: ["2026-09-30": ["PLN": 4.0]], fetchedAt: ["2026-09": Date()])
         XCTAssertNotNil(september.convert(100, from: "EUR", to: "PLN", on: calendar.date(from: DateComponents(year: 2026, month: 9, day: 30))!, calendar: calendar))
         XCTAssertNil(september.convert(100, from: "EUR", to: "PLN", on: expenses[1].spentAt, calendar: calendar))
+
+        // November's lead days reach back into October, but October itself was never loaded.
+        let gap = ExchangeRates(days: ["2026-09-30": ["PLN": 4.0], "2026-10-26": ["PLN": 4.2]], fetchedAt: ["2026-09": Date(), "2026-11": Date()])
+        XCTAssertNil(gap.convert(100, from: "EUR", to: "PLN", on: calendar.date(from: DateComponents(year: 2026, month: 10, day: 10))!, calendar: calendar))
     }
 
     func testPendingAcceptanceIsPerUser() {
