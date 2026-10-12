@@ -183,6 +183,8 @@ jobs:
             echo "::warning::APPLE_CLIENT_SECRET expires in $days_left days. Renew it as docs/account-deletion-runbook.md describes."
           fi
           secret_file="$RUNNER_TEMP/loam-function-secrets"
+          # Removed even when a later command fails, so the file never outlives the step.
+          trap 'rm -f "$secret_file"' EXIT
           umask 077
           printf 'SUPABASE_SERVICE_ROLE_KEY=%s\nDELETION_WORKER_KEY=%s\nDELETION_NOTIFIER_KEY=%s\nDELETION_MONITOR_KEY=%s\nDELETION_CREDENTIAL_ENCRYPTION_KEY=%s\nAPPLE_CLIENT_ID=%s\nAPPLE_CLIENT_SECRET=%s\nDELETION_EMAIL_ENABLED=false\nANALYTICS_ENABLED=%s\nREVENUECAT_SECRET_API_KEY=%s\nREVENUECAT_WEBHOOK_AUTH=%s\n' \
             "$SUPABASE_SERVICE_ROLE_KEY" "$DELETION_WORKER_KEY" "$DELETION_NOTIFIER_KEY" "$DELETION_MONITOR_KEY" "$DELETION_CREDENTIAL_ENCRYPTION_KEY" "$APPLE_CLIENT_ID" "$APPLE_CLIENT_SECRET" "$ANALYTICS_ENABLED" "$REVENUECAT_SECRET_API_KEY" "$REVENUECAT_WEBHOOK_AUTH" > "$secret_file"
@@ -195,7 +197,6 @@ jobs:
               "$PUSH_NOTIFICATION_KEY" "$APNS_KEY_ID" "$APNS_TEAM_ID" "$APNS_BUNDLE_ID" "${APNS_KEY_P8//$'\n'/\\n}" >> "$secret_file"
           fi
           supabase secrets set --project-ref "$PROJECT_REF" --env-file "$secret_file"
-          rm -f "$secret_file"
       # Secrets are checked first so a missing one stops the deploy before any migration runs.
       - name: Apply migrations
         run: supabase db push
@@ -207,35 +208,35 @@ jobs:
         if: env.ANALYTICS_ENABLED != 'true'
         run: |
           api="https://api.supabase.com/v1/projects/$PROJECT_REF/secrets"
-          stale="$(curl --fail --silent --show-error "$api" --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+          stale="$(curl --fail --silent --show-error --max-time 30 "$api" --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             | jq -c '[.[].name | select(startswith("POSTHOG_"))]')"
           if [ "$stale" != "[]" ]; then
-            curl --fail --silent --show-error --output /dev/null --request DELETE "$api" \
+            curl --fail --silent --show-error --max-time 30 --output /dev/null --request DELETE "$api" \
               --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" --header 'Content-Type: application/json' --data "$stale"
           fi
       - name: Provision Vault and scheduler
         run: |
           body="$(jq -n --arg url "$PROJECT_URL" --arg worker "$DELETION_WORKER_KEY" --arg notifier "$DELETION_NOTIFIER_KEY" '{p_project_url:$url,p_worker_key:$worker,p_notifier_key:$notifier}')"
-          curl --fail --silent --show-error --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_account_deletion_scheduler" \
+          curl --fail --silent --show-error --max-time 30 --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_account_deletion_scheduler" \
             --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             --header 'Content-Type: application/json' --data "$body"
       - name: Provision push notifications
         if: env.PUSH_NOTIFICATION_KEY != ''
         run: |
           body="$(jq -n --arg url "$PROJECT_URL" --arg key "$PUSH_NOTIFICATION_KEY" '{p_project_url:$url,p_push_key:$key}')"
-          curl --fail --silent --show-error --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_push_notifications" \
+          curl --fail --silent --show-error --max-time 30 --output /dev/null --request POST "$PROJECT_URL/rest/v1/rpc/configure_push_notifications" \
             --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             --header 'Content-Type: application/json' --data "$body"
       - name: Verify protected worker deployment
         run: |
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-worker" --header 'X-Deletion-Worker-Key: deployment-probe-invalid')"
+          status="$(curl --silent --max-time 30 --retry 3 --retry-all-errors --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-worker" --header 'X-Deletion-Worker-Key: deployment-probe-invalid')"
           test "$status" = 401
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-notifier" --header 'X-Deletion-Notifier-Key: deployment-probe-invalid')"
+          status="$(curl --silent --max-time 30 --retry 3 --retry-all-errors --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/account-deletion-notifier" --header 'X-Deletion-Notifier-Key: deployment-probe-invalid')"
           test "$status" = 401
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request GET "$PROJECT_URL/functions/v1/account-deletion-monitor" --header 'X-Deletion-Monitor-Key: deployment-probe-invalid')"
+          status="$(curl --silent --max-time 30 --retry 3 --retry-all-errors --output /dev/null --write-out '%{http_code}' --request GET "$PROJECT_URL/functions/v1/account-deletion-monitor" --header 'X-Deletion-Monitor-Key: deployment-probe-invalid')"
           test "$status" = 401
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/revenuecat-webhook" --header 'Authorization: deployment-probe-invalid')"
+          status="$(curl --silent --max-time 30 --retry 3 --retry-all-errors --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/revenuecat-webhook" --header 'Authorization: deployment-probe-invalid')"
           test "$status" = 401
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/send-push" --header 'X-Push-Key: deployment-probe-invalid')"
+          status="$(curl --silent --max-time 30 --retry 3 --retry-all-errors --output /dev/null --write-out '%{http_code}' --request POST "$PROJECT_URL/functions/v1/send-push" --header 'X-Push-Key: deployment-probe-invalid')"
           # 503 while push is unconfigured; 401 once the key is installed.
           test "$status" = 401 || { test -z "$PUSH_NOTIFICATION_KEY" && test "$status" = 503; }
