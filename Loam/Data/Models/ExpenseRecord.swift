@@ -171,6 +171,10 @@ struct MonthSpendSummary: Sendable {
     var totalMine: Money
     var sharedShare: Money
     var categoryBreakdown: [CategorySpendSlice]
+    /// Expenses in another currency included at their day's rate.
+    var convertedCount = 0
+    /// Expenses in another currency left out because their rate isn't loaded yet.
+    var unconvertedCount = 0
 
     static func zero(currency: String = "PLN") -> MonthSpendSummary {
         MonthSpendSummary(

@@ -11,7 +11,7 @@ final class ExpenseStore: ObservableObject {
     @Published private(set) var detachedExpenses: [ExpenseRecord] = []
     /// The user's rules the server could not generate a due occurrence for.
     @Published private(set) var failingRecurringRules: [RecurringRuleRecord] = []
-    @Published private(set) var summary: MonthSpendSummary = .zero()
+    @Published private(set) var summary: MonthSpendSummary = .zero(currency: AppPreferences.defaultCurrencyCode)
     @Published private(set) var isLoading = false
     @Published var lastError: String?
     /// Replaces the backend lookup of every expense still waiting on a user, so tests can make it fail.
@@ -58,7 +58,7 @@ final class ExpenseStore: ObservableObject {
             detachedExpenses = []
             failingRecurringRules = []
             recurringStartDatesById = [:]
-            summary = .zero()
+            summary = .zero(currency: AppPreferences.defaultCurrencyCode)
             return
         }
 
@@ -70,12 +70,16 @@ final class ExpenseStore: ObservableObject {
             try await materializeDueRecurring(userId: userId, repository: primaryRepository)
             let fetched = try await primaryRepository.fetchExpenses(for: userId, in: period)
             expenses = fetched
-            summary = Self.makeSummary(expenses: fetched, userId: userId)
+            summary = makeSummary(fetched, userId: userId)
             recurringStartDatesById = await loadRecurringStartDates(for: fetched)
             lastError = nil
         } catch {
             lastError = error.localizedDescription
         }
+
+        // Other currencies convert at their day's rate, which may need downloading first.
+        await ExchangeRateStore.shared.ensureRates(for: period)
+        recomputeSummary()
 
         let rules = (try? await primaryRepository.fetchActiveRecurringRules(for: userId)) ?? []
         failingRecurringRules = rules.filter { $0.generationFailure != nil }
@@ -133,7 +137,7 @@ final class ExpenseStore: ObservableObject {
               currentUserId == userId else { return }
         if let index = expenses.firstIndex(where: { $0.id == expenseId }) {
             expenses[index] = fetched
-            summary = Self.makeSummary(expenses: expenses, userId: userId)
+            summary = makeSummary(expenses, userId: userId)
         } else if let index = proposalExpenses.firstIndex(where: { $0.id == expenseId }) {
             proposalExpenses[index] = fetched
         } else {
@@ -564,7 +568,7 @@ final class ExpenseStore: ObservableObject {
         for (id, _) in targets {
             applyOptimisticShareResponse(expenseId: id, userId: userId, action: action)
         }
-        summary = Self.makeSummary(expenses: expenses, userId: userId)
+        summary = makeSummary(expenses, userId: userId)
 
         do {
             var trustedScopes: Set<String> = []
@@ -851,17 +855,38 @@ final class ExpenseStore: ObservableObject {
         return startDates
     }
 
+    /// Recomputes totals for the loaded month, e.g. after the default currency or the rates change.
+    func recomputeSummary() {
+        guard let userId = currentUserId else { return }
+        summary = makeSummary(expenses, userId: userId)
+    }
+
+    private func makeSummary(_ expenses: [ExpenseRecord], userId: UUID) -> MonthSpendSummary {
+        Self.makeSummary(expenses: expenses, userId: userId, rates: ExchangeRateStore.shared.rates)
+    }
+
+    /// Totals are in `currency`. Expenses in another currency convert at the rate of the day
+    /// they were spent; those without a loaded rate are left out and counted instead.
     nonisolated static func makeSummary(
         expenses: [ExpenseRecord],
         userId: UUID,
-        currency: String = AppPreferences.defaultCurrencyCode
+        currency: String = AppPreferences.defaultCurrencyCode,
+        rates: ExchangeRates = .empty,
+        calendar: Calendar = AppPreferences.calendar
     ) -> MonthSpendSummary {
         var total = 0
         var shared = 0
+        var converted = 0
+        var unconverted = 0
         var byCategory: [ExpenseCategory: Int] = [:]
         for expense in expenses {
-            guard expense.currency.uppercased() == currency.uppercased() else { continue }
-            let mine = expense.acceptedShareMinor(for: userId)
+            let original = expense.acceptedShareMinor(for: userId)
+            guard original != 0 else { continue }
+            guard let mine = rates.convert(original, from: expense.currency, to: currency, on: expense.spentAt, calendar: calendar) else {
+                unconverted += 1
+                continue
+            }
+            if expense.currency.uppercased() != currency.uppercased() { converted += 1 }
             total += mine
             if mine > 0 {
                 byCategory[expense.category, default: 0] += mine
@@ -881,7 +906,9 @@ final class ExpenseStore: ObservableObject {
         return MonthSpendSummary(
             totalMine: Money(amountMinor: total, currencyCode: currency),
             sharedShare: Money(amountMinor: shared, currencyCode: currency),
-            categoryBreakdown: categoryBreakdown
+            categoryBreakdown: categoryBreakdown,
+            convertedCount: converted,
+            unconvertedCount: unconverted
         )
     }
 }

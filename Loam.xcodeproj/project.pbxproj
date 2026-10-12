@@ -14,6 +14,7 @@
 		095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */; };
 		0C56CD5037B2181ECD76F37E /* BalancesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311E61CE00D043E5896AF6E2 /* BalancesView.swift */; };
 		0D1113838C34055B6E07D8CF /* NotificationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7E51743FCDD76EA3759058 /* NotificationRepository.swift */; };
+		126EF1AD57B79B77088CF0D9 /* ExchangeRates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98702872EF571671E266B171 /* ExchangeRates.swift */; };
 		127F94D887AFE6D6CC9C4A23 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 506247FF8FC45BE14B15B178 /* PrivacyInfo.xcprivacy */; };
 		12911FE1A942CD0E6D411A6E /* PendingExpenseActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE4652F8B86C0207F5C6079E /* PendingExpenseActions.swift */; };
 		1423F9D1B80E8BA997D419E8 /* MoneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0704D45C9ECCF37BB8E48B /* MoneyTests.swift */; };
@@ -242,6 +243,7 @@
 		914274A331517EC93002CE6C /* HomeExpenseRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeExpenseRow.swift; sourceTree = "<group>"; };
 		91EF8A33477674847BDE93AF /* OnboardingPermissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPermissions.swift; sourceTree = "<group>"; };
 		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		98702872EF571671E266B171 /* ExchangeRates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExchangeRates.swift; sourceTree = "<group>"; };
 		99A7E2ACFDFFA08B0048B9C9 /* ExpenseSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseSummaryTests.swift; sourceTree = "<group>"; };
 		99F215D3C3920731625D3EE6 /* ConnectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionRepository.swift; sourceTree = "<group>"; };
 		9D15723F1C7A5EE473CA2889 /* TestAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestAccount.swift; sourceTree = "<group>"; };
@@ -362,6 +364,7 @@
 				0E27CDECAD1AC0216EB7FC75 /* CalendarDateCodec.swift */,
 				1BB3E318E7DB0B9CE3B246C1 /* Category.swift */,
 				452162D374274ADBC8769979 /* CategoryCustomizer.swift */,
+				98702872EF571671E266B171 /* ExchangeRates.swift */,
 				7D2B225EA738D0900ECF5C69 /* ExpenseLocation.swift */,
 				B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */,
 				D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */,
@@ -896,6 +899,7 @@
 				3B6CDA37B5479DE4B4111523 /* ConnectionStore.swift in Sources */,
 				F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */,
 				450CF8D24E4AAD123A859E79 /* EditProposalReviewCard.swift in Sources */,
+				126EF1AD57B79B77088CF0D9 /* ExchangeRates.swift in Sources */,
 				543F69BEE3C867F7FB1ED90F /* ExpenseCategoryPicker.swift in Sources */,
 				A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */,
 				ACDEE6074DB240C61F8BF7F1 /* ExpenseDetailSheet.swift in Sources */,
