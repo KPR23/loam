@@ -236,7 +236,7 @@ struct SplitExpenseSection: View {
         switch effectiveSplitMode {
         case .equal:
             HStack {
-                Text(displayName(for: participant.userId))
+                participantLabel(participant)
                 Spacer()
                 if let share = computedShare(for: participant.userId) {
                     Text(formattedAmount(share.amountMinor))
@@ -246,7 +246,7 @@ struct SplitExpenseSection: View {
             }
         case .percentage:
             HStack {
-                Text(displayName(for: participant.userId))
+                participantLabel(participant)
                 Spacer()
                 TextField("0", text: percentageBinding(for: participant.userId))
                     .keyboardType(.numberPad)
@@ -258,7 +258,7 @@ struct SplitExpenseSection: View {
             }
         case .exactAmount:
             HStack {
-                Text(displayName(for: participant.userId))
+                participantLabel(participant)
                 Spacer()
                 TextField("0,00", text: amountBinding(for: participant.userId))
                     .keyboardType(.decimalPad)
@@ -268,6 +268,13 @@ struct SplitExpenseSection: View {
                 Text(currencyCode)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private func participantLabel(_ participant: SplitParticipantOption) -> some View {
+        HStack(spacing: 10) {
+            AvatarView(userId: participant.userId, size: 26, name: participant.displayName)
+            Text(displayName(for: participant.userId))
         }
     }
 
@@ -329,7 +336,7 @@ struct SplitExpenseSection: View {
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.55))
                     .symbolRenderingMode(.hierarchical)
 
-                AvatarView(userId: partner.userId, size: 30)
+                AvatarView(userId: partner.userId, size: 30, name: partner.displayName)
 
                 Text(partner.displayName)
                     .foregroundStyle(.primary)
