@@ -12,9 +12,10 @@ on:
       - project.yml
       - .github/workflows/ios.yml
   # Release branches test again, since a cherry-picked fix lands there without a PR.
-  # main doesn't: every PR touching the app was tested before it merged.
+  # main does too: a pull request can only restore caches saved on the base branch, so these
+  # runs are what give every PR a warm Swift package cache.
   push:
-    branches: ["release/**"]
+    branches: [main, "release/**"]
     paths:
       - Loam/**
       - LoamTests/**
