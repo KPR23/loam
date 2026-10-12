@@ -171,6 +171,7 @@ enum LoamErrorCapture {
         SentrySDK.capture(error: error)
     }
 
+    @discardableResult
     static func withCapture<Value>(
         _ event: String,
         operation: () async throws -> Value
