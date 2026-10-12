@@ -70,7 +70,10 @@ struct FriendsView: View {
                             }
                         }
                         .swipeActions(edge: .trailing) {
-                            Button("Remove", role: .destructive) { friendPendingRemoval = friend }
+                            // Avoid `role: .destructive` — it removes the row before the confirmation;
+                            // the explicit tint keeps the destructive color the app tint would replace.
+                            Button("Remove", systemImage: "person.badge.minus") { friendPendingRemoval = friend }
+                                .tint(.red)
                         }
                         .contextMenu {
                             Button("Remove friend", systemImage: "person.badge.minus", role: .destructive) {
