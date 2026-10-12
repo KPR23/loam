@@ -105,8 +105,41 @@ final class ExpenseSummaryTests: XCTestCase {
             shares: [ExpenseShareRecord(userId: user, amountMinor: 1_000)]
         )
 
-        XCTAssertEqual(ExpenseStore.makeSummary(expenses: [pln, eur], userId: user, currency: "PLN").totalMine.amountMinor, 1_000)
+        let summary = ExpenseStore.makeSummary(expenses: [pln, eur], userId: user, currency: "PLN")
+        XCTAssertEqual(summary.totalMine.amountMinor, 1_000, "Without a rate, other currencies are left out")
+        XCTAssertEqual(summary.unconvertedCount, 1)
         XCTAssertEqual(ExpenseStore.makeSummary(expenses: [pln, eur], userId: user, currency: "EUR").totalMine.amountMinor, 1_000)
+    }
+
+    func testSummaryConvertsOtherCurrenciesAtTheRateOfTheDayTheyWereSpent() {
+        // Expenses store the start of their day in the app's calendar, so days are read in it too.
+        let calendar = AppPreferences.calendar
+        let rates = ExchangeRates(days: [
+            "2026-10-01": ["PLN": 4.0, "USD": 1.25],
+            "2026-10-05": ["PLN": 5.0, "USD": 1.0],
+        ])
+        func expense(_ amountMinor: Int, _ currency: String, on day: Int) -> ExpenseRecord {
+            ExpenseRecord(
+                amountMinor: amountMinor,
+                currency: currency,
+                category: .groceries,
+                spentAt: calendar.date(from: DateComponents(year: 2026, month: 10, day: day))!,
+                paidBy: user,
+                createdBy: user,
+                shares: [ExpenseShareRecord(userId: user, amountMinor: amountMinor)]
+            )
+        }
+        // Saturday the 3rd has no rate of its own, so the 1st applies; the 6th uses the 5th.
+        let expenses = [expense(1_000, "PLN", on: 2), expense(1_000, "EUR", on: 3), expense(1_000, "USD", on: 6)]
+
+        let summary = ExpenseStore.makeSummary(expenses: expenses, userId: user, currency: "PLN", rates: rates, calendar: calendar)
+
+        XCTAssertEqual(summary.totalMine.amountMinor, 1_000 + 4_000 + 5_000)
+        XCTAssertEqual(summary.totalMine.currencyCode, "PLN")
+        XCTAssertEqual(summary.convertedCount, 2)
+        XCTAssertEqual(summary.unconvertedCount, 0)
+        XCTAssertEqual(rates.convert(4_000, from: "PLN", to: "EUR", on: expenses[1].spentAt, calendar: calendar), 1_000)
+        XCTAssertNil(rates.convert(100, from: "EUR", to: "PLN", on: calendar.date(from: DateComponents(year: 2026, month: 9, day: 30))!, calendar: calendar), "No rate before the first loaded day")
     }
 
     func testPendingAcceptanceIsPerUser() {
