@@ -4,13 +4,10 @@ on:
   push:
     branches: [main, "release/**"]
   # Deploy jobs are gated on the branch name, so pull requests only verify.
+  # No path filter: main requires verify-database and test-functions, so they must report on
+  # every PR. The changes job skips them instead, and a skipped job counts as passing.
   pull_request:
     branches: [main, "release/**"]
-    # Only these paths feed the backend, so iOS-only changes skip the Docker stack.
-    paths:
-      - supabase/**
-      - .github/workflows/supabase.yml
-      - .github/actions/setup-supabase/**
 
 permissions:
   contents: read
@@ -21,10 +18,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Only these paths feed the backend, so other pull requests skip the Docker stack.
+  # Pushes always verify, since they deploy.
+  changes:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.diff.outputs.backend }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [[ $GITHUB_EVENT_NAME != pull_request ]] \
+            || git diff --name-only "origin/$BASE_REF"...HEAD \
+              | grep -qE '^(supabase/|\.github/workflows/supabase\.yml$|\.github/actions/setup-supabase/)'; then
+            echo backend=true >> "$GITHUB_OUTPUT"
+          else
+            echo backend=false >> "$GITHUB_OUTPUT"
+          fi
+
   # Supabase keys migrations by the timestamp prefix alone, so two files sharing one fail
   # `db push` with a duplicate key even when their names differ. This fails in seconds,
   # before the Docker stack starts.
   check-migration-versions:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
@@ -50,6 +73,7 @@ jobs:
             fi
           done
 
+  # Skipped along with check-migration-versions when the backend didn't change.
   verify-database:
     needs: check-migration-versions
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
@@ -75,6 +99,8 @@ jobs:
         run: supabase stop --no-backup
 
   test-functions:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
