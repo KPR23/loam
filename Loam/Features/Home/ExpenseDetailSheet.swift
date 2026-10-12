@@ -99,11 +99,11 @@ struct ExpenseDetailSheet: View {
                     VStack(spacing: 0) {
                         ZStack {
                             Circle()
-                                .fill(expense.category.color.opacity(0.12))
-                            Image(systemName: expense.category.systemImage)
+                                .fill(expense.spendCategory.color.opacity(0.12))
+                            Image(systemName: expense.spendCategory.systemImage)
                                 .font(.system(size: 28, weight: .medium))
                                 .symbolRenderingMode(.monochrome)
-                                .foregroundStyle(expense.category.color)
+                                .foregroundStyle(expense.spendCategory.color)
                         }
                         .frame(width: 64, height: 64)
 
@@ -119,7 +119,7 @@ struct ExpenseDetailSheet: View {
                                 .padding(.top, 4)
                         }
 
-                        Text(expense.category.displayName)
+                        Text(expense.spendCategory.displayName)
                             .font(.system(.headline, design: .rounded))
                             .foregroundStyle(HomeTheme.secondary)
                             .padding(.top, expense.isShared ? 10 : 8)
@@ -142,11 +142,11 @@ struct ExpenseDetailSheet: View {
 
                     LabeledContent("Category") {
                         HStack(spacing: 6) {
-                            Image(systemName: expense.category.systemImage)
-                            Text(expense.category.displayName)
+                            Image(systemName: expense.spendCategory.systemImage)
+                            Text(expense.spendCategory.displayName)
                                 .font(.system(.body, design: .rounded))
                         }
-                        .foregroundStyle(expense.category.color)
+                        .foregroundStyle(expense.spendCategory.color)
                     }
 
                     if FeatureFlags.merchant, let location = expense.location {

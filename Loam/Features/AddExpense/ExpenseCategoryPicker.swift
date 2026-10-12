@@ -10,8 +10,16 @@ struct ExpenseCategoryPicker: View {
         case chip
     }
 
-    @Binding var category: ExpenseCategory
+    @Binding var category: SpendCategory
     var style: Style = .formRow
+    /// Defaults to the member's own: built-in categories they haven't removed, then theirs.
+    var options: [SpendCategory]? = nil
+
+    /// The current choice stays listed even when it is hidden or Pro has lapsed.
+    private var menuOptions: [SpendCategory] {
+        let base = options ?? CustomCategoryStore.shared.pickerOptions(isPro: CategoryCustomizer.shared.isActive)
+        return base.contains(category) ? base : base + [category]
+    }
 
     var body: some View {
         switch style {
@@ -80,7 +88,7 @@ struct ExpenseCategoryPicker: View {
 
     private func menuLabel<Label: View>(@ViewBuilder label: () -> Label) -> some View {
         Menu {
-            ForEach(ExpenseCategory.allCases) { item in
+            ForEach(menuOptions) { item in
                 Button {
                     category = item
                 } label: {
@@ -101,7 +109,7 @@ struct ExpenseCategoryPicker: View {
     }
 }
 
-private extension ExpenseCategory {
+private extension SpendCategory {
     var menuIcon: UIImage {
         let config = UIImage.SymbolConfiguration(pointSize: 17, weight: .regular)
         let base = UIImage(systemName: systemImage, withConfiguration: config)
