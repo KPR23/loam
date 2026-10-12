@@ -100,16 +100,30 @@ struct PendingExpenseListRow: View {
 
 @MainActor
 enum PendingAcceptanceFormatting {
-    /// In the default currency; shares in another currency convert at their day's rate.
-    static func total(for expenses: [ExpenseRecord], userId: UUID) -> Money {
+    /// In the default currency; shares in another currency convert at their day's rate. Shares
+    /// whose rate isn't loaded yet are added in their own currency, e.g. "120 zł + €15",
+    /// so a missing rate never reads as nothing to approve.
+    static func totalText(for expenses: [ExpenseRecord], userId: UUID) -> String {
         let currency = AppPreferences.defaultCurrencyCode
         let rates = ExchangeRateStore.shared.rates
         let calendar = AppPreferences.calendar
-        let minor = expenses.reduce(0) { partial, expense in
+        var converted = 0
+        var hasConverted = false
+        var unconverted: [String: Int] = [:]
+        for expense in expenses {
             let share = expense.shareRecord(for: userId)?.amountMinor ?? 0
-            return partial + (rates.convert(share, from: expense.currency, to: currency, on: expense.spentAt, calendar: calendar) ?? 0)
+            if let minor = rates.convert(share, from: expense.currency, to: currency, on: expense.spentAt, calendar: calendar) {
+                converted += minor
+                hasConverted = true
+            } else {
+                unconverted[expense.currency.uppercased(), default: 0] += share
+            }
         }
-        return Money(amountMinor: minor, currencyCode: currency)
+        var parts = unconverted.sorted { $0.key < $1.key }.map { MoneyFormatter.string(from: Money(amountMinor: $0.value, currencyCode: $0.key)) }
+        if hasConverted || parts.isEmpty {
+            parts.insert(MoneyFormatter.string(from: Money(amountMinor: converted, currencyCode: currency)), at: 0)
+        }
+        return parts.joined(separator: " + ")
     }
 
     static func sectionHeader(
@@ -126,7 +140,7 @@ enum PendingAcceptanceFormatting {
                 .fontWeight(.regular)
                 .foregroundStyle(HomeTheme.secondary)
             Spacer()
-            Text(MoneyFormatter.string(from: total(for: expenses, userId: userId)))
+            Text(totalText(for: expenses, userId: userId))
                 .font(.system(.subheadline, design: .rounded))
                 .fontWeight(.regular)
                 .foregroundStyle(HomeTheme.secondary)

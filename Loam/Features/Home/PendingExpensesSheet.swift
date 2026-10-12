@@ -171,7 +171,7 @@ struct PendingExpensesSheet: View {
                 .foregroundStyle(HomeTheme.secondary)
                 .textCase(nil)
             Spacer()
-            Text(MoneyFormatter.string(from: PendingAcceptanceFormatting.total(for: expenses, userId: myUserId)))
+            Text(PendingAcceptanceFormatting.totalText(for: expenses, userId: myUserId))
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(HomeTheme.tertiary)
                 .monospacedDigit()
