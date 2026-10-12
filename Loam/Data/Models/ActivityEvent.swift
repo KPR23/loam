@@ -195,7 +195,7 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
         case .rejected, .proposalRejected: return "xmark.circle.fill"
         case .edited, .proposalCreated: return "pencil.circle.fill"
         case .participantRemoved, .deleted, .proposalSuperseded: return "trash.circle.fill"
-        case .repaymentRecorded: return "banknote.fill"
+        case .repaymentRecorded: return "\(RepaymentRecord.symbolName).circle.fill"
         case .repaymentReversed: return "arrow.uturn.backward.circle.fill"
         }
     }

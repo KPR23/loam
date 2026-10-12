@@ -351,7 +351,7 @@ extension ActivityEventKind {
         case .participantRemoved: "person.fill.xmark"
         case .deleted: "trash.fill"
         case .proposalSuperseded: "arrow.triangle.2.circlepath"
-        case .repaymentRecorded: "banknote.fill"
+        case .repaymentRecorded: RepaymentRecord.symbolName
         case .repaymentReversed: "arrow.uturn.backward"
         }
     }

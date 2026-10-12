@@ -56,6 +56,9 @@ struct BalanceSnapshot: Codable, Hashable, Sendable {
 }
 
 struct RepaymentRecord: Identifiable, Codable, Hashable, Sendable {
+    /// Every place that shows a repayment uses this symbol, filled or in a circle as the context needs.
+    static let symbolName = "arrow.left.arrow.right"
+
     let id: UUID
     let fromUserId: UUID
     let toUserId: UUID

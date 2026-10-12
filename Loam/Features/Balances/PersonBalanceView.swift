@@ -288,7 +288,7 @@ private struct BalanceHistoryRow: View {
                 .frame(width: 26, height: 26)
                 .accessibilityHidden(true)
         } else {
-            Image(systemName: entry.kind == .reversal ? "arrow.uturn.backward.circle.fill" : "arrow.left.arrow.right.circle.fill")
+            Image(systemName: entry.kind == .reversal ? "arrow.uturn.backward.circle.fill" : "\(RepaymentRecord.symbolName).circle.fill")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(entry.kind == .reversal ? HomeTheme.tertiary : BalanceTone.color(for: -entry.amountMinor))
                 .frame(width: 26, height: 26)
