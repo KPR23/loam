@@ -11,8 +11,16 @@ actor LocalBalanceRepository: BalanceRepository {
     func fetchBalances(for userId: UUID) async throws -> BalanceSnapshot {
         let expenses = try loadExpenses()
         var net: [BalanceKey: Int] = [:]
+        var awaiting: [BalanceKey: (amountMinor: Int, count: Int)] = [:]
         for expense in expenses {
             let payerAccepted = expense.shareRecord(for: expense.paidBy)?.status == .accepted
+            if expense.paidBy == userId, payerAccepted {
+                for share in expense.shares where share.userId != userId && share.status == .pending && share.amountMinor > 0 {
+                    let key = BalanceKey(personId: share.userId, currencyCode: expense.currency.uppercased())
+                    awaiting[key, default: (0, 0)].amountMinor += share.amountMinor
+                    awaiting[key, default: (0, 0)].count += 1
+                }
+            }
             for share in expense.shares where share.userId != expense.paidBy && payerAccepted && share.status == .accepted {
                 // A participant owes the payer their accepted share.
                 let payerKey = BalanceKey(personId: share.userId, currencyCode: expense.currency.uppercased())
@@ -29,13 +37,18 @@ actor LocalBalanceRepository: BalanceRepository {
                 net[BalanceKey(personId: payment.toUserId, currencyCode: payment.currencyCode.uppercased()), default: 0] += payment.amountMinor
             }
         }
-        return BalanceSnapshot(balances: net.filter { $0.value != 0 }.map {
-            PersonBalance(personId: $0.key.personId, displayName: SplitPartnerOption.displayName(for: $0.key.personId), amountMinor: $0.value, currencyCode: $0.key.currencyCode)
-        }.sorted {
-            $0.displayName == $1.displayName
-                ? $0.currencyCode < $1.currencyCode
-                : $0.displayName < $1.displayName
-        })
+        return BalanceSnapshot(
+            balances: net.filter { $0.value != 0 }.map {
+                PersonBalance(personId: $0.key.personId, displayName: SplitPartnerOption.displayName(for: $0.key.personId), amountMinor: $0.value, currencyCode: $0.key.currencyCode)
+            }.sorted {
+                $0.displayName == $1.displayName
+                    ? $0.currencyCode < $1.currencyCode
+                    : $0.displayName < $1.displayName
+            },
+            awaiting: awaiting.map {
+                AwaitingBalance(personId: $0.key.personId, amountMinor: $0.value.amountMinor, currencyCode: $0.key.currencyCode, expenseCount: $0.value.count)
+            }
+        )
     }
 
     /// Mirrors the `balance_history` RPC: every share and repayment between the two people, newest first.

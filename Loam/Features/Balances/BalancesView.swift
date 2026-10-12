@@ -39,6 +39,13 @@ struct BalancesView: View {
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
 
+                        if !snapshot.awaiting.isEmpty {
+                            awaitingSummary
+                                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: debts.isEmpty ? 8 : 14, trailing: 20))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                        }
+
                         if !debts.isEmpty {
                             repaymentButton
                                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
@@ -54,7 +61,13 @@ struct BalancesView: View {
                         Section {
                             ForEach(settledPeople) { person in
                                 NavigationLink(value: BalancePerson(personId: person.userId, displayName: person.displayName)) {
-                                    BalancePersonRow(personId: person.userId, name: person.displayName, caption: "Settled up", captionColor: HomeTheme.tertiary) {
+                                    BalancePersonRow(
+                                        personId: person.userId,
+                                        name: person.displayName,
+                                        caption: "Settled up",
+                                        captionColor: HomeTheme.tertiary,
+                                        awaitingNote: awaitingNote(for: person.userId)
+                                    ) {
                                         EmptyView()
                                     }
                                 }
@@ -140,7 +153,8 @@ struct BalancesView: View {
                             personId: balance.personId,
                             name: balance.displayName,
                             caption: balance.direction,
-                            captionColor: BalanceTone.color(for: balance.amountMinor)
+                            captionColor: BalanceTone.color(for: balance.amountMinor),
+                            awaitingNote: awaitingNote(for: balance.personId, currencyCode: balance.currencyCode)
                         ) {
                             Text(MoneyFormatter.string(from: balance.money))
                                 .font(.system(.body, design: .rounded).weight(.semibold))
@@ -153,6 +167,31 @@ struct BalancesView: View {
                 sectionHeader(title)
             }
         }
+    }
+
+    /// Expenses you paid still count toward balances only once the other person accepts them.
+    private var awaitingSummary: some View {
+        let amounts = snapshot.awaitingTotals.map { MoneyFormatter.string(from: $0) }.joined(separator: " + ")
+        return Label {
+            Text("\(amounts) waiting for friends to accept")
+        } icon: {
+            Image(systemName: "hourglass")
+        }
+        .font(.system(.footnote, design: .rounded).weight(.medium))
+        .foregroundStyle(.orange)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.orange.opacity(0.12), in: Capsule())
+        .frame(maxWidth: .infinity)
+        .accessibilityHint("Not counted in balances until accepted")
+    }
+
+    /// A person has a balance row per currency, so those rows pass theirs; the settled row shows every currency.
+    private func awaitingNote(for personId: UUID, currencyCode: String? = nil) -> String? {
+        let awaiting = snapshot.awaiting(from: personId).filter { currencyCode == nil || $0.currencyCode.uppercased() == currencyCode?.uppercased() }
+        guard !awaiting.isEmpty else { return nil }
+        let amounts = awaiting.map { MoneyFormatter.string(from: $0.money) }.joined(separator: " + ")
+        return "\(amounts) awaiting acceptance"
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -299,6 +338,8 @@ private struct BalancePersonRow<Trailing: View>: View {
     let name: String
     let caption: String
     let captionColor: Color
+    /// Shares this person hasn't accepted yet, which the balance leaves out.
+    var awaitingNote: String? = nil
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -313,6 +354,12 @@ private struct BalancePersonRow<Trailing: View>: View {
                 Text(caption)
                     .font(.system(.caption, design: .rounded).weight(.medium))
                     .foregroundStyle(captionColor)
+                if let awaitingNote {
+                    Label(awaitingNote, systemImage: "hourglass")
+                        .font(.system(.caption, design: .rounded).weight(.medium))
+                        .foregroundStyle(.orange)
+                        .labelStyle(AwaitingLabelStyle())
+                }
             }
 
             Spacer(minLength: 8)
@@ -322,6 +369,15 @@ private struct BalancePersonRow<Trailing: View>: View {
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
         .accessibilityHint("Shows your history with \(name)")
+    }
+}
+
+private struct AwaitingLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.icon
+            configuration.title
+        }
     }
 }
 
