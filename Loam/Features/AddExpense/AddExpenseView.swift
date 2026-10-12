@@ -50,7 +50,14 @@ struct AddExpenseView: View {
 
     init(existingExpense: ExpenseRecord? = nil) {
         self.existingExpense = existingExpense
-        guard let expense = existingExpense else { return }
+        guard let expense = existingExpense else {
+            // New expenses start on a category the member can see; only edits keep a removed one.
+            let options = CustomCategoryStore.shared.pickerOptions(isPro: CategoryCustomizer.shared.isActive)
+            if !options.contains(.builtIn(.groceries)), let first = options.first {
+                _category = State(initialValue: first)
+            }
+            return
+        }
 
         // Editing is one form with the amount and category included, so there is no amount step.
         _step = State(initialValue: .details)
