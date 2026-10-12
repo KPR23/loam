@@ -367,7 +367,7 @@ struct SplitExpenseSection: View {
             }
         case .percentage:
             if remainingPercentage == 0 {
-                Text("All 100% of this expense is distributed across \(splitParticipants.count) people.")
+                Text("All 100% of this expense is distributed across \(peopleCount(selectedPercentages.values.filter { $0 > 0 }.count)).")
             } else if remainingPercentage > 0 {
                 Text("\(remainingPercentage)% of this expense is still unassigned. Add it to one or more shares before continuing.")
             } else {
@@ -375,13 +375,18 @@ struct SplitExpenseSection: View {
             }
         case .exactAmount:
             if remainingAmountMinor == 0 {
-                Text("The full expense amount of \(formattedAmount(totalMinor)) is distributed across \(splitParticipants.count) people.")
+                Text("The full expense amount of \(formattedAmount(totalMinor)) is distributed across \(peopleCount(selectedAmountMinors.values.filter { $0 > 0 }.count)).")
             } else if remainingAmountMinor > 0 {
                 Text("\(formattedAmount(remainingAmountMinor)) of this expense is still unassigned. Add it to one or more shares before continuing.")
             } else {
                 Text("Shares exceed the expense total by \(formattedAmount(-remainingAmountMinor)). Reduce one or more shares before continuing.")
             }
         }
+    }
+
+    /// Only people with a share count; someone at 0% takes no part of the expense.
+    private func peopleCount(_ count: Int) -> String {
+        count == 1 ? "1 person" : "\(count) people"
     }
 
     private func togglePartner(_ userId: UUID) {
