@@ -98,12 +98,17 @@ struct PendingExpenseListRow: View {
     }
 }
 
+@MainActor
 enum PendingAcceptanceFormatting {
+    /// In the default currency; shares in another currency convert at their day's rate.
     static func total(for expenses: [ExpenseRecord], userId: UUID) -> Money {
+        let currency = AppPreferences.defaultCurrencyCode
+        let rates = ExchangeRateStore.shared.rates
+        let calendar = AppPreferences.calendar
         let minor = expenses.reduce(0) { partial, expense in
-            partial + (expense.shareRecord(for: userId)?.amountMinor ?? 0)
+            let share = expense.shareRecord(for: userId)?.amountMinor ?? 0
+            return partial + (rates.convert(share, from: expense.currency, to: currency, on: expense.spentAt, calendar: calendar) ?? 0)
         }
-        let currency = expenses.first?.currency ?? "PLN"
         return Money(amountMinor: minor, currencyCode: currency)
     }
 
