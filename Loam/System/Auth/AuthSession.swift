@@ -424,6 +424,10 @@ final class AuthSession: ObservableObject {
             }
             let status = try JSONDecoder().decode(DeletionStatusResponse.self, from: data)
             let previousStatus = deletionStatus
+            // The first confirmation of a request whose response was lost; deleteAccount resets on a clean accept.
+            if (DeletionReceipt.savedStatus(for: receipt.accountId) ?? .submissionUncertain) == .submissionUncertain {
+                UserDefaults.standard.set(false, forKey: OnboardingView.completedKey)
+            }
             switch status.status {
             case "complete":
                 deletionStatus = .complete
