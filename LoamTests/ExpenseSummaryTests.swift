@@ -117,7 +117,7 @@ final class ExpenseSummaryTests: XCTestCase {
         let rates = ExchangeRates(days: [
             "2026-10-01": ["PLN": 4.0, "USD": 1.25],
             "2026-10-05": ["PLN": 5.0, "USD": 1.0],
-        ])
+        ], fetchedAt: ["2026-10": Date()])
         func expense(_ amountMinor: Int, _ currency: String, on day: Int) -> ExpenseRecord {
             ExpenseRecord(
                 amountMinor: amountMinor,
@@ -140,6 +140,11 @@ final class ExpenseSummaryTests: XCTestCase {
         XCTAssertEqual(summary.unconvertedCount, 0)
         XCTAssertEqual(rates.convert(4_000, from: "PLN", to: "EUR", on: expenses[1].spentAt, calendar: calendar), 1_000)
         XCTAssertNil(rates.convert(100, from: "EUR", to: "PLN", on: calendar.date(from: DateComponents(year: 2026, month: 9, day: 30))!, calendar: calendar), "No rate before the first loaded day")
+
+        // With only September loaded, October waits for its own rates instead of reusing September's last one.
+        let september = ExchangeRates(days: ["2026-09-30": ["PLN": 4.0]], fetchedAt: ["2026-09": Date()])
+        XCTAssertNotNil(september.convert(100, from: "EUR", to: "PLN", on: calendar.date(from: DateComponents(year: 2026, month: 9, day: 30))!, calendar: calendar))
+        XCTAssertNil(september.convert(100, from: "EUR", to: "PLN", on: expenses[1].spentAt, calendar: calendar))
     }
 
     func testPendingAcceptanceIsPerUser() {
