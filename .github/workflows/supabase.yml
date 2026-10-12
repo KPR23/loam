@@ -21,7 +21,7 @@ jobs:
   # Only these paths feed the backend, so other pull requests skip the Docker stack.
   # Pushes always verify, since they deploy.
   changes:
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       backend: ${{ steps.diff.outputs.backend }}
@@ -48,7 +48,7 @@ jobs:
   check-migration-versions:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -76,7 +76,7 @@ jobs:
   # Skipped along with check-migration-versions when the backend didn't change.
   verify-database:
     needs: check-migration-versions
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     # A normal run takes about 5 minutes; a hung install shouldn't burn half an hour.
     timeout-minutes: 15
     steps:
@@ -86,12 +86,7 @@ jobs:
         # v2.99.0 defaults to 17.6.1.107, which segfaults when a role calls a function it can't execute.
         run: mkdir -p supabase/.temp && printf 17.6.1.166 > supabase/.temp/postgres-version
       - name: Replay migrations on a clean database
-        # The self-hosted runner is too slow for storage to pass the CLI's health-check window,
-        # so it skips services the database tests never touch.
-        run: >-
-          supabase start ${{ runner.environment == 'self-hosted'
-          && '--ignore-health-check -x studio,logflare,vector,imgproxy,mailpit,edge-runtime,realtime,postgres-meta'
-          || '' }}
+        run: supabase start
       - name: Verify authorization and financial invariants
         run: supabase test db
       - name: Stop local services
@@ -101,7 +96,7 @@ jobs:
   test-functions:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -118,7 +113,7 @@ jobs:
   deploy:
     needs: [verify-database, test-functions]
     if: github.event_name == 'push'
-    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: ${{ github.ref_name == 'main' && 'staging' || 'production' }}
     env:
@@ -204,8 +199,7 @@ jobs:
       # Secrets are checked first so a missing one stops the deploy before any migration runs.
       - name: Apply migrations
         run: supabase db push
-      # Deploys every function under supabase/functions. Bundling through the API skips Docker,
-      # which crashed with exit 135 on the self-hosted runner.
+      # Deploys every function under supabase/functions. Bundling through the API skips Docker.
       - name: Deploy functions
         run: supabase functions deploy --project-ref "$PROJECT_REF" --use-api
       # After the deploy, so the running worker already skips analytics deletion when they go.
