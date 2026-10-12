@@ -36,7 +36,7 @@ jobs:
   # Every PR touching the app builds and tests it, so a broken build or test never reaches an rc tag.
   build-and-test:
     name: Build & Test
-    runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
+    runs-on: macos-26
     timeout-minutes: 15
 
     steps:
@@ -47,20 +47,18 @@ jobs:
         run: xcodebuild -version
 
       # Package checkouts are the slow, network-bound part of a cold run. Package.resolved pins
-      # them, so the cache only changes when a dependency does. Binary artifacts record absolute
-      # paths, so a cache saved on one kind of runner breaks the other and each gets its own.
+      # them, so the cache only changes when a dependency does.
       - name: Cache Swift packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .spm
-          key: spm-${{ runner.environment }}-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-${{ runner.environment }}-${{ runner.os }}-
+          key: spm-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
 
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj -clonedSourcePackagesDirPath .spm
 
-      # A self-hosted Mac shares its simulators with local work. A fresh simulator per run
-      # keeps other sessions from rebooting or reusing it mid-test.
+      # A fresh simulator per run keeps the test from reusing one that another process booted.
       - name: Create iOS simulator
         id: simulator
         run: |
