@@ -261,6 +261,15 @@ struct HomeView: View {
             }
         }
 
+        if let note = conversionNote {
+            Section {
+                Label(note, systemImage: "arrow.left.arrow.right")
+                    .font(.footnote)
+                    .foregroundStyle(HomeTheme.secondary)
+                    .listRowBackground(Color.clear)
+            }
+        }
+
         if !expenseStore.failingRecurringRules.isEmpty {
             Section {
                 ForEach(expenseStore.failingRecurringRules) { rule in
@@ -370,15 +379,27 @@ struct HomeView: View {
         return "\(prefix), \(dayMonth)"
     }
 
+    /// In the default currency, like the month total, so a day mixing currencies adds up.
     private func dayTotal(for expenses: [ExpenseRecord]) -> Money {
         guard let userId = authSession.userId else {
-            return expenses.first?.money ?? Money(amountMinor: 0, currencyCode: "PLN")
+            return expenses.first?.money ?? Money(amountMinor: 0, currencyCode: AppPreferences.defaultCurrencyCode)
         }
-        let minor = expenses.reduce(0) { partial, expense in
-            partial + expense.acceptedShareMinor(for: userId)
+        return ExpenseStore.makeSummary(expenses: expenses, userId: userId, rates: ExchangeRateStore.shared.rates).totalMine
+    }
+
+    /// Explains totals that include expenses added in another currency.
+    private var conversionNote: String? {
+        let summary = expenseStore.summary
+        let currency = summary.totalMine.currencyCode
+        var parts: [String] = []
+        if summary.convertedCount > 0 {
+            parts.append("Totals are in \(currency). Expenses in other currencies are converted at the exchange rate of the day they were spent.")
         }
-        let currency = expenses.first?.currency ?? "PLN"
-        return Money(amountMinor: minor, currencyCode: currency)
+        if summary.unconvertedCount > 0 {
+            let count = summary.unconvertedCount == 1 ? "1 expense" : "\(summary.unconvertedCount) expenses"
+            parts.append("\(count) in another currency \(summary.unconvertedCount == 1 ? "isn't" : "aren't") counted in \(currency) totals until exchange rates load.")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
     private func expenseRow(_ expense: ExpenseRecord) -> some View {
