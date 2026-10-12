@@ -9,6 +9,7 @@ struct LoamApp: App {
     @AppStorage("loam.appearance") private var appearance: AppAppearance = .system
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
     @AppStorage(AppPreferences.timeZoneKey) private var timeZoneIdentifier = ""
+    @AppStorage(AppPreferences.defaultCurrencyKey) private var defaultCurrency = AppPreferences.fallbackCurrencyCode
     @StateObject private var authSession = AuthSession()
     @StateObject private var expenseStore = ExpenseStore()
     @StateObject private var balanceStore = BalanceStore()
@@ -80,6 +81,10 @@ struct LoamApp: App {
             }
             .onChange(of: authSession.userId) { _, _ in
                 Telemetry.setUser(accountId)
+            }
+            .onChange(of: defaultCurrency) { _, _ in
+                // Totals follow the new currency; expenses keep the one they were added in.
+                expenseStore.recomputeSummary()
             }
             .onChange(of: timeZoneIdentifier) { oldIdentifier, _ in
                 Task {

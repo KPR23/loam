@@ -65,11 +65,12 @@ final class DatePeriodTests: LocalStorageTestCase {
 }
 
 final class AppPreferencesTests: LocalStorageTestCase {
-    func testDefaultCurrencyIsPLNWhileSelectionIsDisabled() {
-        XCTAssertFalse(AppPreferences.allowsCurrencySelection)
+    func testDefaultCurrencyFollowsTheSupportedSelection() {
         XCTAssertEqual(AppPreferences.defaultCurrencyCode, "PLN")
         UserDefaults.standard.set("eur", forKey: AppPreferences.defaultCurrencyKey)
-        XCTAssertEqual(AppPreferences.defaultCurrencyCode, "PLN")
+        XCTAssertEqual(AppPreferences.defaultCurrencyCode, "EUR")
+        UserDefaults.standard.set("USD", forKey: AppPreferences.defaultCurrencyKey)
+        XCTAssertEqual(AppPreferences.defaultCurrencyCode, "USD")
         UserDefaults.standard.set("GBP", forKey: AppPreferences.defaultCurrencyKey)
         XCTAssertEqual(AppPreferences.defaultCurrencyCode, "PLN")
     }
