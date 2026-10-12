@@ -21,7 +21,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Supabase keys migrations by the timestamp prefix alone, so two files sharing one fail
+  # `db push` with a duplicate key even when their names differ. This fails in seconds,
+  # before the Docker stack starts.
+  check-migration-versions:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Reject duplicate versions
+        run: |
+          dups="$(ls supabase/migrations | cut -d_ -f1 | sort | uniq -d)"
+          [ -z "$dups" ] || { echo "Duplicate migration versions: $dups. Rename one with 'supabase migration new'." >&2; exit 1; }
+      - name: Reject migrations older than the base branch's latest
+        if: github.event_name == 'pull_request'
+        run: |
+          base="origin/${{ github.base_ref }}"
+          latest="$(git ls-tree --name-only "$base" supabase/migrations/ | xargs -n1 basename | cut -d_ -f1 | sort | tail -1)"
+          git diff --diff-filter=A --name-only "$base"...HEAD -- supabase/migrations | while read -r file; do
+            version="$(basename "$file" | cut -d_ -f1)"
+            if [[ "$version" < "$latest" || "$version" == "$latest" ]]; then
+              echo "$file is not newer than $latest on ${{ github.base_ref }}. Rebase and rename it with 'supabase migration new'." >&2
+              exit 1
+            fi
+          done
+
   verify-database:
+    needs: check-migration-versions
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     # A normal run takes about 5 minutes; a hung install shouldn't burn half an hour.
     timeout-minutes: 15
