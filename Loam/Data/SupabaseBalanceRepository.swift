@@ -9,8 +9,20 @@ actor SupabaseBalanceRepository: BalanceRepository {
         _ = userId // The RPC always uses auth.uid().
         struct Row: Decodable { let personId: UUID; let displayName: String; let amountMinor: Int; let currency: String
             enum CodingKeys: String, CodingKey { case personId = "person_id", displayName = "display_name", amountMinor = "amount_minor", currency } }
+        async let awaiting = fetchAwaiting()
         let rows: [Row] = try await client.rpc("balance_snapshot").execute().value
-        return BalanceSnapshot(balances: rows.map { PersonBalance(personId: $0.personId, displayName: $0.displayName, amountMinor: $0.amountMinor, currencyCode: $0.currency) })
+        return BalanceSnapshot(
+            balances: rows.map { PersonBalance(personId: $0.personId, displayName: $0.displayName, amountMinor: $0.amountMinor, currencyCode: $0.currency) },
+            awaiting: await awaiting
+        )
+    }
+
+    /// Optional extra: balances still load when it fails.
+    private func fetchAwaiting() async -> [AwaitingBalance] {
+        struct Row: Decodable { let personId: UUID; let amountMinor: Int; let currency: String; let expenseCount: Int
+            enum CodingKeys: String, CodingKey { case personId = "person_id", amountMinor = "amount_minor", currency, expenseCount = "expense_count" } }
+        guard let rows: [Row] = try? await client.rpc("awaiting_acceptance_snapshot").execute().value else { return [] }
+        return rows.map { AwaitingBalance(personId: $0.personId, amountMinor: $0.amountMinor, currencyCode: $0.currency, expenseCount: $0.expenseCount) }
     }
 
     func fetchHistory(for userId: UUID, personId: UUID) async throws -> [BalanceHistoryEntry] {

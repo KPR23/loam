@@ -44,6 +44,19 @@ final class LocalBalanceRepositoryTests: LocalStorageTestCase {
         XCTAssertTrue(snapshot.balances.isEmpty)
     }
 
+    func testUnacceptedSharesTheViewerPaidAreAwaitingAcceptance() async throws {
+        try await store(
+            dinner(paidBy: me, owed: 1500, status: .pending),
+            dinner(paidBy: me, owed: 500, status: .pending),
+            dinner(paidBy: me, owed: 700, status: .rejected),
+            dinner(paidBy: friend, owed: 900, status: .pending)
+        )
+        let mine = try await LocalBalanceRepository().fetchBalances(for: me)
+        XCTAssertEqual(mine.awaiting, [AwaitingBalance(personId: friend, amountMinor: 2000, currencyCode: "PLN", expenseCount: 2)])
+        let theirs = try await LocalBalanceRepository().fetchBalances(for: friend)
+        XCTAssertEqual(theirs.awaiting, [AwaitingBalance(personId: me, amountMinor: 900, currencyCode: "PLN", expenseCount: 1)], "Only the payer waits for an answer")
+    }
+
     func testOpposingDebtsNetOutPerCurrency() async throws {
         try await store(
             dinner(paidBy: me, owed: 1500),

@@ -12,13 +12,36 @@ struct PersonBalance: Identifiable, Codable, Hashable, Sendable {
     var direction: String { amountMinor >= 0 ? "Owes you" : "You owe" }
 }
 
+/// What someone owes the viewer for expenses the viewer paid that they haven't accepted yet.
+/// Balances leave it out until they accept.
+struct AwaitingBalance: Identifiable, Codable, Hashable, Sendable {
+    let personId: UUID
+    let amountMinor: Int
+    let currencyCode: String
+    let expenseCount: Int
+
+    var id: String { "\(personId.uuidString)-\(currencyCode.uppercased())" }
+    var money: Money { Money(amountMinor: amountMinor, currencyCode: currencyCode) }
+}
+
 struct BalanceSnapshot: Codable, Hashable, Sendable {
     var balances: [PersonBalance]
+    var awaiting: [AwaitingBalance] = []
 
     static let empty = BalanceSnapshot(balances: [])
 
     var owedToYou: [Money] { totals(where: { $0.amountMinor > 0 }, sign: 1) }
     var youOwe: [Money] { totals(where: { $0.amountMinor < 0 }, sign: -1) }
+
+    var awaitingTotals: [Money] {
+        Dictionary(grouping: awaiting, by: { $0.currencyCode.uppercased() })
+            .map { currency, rows in Money(amountMinor: rows.reduce(0) { $0 + $1.amountMinor }, currencyCode: currency) }
+            .sorted { $0.currencyCode < $1.currencyCode }
+    }
+
+    func awaiting(from personId: UUID) -> [AwaitingBalance] {
+        awaiting.filter { $0.personId == personId }.sorted { $0.currencyCode < $1.currencyCode }
+    }
 
     private func totals(where include: (PersonBalance) -> Bool, sign: Int) -> [Money] {
         Dictionary(grouping: balances.filter(include), by: { $0.currencyCode.uppercased() })
