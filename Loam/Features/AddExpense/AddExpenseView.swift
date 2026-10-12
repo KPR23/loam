@@ -18,7 +18,7 @@ struct AddExpenseView: View {
 
     @State private var step: AddExpenseStep = .amount
     @State private var amountText = ""
-    @State private var category: ExpenseCategory = .groceries
+    @State private var category: SpendCategory = .builtIn(.groceries)
     @State private var title = ""
     @State private var note = ""
     @State private var location: ExpenseLocation?
@@ -61,7 +61,7 @@ struct AddExpenseView: View {
         _amountText = State(
             initialValue: MoneyFormatter.editableAmount(from: expense.money)
         )
-        _category = State(initialValue: expense.category)
+        _category = State(initialValue: expense.spendCategory)
         _title = State(initialValue: expense.title ?? "")
         _note = State(initialValue: expense.note ?? "")
         _location = State(initialValue: expense.location)
@@ -610,7 +610,8 @@ struct AddExpenseView: View {
                 ownerUserId: userId,
                 amountMinor: money.amountMinor,
                 currency: currencyCode,
-                category: category,
+                category: category.builtInCategory,
+                customCategory: category.customCategory,
                 title: title.nilIfBlank,
                 note: note.nilIfBlank,
                 location: location,
@@ -628,7 +629,8 @@ struct AddExpenseView: View {
             try await expenseStore.addSplit(
                 amountMinor: money.amountMinor,
                 currency: currencyCode,
-                category: category,
+                category: category.builtInCategory,
+                customCategory: category.customCategory,
                 title: title.nilIfBlank,
                 note: note,
                 location: location,
@@ -647,7 +649,8 @@ struct AddExpenseView: View {
             try await expenseStore.addPersonal(
                 amountMinor: money.amountMinor,
                 currency: currencyCode,
-                category: category,
+                category: category.builtInCategory,
+                customCategory: category.customCategory,
                 title: title.nilIfBlank,
                 note: note,
                 location: location,
@@ -669,7 +672,8 @@ struct AddExpenseView: View {
             try await expenseStore.update(
                 expenseId: expense.id,
                 amountMinor: money.amountMinor,
-                category: category,
+                category: category.builtInCategory,
+                customCategory: category.customCategory,
                 title: title.nilIfBlank,
                 note: note,
                 location: location,
@@ -687,7 +691,8 @@ struct AddExpenseView: View {
             try await expenseStore.update(
                 expenseId: expense.id,
                 amountMinor: money.amountMinor,
-                category: category,
+                category: category.builtInCategory,
+                customCategory: category.customCategory,
                 title: title.nilIfBlank,
                 note: note,
                 location: location,
@@ -713,7 +718,8 @@ struct AddExpenseView: View {
         try await expenseStore.update(
             expenseId: expense.id,
             amountMinor: money.amountMinor,
-            category: category,
+            category: category.builtInCategory,
+            customCategory: category.customCategory,
             title: title.nilIfBlank,
             note: note,
             location: location,

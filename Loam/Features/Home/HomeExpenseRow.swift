@@ -131,10 +131,10 @@ struct HomeExpenseRow: View {
     }
 
     private var categoryIcon: some View {
-        Image(systemName: expense.category.systemImage)
+        Image(systemName: expense.spendCategory.systemImage)
             .font(.system(size: 18, weight: .semibold))
             .symbolRenderingMode(.monochrome)
-            .foregroundStyle(expense.category.color)
+            .foregroundStyle(expense.spendCategory.color)
             .frame(width: 26, height: 26)
             .accessibilityHidden(true)
     }

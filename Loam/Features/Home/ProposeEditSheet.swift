@@ -2,7 +2,7 @@ import SwiftUI
 
 private struct ProposeEditFormState: Equatable {
     var amountText: String
-    var category: ExpenseCategory
+    var category: SpendCategory
     var title: String
     var note: String
     var location: ExpenseLocation?
@@ -21,7 +21,7 @@ private struct ProposeEditFormState: Equatable {
         let splitSeed = SplitFormSeed.from(expense: expense, myUserId: myUserId)
         return ProposeEditFormState(
             amountText: MoneyFormatter.editableAmount(from: expense.money),
-            category: expense.category,
+            category: expense.spendCategory,
             title: expense.title ?? "",
             note: expense.note ?? "",
             location: expense.location,
@@ -99,7 +99,11 @@ struct ProposeEditSheet: View {
                 Section("Details") {
                     TextField("Title (optional)", text: $formState.title)
                         .textInputAutocapitalization(.sentences)
-                    ExpenseCategoryPicker(category: $formState.category)
+                    // Only the creator's categories can file their expense, so offer the built-in ones and the current one.
+                    ExpenseCategoryPicker(
+                        category: $formState.category,
+                        options: ExpenseCategory.allCases.map(SpendCategory.builtIn) + [expense.spendCategory].filter { $0.customCategory != nil }
+                    )
                     DatePicker("Date", selection: $formState.spentAt, displayedComponents: .date)
                     ExpenseLocationPicker(location: $formState.location)
                     TextField("Note", text: $formState.note, axis: .vertical)
@@ -200,7 +204,7 @@ struct ProposeEditSheet: View {
                 for: expense,
                 userId: myUserId,
                 amountMinor: amountMinor,
-                category: formState.category,
+                category: formState.category.builtInCategory,
                 title: trimmedTitle.isEmpty ? nil : trimmedTitle,
                 note: trimmedNote.isEmpty ? nil : trimmedNote,
                 location: formState.location,

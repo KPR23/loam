@@ -37,7 +37,7 @@ struct EditProposalReviewCard: View {
                 if expense.category != proposal.category {
                     changeRow(
                         label: "Category",
-                        from: expense.category.displayName,
+                        from: expense.spendCategory.displayName,
                         to: proposal.category.displayName
                     )
                 }

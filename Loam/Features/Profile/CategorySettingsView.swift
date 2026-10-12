@@ -1,37 +1,217 @@
 import SwiftUI
 
-/// Pro: rename the built-in categories and change their icon and color.
+/// Pro: add your own categories, remove built-in ones from the picker, and rename,
+/// recolor or re-icon the built-in ones.
 struct CategorySettingsView: View {
+    private var store: CustomCategoryStore { .shared }
+    @State private var pendingDeletion: CustomCategory?
+    @State private var error: String?
+
+    private var visibleBuiltIns: [ExpenseCategory] {
+        ExpenseCategory.allCases.filter { !store.hidden.contains($0) }
+    }
+
+    private var hiddenBuiltIns: [ExpenseCategory] {
+        ExpenseCategory.allCases.filter { store.hidden.contains($0) }
+    }
+
     var body: some View {
         List {
             Section {
-                ForEach(ExpenseCategory.allCases) { category in
+                ForEach(store.categories) { category in
+                    NavigationLink {
+                        CustomCategoryEditorView(category: category)
+                    } label: {
+                        CategoryRow(name: category.name, symbol: category.symbol, color: category.color)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        // Avoid `role: .destructive` — it removes the row before the confirmation.
+                        Button("Delete", systemImage: "trash") { pendingDeletion = category }
+                            .tint(.red)
+                    }
+                }
+                if store.categories.count < CustomCategoryStore.maxCount {
+                    NavigationLink {
+                        CustomCategoryEditorView(category: nil)
+                    } label: {
+                        Label("Add category", systemImage: "plus")
+                    }
+                }
+            } header: {
+                Text("Your categories")
+            } footer: {
+                Text("Friends see your categories on expenses you share with them.")
+            }
+
+            Section {
+                ForEach(visibleBuiltIns) { category in
                     NavigationLink {
                         CategoryEditorView(category: category)
                     } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: category.systemImage)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(category.color)
-                                .frame(width: 26, height: 26)
-                                .accessibilityHidden(true)
-                            Text(category.displayName)
-                                .foregroundStyle(HomeTheme.text)
-                            Spacer(minLength: 0)
-                            if CategoryCustomizer.shared.savedStyle(for: category) != nil {
-                                Text("Customized")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
+                        CategoryRow(
+                            name: category.displayName,
+                            symbol: category.systemImage,
+                            color: category.color,
+                            detail: CategoryCustomizer.shared.savedStyle(for: category) != nil ? "Customized" : nil
+                        )
+                    }
+                    .swipeActions(edge: .trailing) {
+                        if category != .other {
+                            Button("Remove", systemImage: "minus.circle") { setHidden(category, true) }
+                                .tint(.red)
                         }
                     }
                 }
+            } header: {
+                Text("Built-in")
             } footer: {
-                Text("Your names, icons and colors show up on this device wherever a category appears.")
+                Text("Swipe to remove a category from the list you pick from. Expenses already in it keep it. Names, icons and colors you change here show up on this device.")
+            }
+
+            if !hiddenBuiltIns.isEmpty {
+                Section("Removed") {
+                    ForEach(hiddenBuiltIns) { category in
+                        HStack {
+                            CategoryRow(name: category.displayName, symbol: category.systemImage, color: category.color)
+                            Button("Restore") { setHidden(category, false) }
+                                .buttonStyle(.borderless)
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("Categories")
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "Delete \u{201C}\(pendingDeletion?.name ?? "")\u{201D}?",
+            isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingDeletion
+        ) { category in
+            Button("Delete category", role: .destructive) {
+                Task {
+                    do { try await store.delete(category) } catch { self.error = error.localizedDescription }
+                }
+            }
+        } message: { _ in
+            Text("Its expenses move to Other, for you and for friends you shared them with.")
+        }
+        .alert("Couldn't update categories", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(error ?? "")
+        }
+    }
+
+    private func setHidden(_ category: ExpenseCategory, _ isHidden: Bool) {
+        Task {
+            do { try await store.setHidden(category, isHidden) } catch { self.error = error.localizedDescription }
+        }
+    }
+}
+
+private struct CategoryRow: View {
+    let name: String
+    let symbol: String
+    let color: Color
+    var detail: String? = nil
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 26, height: 26)
+                .accessibilityHidden(true)
+            Text(name)
+                .foregroundStyle(HomeTheme.text)
+            Spacer(minLength: 0)
+            if let detail {
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// Creates or edits one of the member's own categories.
+private struct CustomCategoryEditorView: View {
+    let category: CustomCategory?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var symbol: String
+    @State private var colorHex: String
+    @State private var isSaving = false
+    @State private var error: String?
+
+    init(category: CustomCategory?) {
+        self.category = category
+        _name = State(initialValue: category?.name ?? "")
+        _symbol = State(initialValue: category?.symbol ?? "star.fill")
+        _colorHex = State(initialValue: category?.colorHex ?? CategoryStyleOptions.colors[0].hex)
+    }
+
+    private var trimmedName: String {
+        String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(CategoryCustomizer.maxNameLength))
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                CategoryPreview(name: trimmedName.isEmpty ? "New category" : trimmedName, symbol: symbol, color: Color(hex: colorHex) ?? .gray)
+            }
+            Section("Name") {
+                TextField("Pets, Gym, Kids…", text: $name)
+                    .textInputAutocapitalization(.words)
+                    .onChange(of: name) { _, newValue in
+                        if newValue.count > CategoryCustomizer.maxNameLength {
+                            name = String(newValue.prefix(CategoryCustomizer.maxNameLength))
+                        }
+                    }
+            }
+            CategoryColorSection(colorHex: $colorHex, defaultColor: nil)
+            CategoryIconSection(symbol: $symbol, options: CategoryStyleOptions.symbols, color: Color(hex: colorHex) ?? .gray)
+        }
+        .navigationTitle(category == nil ? "New category" : "Edit category")
+        .navigationBarTitleDisplayMode(.inline)
+        .disabled(isSaving)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
+                    Task { await save() }
+                } label: {
+                    SavingActionLabel(title: "Save", isSaving: isSaving)
+                }
+                .fontWeight(.semibold)
+                .disabled(trimmedName.isEmpty || isSaving)
+            }
+        }
+        .alert("Couldn't save category", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(error ?? "")
+        }
+    }
+
+    private func save() async {
+        isSaving = true
+        defer { isSaving = false }
+        let saved = CustomCategory(
+            id: category?.id ?? UUID(),
+            ownerId: category?.ownerId ?? UUID(),
+            name: trimmedName,
+            symbol: symbol,
+            colorHex: colorHex
+        )
+        do {
+            try await CustomCategoryStore.shared.save(saved)
+            LoamFeedback.success()
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 }
 
@@ -62,17 +242,7 @@ private struct CategoryEditorView: View {
     var body: some View {
         Form {
             Section {
-                HStack(spacing: 12) {
-                    Image(systemName: symbol)
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(previewColor)
-                        .frame(width: 44, height: 44)
-                        .background(previewColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .accessibilityHidden(true)
-                    Text(trimmedName.isEmpty ? category.defaultDisplayName : trimmedName)
-                        .font(.system(.title3, design: .rounded).weight(.semibold))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                CategoryPreview(name: trimmedName.isEmpty ? category.defaultDisplayName : trimmedName, symbol: symbol, color: previewColor)
             }
 
             Section("Name") {
@@ -85,39 +255,8 @@ private struct CategoryEditorView: View {
                     }
             }
 
-            Section("Color") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 6), spacing: 12) {
-                    swatch(hex: "", color: category.defaultColor, label: "Default")
-                    ForEach(CategoryStyleOptions.colors, id: \.hex) { option in
-                        swatch(hex: option.hex, color: Color(hex: option.hex) ?? .gray, label: option.name)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-
-            Section("Icon") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 6), spacing: 12) {
-                    ForEach(iconOptions, id: \.self) { option in
-                        Button {
-                            LoamFeedback.selection()
-                            symbol = option
-                        } label: {
-                            Image(systemName: option)
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(symbol == option ? previewColor : Color.secondary)
-                                .frame(width: 40, height: 40)
-                                .background(
-                                    symbol == option ? previewColor.opacity(0.16) : Color.clear,
-                                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(option)
-                        .accessibilityAddTraits(symbol == option ? .isSelected : [])
-                    }
-                }
-                .padding(.vertical, 4)
-            }
+            CategoryColorSection(colorHex: $colorHex, defaultColor: category.defaultColor)
+            CategoryIconSection(symbol: $symbol, options: iconOptions, color: previewColor)
 
             if CategoryCustomizer.shared.savedStyle(for: category) != nil {
                 Section {
@@ -156,6 +295,46 @@ private struct CategoryEditorView: View {
             colorHex: Color(hex: colorHex) == nil ? nil : colorHex
         )
     }
+}
+
+private struct CategoryPreview: View {
+    let name: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 44, height: 44)
+                .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityHidden(true)
+            Text(name)
+                .font(.system(.title3, design: .rounded).weight(.semibold))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// With a `defaultColor`, an empty hex means the built-in color.
+private struct CategoryColorSection: View {
+    @Binding var colorHex: String
+    let defaultColor: Color?
+
+    var body: some View {
+        Section("Color") {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 6), spacing: 12) {
+                if let defaultColor {
+                    swatch(hex: "", color: defaultColor, label: "Default")
+                }
+                ForEach(CategoryStyleOptions.colors, id: \.hex) { option in
+                    swatch(hex: option.hex, color: Color(hex: option.hex) ?? .gray, label: option.name)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
 
     private func swatch(hex: String, color: Color, label: String) -> some View {
         Button {
@@ -176,5 +355,37 @@ private struct CategoryEditorView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(label)
         .accessibilityAddTraits(colorHex == hex ? .isSelected : [])
+    }
+}
+
+private struct CategoryIconSection: View {
+    @Binding var symbol: String
+    let options: [String]
+    let color: Color
+
+    var body: some View {
+        Section("Icon") {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 6), spacing: 12) {
+                ForEach(options, id: \.self) { option in
+                    Button {
+                        LoamFeedback.selection()
+                        symbol = option
+                    } label: {
+                        Image(systemName: option)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(symbol == option ? color : Color.secondary)
+                            .frame(width: 40, height: 40)
+                            .background(
+                                symbol == option ? color.opacity(0.16) : Color.clear,
+                                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(option)
+                    .accessibilityAddTraits(symbol == option ? .isSelected : [])
+                }
+            }
+            .padding(.vertical, 4)
+        }
     }
 }
