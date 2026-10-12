@@ -11,13 +11,16 @@ struct ExchangeRates: Codable, Equatable, Sendable {
     static let empty = ExchangeRates()
 
     /// Converts minor units at the rate of `date`, or of the closest earlier day:
-    /// the ECB publishes nothing on weekends and holidays. Nil until rates for that time are loaded.
+    /// the ECB publishes nothing on weekends and holidays. Nil until rates for that time are loaded:
+    /// an earlier day's rate only stands in once the date's month has been downloaded, or a later
+    /// rate shows nothing was published in between.
     func convert(_ amountMinor: Int, from source: String, to target: String, on date: Date, calendar: Calendar) -> Int? {
         let from = source.uppercased()
         let to = target.uppercased()
         if from == to { return amountMinor }
         let day = Self.dayKey(for: date, calendar: calendar)
-        guard let key = days.keys.filter({ $0 <= day }).max(),
+        guard fetchedAt[String(day.prefix(7))] != nil || days.keys.contains(where: { $0 > day }),
+              let key = days.keys.filter({ $0 <= day }).max(),
               let table = days[key],
               let fromRate = from == "EUR" ? 1.0 : table[from],
               let toRate = to == "EUR" ? 1.0 : table[to],
