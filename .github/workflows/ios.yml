@@ -38,7 +38,8 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: macos-26
-    timeout-minutes: 15
+    # GitHub-hosted runners need about 9 minutes to build and 6 to test, so 15 cut runs off mid-test.
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
