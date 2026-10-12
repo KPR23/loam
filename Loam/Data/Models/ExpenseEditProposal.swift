@@ -17,6 +17,9 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
     var message: String?
     var createdAt: Date
     var respondedAt: Date?
+    /// Moves the expense out of its custom category into Other. `category` alone can't say
+    /// so: `.other` also means keeping the custom category. Optional so older saved proposals decode.
+    var clearsCustomCategory: Bool?
 
     init(
         id: UUID = UUID(),
@@ -34,7 +37,8 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         shares: [ExpenseShareRecord],
         message: String? = nil,
         createdAt: Date = Date(),
-        respondedAt: Date? = nil
+        respondedAt: Date? = nil,
+        clearsCustomCategory: Bool = false
     ) {
         self.id = id
         self.expenseId = expenseId
@@ -52,6 +56,12 @@ struct ExpenseEditProposal: Identifiable, Codable, Hashable, Sendable {
         self.message = message
         self.createdAt = createdAt
         self.respondedAt = respondedAt
+        self.clearsCustomCategory = clearsCustomCategory
+    }
+
+    /// Whether accepting it changes the expense's category.
+    func changesCategory(of expense: ExpenseRecord) -> Bool {
+        expense.category != category || (clearsCustomCategory == true && expense.customCategory != nil)
     }
 
     func toExpenseRecord(currency: String, createdBy: UUID) -> ExpenseRecord {
@@ -93,6 +103,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
     var message: String?
     var createdAt: Date?
     var respondedAt: Date?
+    var clearsCustomCategory: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -111,6 +122,7 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
         case message
         case createdAt = "created_at"
         case respondedAt = "responded_at"
+        case clearsCustomCategory = "clears_custom_category"
     }
 
     func toRecord() -> ExpenseEditProposal? {
@@ -133,7 +145,8 @@ struct ExpenseEditProposalDTO: Codable, Sendable {
             },
             message: message,
             createdAt: createdAt ?? Date(),
-            respondedAt: respondedAt
+            respondedAt: respondedAt,
+            clearsCustomCategory: clearsCustomCategory ?? false
         )
     }
 }

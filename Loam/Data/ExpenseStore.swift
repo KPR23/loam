@@ -642,7 +642,8 @@ final class ExpenseStore: ObservableObject {
         spentAt: Date,
         paidBy: UUID,
         shares: [ExpenseShareRecord],
-        message: String?
+        message: String?,
+        clearsCustomCategory: Bool = false
     ) async throws {
         let proposal = ExpenseEditProposal(
             expenseId: expense.id,
@@ -656,7 +657,8 @@ final class ExpenseStore: ObservableObject {
             spentAt: spentAt,
             paidBy: paidBy,
             shares: shares,
-            message: message
+            message: message,
+            clearsCustomCategory: clearsCustomCategory
         )
         let activeRepository = repository(for: expense)
         _ = try await LoamErrorCapture.withCapture("expense.edit_proposal_create_failed") {

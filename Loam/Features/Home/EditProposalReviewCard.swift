@@ -34,7 +34,7 @@ struct EditProposalReviewCard: View {
                         )
                     )
                 }
-                if expense.category != proposal.category {
+                if proposal.changesCategory(of: expense) {
                     changeRow(
                         label: "Category",
                         from: expense.spendCategory.displayName,
@@ -164,7 +164,7 @@ struct EditProposalReviewCard: View {
     static func changedFieldLabels(expense: ExpenseRecord, proposal: ExpenseEditProposal) -> [String] {
         var labels: [String] = []
         if expense.amountMinor != proposal.amountMinor { labels.append("Amount") }
-        if expense.category != proposal.category { labels.append("Category") }
+        if proposal.changesCategory(of: expense) { labels.append("Category") }
         if normalizedNote(expense.title) != normalizedNote(proposal.title) { labels.append("Title") }
         if expense.spentAt != proposal.spentAt { labels.append("Date") }
         if normalizedNote(expense.note) != normalizedNote(proposal.note) { labels.append("Note") }

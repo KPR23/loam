@@ -362,9 +362,14 @@ private struct CreateEditProposalParams: Encodable {
 private struct ProposalPayload: Encodable {
     let amountMinor: Int; let category: ExpenseCategory; let title: String?; let note: String?
     let location: ExpenseLocation?; let spentAt: String; let paidBy: UUID; let shares: [ProposalShareDTO]; let message: String?
-    enum CodingKeys: String, CodingKey { case amountMinor = "amount_minor", spentAt = "spent_at", paidBy = "paid_by", category, title, note, location, shares, message }
+    let clearsCustomCategory: Bool
+    enum CodingKeys: String, CodingKey {
+        case amountMinor = "amount_minor", spentAt = "spent_at", paidBy = "paid_by", category, title, note, location, shares, message
+        case clearsCustomCategory = "clears_custom_category"
+    }
     init(_ p: ExpenseEditProposal) {
         amountMinor = p.amountMinor; category = p.category; title = p.title; note = p.note; location = p.location
+        clearsCustomCategory = p.clearsCustomCategory ?? false
         spentAt = CalendarDateCodec.string(from: p.spentAt); paidBy = p.paidBy; message = p.message
         shares = p.shares.map { ProposalShareDTO(userId: $0.userId, amountMinor: $0.amountMinor) }
     }

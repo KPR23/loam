@@ -211,7 +211,9 @@ struct ProposeEditSheet: View {
                 spentAt: formState.spentAt,
                 paidBy: formState.paidByUserId,
                 shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) },
-                message: formState.message.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+                message: formState.message.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+                // Built-in Other on an expense in a custom category moves it out; `.other` alone keeps it.
+                clearsCustomCategory: expense.customCategory != nil && formState.category == .builtIn(.other)
             )
             LoamFeedback.success()
             dismiss()
