@@ -86,7 +86,8 @@ jobs:
         # v2.99.0 defaults to 17.6.1.107, which segfaults when a role calls a function it can't execute.
         run: mkdir -p supabase/.temp && printf 17.6.1.166 > supabase/.temp/postgres-version
       - name: Replay migrations on a clean database
-        run: supabase start
+        # The database tests never touch these services, so skipping them speeds up the start.
+        run: supabase start -x studio,logflare,vector,imgproxy,mailpit,edge-runtime,realtime,postgres-meta
       - name: Verify authorization and financial invariants
         run: supabase test db
       - name: Stop local services
