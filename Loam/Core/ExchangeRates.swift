@@ -13,14 +13,16 @@ struct ExchangeRates: Codable, Equatable, Sendable {
     /// Converts minor units at the rate of `date`, or of the closest earlier day:
     /// the ECB publishes nothing on weekends and holidays. Nil until rates for that time are loaded:
     /// an earlier day's rate only stands in once the date's month has been downloaded, or a later
-    /// rate shows nothing was published in between.
+    /// rate shows nothing was published in between, and never from more than `fallbackDays` before.
     func convert(_ amountMinor: Int, from source: String, to target: String, on date: Date, calendar: Calendar) -> Int? {
         let from = source.uppercased()
         let to = target.uppercased()
         if from == to { return amountMinor }
         let day = Self.dayKey(for: date, calendar: calendar)
+        let earliest = calendar.date(byAdding: .day, value: -Self.fallbackDays, to: date).map { Self.dayKey(for: $0, calendar: calendar) } ?? day
         guard fetchedAt[String(day.prefix(7))] != nil || days.keys.contains(where: { $0 > day }),
               let key = days.keys.filter({ $0 <= day }).max(),
+              key >= earliest,
               let table = days[key],
               let fromRate = from == "EUR" ? 1.0 : table[from],
               let toRate = to == "EUR" ? 1.0 : table[to],
@@ -28,6 +30,9 @@ struct ExchangeRates: Codable, Equatable, Sendable {
         else { return nil }
         return Int((Double(amountMinor) * toRate / fromRate).rounded())
     }
+
+    /// Longer than any run of ECB closing days (Easter is four), shorter than a missing month.
+    static let fallbackDays = 7
 
     static func dayKey(for date: Date, calendar: Calendar) -> String {
         let components = calendar.dateComponents([.year, .month, .day], from: date)
