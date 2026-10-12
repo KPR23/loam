@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 /// The switches behind push notifications. Each governs a group of Activity
 /// event kinds; the backend applies the same grouping when it decides what to send.
@@ -28,12 +28,23 @@ enum NotificationCategory: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Drawn white on `tint`, like a Settings row.
     var symbolName: String {
         switch self {
         case .requests: "tray.and.arrow.down.fill"
         case .replies: "arrowshape.turn.up.left.fill"
-        case .changes: "pencil.circle.fill"
-        case .repayments: "banknote.fill"
+        case .changes: "pencil"
+        case .repayments: RepaymentRecord.symbolName
+        }
+    }
+
+    /// Matches the Activity badges of the events in this category.
+    var tint: Color {
+        switch self {
+        case .requests: .blue
+        case .replies: .green
+        case .changes: .orange
+        case .repayments: .teal
         }
     }
 
