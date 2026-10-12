@@ -10,7 +10,7 @@ protocol ActivityRepository: Sendable {
     /// Unread events `userId` hasn't seen yet; the tab and app icon badge show it.
     func unseenCount(for userId: UUID) async throws -> Int
     /// Unread events up to `through` stop counting toward the badge but stay unread.
-    func markSeen(through: Date, userId: UUID) async throws
+    func markSeen(_ eventIds: [UUID], userId: UUID) async throws
     /// IDs that are not `userId`'s events are ignored.
     func markRead(_ eventIds: [UUID], userId: UUID) async throws
 }
