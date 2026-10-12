@@ -3,6 +3,8 @@ import SwiftUI
 /// Pro: add your own categories, remove built-in ones from the picker, and rename,
 /// recolor or re-icon the built-in ones.
 struct CategorySettingsView: View {
+    @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var expenseStore: ExpenseStore
     private var store: CustomCategoryStore { .shared }
     @State private var pendingDeletion: CustomCategory?
     @State private var error: String?
@@ -90,7 +92,11 @@ struct CategorySettingsView: View {
         ) { category in
             Button("Delete category", role: .destructive) {
                 Task {
-                    do { try await store.delete(category) } catch { self.error = error.localizedDescription }
+                    do {
+                        try await store.delete(category)
+                        // Loaded expenses still hold the deleted category; reload them under Other.
+                        await expenseStore.refresh(userId: authSession.userId)
+                    } catch { self.error = error.localizedDescription }
                 }
             }
         } message: { _ in
@@ -139,6 +145,8 @@ private struct CategoryRow: View {
 private struct CustomCategoryEditorView: View {
     let category: CustomCategory?
 
+    @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var expenseStore: ExpenseStore
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var symbol: String
@@ -207,6 +215,8 @@ private struct CustomCategoryEditorView: View {
         )
         do {
             try await CustomCategoryStore.shared.save(saved)
+            // Loaded expenses hold a copy of the category; reload them to show the new name, icon and color.
+            if category != nil { await expenseStore.refresh(userId: authSession.userId) }
             LoamFeedback.success()
             dismiss()
         } catch {
