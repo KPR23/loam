@@ -73,12 +73,15 @@ struct HomeView: View {
                 await expenseStore.refresh(userId: authSession.userId)
             }
             .overlay(alignment: .bottomTrailing) {
-                AddExpenseFAB {
-                    Telemetry.capture(.addExpenseOpened(source: .fab))
-                    showAddExpense = true
+                // The empty state has its own add button; a second one would compete with it.
+                if !showsCurrentMonthEmptyState {
+                    AddExpenseFAB {
+                        Telemetry.capture(.addExpenseOpened(source: .fab))
+                        showAddExpense = true
+                    }
+                    .padding(.trailing, AddExpenseFABLayout.trailingPadding)
+                    .padding(.bottom, AddExpenseFABLayout.bottomPadding)
                 }
-                .padding(.trailing, AddExpenseFABLayout.trailingPadding)
-                .padding(.bottom, AddExpenseFABLayout.bottomPadding)
             }
         }
         .sheet(isPresented: $showAddExpense) {
@@ -279,6 +282,12 @@ struct HomeView: View {
                     .foregroundStyle(.red)
             }
         }
+    }
+
+    private var showsCurrentMonthEmptyState: Bool {
+        expenseStore.period == .currentMonth
+            && expenseStore.expenses.isEmpty
+            && !expenseStore.isLoading
     }
 
     @ViewBuilder
