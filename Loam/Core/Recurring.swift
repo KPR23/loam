@@ -99,6 +99,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
     var amountMinor: Int
     var currency: String
     var category: ExpenseCategory
+    var customCategory: CustomCategory?
     var title: String?
     var note: String?
     var location: ExpenseLocation?
@@ -122,6 +123,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         amountMinor: Int,
         currency: String = "PLN",
         category: ExpenseCategory,
+        customCategory: CustomCategory? = nil,
         title: String? = nil,
         note: String? = nil,
         location: ExpenseLocation? = nil,
@@ -142,7 +144,8 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         self.version = version
         self.amountMinor = amountMinor
         self.currency = currency
-        self.category = category
+        self.category = customCategory == nil ? category : .other
+        self.customCategory = customCategory
         self.title = title
         self.note = note
         self.location = location
@@ -158,7 +161,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
 
     var displayTitle: String {
         let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? category.displayName : trimmed
+        return trimmed.isEmpty ? (customCategory?.name ?? category.displayName) : trimmed
     }
 
     /// Rules saved before the payer and split lived on the rule took them,
@@ -167,6 +170,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         amountMinor = expense.amountMinor
         currency = expense.currency
         category = expense.category
+        customCategory = expense.customCategory
         title = expense.title
         note = expense.note
         location = expense.location
@@ -237,6 +241,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         case amountMinor
         case currency
         case category
+        case customCategory
         case title
         case note
         case location
@@ -260,6 +265,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
         version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         currency = try container.decode(String.self, forKey: .currency)
         category = try container.decode(ExpenseCategory.self, forKey: .category)
+        customCategory = try container.decodeIfPresent(CustomCategory.self, forKey: .customCategory)
         title = try container.decodeIfPresent(String.self, forKey: .title)
         note = try container.decodeIfPresent(String.self, forKey: .note)
         location = try container.decodeIfPresent(ExpenseLocation.self, forKey: .location)
@@ -334,6 +340,7 @@ enum RecurringMaterializer {
             amountMinor: amountMinor,
             currency: currency,
             category: category,
+            customCategory: rule.customCategory,
             title: title,
             note: note,
             location: location,
@@ -365,6 +372,7 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
     var nextOccurrence: String
     var skippedDates: [String]
     var isActive: Bool
+    var customCategoryId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -384,6 +392,32 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
         case nextOccurrence = "next_occurrence"
         case skippedDates = "skipped_dates"
         case isActive = "is_active"
+        case customCategoryId = "custom_category_id"
+    }
+
+    /// Like the synthesized encoding, but `custom_category_id` is always sent, as null
+    /// when there is none: the server keeps the current one only when the key is missing.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(ownerUserId, forKey: .ownerUserId)
+        try container.encode(paidBy, forKey: .paidBy)
+        try container.encode(shares, forKey: .shares)
+        try container.encodeIfPresent(version, forKey: .version)
+        try container.encode(amountMinor, forKey: .amountMinor)
+        try container.encode(currency, forKey: .currency)
+        try container.encode(category, forKey: .category)
+        try container.encodeIfPresent(title, forKey: .title)
+        try container.encodeIfPresent(note, forKey: .note)
+        try container.encodeIfPresent(location, forKey: .location)
+        try container.encode(intervalUnit, forKey: .intervalUnit)
+        try container.encode(intervalCount, forKey: .intervalCount)
+        try container.encode(startDate, forKey: .startDate)
+        try container.encodeIfPresent(endDate, forKey: .endDate)
+        try container.encode(nextOccurrence, forKey: .nextOccurrence)
+        try container.encode(skippedDates, forKey: .skippedDates)
+        try container.encode(isActive, forKey: .isActive)
+        try container.encode(customCategoryId, forKey: .customCategoryId)
     }
 
     init(from record: RecurringRuleRecord) {
@@ -405,6 +439,7 @@ struct RecurringRuleInsertDTO: Encodable, Sendable {
         nextOccurrence = CalendarDateCodec.string(from: record.nextOccurrence)
         skippedDates = record.skippedDates.map { CalendarDateCodec.string(from: $0) }
         isActive = record.isActive
+        customCategoryId = record.customCategory?.id
     }
 }
 
@@ -428,6 +463,7 @@ struct RecurringRuleDTO: Decodable, Sendable {
     var skippedDates: [String]?
     var isActive: Bool
     var failure: String?
+    var customCategory: CustomCategory?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -448,6 +484,7 @@ struct RecurringRuleDTO: Decodable, Sendable {
         case skippedDates = "skipped_dates"
         case isActive = "is_active"
         case failure
+        case customCategory = "custom_category"
     }
 
     func toRecord() -> RecurringRuleRecord? {
@@ -465,6 +502,7 @@ struct RecurringRuleDTO: Decodable, Sendable {
             amountMinor: amountMinor,
             currency: currency,
             category: category,
+            customCategory: customCategory,
             title: title,
             note: note,
             location: location,

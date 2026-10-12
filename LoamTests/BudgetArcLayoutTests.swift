@@ -65,16 +65,16 @@ final class BudgetArcLayoutTests: XCTestCase {
         ]
         let total = 36
         let counts = BudgetArcFill.tileCounts(total: total, slices: slices)
-        XCTAssertEqual(counts[.groceries], 18)
-        XCTAssertEqual(counts[.dining], 11)
-        XCTAssertEqual(counts[.transport], 7)
+        XCTAssertEqual(counts[.builtIn(.groceries)], 18)
+        XCTAssertEqual(counts[.builtIn(.dining)], 11)
+        XCTAssertEqual(counts[.builtIn(.transport)], 7)
         XCTAssertEqual(counts.values.reduce(0, +), total)
 
-        XCTAssertEqual(BudgetArcFill.category(forTile: 0, total: total, slices: slices), .groceries)
-        XCTAssertEqual(BudgetArcFill.category(forTile: 17, total: total, slices: slices), .groceries)
-        XCTAssertEqual(BudgetArcFill.category(forTile: 18, total: total, slices: slices), .dining)
-        XCTAssertEqual(BudgetArcFill.category(forTile: 28, total: total, slices: slices), .dining)
-        XCTAssertEqual(BudgetArcFill.category(forTile: 29, total: total, slices: slices), .transport)
+        XCTAssertEqual(BudgetArcFill.category(forTile: 0, total: total, slices: slices), .builtIn(.groceries))
+        XCTAssertEqual(BudgetArcFill.category(forTile: 17, total: total, slices: slices), .builtIn(.groceries))
+        XCTAssertEqual(BudgetArcFill.category(forTile: 18, total: total, slices: slices), .builtIn(.dining))
+        XCTAssertEqual(BudgetArcFill.category(forTile: 28, total: total, slices: slices), .builtIn(.dining))
+        XCTAssertEqual(BudgetArcFill.category(forTile: 29, total: total, slices: slices), .builtIn(.transport))
         XCTAssertNil(BudgetArcFill.category(forTile: 0, total: total, slices: []))
     }
 

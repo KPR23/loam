@@ -67,6 +67,9 @@ struct LoamApp: App {
             .task(id: authSession.userId) {
                 await connectionStore.refresh(userId: authSession.userId)
             }
+            .task(id: authSession.userId) {
+                await CustomCategoryStore.shared.load(userId: authSession.userId)
+            }
             .task(id: accountId) {
                 await subscriptionStore.identify(userId: accountId)
             }

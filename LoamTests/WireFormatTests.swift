@@ -76,6 +76,25 @@ final class WireFormatTests: LocalStorageTestCase {
         XCTAssertNil(payload["status"], "The server assigns consent")
     }
 
+    func testCustomCategoryIsEmbeddedOnReadAndSentAsAnIdOnSave() throws {
+        let categoryId = UUID()
+        let row = try decode(ExpenseDTO.self, """
+        {"id":"\(UUID())","amount_minor":1000,"currency":"PLN","category":"other","spent_at":"2026-09-07",
+         "paid_by":"\(TestUser.alice)","created_by":"\(TestUser.alice)","expense_share":[],
+         "custom_category":{"id":"\(categoryId)","owner_id":"\(TestUser.alice)","name":"Pets","symbol":"pawprint.fill","color_hex":"9C7A55"}}
+        """)
+        let record = try XCTUnwrap(row.toRecord())
+        XCTAssertEqual(record.spendCategory.displayName, "Pets")
+        XCTAssertEqual(record.displayTitle, "Pets")
+        XCTAssertEqual(try json(ExpenseInsertDTO(from: record))["custom_category_id"] as? String, categoryId.uuidString)
+
+        // Without one the key is still sent, so the server clears a custom category instead of keeping it.
+        let payload = try json(ExpenseInsertDTO(from: personalExpense(100)))
+        XCTAssertTrue(payload["custom_category_id"] is NSNull)
+        let rule = RecurringRuleRecord(ownerUserId: TestUser.alice, amountMinor: 100, category: .other, intervalUnit: .month, startDate: day(2026, 1, 1))
+        XCTAssertTrue(try json(RecurringRuleInsertDTO(from: rule))["custom_category_id"] is NSNull)
+    }
+
     func testRecurringRuleRoundTripsThroughTheServerShape() throws {
         let rule = RecurringRuleRecord(
             ownerUserId: TestUser.alice,

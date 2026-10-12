@@ -162,6 +162,7 @@ final class ExpenseStore: ObservableObject {
         amountMinor: Int,
         currency: String = AppPreferences.defaultCurrencyCode,
         category: ExpenseCategory,
+        customCategory: CustomCategory? = nil,
         title: String? = nil,
         note: String?,
         location: ExpenseLocation? = nil,
@@ -195,6 +196,7 @@ final class ExpenseStore: ObservableObject {
             amountMinor: amountMinor,
             currency: currency,
             category: category,
+            customCategory: customCategory,
             title: trimmedTitle,
             note: trimmedNote,
             location: location,
@@ -230,6 +232,7 @@ final class ExpenseStore: ObservableObject {
             amountMinor: amountMinor,
             currency: currency,
             category: category,
+            customCategory: customCategory,
             title: trimmedTitle,
             note: trimmedNote,
             location: location,
@@ -258,6 +261,7 @@ final class ExpenseStore: ObservableObject {
         amountMinor: Int,
         currency: String = AppPreferences.defaultCurrencyCode,
         category: ExpenseCategory,
+        customCategory: CustomCategory? = nil,
         title: String? = nil,
         note: String?,
         location: ExpenseLocation? = nil,
@@ -284,6 +288,7 @@ final class ExpenseStore: ObservableObject {
             amountMinor: amountMinor,
             currency: currency,
             category: category,
+            customCategory: customCategory,
             title: trimmedTitle,
             note: trimmedNote,
             location: location,
@@ -310,6 +315,7 @@ final class ExpenseStore: ObservableObject {
         expenseId: UUID,
         amountMinor: Int,
         category: ExpenseCategory,
+        customCategory: CustomCategory? = nil,
         title: String? = nil,
         note: String?,
         location: ExpenseLocation? = nil,
@@ -339,7 +345,7 @@ final class ExpenseStore: ObservableObject {
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
 
         expense.amountMinor = amountMinor
-        expense.category = category
+        expense.spendCategory = customCategory.map(SpendCategory.custom) ?? .builtIn(category)
         expense.title = trimmedTitle
         expense.note = trimmedNote
         expense.location = location
@@ -878,7 +884,7 @@ final class ExpenseStore: ObservableObject {
         var shared = 0
         var converted = 0
         var unconverted = 0
-        var byCategory: [ExpenseCategory: Int] = [:]
+        var byCategory: [SpendCategory: Int] = [:]
         for expense in expenses {
             let original = expense.acceptedShareMinor(for: userId)
             guard original != 0 else { continue }
@@ -889,7 +895,7 @@ final class ExpenseStore: ObservableObject {
             if expense.currency.uppercased() != currency.uppercased() { converted += 1 }
             total += mine
             if mine > 0 {
-                byCategory[expense.category, default: 0] += mine
+                byCategory[expense.spendCategory, default: 0] += mine
             }
             if expense.isSharedWithOthers(for: userId) {
                 shared += mine

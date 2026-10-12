@@ -147,7 +147,7 @@ enum BudgetArcFill {
     }
 
     /// Maps each tile to a category based on spending share (largest categories first, left→right).
-    static func category(forTile index: Int, total: Int, slices: [CategorySpendSlice]) -> ExpenseCategory? {
+    static func category(forTile index: Int, total: Int, slices: [CategorySpendSlice]) -> SpendCategory? {
         guard total > 0, index >= 0, index < total, !slices.isEmpty else { return nil }
 
         let counts = tileCounts(total: total, slices: slices)
@@ -162,13 +162,13 @@ enum BudgetArcFill {
         return nil
     }
 
-    static func tileCounts(total: Int, slices: [CategorySpendSlice]) -> [ExpenseCategory: Int] {
+    static func tileCounts(total: Int, slices: [CategorySpendSlice]) -> [SpendCategory: Int] {
         guard total > 0, !slices.isEmpty else { return [:] }
 
         let totalAmount = slices.reduce(0) { $0 + $1.amountMinor }
         guard totalAmount > 0 else { return [:] }
 
-        var allocations: [(category: ExpenseCategory, count: Int, remainder: Double)] = []
+        var allocations: [(category: SpendCategory, count: Int, remainder: Double)] = []
         var assigned = 0
 
         for slice in slices {

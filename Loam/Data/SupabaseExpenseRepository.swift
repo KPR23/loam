@@ -8,6 +8,10 @@ actor SupabaseExpenseRepository: ExpenseRepository {
         self.client = client
     }
 
+    /// Custom categories are embedded so everyone on an expense sees its name, icon and color.
+    private static let expenseColumns = "*, expense_share(*), custom_category(id, owner_id, name, symbol, color_hex)"
+    private static let ruleColumns = "*, custom_category(id, owner_id, name, symbol, color_hex)"
+
     func fetchExpenses(for userId: UUID, in period: DatePeriod) async throws -> [ExpenseRecord] {
         let (start, endExclusive) = period.dateRange
         let startString = CalendarDateCodec.string(from: start)
@@ -15,7 +19,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
 
         let rows: [ExpenseDTO] = try await client
             .from("expense")
-            .select("*, expense_share(*)")
+            .select(Self.expenseColumns)
             .gte("spent_at", value: startString)
             .lt("spent_at", value: endString)
             .order("spent_at", ascending: false)
@@ -66,7 +70,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     func fetchActiveRecurringRules(for userId: UUID) async throws -> [RecurringRuleRecord] {
         let rows: [RecurringRuleDTO] = try await client
             .from("recurring_rule")
-            .select()
+            .select(Self.ruleColumns)
             .eq("owner_user_id", value: userId)
             .eq("is_active", value: true)
             .execute()
@@ -77,7 +81,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     func fetchRecurringRule(id: UUID) async throws -> RecurringRuleRecord? {
         let rows: [RecurringRuleDTO] = try await client
             .from("recurring_rule")
-            .select()
+            .select(Self.ruleColumns)
             .eq("id", value: id)
             .limit(1)
             .execute()
@@ -195,7 +199,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
 
         let rows: [ExpenseDTO] = try await client
             .from("expense")
-            .select("*, expense_share(*)")
+            .select(Self.expenseColumns)
             .in("id", values: ids.map(\.uuidString))
             .execute()
             .value
@@ -292,7 +296,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     private func fetchExpense(id: UUID) async throws -> ExpenseRecord {
         let row: ExpenseDTO = try await client
             .from("expense")
-            .select("*, expense_share(*)")
+            .select(Self.expenseColumns)
             .eq("id", value: id)
             .single()
             .execute()
@@ -307,7 +311,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
     private func fetchExpense(recurringId: UUID, spentAt: Date) async throws -> ExpenseRecord? {
         let rows: [ExpenseDTO] = try await client
             .from("expense")
-            .select("*, expense_share(*)")
+            .select(Self.expenseColumns)
             .eq("recurring_id", value: recurringId)
             .eq("spent_at", value: CalendarDateCodec.string(from: spentAt))
             .limit(1)
