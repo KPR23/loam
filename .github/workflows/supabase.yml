@@ -42,7 +42,7 @@ jobs:
         run: |
           base="origin/$BASE_REF"
           latest="$(git ls-tree --name-only "$base" supabase/migrations/ | xargs -n1 basename | cut -d_ -f1 | sort | tail -1)"
-          git diff --diff-filter=A --name-only "$base"...HEAD -- supabase/migrations | while read -r file; do
+          git diff --no-renames --diff-filter=A --name-only "$base"...HEAD -- supabase/migrations | while read -r file; do
             version="$(basename "$file" | cut -d_ -f1)"
             if [[ "$version" < "$latest" || "$version" == "$latest" ]]; then
               echo "$file is not newer than $latest on $BASE_REF. Rebase and rename it with 'supabase migration new'." >&2
