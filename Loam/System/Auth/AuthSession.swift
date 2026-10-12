@@ -345,6 +345,8 @@ final class AuthSession: ObservableObject {
         }
         // Acceptance closes app access immediately; the service worker revokes
         // Apple, removes owned avatars, and then soft-deletes the Auth identity.
+        // Whoever signs up next on this device starts fresh, so they see onboarding.
+        UserDefaults.standard.set(false, forKey: OnboardingView.completedKey)
         try? await client.auth.signOut(scope: .local)
         #if DEBUG
         savedMainAccount = nil

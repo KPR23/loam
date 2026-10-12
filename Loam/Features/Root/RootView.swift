@@ -5,6 +5,11 @@ struct RootView: View {
     @EnvironmentObject private var authSession: AuthSession
     @AppStorage(OnboardingView.completedKey) private var hasCompletedOnboarding = false
 
+    /// Whether onboarding was ever finished or reset here, as opposed to never recorded.
+    private var hasRecordedOnboarding: Bool {
+        UserDefaults.standard.object(forKey: OnboardingView.completedKey) != nil
+    }
+
     var body: some View {
         Group {
             switch authSession.state {
@@ -20,7 +25,14 @@ struct RootView: View {
                         .transition(.opacity)
                 }
             case .signedIn:
-                MainTabView()
+                // Someone who signs up again right after deleting an account skipped
+                // onboarding on the sign-in screen, where the deletion status showed instead.
+                if hasCompletedOnboarding || !hasRecordedOnboarding || LaunchEnvironment.isUITesting {
+                    MainTabView()
+                } else {
+                    OnboardingView { hasCompletedOnboarding = true }
+                        .transition(.opacity)
+                }
             }
         }
         .animation(.easeInOut(duration: 0.2), value: authSession.state)
@@ -29,11 +41,12 @@ struct RootView: View {
             switch state {
             case .loading:
                 // Decided before any signed-out screen shows, so returning people never glimpse onboarding.
-                if !hasCompletedOnboarding, OnboardingHistory.hasUsedLoam() {
+                // Only versions that kept no flag at all; a deleted account leaves it explicitly false.
+                if !hasRecordedOnboarding, OnboardingHistory.hasUsedLoam() {
                     hasCompletedOnboarding = true
                 }
             case .signedIn:
-                hasCompletedOnboarding = true
+                if !hasRecordedOnboarding { hasCompletedOnboarding = true }
             case .signedOut:
                 break
             }
