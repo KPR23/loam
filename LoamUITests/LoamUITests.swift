@@ -130,12 +130,17 @@ final class LoamUITests: XCTestCase {
         let demo = app.buttons["Continue without account (demo)"]
         XCTAssertTrue(demo.waitForExistence(timeout: 10), "Demo sign-in is missing; is the app in demo mode?")
         demo.tap()
-        XCTAssertTrue(app.buttons["Add expense"].waitForExistence(timeout: 10))
+        XCTAssertTrue(addExpenseButton.waitForExistence(timeout: 10))
     }
 
     private func openAddExpense() {
-        app.buttons["Add expense"].tap()
+        addExpenseButton.tap()
         XCTAssertTrue(amountField.waitForExistence(timeout: 5))
+    }
+
+    /// The floating button, or the empty month's own button while no expenses exist.
+    private var addExpenseButton: XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label IN %@", ["Add expense", "Add an expense"])).firstMatch
     }
 
     private var amountField: XCUIElement {
@@ -151,7 +156,7 @@ final class LoamUITests: XCTestCase {
         openAddExpense()
         typeAmount(amount)
         app.buttons["Quick add"].tap()
-        XCTAssertTrue(app.buttons["Add expense"].waitForExistence(timeout: 5))
+        XCTAssertTrue(addExpenseButton.waitForExistence(timeout: 5))
     }
 
     private func expenseRow(containing text: String) -> XCUIElement {
