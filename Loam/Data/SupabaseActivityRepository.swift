@@ -30,9 +30,18 @@ actor SupabaseActivityRepository: ActivityRepository {
     // Remote history is written only by database mutation functions/triggers.
     func record(_ event: ActivityEvent, audience: [UUID]) async throws { _ = event; _ = audience }
 
-    func unreadCount(for userId: UUID) async throws -> Int {
+    func unseenCount(for userId: UUID) async throws -> Int {
         _ = userId
-        return try await client.rpc("activity_unread_count").execute().value
+        return try await client.rpc("activity_unseen_count").execute().value
+    }
+
+    func markSeen(through: Date, userId: UUID) async throws {
+        _ = userId
+        struct Params: Encodable {
+            let through: Date
+            enum CodingKeys: String, CodingKey { case through = "p_through" }
+        }
+        try await client.rpc("mark_activity_seen", params: Params(through: through)).execute()
     }
 
     func markRead(_ eventIds: [UUID], userId: UUID) async throws {

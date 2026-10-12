@@ -73,7 +73,7 @@ struct LoamApp: App {
                 await pushStore.activate(userId: accountId)
             }
             .task(id: pushBadge) {
-                await pushStore.updateBadge(unreadCount: activityStore.unreadCount)
+                await pushStore.updateBadge(unreadCount: activityStore.badgeCount)
             }
             .onReceive(NotificationCenter.default.publisher(for: .loamPushReceived)) { _ in
                 Task { await activityStore.refresh(userId: authSession.userId) }
@@ -102,7 +102,7 @@ struct LoamApp: App {
     }
 
     /// The badge follows the Activity count once iOS allows it.
-    private var pushBadge: String { "\(activityStore.unreadCount)-\(pushStore.permission == .allowed)-\(accountId?.uuidString ?? "")" }
+    private var pushBadge: String { "\(activityStore.badgeCount)-\(pushStore.permission == .allowed)-\(accountId?.uuidString ?? "")" }
 
     /// Demo IDs are not real accounts, so their purchases and telemetry stay anonymous.
     private var accountId: UUID? {

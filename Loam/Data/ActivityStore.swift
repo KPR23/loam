@@ -7,26 +7,36 @@ final class ActivityStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var canLoadMore = false
     @Published var lastError: String?
-    /// Drives the tab badge.
-    @Published private(set) var unreadCount = 0
+    /// Unread events not seen yet; drives the tab and app icon badges.
+    @Published private(set) var badgeCount = 0
+    /// While Activity is on screen, every refresh marks what it loaded as seen.
+    var isInboxVisible = false
     private var accountId: UUID?
     private var nextCursor: UUID?
     /// Rows folded into a shown event, so marking it read reads all of them.
     private var foldedIds: [UUID: [UUID]] = [:]
     /// Bumped by each refresh so a page fetched before it can't land on the new list.
     private var generation = 0
-    /// `activity_unread_count` stops counting here.
-    private static let unreadCountCap = 100
 
-    func refreshUnreadCount(userId: UUID?) async {
-        guard let userId else { unreadCount = 0; return }
-        guard let count = try? await ActivityRepositoryFactory.make().unreadCount(for: userId), accountId == nil || accountId == userId else { return }
-        unreadCount = count
+    func refreshBadgeCount(userId: UUID?) async {
+        guard let userId else { badgeCount = 0; return }
+        guard let count = try? await ActivityRepositoryFactory.make().unseenCount(for: userId), accountId == nil || accountId == userId else { return }
+        badgeCount = count
+    }
+
+    /// Opening Activity clears the badge; the events stay until they are marked read.
+    /// Only events already loaded count as seen, so newer ones keep the badge up.
+    func markSeen(userId: UUID) async {
+        guard accountId == userId else { return }
+        guard let newest = events.map(\.occurredAt).max() else { return await refreshBadgeCount(userId: userId) }
+        badgeCount = 0
+        try? await ActivityRepositoryFactory.make().markSeen(through: newest, userId: userId)
+        await refreshBadgeCount(userId: userId)
     }
 
     func refresh(userId: UUID?) async {
         guard let userId else {
-            accountId = nil; events = []; foldedIds = [:]; canLoadMore = false; nextCursor = nil; lastError = nil; unreadCount = 0
+            accountId = nil; events = []; foldedIds = [:]; canLoadMore = false; nextCursor = nil; lastError = nil; badgeCount = 0
             return
         }
         generation += 1
@@ -39,7 +49,7 @@ final class ActivityStore: ObservableObject {
             guard accountId == userId, generation == current else { return }
             setEvents(page.events); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil
         } catch { guard accountId == userId else { return }; lastError = error.localizedDescription }
-        await refreshUnreadCount(userId: userId)
+        if isInboxVisible { await markSeen(userId: userId) } else { await refreshBadgeCount(userId: userId) }
     }
 
     func loadMore(userId: UUID) async {
@@ -55,12 +65,10 @@ final class ActivityStore: ObservableObject {
         let ids = Set(read.map(\.id))
         let rowIds = ids.flatMap { foldedIds[$0] ?? [$0] }
         events.removeAll { ids.contains($0.id) }
-        // The server caps the count, so a capped badge waits for the real number.
-        if unreadCount < Self.unreadCountCap { unreadCount = max(0, unreadCount - rowIds.count) }
         do {
             try await ActivityRepositoryFactory.make().markRead(rowIds, userId: userId)
             await PushNotificationStore.shared.clearDelivered(eventIds: rowIds)
-            await refreshUnreadCount(userId: userId)
+            await refreshBadgeCount(userId: userId)
         } catch {
             guard accountId == userId else { return }
             lastError = error.localizedDescription

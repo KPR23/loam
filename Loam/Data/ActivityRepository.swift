@@ -7,7 +7,10 @@ protocol ActivityRepository: Sendable {
     /// One expense's history visible to `userId`, oldest first.
     func fetchExpenseEvents(expenseId: UUID, userId: UUID) async throws -> [ActivityEvent]
     func record(_ event: ActivityEvent, audience: [UUID]) async throws
-    func unreadCount(for userId: UUID) async throws -> Int
+    /// Unread events `userId` hasn't seen yet; the tab and app icon badge show it.
+    func unseenCount(for userId: UUID) async throws -> Int
+    /// Unread events up to `through` stop counting toward the badge but stay unread.
+    func markSeen(through: Date, userId: UUID) async throws
     /// IDs that are not `userId`'s events are ignored.
     func markRead(_ eventIds: [UUID], userId: UUID) async throws
 }
