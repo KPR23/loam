@@ -124,28 +124,14 @@ private struct ProPaywallView: View {
         annualPackage != nil && selectedId == annualPackage?.identifier
     }
 
-    /// The yearly free trial, when this Apple Account can still take it.
-    private var annualTrial: StoreProductDiscount? {
-        guard let annualPackage, trialEligibleIds.contains(annualPackage.identifier) else { return nil }
-        return annualPackage.storeProduct.introductoryDiscount
-    }
-
-    /// What Yearly adds over Monthly: its free trial and its discount, whichever apply.
+    /// Yearly's discount over Monthly. The free trial stays out of it: App Review rejects
+    /// paywalls that show a trial more prominently than the price billed after it.
     private var yearlyHint: String? {
-        let trial = annualTrial.map { "\($0.durationText.lowercased()) free" }
-        let savings = annualSavings.map { "save \($0)%" }
-        switch (trial, savings, isAnnualSelected) {
-        case let (trial?, savings?, true): return "\(trial.capitalizedFirst), then \(savings)"
-        case let (trial?, savings?, false): return "Yearly: \(trial), then \(savings)"
-        case let (trial?, nil, true): return "Includes \(trial)"
-        case let (trial?, nil, false): return "Try Yearly \(trial)"
-        case let (nil, savings?, true): return "You \(savings) with Yearly"
-        case let (nil, savings?, false): return "\(savings.capitalizedFirst) with Yearly"
-        case (nil, nil, _): return nil
-        }
+        guard let annualSavings else { return nil }
+        return isAnnualSelected ? "You save \(annualSavings)% with Yearly" : "Save \(annualSavings)% with Yearly"
     }
 
-    /// The segmented control can't color part of a label, so Yearly's perks sit below it.
+    /// The segmented control can't color part of a label, so Yearly's discount sits below it.
     /// On Monthly it doubles as a shortcut to Yearly.
     private func yearlyHintPill(_ text: String) -> some View {
         Button {
@@ -182,6 +168,8 @@ private struct ProPaywallView: View {
 
     private var purchaseBar: some View {
         VStack(spacing: 12) {
+            priceSummary
+
             Button {
                 Task {
                     if let selected { await purchase(selected) } else { await loadPackages() }
@@ -206,12 +194,6 @@ private struct ProPaywallView: View {
             .buttonStyle(LoamPressStyle())
             .disabled(isLoading || isBusy)
             .accessibilityLabel(isPurchasing ? "Purchasing" : ctaTitle)
-
-            Text(footnote)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .contentTransition(.opacity)
 
             HStack(spacing: 20) {
                 Button {
@@ -253,33 +235,61 @@ private struct ProPaywallView: View {
         }
     }
 
+    /// The billed price leads, larger than anything about the trial, with the trial's length
+    /// and what renews after it right below. App Review requires that order of prominence.
+    @ViewBuilder
+    private var priceSummary: some View {
+        if let selected {
+            VStack(spacing: 4) {
+                Text(billedPrice(selected))
+                    .font(.title2.weight(.bold))
+                    .contentTransition(.numericText())
+                Text(billingTerms(selected))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .contentTransition(.opacity)
+            }
+            .multilineTextAlignment(.center)
+            .accessibilityElement(children: .combine)
+        } else {
+            Text(isLoading ? " " : "Couldn’t load plans. Check your connection and try again.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
     // MARK: Copy
 
     private var ctaTitle: String {
-        guard let selected else { return isLoading ? "" : "Try Again" }
-        if let trial = selectedTrial { return "Try Free for \(trial.durationText)" }
-        return "Upgrade for \(selected.storeProduct.localizedPriceString)"
+        guard selected != nil else { return isLoading ? "" : "Try Again" }
+        return selectedTrial == nil ? "Subscribe" : "Start Free Trial"
     }
 
-    private var footnote: String {
-        guard let selected else {
-            return isLoading ? " " : "Couldn’t load plans. Check your connection and try again."
-        }
+    /// "99,99 zł/year": what each renewal charges.
+    private func billedPrice(_ package: Package) -> String {
+        let price = package.storeProduct.localizedPriceString
+        guard let period = package.billingPeriod else { return price }
+        return "\(price)/\(period)"
+    }
+
+    private func billingTerms(_ package: Package) -> String {
+        let product = package.storeProduct
         if let trial = selectedTrial {
-            let period = selected.packageType == .monthly ? "month" : "year"
-            return "Free for \(trial.durationText.lowercased()), then \(selected.storeProduct.localizedPriceString)/\(period). Cancel anytime."
+            let then = package.billingPeriod.map { "\(product.localizedPriceString)/\($0)" } ?? product.localizedPriceString
+            return "Free for \(trial.durationText.lowercased()), then \(then). Renews until cancelled."
         }
-        switch selected.packageType {
+        switch package.packageType {
         case .monthly:
-            return "Auto-renews monthly. Cancel anytime."
+            return "Renews monthly until cancelled."
         case .annual:
-            if let perMonth = selected.storeProduct.localizedPricePerMonth {
-                return "Just \(perMonth)/month, billed yearly. Cancel anytime."
+            if let perMonth = product.localizedPricePerMonth {
+                return "Billed yearly, about \(perMonth)/month. Renews until cancelled."
             }
-            return "Auto-renews yearly. Cancel anytime."
+            return "Renews yearly until cancelled."
         default:
-            return selected.storeProduct.productType == .autoRenewableSubscription
-                ? "Auto-renews. Cancel anytime."
+            return product.productType == .autoRenewableSubscription
+                ? "Renews until cancelled."
                 : "One-time purchase."
         }
     }
@@ -565,6 +575,15 @@ private extension Package {
         default: storeProduct.localizedTitle
         }
     }
+
+    /// The unit each renewal is billed for, as in "99,99 zł/year".
+    var billingPeriod: String? {
+        switch packageType {
+        case .monthly: "month"
+        case .annual: "year"
+        default: nil
+        }
+    }
 }
 
 private extension StoreProductDiscount {
@@ -585,10 +604,6 @@ private extension StoreProductDiscount {
         }
         return "\(count) \(name)\(count == 1 ? "" : "s")"
     }
-}
-
-private extension String {
-    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
 }
 
 private extension PackageType {
