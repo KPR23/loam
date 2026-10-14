@@ -222,7 +222,6 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 struct ProfileView: View {
     /// Pages Profile opens in an in-app browser.
     private enum WebDestination: String, Identifiable {
-        case changelog
         case feedback
         case privacyPolicy
         case termsOfUse
@@ -231,8 +230,6 @@ struct ProfileView: View {
 
         var url: URL {
             switch self {
-            case .changelog:
-                URL(string: "https://kprslab.featurebase.app/changelog")!
             case .feedback:
                 URL(string: "https://kprslab.featurebase.app")!
             case .privacyPolicy:
@@ -336,12 +333,6 @@ struct ProfileView: View {
                 }
 
                 Section {
-                    Button {
-                        webDestination = .changelog
-                    } label: {
-                        ProfileRow("Changelog", symbol: "newspaper", color: .purple)
-                    }
-                    .accessibilityHint("Opens Loam's changelog")
                     Button {
                         webDestination = .feedback
                     } label: {
