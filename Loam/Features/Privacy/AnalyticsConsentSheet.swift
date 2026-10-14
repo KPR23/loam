@@ -17,7 +17,7 @@ struct AnalyticsConsentSheet: View {
             VStack(spacing: 8) {
                 Text("Help improve Loam")
                     .font(.system(.title2, design: .rounded).weight(.semibold))
-                Text("Share anonymous usage data so we can see which screens are used and where the app gets in your way.")
+                Text("Share usage data linked to your account so we can see which screens are used and where the app gets in your way.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
