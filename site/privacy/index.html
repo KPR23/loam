@@ -42,7 +42,10 @@
           <li><strong>Expenses.</strong> Amounts, currencies, categories, titles, notes, dates, recurring
             schedules and, if you add one, a place (name, address and coordinates).</li>
           <li><strong>Shared balances.</strong> Your connections with other Loam users, expenses you split
-            with them, their acceptance of those splits, repayments, and the related activity history.</li>
+            with them, their acceptance of those splits (or your choice to accept them automatically),
+            repayments, and the related activity history.</li>
+          <li><strong>People without an account.</strong> If you add someone who doesn’t use Loam, the name
+            you give them and the expenses and repayments you record with them. They are visible only to you.</li>
           <li><strong>Location.</strong> With your permission, your current location is used on your device to
             suggest nearby places when adding an expense. We do not store your location; only a place you
             choose is saved with the expense.</li>
@@ -53,12 +56,12 @@
             processed by Apple; we never receive your payment details.</li>
           <li><strong>Crash reports.</strong> Technical diagnostics when the App crashes or hits an error
             (device model, iOS version, app version, stack traces), linked to your account identifier.</li>
-          <li><strong>Usage analytics (optional, off by default).</strong> Only if you turn on “Share usage
-            analytics” in Profile. Analytics are linked to your account identifier and include which
-            screens you open, app open/close events, events such as “expense created” (with whether it was
-            shared or recurring and how many participants), and session recordings in which all text, inputs
-            and images are masked on your device. Analytics never include amounts, descriptions, names or
-            locations.</li>
+          <li><strong>Usage analytics (optional, off by default).</strong> Only if you agree when the App asks
+            after you sign in, or turn on “Share usage analytics” in Profile later. Analytics are linked to
+            your account identifier and include which screens you open, app open/close events, events such as
+            “expense created” (with whether it was shared or recurring and how many participants), and session
+            recordings in which all text, inputs and images are masked on your device. Analytics never include
+            amounts, descriptions, names or locations.</li>
         </ul>
       </div>
 
@@ -115,7 +118,8 @@
       <div class="panel">
         <p>
           We keep your data while your account exists. When you delete your account, your profile, profile
-          photo, private expenses and analytics data are deleted, and your Apple sign-in is revoked.
+          photo, private expenses, the people without an account you added (with everything you recorded
+          only with them) and analytics data are deleted, and your Apple sign-in is revoked.
           Expenses you shared with other people stay visible to them so their balances remain correct, with
           your name replaced by a “deleted user” label. Crash reports expire automatically under Sentry’s
           retention period. Purchase records may be retained by Apple and RevenueCat as required for
