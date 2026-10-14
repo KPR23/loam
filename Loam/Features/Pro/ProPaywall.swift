@@ -288,6 +288,7 @@ private struct ProPaywallView: View {
             }
             return "Renews yearly until cancelled."
         default:
+            if let period = package.billingPeriod { return "Renews every \(period) until cancelled." }
             return product.productType == .autoRenewableSubscription
                 ? "Renews until cancelled."
                 : "One-time purchase."
@@ -576,13 +577,19 @@ private extension Package {
         }
     }
 
-    /// The unit each renewal is billed for, as in "99,99 zł/year".
+    /// The length each renewal is billed for, as in "99,99 zł/year" or "29,99 zł/3 months".
+    /// Read from the product, since the offering can gain packages without an app update.
     var billingPeriod: String? {
-        switch packageType {
-        case .monthly: "month"
-        case .annual: "year"
-        default: nil
+        guard let period = storeProduct.subscriptionPeriod else { return nil }
+        let unit: String
+        switch period.unit {
+        case .day: unit = "day"
+        case .week: unit = "week"
+        case .month: unit = "month"
+        case .year: unit = "year"
+        @unknown default: return nil
         }
+        return period.value == 1 ? unit : "\(period.value) \(unit)s"
     }
 }
 
