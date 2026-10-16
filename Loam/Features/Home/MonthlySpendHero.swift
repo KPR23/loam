@@ -29,6 +29,7 @@ struct MonthlySpendHero: View {
                 let anchor = layout.labelAnchor(in: geometry.size)
                 let maxLabelWidth = layout.labelMaxWidth(in: geometry.size)
                 let collapseYOffset = easedCollapse * 8
+                let amountOut = HomeCollapsePhase.heroAmountOut.progress(collapseProgress)
 
                 ZStack {
                     BudgetArcMosaic(
@@ -49,9 +50,9 @@ struct MonthlySpendHero: View {
                             x: anchor.x,
                             y: anchor.y + collapseYOffset
                         )
-                        .opacity(1 - easedCollapse)
-                        .scaleEffect(1 - 0.12 * easedCollapse, anchor: .center)
-                        .blur(radius: easedCollapse * 3)
+                        .opacity(1 - amountOut)
+                        .scaleEffect(1 - 0.12 * amountOut, anchor: .center)
+                        .blur(radius: amountOut * 3)
                 }
             }
             .frame(height: 260)

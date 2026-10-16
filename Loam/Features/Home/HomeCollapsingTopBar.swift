@@ -25,21 +25,20 @@ struct HomeCollapsingTopBar: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    fileprivate var easedProgress: CGFloat {
-        smoothstep(collapseProgress)
-    }
-
     var body: some View {
+        let pickerOut = HomeCollapsePhase.monthPickerOut.progress(collapseProgress)
+        let amountIn = HomeCollapsePhase.barAmountIn.progress(collapseProgress)
+
         ZStack {
             monthPickerButton
-                .opacity(1 - easedProgress)
-                .scaleEffect(1 - 0.06 * easedProgress)
-                .blur(radius: easedProgress * 2)
+                .opacity(1 - pickerOut)
+                .scaleEffect(1 - 0.06 * pickerOut)
+                .blur(radius: pickerOut * 2)
 
             collapsedAmount
-                .opacity(easedProgress)
-                .scaleEffect(0.94 + 0.06 * easedProgress)
-                .offset(y: (1 - easedProgress) * 6)
+                .opacity(amountIn)
+                .scaleEffect(0.94 + 0.06 * amountIn)
+                .offset(y: (1 - amountIn) * 6)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 44)
@@ -88,9 +87,27 @@ struct HomeCollapsingTopBar: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("You spent \(MoneyFormatter.string(from: amount)) this month")
     }
+}
 
-    private func smoothstep(_ value: CGFloat) -> CGFloat {
-        let t = min(max(value, 0), 1)
+/// Slices of the scroll collapse, so the hero amount hands off to the bar as the arc closes on its crown.
+enum HomeCollapsePhase {
+    case heroAmountOut
+    case monthPickerOut
+    case barAmountIn
+
+    private var window: ClosedRange<CGFloat> {
+        switch self {
+        // Holds while the horns dissolve, then leaves with the crown.
+        case .heroAmountOut: 0.3...0.8
+        case .monthPickerOut: 0...0.6
+        // Starts once the hero amount is mostly gone, so the two never read as a double.
+        case .barAmountIn: 0.55...1
+        }
+    }
+
+    /// Eased 0...1 within this phase's window of the overall collapse.
+    func progress(_ collapse: CGFloat) -> CGFloat {
+        let t = min(max((collapse - window.lowerBound) / (window.upperBound - window.lowerBound), 0), 1)
         return t * t * (3 - 2 * t)
     }
 }
