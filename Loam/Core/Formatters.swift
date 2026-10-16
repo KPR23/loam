@@ -2,7 +2,7 @@ import Foundation
 
 enum MoneyFormatter {
     /// Amount with its currency symbol where that currency usually puts it, e.g. `$12.50`,
-    /// `€12.50` or `12.50 zł`. Only the digits follow `locale`: its own currency format would
+    /// `12.50 €` or `12.50 zł`. Only the digits follow `locale`: its own currency format would
     /// read `12,50 US$` or `12,50 USD` in Poland.
     static func string(from money: Money, locale: Locale = .current) -> String {
         let amount = decimalAmount(
@@ -13,7 +13,7 @@ enum MoneyFormatter {
         let sign = money.amountMinor < 0 ? "-" : ""
         switch money.currencyCode {
         case "USD": return "\(sign)$\(amount)"
-        case "EUR": return "\(sign)€\(amount)"
+        case "EUR": return "\(sign)\(amount) €"
         case "PLN": return "\(sign)\(amount) zł"
         default: return "\(sign)\(amount) \(money.currencyCode)"
         }

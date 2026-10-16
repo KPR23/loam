@@ -101,7 +101,7 @@ struct PendingExpenseListRow: View {
 @MainActor
 enum PendingAcceptanceFormatting {
     /// In the default currency; shares in another currency convert at their day's rate. Shares
-    /// whose rate isn't loaded yet are added in their own currency, e.g. "120 zł + €15",
+    /// whose rate isn't loaded yet are added in their own currency, e.g. "120 zł + 15 €",
     /// so a missing rate never reads as nothing to approve.
     static func totalText(for expenses: [ExpenseRecord], userId: UUID) -> String {
         let currency = AppPreferences.defaultCurrencyCode
