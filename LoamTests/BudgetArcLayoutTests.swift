@@ -21,6 +21,14 @@ final class BudgetArcLayoutTests: XCTestCase {
         XCTAssertGreaterThan(tiles.last!.point.x, canvas.width / 2)
     }
 
+    func testDotsFillOrderNeverDoublesBack() {
+        let tiles = BudgetArcLayout.dots.makeTiles(in: canvas)
+        XCTAssertEqual(tiles.map(\.id), Array(0..<tiles.count))
+        for pair in zip(tiles, tiles.dropFirst()) {
+            XCTAssertLessThanOrEqual(pair.0.t, pair.1.t)
+        }
+    }
+
     func testColumnsShareAnAngleAcrossRows() {
         let tiles = layout.makeTiles(in: canvas)
         let column = tiles.filter { $0.column == 4 }
