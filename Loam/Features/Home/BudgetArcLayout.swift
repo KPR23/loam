@@ -145,7 +145,22 @@ struct BudgetArcLayout: Equatable {
             }
         }
 
+        // The staggered rows interleave within a column, so emit in left-to-right order: reveal and
+        // category bands go by array index and must not double back.
         return tiles
+            .sorted { ($0.t, $0.row) < ($1.t, $1.row) }
+            .enumerated()
+            .map { index, tile in
+                BudgetArcTile(
+                    id: index,
+                    row: tile.row,
+                    column: tile.column,
+                    size: tile.size,
+                    t: tile.t,
+                    point: tile.point,
+                    rotationDegrees: tile.rotationDegrees
+                )
+            }
     }
 }
 
