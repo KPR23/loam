@@ -1,17 +1,22 @@
 import Foundation
 
 enum MoneyFormatter {
+    /// Amount with its currency symbol where that currency usually puts it, e.g. `$12.50`,
+    /// `€12.50` or `12.50 zł`. Only the digits follow `locale`: its own currency format would
+    /// read `12,50 US$` or `12,50 USD` in Poland.
     static func string(from money: Money, locale: Locale = .current) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = money.currencyCode
-        formatter.locale = locale
-        let fractionDigits = fractionDigits(for: money.amountMinor)
-        formatter.minimumFractionDigits = fractionDigits.min
-        formatter.maximumFractionDigits = fractionDigits.max
-
-        let major = NSDecimalNumber(value: money.amountMinor).dividing(by: NSDecimalNumber(value: 100))
-        return formatter.string(from: major) ?? "\(money.amountMinor) \(money.currencyCode)"
+        let amount = decimalAmount(
+            from: Money(amountMinor: abs(money.amountMinor), currencyCode: money.currencyCode),
+            locale: locale,
+            minimumFractionDigits: nil
+        )
+        let sign = money.amountMinor < 0 ? "-" : ""
+        switch money.currencyCode {
+        case "USD": return "\(sign)$\(amount)"
+        case "EUR": return "\(sign)€\(amount)"
+        case "PLN": return "\(sign)\(amount) zł"
+        default: return "\(sign)\(amount) \(money.currencyCode)"
+        }
     }
 
     /// Hero amount without a currency suffix, e.g. `250` or `250,40`.
