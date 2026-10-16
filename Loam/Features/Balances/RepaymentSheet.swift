@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Records money paid outside Loam to someone the viewer owes. Laid out like
-/// the amount step of Add expense: who it's for, a large amount, then actions.
+/// Records money paid outside Loam, either by the viewer to someone they owe or
+/// to the viewer by someone who owes them. Laid out like the amount step of
+/// Add expense: who it's for, a large amount, then actions.
 struct RepaymentSheet: View {
-    /// Balances the viewer owes; each is one person in one currency.
-    let debts: [PersonBalance]
+    /// Open balances in either direction; each is one person in one currency.
+    let balances: [PersonBalance]
 
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var balanceStore: BalanceStore
@@ -15,20 +16,30 @@ struct RepaymentSheet: View {
     @State private var note = ""
     @State private var paidAt = Date()
     @State private var isSaving = false
-    @State private var errorMessage: String?
+        @State private var errorMessage: String?
     @FocusState private var amountFocused: Bool
     @FocusState private var noteFocused: Bool
 
-    init(debts: [PersonBalance], selected: PersonBalance? = nil) {
-        self.debts = debts
-        _selectedId = State(initialValue: (selected ?? debts.first)?.id ?? "")
+    init(balances: [PersonBalance], selected: PersonBalance? = nil) {
+        self.balances = balances
+        let initial = selected ?? balances.first
+        _selectedId = State(initialValue: initial?.id ?? "")
+        _amountText = State(initialValue: initial.map { MoneyFormatter.editableAmount(from: $0.money) } ?? "")
     }
 
     /// Nil once the chosen balance is gone (settled elsewhere, say). Never falls back to someone
     /// else, or an amount typed for one person could be recorded against another.
     private var target: PersonBalance? {
-        debts.first { $0.id == selectedId }
+        balances.first { $0.id == selectedId }
     }
+
+    /// The other person owes the viewer, so the money came in rather than went out.
+    /// Settling usually means the whole balance, so that is where the amount starts.
+    private var fullAmountText: String {
+        target.map { MoneyFormatter.editableAmount(from: $0.money) } ?? ""
+    }
+
+    private var isReceiving: Bool { (target?.amountMinor ?? 0) > 0 }
 
     private var parsedMoney: Money? {
         guard let target else { return nil }
@@ -50,6 +61,8 @@ struct RepaymentSheet: View {
                 if let target {
                     recipientPicker(target)
                         .padding(.top, 8)
+                    dateButton
+                        .padding(.top, 10)
 
                     Spacer(minLength: 0)
 
@@ -69,17 +82,17 @@ struct RepaymentSheet: View {
                         .padding(.bottom, 16)
                 } else {
                     LoamEmptyState(
-                        title: debts.isEmpty ? "Nothing left to repay" : "That balance changed",
-                        message: debts.isEmpty
-                            ? "You don’t owe anyone right now."
-                            : "It was settled or updated while you were away. Choose who you paid.",
+                        title: balances.isEmpty ? "Nothing left to settle" : "That balance changed",
+                        message: balances.isEmpty
+                            ? "Nobody owes anything right now."
+                            : "It was settled or updated while you were away. Choose who it was with.",
                         systemImage: "checkmark.circle"
                     ) {
-                        if !debts.isEmpty {
+                        if !balances.isEmpty {
                             Menu {
                                 recipientOptions
                             } label: {
-                                Label("Choose who you paid", systemImage: "person.crop.circle")
+                                Label("Choose a person", systemImage: "person.crop.circle")
                                     .fontWeight(.semibold)
                             }
                             .menuStyle(.button)
@@ -108,8 +121,8 @@ struct RepaymentSheet: View {
                 guard !Task.isCancelled else { return }
                 amountFocused = true
             }
-            // A new recipient or currency, or the old one disappearing, starts the amount over.
-            .onChange(of: target?.id) { _, _ in amountText = "" }
+            // A new recipient or currency, or the old one disappearing, restarts at the full balance.
+            .onChange(of: target?.id) { _, _ in amountText = fullAmountText }
             .alert("Couldn’t record repayment", isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
@@ -125,14 +138,14 @@ struct RepaymentSheet: View {
 
     @ViewBuilder
     private func recipientPicker(_ target: PersonBalance) -> some View {
-        if debts.count > 1 {
+        if balances.count > 1 {
             Menu {
                 recipientOptions
             } label: {
                 recipientChip(target, showsChevron: true)
             }
-            .accessibilityLabel("Paying \(target.displayName)")
-            .accessibilityHint("Choose who you paid")
+            .accessibilityLabel("\(isReceiving ? "Received from" : "Paying") \(target.displayName)")
+            .accessibilityHint("Choose who the repayment was with")
         } else {
             recipientChip(target, showsChevron: false)
                 .accessibilityElement(children: .combine)
@@ -140,9 +153,9 @@ struct RepaymentSheet: View {
     }
 
     private var recipientOptions: some View {
-        Picker("Pay", selection: $selectedId) {
-            ForEach(debts) { debt in
-                Text("\(debt.displayName) · \(MoneyFormatter.string(from: debt.money))").tag(debt.id)
+        Picker("Person", selection: $selectedId) {
+            ForEach(balances) { balance in
+                Text("\(balance.displayName) · \(balance.direction.lowercased()) \(MoneyFormatter.string(from: balance.money))").tag(balance.id)
             }
         }
     }
@@ -150,7 +163,7 @@ struct RepaymentSheet: View {
     private func recipientChip(_ target: PersonBalance, showsChevron: Bool) -> some View {
         HStack(spacing: 8) {
             AvatarView(userId: target.personId, size: 28, name: target.displayName)
-            Text("To \(target.displayName)")
+            Text("\(isReceiving ? "From" : "To") \(target.displayName)")
                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .foregroundStyle(HomeTheme.text)
                 .lineLimit(1)
@@ -171,31 +184,23 @@ struct RepaymentSheet: View {
     private func debtCaption(_ target: PersonBalance) -> some View {
         HStack(spacing: 8) {
             if exceedsDebt {
-                Text("That’s more than you owe")
+                Text(isReceiving ? "That’s more than they owe you" : "That’s more than you owe")
                     .foregroundStyle(.red)
             } else {
-                Text("You owe \(MoneyFormatter.string(from: target.money))")
+                Text("\(target.direction) \(MoneyFormatter.string(from: target.money))")
                     .foregroundStyle(HomeTheme.secondary)
             }
-
-            Button {
-                LoamFeedback.selection()
-                amountText = MoneyFormatter.editableAmount(from: target.money)
-            } label: {
-                Text("Pay in full")
-                    .font(.system(.footnote, design: .rounded).weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(HomeTheme.accent.opacity(0.14), in: Capsule())
-                    .foregroundStyle(HomeTheme.accent)
-            }
-            .buttonStyle(LoamPressStyle())
-            .opacity(parsedMoney?.amountMinor == target.money.amountMinor ? 0 : 1)
-            .accessibilityHidden(parsedMoney?.amountMinor == target.money.amountMinor)
         }
         .font(.system(.footnote, design: .rounded).weight(.medium))
         .monospacedDigit()
         .animation(.easeInOut(duration: 0.18), value: exceedsDebt)
+    }
+
+    // MARK: - Date
+
+    private var dateButton: some View {
+        DatePicker("Paid on", selection: $paidAt, in: ...Date(), displayedComponents: .date)
+            .labelsHidden()
     }
 
     // MARK: - Controls
@@ -214,12 +219,8 @@ struct RepaymentSheet: View {
                         .focused($noteFocused)
                 }
                 .padding(.horizontal, 14)
-                .frame(height: 44)
+                .frame(height: 52)
                 .background(HomeTheme.surface, in: Capsule())
-
-                DatePicker("Paid on", selection: $paidAt, in: ...Date(), displayedComponents: .date)
-                    .labelsHidden()
-                    .accessibilityLabel("Paid on")
             }
 
             Button {
@@ -234,7 +235,7 @@ struct RepaymentSheet: View {
             .buttonStyle(.borderedProminent)
             .tint(HomeTheme.accentFill)
             .buttonBorderShape(.capsule)
-            .frame(height: 44)
+            .frame(height: 52)
             .disabled(!canSave || isSaving)
         }
     }
@@ -245,14 +246,25 @@ struct RepaymentSheet: View {
         defer { isSaving = false }
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            try await balanceStore.repay(
-                to: target.personId,
-                amountMinor: money.amountMinor,
-                currencyCode: target.currencyCode,
-                note: trimmedNote.isEmpty ? nil : trimmedNote,
-                paidAt: paidAt,
-                userId: userId
-            )
+            if isReceiving {
+                try await balanceStore.receive(
+                    from: target.personId,
+                    amountMinor: money.amountMinor,
+                    currencyCode: target.currencyCode,
+                    note: trimmedNote.isEmpty ? nil : trimmedNote,
+                    paidAt: paidAt,
+                    userId: userId
+                )
+            } else {
+                try await balanceStore.repay(
+                    to: target.personId,
+                    amountMinor: money.amountMinor,
+                    currencyCode: target.currencyCode,
+                    note: trimmedNote.isEmpty ? nil : trimmedNote,
+                    paidAt: paidAt,
+                    userId: userId
+                )
+            }
             LoamFeedback.success()
             dismiss()
         } catch {

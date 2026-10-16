@@ -32,18 +32,18 @@ struct BalancesView: View {
                 } else {
                     Section {
                         BalancesHero(snapshot: snapshot)
-                            .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: debts.isEmpty ? 8 : 18, trailing: 0))
+                            .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: snapshot.balances.isEmpty ? 8 : 18, trailing: 0))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
 
                         if !snapshot.awaiting.isEmpty {
                             awaitingSummary
-                                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: debts.isEmpty ? 8 : 14, trailing: 20))
+                                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: snapshot.balances.isEmpty ? 8 : 14, trailing: 20))
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
                         }
 
-                        if !debts.isEmpty {
+                        if !snapshot.balances.isEmpty {
                             repaymentButton
                                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
                                 .listRowSeparator(.hidden)
@@ -102,7 +102,7 @@ struct BalancesView: View {
             .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await balanceStore.refresh(userId: authSession.userId) } } }
         }
         .sheet(isPresented: $showsRepayment) {
-            RepaymentSheet(debts: debts)
+            RepaymentSheet(balances: snapshot.balances)
         }
         .sheet(isPresented: $showAddFriend) {
             NavigationStack {
@@ -137,7 +137,7 @@ struct BalancesView: View {
         .tint(HomeTheme.accentFill)
         .buttonBorderShape(.capsule)
         .padding(.horizontal, 20)
-        .accessibilityHint("Records money you paid someone outside Loam")
+        .accessibilityHint("Records money you paid or received outside Loam")
     }
 
     @ViewBuilder
@@ -169,16 +169,19 @@ struct BalancesView: View {
     /// Expenses you paid still count toward balances only once the other person accepts them.
     private var awaitingSummary: some View {
         let amounts = snapshot.awaitingTotals.map { MoneyFormatter.string(from: $0) }.joined(separator: " + ")
-        return Label {
-            Text("\(amounts) waiting for friends to accept")
-        } icon: {
+        return HStack(spacing: 6) {
             Image(systemName: "hourglass")
+                .font(.system(size: 17, weight: .semibold))
+                .accessibilityHidden(true)
+            Text("\(amounts) waiting for friends to accept")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .multilineTextAlignment(.leading)
         }
-        .font(.system(.footnote, design: .rounded).weight(.medium))
         .foregroundStyle(.orange)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
         .background(Color.orange.opacity(0.12), in: Capsule())
+        .accessibilityElement(children: .combine)
         .frame(maxWidth: .infinity)
         .accessibilityHint("Not counted in balances until accepted")
     }

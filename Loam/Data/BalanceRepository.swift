@@ -4,6 +4,8 @@ protocol BalanceRepository: Sendable {
     func fetchBalances(for userId: UUID) async throws -> BalanceSnapshot
     func fetchHistory(for userId: UUID, personId: UUID) async throws -> [BalanceHistoryEntry]
     func createRepayment(from userId: UUID, to personId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, operationId: UUID) async throws
+    /// The person owed records that `personId` paid them.
+    func createReceivedRepayment(from personId: UUID, to userId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, operationId: UUID) async throws
     func reverseRepayment(id: UUID, operationId: UUID) async throws
 }
 

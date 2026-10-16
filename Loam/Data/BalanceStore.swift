@@ -33,16 +33,26 @@ final class BalanceStore: ObservableObject {
             try await BalanceRepositoryFactory.make().createRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note, paidAt: paidAt, operationId: UUID())
         }
         Telemetry.capture(.repaymentRecorded)
-        await recordLocalRepayment(from: userId, to: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note)
+        await recordLocalRepayment(kind: .repaymentRecorded, userId: userId, personId: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note)
+        await refresh(userId: userId)
+    }
+
+    /// The viewer is owed money and records that `personId` paid them.
+    func receive(from personId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, userId: UUID) async throws {
+        try await LoamErrorCapture.withCapture("balance.repayment_create_failed") {
+            try await BalanceRepositoryFactory.make().createReceivedRepayment(from: personId, to: userId, amountMinor: amountMinor, currencyCode: currencyCode, note: note, paidAt: paidAt, operationId: UUID())
+        }
+        Telemetry.capture(.repaymentRecorded)
+        await recordLocalRepayment(kind: .repaymentReceived, userId: userId, personId: personId, amountMinor: amountMinor, currencyCode: currencyCode, note: note)
         await refresh(userId: userId)
     }
 
     /// The backend records repayment activity itself; demo storage needs a local row.
-    private func recordLocalRepayment(from userId: UUID, to personId: UUID, amountMinor: Int, currencyCode: String, note: String?) async {
+    private func recordLocalRepayment(kind: ActivityEventKind, userId: UUID, personId: UUID, amountMinor: Int, currencyCode: String, note: String?) async {
         guard ExpenseRepositoryFactory.usesLocalStorage else { return }
         let trimmedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let event = ActivityEvent(
-            kind: .repaymentRecorded,
+            kind: kind,
             actorId: userId,
             actorName: SplitPartnerOption.displayName(for: userId, fallback: "You"),
             recipientId: personId,

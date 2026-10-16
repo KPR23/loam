@@ -14,8 +14,10 @@ enum ActivityEventKind: String, Codable, Sendable {
     case proposalSuperseded = "proposal_superseded"
     case repaymentRecorded = "repayment_recorded"
     case repaymentReversed = "repayment_reversed"
+    /// The person who was paid recorded it, so the actor is the receiver.
+    case repaymentReceived = "repayment_received"
 
-    var isRepayment: Bool { self == .repaymentRecorded || self == .repaymentReversed }
+    var isRepayment: Bool { self == .repaymentRecorded || self == .repaymentReversed || self == .repaymentReceived }
 }
 
 struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
@@ -108,6 +110,10 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
             return actorIsViewer
                 ? "You recorded a repayment to \(recipientName ?? "someone")"
                 : "\(actor) recorded a repayment to you"
+        case .repaymentReceived:
+            return actorIsViewer
+                ? "You recorded a repayment from \(recipientName ?? "someone")"
+                : "\(actor) recorded a repayment from you"
         case .repaymentReversed:
             return actorIsViewer
                 ? "You reversed a repayment to \(recipientName ?? "someone")"
@@ -152,6 +158,8 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
             return around("\(Self.possessive(actor)) changes to ", " were replaced")
         case .repaymentRecorded:
             return AttributedString(actorIsViewer ? "You paid \(recipientName ?? "someone") back" : "\(actor) paid you back")
+        case .repaymentReceived:
+            return AttributedString(actorIsViewer ? "\(recipientName ?? "Someone") paid you back" : "You paid \(actor) back")
         case .repaymentReversed:
             return AttributedString(actorIsViewer
                 ? "You reversed a repayment to \(recipientName ?? "someone")"
@@ -195,7 +203,7 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
         case .rejected, .proposalRejected: return "xmark.circle.fill"
         case .edited, .proposalCreated: return "pencil.circle.fill"
         case .participantRemoved, .deleted, .proposalSuperseded: return "trash.circle.fill"
-        case .repaymentRecorded: return "\(RepaymentRecord.symbolName).circle.fill"
+        case .repaymentRecorded, .repaymentReceived: return "\(RepaymentRecord.symbolName).circle.fill"
         case .repaymentReversed: return "arrow.uturn.backward.circle.fill"
         }
     }
