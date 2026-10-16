@@ -960,6 +960,7 @@ private struct DefaultCurrencySettingsView: View {
                                     .accessibilityLabel("Selected")
                             }
                         }
+                        .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
                 }
@@ -1030,6 +1031,7 @@ private struct TimeZoneSettingsView: View {
                         .accessibilityLabel("Selected")
                 }
             }
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
     }
