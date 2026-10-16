@@ -49,6 +49,9 @@ struct BudgetArcLayout: Equatable {
 
     var sweepDegrees: Double { startDegrees - endDegrees }
 
+    /// How much of the sweep a full `gather` takes away.
+    static let maxGatherSweepReduction = 0.32
+
     /// Half the diagonal of the largest tile — reach from its centre.
     var tileReach: CGFloat { outerSquareSize * CGFloat(2.0.squareRoot()) / 2 }
 
@@ -104,12 +107,15 @@ struct BudgetArcLayout: Equatable {
         return max(72, width)
     }
 
-    func makeTiles(in size: CGSize) -> [BudgetArcTile] {
+    /// `gather` (0...1) pulls the horns up along the circle toward the crown, narrowing the sweep.
+    func makeTiles(in size: CGSize, gather: Double = 0) -> [BudgetArcTile] {
         guard let geometry = arcGeometry(in: size) else { return [] }
 
         let center = geometry.center
         let innerRadius = geometry.innerRadius
         let pitch = rowPitch
+        let crownDegrees = (startDegrees + endDegrees) / 2
+        let sweepScale = 1 - Self.maxGatherSweepReduction * min(max(gather, 0), 1)
 
         var tiles: [BudgetArcTile] = []
         var nextID = 0
@@ -122,7 +128,7 @@ struct BudgetArcLayout: Equatable {
 
                 let position = Double(column) + (shifted ? 0.5 : 0)
                 let t = columnCount == 1 ? 0.5 : position / Double(columnCount - 1)
-                let degrees = startDegrees - sweepDegrees * t
+                let degrees = crownDegrees + (startDegrees - sweepDegrees * t - crownDegrees) * sweepScale
                 let angle = degrees * .pi / 180
                 let tileSize = squareSize(forRow: row)
                 let radius = innerRadius + CGFloat(row) * pitch + (row == rowCount - 1 ? outerRowExtraGap : 0)

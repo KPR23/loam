@@ -33,8 +33,10 @@ struct MonthlySpendHero: View {
                         layout: layout,
                         categoryBreakdown: categoryBreakdown,
                         reveal: displayedReveal,
-                        tileShape: .circle
+                        tileShape: .circle,
+                        collapse: reduceMotion ? 0 : easedCollapse
                     )
+                    .opacity(reduceMotion ? 1 - easedCollapse : 1)
 
                     ViewThatFits(in: .horizontal) {
                         amountStack(amount: amount, size: 46, maxWidth: maxLabelWidth)
