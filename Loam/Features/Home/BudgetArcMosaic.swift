@@ -5,6 +5,9 @@ struct BudgetArcMosaic: View, Animatable {
     var layout: BudgetArcLayout
     var categoryBreakdown: [CategorySpendSlice]
     var reveal: Double
+    var tileShape: TileShape = .roundedSquare
+
+    enum TileShape { case roundedSquare, circle }
 
     var animatableData: Double {
         get { reveal }
@@ -25,6 +28,15 @@ struct BudgetArcMosaic: View, Animatable {
                 let lit = category != nil
                     && BudgetArcFill.coverage(index: index, total: total, progress: reveal) > 0.5
                 let color = lit ? category!.color : HomeTheme.tileEmpty
+
+                if tileShape == .circle {
+                    let half = tile.size / 2
+                    context.fill(
+                        Path(ellipseIn: CGRect(x: tile.point.x - half, y: tile.point.y - half, width: tile.size, height: tile.size)),
+                        with: .color(color)
+                    )
+                    continue
+                }
 
                 let half = tile.size / 2
                 let corner = CGSize(width: max(3, tile.size * 0.2), height: max(3, tile.size * 0.2))

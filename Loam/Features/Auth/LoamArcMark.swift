@@ -16,14 +16,14 @@ struct LoamArcMark: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var reveal = 0.0
 
-    private let layout = BudgetArcLayout()
+    private let layout = BudgetArcLayout.dots
 
     var body: some View {
         GeometryReader { geometry in
             let anchor = layout.labelAnchor(in: geometry.size)
 
             ZStack {
-                BudgetArcMosaic(layout: layout, categoryBreakdown: Self.brandMix, reveal: reveal)
+                BudgetArcMosaic(layout: layout, categoryBreakdown: Self.brandMix, reveal: reveal, tileShape: .circle)
 
                 Text("Loam")
                     .font(.system(size: 48, weight: .bold, design: .rounded))
