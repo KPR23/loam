@@ -221,7 +221,7 @@ struct HomeScrollCollapseModifier: ViewModifier {
 
     @State private var baselineOffset: CGFloat?
 
-    private let collapseDistance: CGFloat = 88
+    private let collapseDistance: CGFloat = 150
 
     func body(content: Content) -> some View {
         content
