@@ -27,10 +27,25 @@ struct BudgetArcLayout: Equatable {
     var startDegrees: Double = 198
     /// Right horn, mirrored.
     var endDegrees: Double = -18
+    /// Odd rows shift half a column so their tiles fall between those of the rows beside them.
+    var staggersOddRows = false
+    /// Extra room between the outermost row and the one inside it.
+    var outerRowExtraGap: CGFloat = 0
     var horizontalInset: CGFloat = 16
     var topInset: CGFloat = 10
     /// Vertical placement of the circle origin, 0 = top.
     var centerYRatio: CGFloat = 0.72
+
+    /// Round dots in three rows that grow outward; the middle row sits in the gaps of its neighbours.
+    static let dots = BudgetArcLayout(
+        rowCount: 3,
+        columnCount: 16,
+        squareSize: 11,
+        outerSquareSize: 20,
+        rowGap: 6,
+        staggersOddRows: true,
+        outerRowExtraGap: 3
+    )
 
     var sweepDegrees: Double { startDegrees - endDegrees }
 
@@ -38,7 +53,8 @@ struct BudgetArcLayout: Equatable {
     var tileReach: CGFloat { outerSquareSize * CGFloat(2.0.squareRoot()) / 2 }
 
     func squareSize(forRow row: Int) -> CGFloat {
-        row == rowCount - 1 ? outerSquareSize : squareSize
+        guard rowCount > 1 else { return outerSquareSize }
+        return squareSize + (outerSquareSize - squareSize) * CGFloat(row) / CGFloat(rowCount - 1)
     }
 
     /// Centre-to-centre distance between consecutive rows.
@@ -54,7 +70,7 @@ struct BudgetArcLayout: Equatable {
         let widthLimited = (size.width / 2) - horizontalInset - tileReach
         let topLimited = center.y - topInset - tileReach
         let outerRadius = max(tileReach, min(widthLimited, topLimited))
-        let innerRadius = max(tileReach, outerRadius - CGFloat(rowCount - 1) * pitch)
+        let innerRadius = max(tileReach, outerRadius - CGFloat(rowCount - 1) * pitch - outerRowExtraGap)
         return (center, innerRadius, outerRadius)
     }
 
@@ -100,13 +116,16 @@ struct BudgetArcLayout: Equatable {
 
         // Columns share an angle across rows, so a column lights up as one radial spoke.
         for column in 0..<columnCount {
-            let t = columnCount == 1 ? 0.5 : Double(column) / Double(columnCount - 1)
-            let degrees = startDegrees - sweepDegrees * t
-            let angle = degrees * .pi / 180
-
             for row in 0..<rowCount {
+                let shifted = staggersOddRows && row % 2 == 1
+                if shifted && column == columnCount - 1 { continue }
+
+                let position = Double(column) + (shifted ? 0.5 : 0)
+                let t = columnCount == 1 ? 0.5 : position / Double(columnCount - 1)
+                let degrees = startDegrees - sweepDegrees * t
+                let angle = degrees * .pi / 180
                 let tileSize = squareSize(forRow: row)
-                let radius = innerRadius + CGFloat(row) * pitch
+                let radius = innerRadius + CGFloat(row) * pitch + (row == rowCount - 1 ? outerRowExtraGap : 0)
                 let point = CGPoint(
                     x: center.x + radius * CGFloat(cos(angle)),
                     y: center.y - radius * CGFloat(sin(angle))

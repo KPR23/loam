@@ -7,7 +7,7 @@ struct MonthlySpendHero: View {
     /// Bump when Expenses becomes visible again; only used to recover a stuck arc.
     var reloadToken: Int = 0
     var collapseProgress: CGFloat = 0
-    var layout: BudgetArcLayout = BudgetArcLayout()
+    var layout: BudgetArcLayout = .dots
     @Binding var displayedReveal: Double
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -32,7 +32,8 @@ struct MonthlySpendHero: View {
                     BudgetArcMosaic(
                         layout: layout,
                         categoryBreakdown: categoryBreakdown,
-                        reveal: displayedReveal
+                        reveal: displayedReveal,
+                        tileShape: .circle
                     )
 
                     ViewThatFits(in: .horizontal) {
