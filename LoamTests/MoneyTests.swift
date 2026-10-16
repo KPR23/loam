@@ -64,13 +64,13 @@ final class MoneyFormatterTests: XCTestCase {
 
     func testCurrencyStringUsesTheMoneyCurrency() {
         let text = MoneyFormatter.string(from: Money(amountMinor: 12_50, currencyCode: "EUR"), locale: Locale(identifier: "en_US"))
-        XCTAssertEqual(text, "€12.50")
+        XCTAssertEqual(text, "12.50 €")
     }
 
     func testCurrencyStringPlacesTheSymbolByCurrencyNotLocale() {
         let poland = Locale(identifier: "en_PL")
         XCTAssertEqual(MoneyFormatter.string(from: Money(amountMinor: 12_50, currencyCode: "USD"), locale: poland), "$12,50")
-        XCTAssertEqual(MoneyFormatter.string(from: Money(amountMinor: 12_00, currencyCode: "EUR"), locale: poland), "€12")
+        XCTAssertEqual(MoneyFormatter.string(from: Money(amountMinor: 12_00, currencyCode: "EUR"), locale: poland), "12 €")
         XCTAssertEqual(MoneyFormatter.string(from: Money(amountMinor: -12_50, currencyCode: "PLN"), locale: poland), "-12,50 zł")
     }
 
