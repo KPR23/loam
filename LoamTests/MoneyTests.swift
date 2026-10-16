@@ -67,6 +67,13 @@ final class MoneyFormatterTests: XCTestCase {
         XCTAssertEqual(text, "€12.50")
     }
 
+    func testCurrencyStringPlacesTheSymbolByCurrencyNotLocale() {
+        let poland = Locale(identifier: "en_PL")
+        XCTAssertEqual(MoneyFormatter.string(from: Money(amountMinor: 12_50, currencyCode: "USD"), locale: poland), "$12,50")
+        XCTAssertEqual(MoneyFormatter.string(from: Money(amountMinor: 12_00, currencyCode: "EUR"), locale: poland), "€12")
+        XCTAssertEqual(MoneyFormatter.string(from: Money(amountMinor: -12_50, currencyCode: "PLN"), locale: poland), "-12,50 zł")
+    }
+
     func testEditableAmountIsWhatTheUserWouldHaveTyped() {
         XCTAssertEqual(MoneyFormatter.editableAmount(from: Money(amountMinor: 0)), "0")
         XCTAssertEqual(MoneyFormatter.editableAmount(from: Money(amountMinor: 12_00)), "12")
