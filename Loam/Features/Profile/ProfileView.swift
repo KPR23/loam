@@ -973,7 +973,7 @@ private struct DefaultCurrencySettingsView: View {
                     .buttonStyle(.plain)
                 }
             } footer: {
-                Text("New expenses use this currency. Existing expenses keep the currency they were added in; monthly totals convert them at the exchange rate of the day they were spent.")
+                Text("New expenses use this currency. Existing expenses keep the currency they were added in; totals convert them at the exchange rate of the day they were spent.")
             }
         }
         .navigationTitle("Default currency")
