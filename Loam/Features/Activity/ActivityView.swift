@@ -17,46 +17,49 @@ struct ActivityView: View {
             List {
                 if showsNotificationPrompt { notificationPrompt }
                 if activityStore.isLoading && activityStore.events.isEmpty {
-                    Section { SkeletonRows(count: 4, leading: .avatar(34), showsAmount: false) }
-                } else if activityStore.events.isEmpty {
                     Section {
-                        LoamEmptyState(
-                            title: "You're all caught up",
-                            message: "When a friend splits an expense with you, suggests an edit, or records a repayment, it shows up here for you to review. Read items stay in each expense's history.",
-                            systemImage: "tray"
-                        )
-                        .onAppear { Telemetry.capture(.emptyStateViewed(.activity)) }
+                        SkeletonRows(count: 4, leading: .avatar(40), showsAmount: false)
                     }
+                } else if activityStore.events.isEmpty {
+                    Section { emptyState }
                 } else {
                     if !requests.isEmpty {
-                        Section("Waiting on you") {
-                            ForEach(requests) { event in requestRow(event) }
-                        }
-                    }
-                    ForEach(groupedEvents(notifications)) { group in
-                        Section(group.title) {
-                            ForEach(group.events) { event in notificationRow(event) }
-                        }
-                    }
-                    if activityStore.canLoadMore {
                         Section {
-                            Button("Load more") { if let id = authSession.userId { Task { await activityStore.loadMore(userId: id) } } }
+                            ForEach(requests) { event in requestRow(event) }
+                        } header: {
+                            sectionHeader("Waiting on you")
                         }
                     }
-                }
-                if let error = activityStore.lastError {
-                    Section { VStack(alignment: .leading, spacing: 8) { Text(error).foregroundStyle(.secondary); Button("Retry") { Task { await reload() } } } }
+
+                    ForEach(groupedEvents(notifications)) { group in
+                        Section {
+                            ForEach(group.events) { event in notificationRow(event) }
+                        } header: {
+                            sectionHeader(group.title)
+                        }
+                    }
+
+                    if activityStore.canLoadMore {
+                        Section { loadMoreButton }
+                    }
                 }
             }
             .listStyle(.insetGrouped)
+            .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationTitle("Activity")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if !notifications.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         // Requests stay; only answering or dismissing one clears it.
-                        Button("Mark all read") { markRead(notifications) }
+                        Button {
+                            LoamFeedback.tap()
+                            markRead(notifications)
+                        } label: {
+                            Label("Mark all read", systemImage: "checkmark.circle")
+                        }
                     }
                 }
             }
@@ -88,7 +91,50 @@ struct ActivityView: View {
             guard oldValue != nil, newValue == nil else { return }
             Task { await reload() }
         }
-        .alert("Expense unavailable", isPresented: Binding(get: { unavailableMessage != nil }, set: { if !$0 { unavailableMessage = nil } })) { Button("OK", role: .cancel) {} } message: { Text(unavailableMessage ?? "") }
+        .alert("Expense unavailable", isPresented: Binding(
+            get: { unavailableMessage != nil },
+            set: { if !$0 { unavailableMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(unavailableMessage ?? "")
+        }
+        .alert("Couldn’t load activity", isPresented: Binding(
+            get: { activityStore.lastError != nil },
+            set: { if !$0 { activityStore.lastError = nil } }
+        )) {
+            Button("Retry") { Task { await reload() } }
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(activityStore.lastError ?? "")
+        }
+    }
+
+    private var loadMoreButton: some View {
+        Button {
+            guard let userId = authSession.userId else { return }
+            Task { await activityStore.loadMore(userId: userId) }
+        } label: {
+            Text("Load more")
+                .font(.system(.body, design: .rounded).weight(.medium))
+                .frame(maxWidth: .infinity)
+        }
+        .disabled(activityStore.isLoading)
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .textCase(nil)
+    }
+
+    private var emptyState: some View {
+        LoamEmptyState(
+            title: "You’re all caught up",
+            message: "When a friend splits an expense with you, suggests an edit, or records a repayment, it shows up here for you to review. Read items stay in each expense’s history.",
+            systemImage: "tray"
+        )
+        .onAppear { Telemetry.capture(.emptyStateViewed(.activity)) }
     }
 
     // MARK: - Notifications
@@ -102,23 +148,35 @@ struct ActivityView: View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
                 Label {
-                    Text("Get notified").font(.headline)
+                    Text("Get notified")
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(HomeTheme.text)
                 } icon: {
                     Image(systemName: "bell.badge.fill").foregroundStyle(HomeTheme.accent)
                 }
                 Text("Hear about shared expenses, replies and repayments as they happen. You choose which ones in Profile.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                HStack {
-                    Button("Turn on notifications") { Task { await pushStore.requestPermission() } }
-                        .buttonStyle(.borderedProminent)
-                        .tint(HomeTheme.accentFill)
+                    .foregroundStyle(HomeTheme.secondary)
+                HStack(spacing: 12) {
+                    Button {
+                        LoamFeedback.tap()
+                        Task { await pushStore.requestPermission() }
+                    } label: {
+                        Text("Turn on notifications")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(minHeight: 36)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(HomeTheme.accentFill)
+                    .buttonBorderShape(.capsule)
+
                     Button("Not now") { promptDismissed = true }
+                        .font(.subheadline.weight(.medium))
                         .buttonStyle(.borderless)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(HomeTheme.secondary)
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
         }
     }
 
@@ -161,45 +219,36 @@ struct ActivityView: View {
 
     @ViewBuilder
     private func activityRow(_ event: ActivityEvent, request: ActivityRequestKind?) -> some View {
+        let row = ActivityRow(
+            event: event,
+            headline: event.headline(viewerId: authSession.userId ?? event.actorId),
+            caption: subtitle(for: event, request: request),
+            isRequest: request != nil
+        )
         if event.kind.isRepayment {
             // Repayments have no expense to open; Balances shows the running total.
-            activityRowContent(event, request: request)
-                .accessibilityElement(children: .combine)
+            row
         } else {
             Button {
-                guard let id = event.expenseId, let userId = authSession.userId else { unavailableMessage = "This expense is no longer available."; return }
-                Task {
-                    let fetched = await expenseStore.fetchExpense(id: id, userId: userId)
-                    if let fetched { selectedExpense = fetched } else { unavailableMessage = "This expense was deleted or you no longer have access to it." }
-                }
+                open(event)
             } label: {
-                activityRowContent(event, request: request)
+                row
             }
             .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
+            .accessibilityHint("Opens the expense")
         }
     }
 
-    private func activityRowContent(_ event: ActivityEvent, request: ActivityRequestKind?) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
-                ActivityAvatar(event: event)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(event.headline(viewerId: authSession.userId ?? event.actorId))
-                        .font(.system(.body, design: .rounded))
-                        .multilineTextAlignment(.leading)
-                    Text(subtitle(for: event, request: request))
-                        .font(.caption)
-                        .foregroundStyle(request == nil ? Color.secondary : HomeTheme.accent)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if request != nil {
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(HomeTheme.accent)
-                    .padding(.top, 4)
-                    .accessibilityHidden(true)
+    private func open(_ event: ActivityEvent) {
+        guard let id = event.expenseId, let userId = authSession.userId else {
+            unavailableMessage = "This expense is no longer available."
+            return
+        }
+        Task {
+            if let fetched = await expenseStore.fetchExpense(id: id, userId: userId) {
+                selectedExpense = fetched
+            } else {
+                unavailableMessage = "This expense was deleted or you no longer have access to it."
             }
         }
     }
@@ -307,17 +356,55 @@ private enum ActivityRequestKind {
     }
 }
 
+// MARK: - Rows
+
+private struct ActivityRow: View {
+    let event: ActivityEvent
+    let headline: AttributedString
+    let caption: String
+    /// Requests wait on the viewer, so their caption and chevron take the accent.
+    let isRequest: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ActivityAvatar(event: event)
+
+            VStack(alignment: .leading, spacing: 2) {
+                // Regular weight, so the bold expense title inside stands out.
+                Text(headline)
+                    .font(.system(.body, design: .rounded))
+                    .foregroundStyle(HomeTheme.text)
+                    .multilineTextAlignment(.leading)
+                Text(caption)
+                    .font(.system(.caption, design: .rounded).weight(.medium))
+                    .foregroundStyle(isRequest ? HomeTheme.accent : HomeTheme.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if isRequest {
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(HomeTheme.accent)
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+}
+
 /// The actor's avatar with a badge saying what they did.
 private struct ActivityAvatar: View {
     let event: ActivityEvent
 
     var body: some View {
-        AvatarView(userId: event.actorId, size: 34)
+        AvatarView(userId: event.actorId, size: 40)
             .overlay(alignment: .bottomTrailing) {
                 Image(systemName: event.kind.badgeSymbol)
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(.white)
-                    .frame(width: 17, height: 17)
+                    .frame(width: 18, height: 18)
                     .background(event.kind.tint, in: Circle())
                     .overlay(Circle().stroke(HomeTheme.surface, lineWidth: 2))
                     .offset(x: 4, y: 4)
