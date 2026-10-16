@@ -22,7 +22,7 @@ export interface PushContent {
 
 const REQUESTS = new Set(["shared", "proposal_created"]);
 const REPLIES = new Set(["accepted", "rejected", "proposal_accepted", "proposal_rejected", "auto_accepted"]);
-const REPAYMENTS = new Set(["repayment_recorded", "repayment_reversed"]);
+const REPAYMENTS = new Set(["repayment_recorded", "repayment_reversed", "repayment_received"]);
 
 export function notificationCategory(kind: string): PushContent["category"] {
   if (REQUESTS.has(kind)) return "requests";
@@ -65,6 +65,8 @@ export function pushContent(event: PushEvent, viewerId: string): PushContent | n
     case "proposal_superseded": return reply(`${possessive(actor)} suggested changes were replaced`);
     case "repayment_recorded":
       return reply(`${actor} paid you back ${money(event.affected_share_minor, event.currency)}`, "Repayment");
+    case "repayment_received":
+      return reply(`${actor} recorded that you paid them back ${money(event.affected_share_minor, event.currency)}`, "Repayment");
     case "repayment_reversed":
       return reply(`${actor} reversed a repayment of ${money(event.affected_share_minor, event.currency)}`, "Repayment");
     default: return null;

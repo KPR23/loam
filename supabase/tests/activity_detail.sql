@@ -68,6 +68,24 @@ select public.reverse_repayment(current_setting('test.repayment')::uuid,gen_rand
 do $$ begin
  assert (select count(*)=1 from public.activity_page() where kind='repayment_reversed'),'Reversal not recorded';
 end $$;
+-- The person owed money can record being paid; the event reads from each side.
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+select set_config('test.received',public.create_received_repayment(current_setting('test.b')::uuid,100,'PLN','Cash',current_date,gen_random_uuid())::text,true);
+do $$ begin
+ assert (select from_user=current_setting('test.b')::uuid and to_user=current_setting('test.a')::uuid from public.repayment where id=current_setting('test.received')::uuid),'Payer and receiver swapped';
+ assert (select kind='repayment_received' and actor_id=current_setting('test.a')::uuid and recipient_id=current_setting('test.b')::uuid
+   from public.activity_page() where repayment_id=current_setting('test.received')::uuid),'Receiver has no received event';
+end $$;
+do $$ begin
+ perform public.create_received_repayment(current_setting('test.b')::uuid,100000,'PLN',null,current_date,gen_random_uuid());
+ assert false,'Overpaying a debt was accepted';
+exception when others then assert sqlerrm='Repayment exceeds confirmed debt','Wrong error: '||sqlerrm;
+end $$;
+select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
+do $$ begin
+ assert (select kind='repayment_received' and actor_id=current_setting('test.a')::uuid
+   from public.activity_page() where repayment_id=current_setting('test.received')::uuid),'Payer has no received event';
+end $$;
 select 'ok 3 - repayments and reversals are recorded for both people' as result;
 
 select set_config('request.jwt.claim.sub',current_setting('test.c'),true);
