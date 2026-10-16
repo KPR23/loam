@@ -5,8 +5,8 @@ struct HomeView: View {
     @EnvironmentObject private var expenseStore: ExpenseStore
 
     var arcReloadToken: Int = 0
+    var onAddExpense: () -> Void = {}
 
-    @State private var showAddExpense = false
     @State private var showMonthPicker = false
     @State private var collapseProgress: CGFloat = 0
     @State private var arcReveal: Double = 0
@@ -29,9 +29,18 @@ struct HomeView: View {
                         displayedReveal: $arcReveal
                     )
                     .reportHomeHeroScrollOffset()
-                    .listRowInsets(EdgeInsets(top: -2, leading: 0, bottom: 4, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: -2, leading: 0, bottom: 0, trailing: 0))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+
+                    // The hero's top inset (-2) cancels the 2pt content margin, leaving no gap above the graph;
+                    // the button adds 14pt below so it doesn't crowd the graph.
+                    if !showsCurrentMonthEmptyState {
+                        addExpenseButton
+                            .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 0, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
                 }
 
                 pendingAcceptanceSection
@@ -42,8 +51,6 @@ struct HomeView: View {
             .coordinateSpace(name: "homeScroll")
             .trackHomeScrollCollapse($collapseProgress)
             .contentMargins(.top, 2, for: .scrollContent)
-            // Keep the last expense row scrollable above the floating + button.
-            .contentMargins(.bottom, AddExpenseFABLayout.listBottomContentInset, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
@@ -72,20 +79,6 @@ struct HomeView: View {
             .refreshable {
                 await expenseStore.refresh(userId: authSession.userId)
             }
-            .overlay(alignment: .bottomTrailing) {
-                // The empty state has its own add button; a second one would compete with it.
-                if !showsCurrentMonthEmptyState {
-                    AddExpenseFAB {
-                        Telemetry.capture(.addExpenseOpened(source: .fab))
-                        showAddExpense = true
-                    }
-                    .padding(.trailing, AddExpenseFABLayout.trailingPadding)
-                    .padding(.bottom, AddExpenseFABLayout.bottomPadding)
-                }
-            }
-        }
-        .sheet(isPresented: $showAddExpense) {
-            AddExpenseView()
         }
         .sheet(isPresented: $showMonthPicker) {
             MonthPickerSheet(period: expenseStore.period) { newPeriod in
@@ -99,6 +92,21 @@ struct HomeView: View {
             }
         }
         .expenseActionsHost(selectedExpense: $selectedExpense, request: $actionRequest)
+    }
+
+    private var addExpenseButton: some View {
+        Button {
+            Telemetry.capture(.addExpenseOpened(source: .homeButton))
+            onAddExpense()
+        } label: {
+            Label("Add expense", systemImage: "plus")
+                .labelStyle(.titleAndIcon)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(HomeTheme.accentFill)
+        .controlSize(.large)
     }
 
     @ViewBuilder
@@ -310,7 +318,7 @@ struct HomeView: View {
                 Button {
                     Telemetry.capture(.emptyStateActionTapped(.expenses))
                     Telemetry.capture(.addExpenseOpened(source: .emptyState))
-                    showAddExpense = true
+                    onAddExpense()
                 } label: {
                     Label("Add an expense", systemImage: "plus")
                         .fontWeight(.semibold)
@@ -456,38 +464,6 @@ struct HomeView: View {
 
     private func presentDeleteConfirmation(for expense: ExpenseRecord) {
         actionRequest = .delete(expense)
-    }
-}
-
-private enum AddExpenseFABLayout {
-    static let diameter: CGFloat = 56
-    static let trailingPadding: CGFloat = 20
-    static let bottomPadding: CGFloat = 12
-    /// Extra gap so the last row isn’t tucked under the FAB when scrolled to the end.
-    static let listClearance: CGFloat = 20
-
-    static var listBottomContentInset: CGFloat {
-        diameter + bottomPadding + listClearance
-    }
-}
-
-private struct AddExpenseFAB: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            LoamFeedback.tap()
-            action()
-        } label: {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(Color(.systemBackground))
-                .frame(width: AddExpenseFABLayout.diameter, height: AddExpenseFABLayout.diameter)
-                .background(Circle().fill(Color.primary))
-                .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
-        }
-        .buttonStyle(LoamPressStyle())
-        .accessibilityLabel("Add expense")
     }
 }
 
