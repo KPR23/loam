@@ -10,6 +10,8 @@ struct MonthlySpendHero: View {
     var layout: BudgetArcLayout = .dots
     @Binding var displayedReveal: Double
 
+    @State private var amountSize: CGFloat = 46
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var easedCollapse: CGFloat {
@@ -38,21 +40,18 @@ struct MonthlySpendHero: View {
                     )
                     .opacity(reduceMotion ? 1 - easedCollapse : 1)
 
-                    ViewThatFits(in: .horizontal) {
-                        amountStack(amount: amount, size: 46, maxWidth: maxLabelWidth)
-                        amountStack(amount: amount, size: 40, maxWidth: maxLabelWidth)
-                        amountStack(amount: amount, size: 34, maxWidth: maxLabelWidth)
-                        amountStack(amount: amount, size: 28, maxWidth: maxLabelWidth)
-                        amountStack(amount: amount, size: 23, maxWidth: maxLabelWidth, shrinksToFit: true)
-                    }
-                    .frame(width: maxLabelWidth)
-                    .position(
-                        x: anchor.x,
-                        y: anchor.y + collapseYOffset
-                    )
-                    .opacity(1 - easedCollapse)
-                    .scaleEffect(1 - 0.12 * easedCollapse, anchor: .center)
-                    .blur(radius: easedCollapse * 3)
+                    // One stack whose size follows the hidden probes, so a new amount rolls its digits
+                    // like typing does instead of `ViewThatFits` swapping in a different view.
+                    amountStack(amount: amount, size: amountSize, maxWidth: maxLabelWidth, shrinksToFit: true)
+                        .frame(width: maxLabelWidth)
+                        .background { amountSizeProbe(maxWidth: maxLabelWidth) }
+                        .position(
+                            x: anchor.x,
+                            y: anchor.y + collapseYOffset
+                        )
+                        .opacity(1 - easedCollapse)
+                        .scaleEffect(1 - 0.12 * easedCollapse, anchor: .center)
+                        .blur(radius: easedCollapse * 3)
                 }
             }
             .frame(height: 260)
@@ -107,6 +106,28 @@ struct MonthlySpendHero: View {
         .joined(separator: ", ")
     }
 
+    /// The largest size the amount fits at, reported through `HeroAmountSizeKey`.
+    private func amountSizeProbe(maxWidth: CGFloat) -> some View {
+        ViewThatFits(in: .horizontal) {
+            amountSizeCandidate(size: 46, maxWidth: maxWidth)
+            amountSizeCandidate(size: 40, maxWidth: maxWidth)
+            amountSizeCandidate(size: 34, maxWidth: maxWidth)
+            amountSizeCandidate(size: 28, maxWidth: maxWidth)
+            amountSizeCandidate(size: 23, maxWidth: maxWidth, shrinksToFit: true)
+        }
+        .hidden()
+        .accessibilityHidden(true)
+        .onPreferenceChange(HeroAmountSizeKey.self) { size in
+            guard let size else { return }
+            amountSize = size
+        }
+    }
+
+    private func amountSizeCandidate(size: CGFloat, maxWidth: CGFloat, shrinksToFit: Bool = false) -> some View {
+        amountStack(amount: amount, size: size, maxWidth: maxWidth, shrinksToFit: shrinksToFit)
+            .preference(key: HeroAmountSizeKey.self, value: size)
+    }
+
     /// The sizes ask for their full width, so `ViewThatFits` skips one that wouldn't fit instead of
     /// truncating it; only the smallest may shrink further, rather than end in an ellipsis.
     private func amountStack(amount money: Money, size: CGFloat, maxWidth: CGFloat, shrinksToFit: Bool = false) -> some View {
@@ -157,6 +178,14 @@ struct MonthlySpendHero: View {
         withAnimation(.linear(duration: 1.05)) {
             displayedReveal = clamped
         }
+    }
+}
+
+private struct HeroAmountSizeKey: PreferenceKey {
+    static var defaultValue: CGFloat?
+
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        value = nextValue() ?? value
     }
 }
 
