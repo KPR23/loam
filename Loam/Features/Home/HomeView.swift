@@ -395,19 +395,13 @@ struct HomeView: View {
         return ExpenseStore.makeSummary(expenses: expenses, userId: userId, rates: ExchangeRateStore.shared.rates).totalMine
     }
 
-    /// Explains totals that include expenses added in another currency.
+    /// Warns that totals leave out expenses in another currency whose rates haven't loaded.
+    /// How conversion works is explained once, in the default currency picker.
     private var conversionNote: String? {
         let summary = expenseStore.summary
-        let currency = summary.totalMine.currencyCode
-        var parts: [String] = []
-        if summary.convertedCount > 0 {
-            parts.append("Totals are in \(currency). Expenses in other currencies are converted at the exchange rate of the day they were spent.")
-        }
-        if summary.unconvertedCount > 0 {
-            let count = summary.unconvertedCount == 1 ? "1 expense" : "\(summary.unconvertedCount) expenses"
-            parts.append("\(count) in another currency \(summary.unconvertedCount == 1 ? "isn't" : "aren't") counted in \(currency) totals until exchange rates load.")
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " ")
+        guard summary.unconvertedCount > 0 else { return nil }
+        let count = summary.unconvertedCount == 1 ? "1 expense" : "\(summary.unconvertedCount) expenses"
+        return "\(count) in another currency \(summary.unconvertedCount == 1 ? "isn't" : "aren't") counted in \(summary.totalMine.currencyCode) totals until exchange rates load."
     }
 
     private func expenseRow(_ expense: ExpenseRecord) -> some View {
