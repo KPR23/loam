@@ -106,6 +106,7 @@
 		B5C583A33F2526F24215AC48 /* RepaymentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5614B3035CE6B96ADF47AE16 /* RepaymentSheet.swift */; };
 		B69CB7C679EF32139B0D1051 /* LegalPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CEBE465F07788ACD889DE61 /* LegalPages.swift */; };
 		BC595E14561F6D076C40E8C5 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07214E88835854CA791C14E /* BalanceStore.swift */; };
+		BDF661A4D263047804C66719 /* SkeletonRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E0E0F8791CA698A81E09E78 /* SkeletonRows.swift */; };
 		C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */ = {isa = PBXBuildFile; fileRef = 21C2E3B3B713F758DAD1B856 /* budget-arc.svg */; };
 		CF1A3CBDC16DCE533EE59653 /* SplitExpenseSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87AE244F130211B61887F30 /* SplitExpenseSection.swift */; };
 		CF22202F705F49295851F0ED /* ExpenseShareStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9EFB1F919E67DF4B88ECEC1 /* ExpenseShareStatus.swift */; };
@@ -177,6 +178,7 @@
 		1BB3E318E7DB0B9CE3B246C1 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
 		1BCD03B5C9F32D9021D06CB6 /* FriendConnectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendConnectionViews.swift; sourceTree = "<group>"; };
 		1C9A76F1F1B13BB49D3BCA2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1E0E0F8791CA698A81E09E78 /* SkeletonRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonRows.swift; sourceTree = "<group>"; };
 		20C428C07622150791184237 /* Recurring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recurring.swift; sourceTree = "<group>"; };
 		21C2E3B3B713F758DAD1B856 /* budget-arc.svg */ = {isa = PBXFileReference; path = "budget-arc.svg"; sourceTree = "<group>"; };
 		230D7634A0B21CFBD5ABD83B /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
@@ -328,6 +330,7 @@
 				1B937506CE1AD90136888495 /* PendingExpenseCard.swift */,
 				54E27DC7E441F9167DCEB57D /* PendingExpensesSheet.swift */,
 				B52E9F008EB2501D5905C2CA /* ProposeEditSheet.swift */,
+				1E0E0F8791CA698A81E09E78 /* SkeletonRows.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -961,6 +964,7 @@
 				B5C583A33F2526F24215AC48 /* RepaymentSheet.swift in Sources */,
 				33C83051AA7FF1FDA79F0241 /* RootView.swift in Sources */,
 				F7D1E2A7318C3E027F56FBCA /* SettlementMode.swift in Sources */,
+				BDF661A4D263047804C66719 /* SkeletonRows.swift in Sources */,
 				F4BF728964DC326187620B67 /* SplitCalculator.swift in Sources */,
 				56B5F3D7C0915B265B5C7938 /* SplitExpenseMode.swift in Sources */,
 				CF1A3CBDC16DCE533EE59653 /* SplitExpenseSection.swift in Sources */,

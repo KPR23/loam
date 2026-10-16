@@ -150,10 +150,7 @@ struct PersonBalanceView: View {
     private var historySections: some View {
         if !hasLoaded {
             Section {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-                    .listRowBackground(Color.clear)
+                SkeletonRows(count: 4)
             }
         } else if let loadError, history.isEmpty {
             Section {
