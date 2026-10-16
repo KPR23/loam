@@ -25,10 +25,6 @@ struct PersonBalanceView: View {
         balanceStore.snapshot.balances.filter { $0.personId == person.personId }
     }
 
-    private var debts: [PersonBalance] {
-        balances.filter { $0.amountMinor < 0 }
-    }
-
     var body: some View {
         List {
             Section {
@@ -72,7 +68,7 @@ struct PersonBalanceView: View {
             await loadHistory()
         }
         .sheet(isPresented: $showsRepayment) {
-            RepaymentSheet(debts: debts)
+            RepaymentSheet(balances: balances)
         }
     }
 
@@ -82,7 +78,7 @@ struct PersonBalanceView: View {
         VStack(spacing: 16) {
             standing
 
-            if !debts.isEmpty {
+            if !balances.isEmpty {
                 Button {
                     LoamFeedback.tap()
                     showsRepayment = true
@@ -94,7 +90,7 @@ struct PersonBalanceView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(HomeTheme.accentFill)
                 .buttonBorderShape(.capsule)
-                .accessibilityHint("Records money you paid \(person.displayName) outside Loam")
+                .accessibilityHint("Records money exchanged with \(person.displayName) outside Loam")
             }
         }
         .frame(maxWidth: .infinity)

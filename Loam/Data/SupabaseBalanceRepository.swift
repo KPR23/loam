@@ -44,6 +44,19 @@ actor SupabaseBalanceRepository: BalanceRepository {
         _ = try await client.rpc("create_repayment", params: params).execute()
     }
 
+    func createReceivedRepayment(from personId: UUID, to userId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, operationId: UUID) async throws {
+        _ = userId
+        let params = CreateReceivedRepaymentParams(
+            fromUserId: personId,
+            amountMinor: amountMinor,
+            currency: currencyCode.uppercased(),
+            note: note,
+            paidAt: CalendarDateCodec.string(from: paidAt),
+            operationId: operationId
+        )
+        _ = try await client.rpc("create_received_repayment", params: params).execute()
+    }
+
     func reverseRepayment(id: UUID, operationId: UUID) async throws {
         struct Params: Encodable { let pRepaymentId: UUID; let pOperationId: UUID
             enum CodingKeys: String, CodingKey { case pRepaymentId = "p_repayment_id", pOperationId = "p_operation_id" } }
@@ -80,6 +93,35 @@ struct CreateRepaymentParams: Encodable, Sendable {
             // this optional key makes it search for a four-argument function.
             try container.encodeNil(forKey: .note)
         }
+        try container.encode(paidAt, forKey: .paidAt)
+        try container.encode(operationId, forKey: .operationId)
+    }
+}
+
+/// Same shape as `CreateRepaymentParams`, with the payer named instead of the recipient.
+struct CreateReceivedRepaymentParams: Encodable, Sendable {
+    let fromUserId: UUID
+    let amountMinor: Int
+    let currency: String
+    let note: String?
+    let paidAt: String
+    let operationId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case fromUserId = "p_from_user_id"
+        case amountMinor = "p_amount_minor"
+        case currency = "p_currency"
+        case note = "p_note"
+        case paidAt = "p_paid_at"
+        case operationId = "p_operation_id"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(fromUserId, forKey: .fromUserId)
+        try container.encode(amountMinor, forKey: .amountMinor)
+        try container.encode(currency, forKey: .currency)
+        try container.encode(note, forKey: .note)
         try container.encode(paidAt, forKey: .paidAt)
         try container.encode(operationId, forKey: .operationId)
     }

@@ -53,7 +53,7 @@ enum NotificationCategory: String, CaseIterable, Identifiable, Sendable {
         case .shared, .proposalCreated: self = .requests
         case .accepted, .rejected, .proposalAccepted, .proposalRejected, .autoAccepted: self = .replies
         case .edited, .participantRemoved, .deleted, .proposalSuperseded: self = .changes
-        case .repaymentRecorded, .repaymentReversed: self = .repayments
+        case .repaymentRecorded, .repaymentReversed, .repaymentReceived: self = .repayments
         }
     }
 }

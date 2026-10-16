@@ -336,7 +336,7 @@ extension ActivityEventKind {
         case .rejected, .proposalRejected: .red
         case .edited: .orange
         case .proposalCreated: .purple
-        case .repaymentRecorded: .teal
+        case .repaymentRecorded, .repaymentReceived: .teal
         case .participantRemoved, .deleted, .proposalSuperseded, .repaymentReversed: Color(.systemGray)
         }
     }
@@ -351,7 +351,7 @@ extension ActivityEventKind {
         case .participantRemoved: "person.fill.xmark"
         case .deleted: "trash.fill"
         case .proposalSuperseded: "arrow.triangle.2.circlepath"
-        case .repaymentRecorded: RepaymentRecord.symbolName
+        case .repaymentRecorded, .repaymentReceived: RepaymentRecord.symbolName
         case .repaymentReversed: "arrow.uturn.backward"
         }
     }

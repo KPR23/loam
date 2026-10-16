@@ -97,6 +97,18 @@ actor LocalBalanceRepository: BalanceRepository {
         try save(records)
     }
 
+    func createReceivedRepayment(from personId: UUID, to userId: UUID, amountMinor: Int, currencyCode: String, note: String?, paidAt: Date, operationId: UUID) async throws {
+        guard amountMinor > 0 else { throw BalanceRepositoryError.invalidAmount }
+        let owed = try await fetchBalances(for: userId).balances.first(where: {
+            $0.personId == personId && $0.currencyCode.caseInsensitiveCompare(currencyCode) == .orderedSame
+        })?.amountMinor ?? 0
+        guard owed > 0, amountMinor <= owed else { throw BalanceRepositoryError.exceedsDebt }
+        var records = try loadRepayments()
+        guard !records.contains(where: { $0.id == operationId }) else { return }
+        records.append(RepaymentRecord(id: operationId, fromUserId: personId, toUserId: userId, amountMinor: amountMinor, currencyCode: currencyCode.uppercased(), note: note, paidAt: paidAt, createdAt: Date(), reversedAt: nil))
+        try save(records)
+    }
+
     func reverseRepayment(id: UUID, operationId: UUID) async throws {
         var records = try loadRepayments()
         guard let index = records.firstIndex(where: { $0.id == id }), !records[index].isReversed else { return }
