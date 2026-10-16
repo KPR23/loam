@@ -41,7 +41,7 @@ struct MonthlySpendHero: View {
                         amountStack(amount: amount, size: 40, maxWidth: maxLabelWidth)
                         amountStack(amount: amount, size: 34, maxWidth: maxLabelWidth)
                         amountStack(amount: amount, size: 28, maxWidth: maxLabelWidth)
-                        amountStack(amount: amount, size: 23, maxWidth: maxLabelWidth)
+                        amountStack(amount: amount, size: 23, maxWidth: maxLabelWidth, shrinksToFit: true)
                     }
                     .frame(width: maxLabelWidth)
                     .position(
@@ -105,7 +105,9 @@ struct MonthlySpendHero: View {
         .joined(separator: ", ")
     }
 
-    private func amountStack(amount money: Money, size: CGFloat, maxWidth: CGFloat) -> some View {
+    /// The sizes ask for their full width, so `ViewThatFits` skips one that wouldn't fit instead of
+    /// truncating it; only the smallest may shrink further, rather than end in an ellipsis.
+    private func amountStack(amount money: Money, size: CGFloat, maxWidth: CGFloat, shrinksToFit: Bool = false) -> some View {
         let heroAmount = MoneyFormatter.heroAmount(from: money)
         let amountValue = Double(money.amountMinor) / 100.0
 
@@ -116,14 +118,15 @@ struct MonthlySpendHero: View {
                 .foregroundStyle(HomeTheme.text)
                 .contentTransition(.numericText(value: amountValue))
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(shrinksToFit ? 0.4 : 1)
+                .fixedSize(horizontal: !shrinksToFit, vertical: false)
             Text(money.currencyCode)
                 .font(.system(size: max(14, size * 0.33), weight: .semibold, design: .rounded))
                 .foregroundStyle(HomeTheme.secondary)
                 .lineLimit(1)
         }
         .multilineTextAlignment(.center)
-        .frame(maxWidth: maxWidth)
+        .frame(maxWidth: shrinksToFit ? maxWidth : nil)
         .animation(reduceMotion ? nil : .smooth(duration: 0.42), value: amountValue)
     }
 
