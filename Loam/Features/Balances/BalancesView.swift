@@ -25,10 +25,7 @@ struct BalancesView: View {
             List {
                 if balanceStore.isLoading && snapshot.balances.isEmpty {
                     Section {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 48)
-                            .listRowBackground(Color.clear)
+                        SkeletonRows(count: 3, leading: .avatar(40))
                     }
                 } else if isEmpty {
                     Section { emptyState }

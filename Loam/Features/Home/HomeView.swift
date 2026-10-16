@@ -207,8 +207,7 @@ struct HomeView: View {
     private var expenseList: some View {
         if expenseStore.isLoading && expenseStore.expenses.isEmpty {
             Section {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
+                SkeletonRows()
             }
         } else if expenseStore.expenses.isEmpty {
             Section {

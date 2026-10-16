@@ -17,7 +17,7 @@ struct ActivityView: View {
             List {
                 if showsNotificationPrompt { notificationPrompt }
                 if activityStore.isLoading && activityStore.events.isEmpty {
-                    Section { HStack { Spacer(); ProgressView("Loading activity…"); Spacer() }.padding(.vertical, 28) }
+                    Section { SkeletonRows(count: 4, leading: .avatar(34), showsAmount: false) }
                 } else if activityStore.events.isEmpty {
                     Section {
                         LoamEmptyState(
