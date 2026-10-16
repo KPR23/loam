@@ -19,7 +19,7 @@ Deno.test("every activity kind maps to a switch", () => {
     shared: "requests", proposal_created: "requests",
     accepted: "replies", rejected: "replies", proposal_accepted: "replies", proposal_rejected: "replies", auto_accepted: "replies",
     edited: "changes", participant_removed: "changes", deleted: "changes", proposal_superseded: "changes",
-    repayment_recorded: "repayments", repayment_reversed: "repayments",
+    repayment_recorded: "repayments", repayment_reversed: "repayments", repayment_received: "repayments",
   };
   for (const [kind, category] of Object.entries(kinds)) {
     assertEquals(notificationCategory(kind), category);
