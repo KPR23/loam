@@ -94,7 +94,7 @@ struct HomeExpenseRow: View {
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 2) {
-                HStack(spacing: 5) {
+                HStack(spacing: 6) {
                     if acceptance == nil {
                         if expense.isRecurring {
                             amountAccessoryIcon(
