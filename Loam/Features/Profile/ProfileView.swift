@@ -612,11 +612,11 @@ private struct ProUpgradeBanner: View {
             HStack(spacing: 12) {
                 copy(accent: accent)
                 Spacer(minLength: 4)
-                getProPill(accent: accent, isDark: isDark)
+                getProPill(isDark: isDark)
             }
             VStack(alignment: .leading, spacing: 12) {
                 copy(accent: accent)
-                getProPill(accent: accent, isDark: isDark)
+                getProPill(isDark: isDark)
             }
         }
         .padding(.horizontal, 18)
@@ -659,9 +659,9 @@ private struct ProUpgradeBanner: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    private func getProPill(accent: Color, isDark: Bool) -> some View {
-        // White text on the accent, except when the accent itself is white (black accent in dark mode).
-        let label: Color = HomeTheme.solidAccent == .black && isDark ? .black : .white
+    private func getProPill(isDark: Bool) -> some View {
+        // accentFill is the app's fill for white-text buttons; it keeps black readable in dark mode.
+        let fill = HomeTheme.accentFill
 
         return HStack(spacing: 4) {
             Text("Get Pro")
@@ -669,15 +669,15 @@ private struct ProUpgradeBanner: View {
                 .font(.caption.weight(.bold))
         }
         .font(.system(.subheadline, design: .rounded).weight(.bold))
-        .foregroundStyle(label)
+        .foregroundStyle(.white)
         .lineLimit(1)
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(
             Capsule()
-                .fill(accent.shadow(.inner(color: .white.opacity(0.3), radius: 2, x: 1, y: 1.5)))
+                .fill(fill.shadow(.inner(color: .white.opacity(0.3), radius: 2, x: 1, y: 1.5)))
         )
-        .shadow(color: accent.opacity(isDark ? 0 : 0.25), radius: 6, y: 3)
+        .shadow(color: fill.opacity(isDark ? 0 : 0.25), radius: 6, y: 3)
     }
 }
 
