@@ -581,7 +581,7 @@ private struct ProUpgradeSection: View {
                 Button { showsPaywall = true } label: {
                     ProUpgradeBanner()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(LoamPressStyle())
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .proPaywall(isPresented: $showsPaywall)
@@ -591,7 +591,8 @@ private struct ProUpgradeSection: View {
 }
 
 /// A clay tile in the PRO mark's style: a pale accent face lit from the top left,
-/// with a slightly darker edge showing below it.
+/// with a slightly darker edge showing below it. The copy sits on the left and a solid
+/// "Get Pro" pill on the right makes it read as something to tap.
 private struct ProUpgradeBanner: View {
     @Environment(\.colorScheme) private var colorScheme
 
@@ -599,29 +600,26 @@ private struct ProUpgradeBanner: View {
         let isDark = colorScheme == .dark
         // The tile mixes the accent into its face, so black stays black, or white on dark surfaces.
         let accent = HomeTheme.solidAccent == .black && isDark ? Color.white : HomeTheme.solidAccent
-        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
         // A pale face glares against dark surfaces, so dark mode shades the accent toward black instead.
         let face = isDark ? ProMark.shaded(of: accent, blackness: 0.62) : ProMark.pastel(of: accent)
         let edge = isDark ? ProMark.shaded(of: accent, blackness: 0.78) : ProMark.pastel(of: accent, whiteness: 0.72)
 
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Upgrade to Loam Pro")
-                    .font(.system(.title3, design: .rounded).weight(.heavy))
-                    .foregroundStyle(
-                        accent.shadow(.inner(color: .white.opacity(0.55), radius: 1, x: 0.5, y: 1))
-                    )
-                Text("Share every bill, with everyone")
-                    .font(.subheadline)
-                    .foregroundStyle(accent.opacity(0.75))
+        // Large text sizes don't fit the pill beside the copy, so it drops below instead.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                copy(accent: accent)
+                Spacer(minLength: 4)
+                getProPill(accent: accent, isDark: isDark)
             }
-            Spacer(minLength: 8)
-            ProMark(height: 34)
-                .shadow(color: accent.opacity(0.18), radius: 6, y: 4)
-                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 12) {
+                copy(accent: accent)
+                getProPill(accent: accent, isDark: isDark)
+            }
         }
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, minHeight: 104)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
                 // Thickness: a slightly darker copy just below the face.
@@ -639,8 +637,45 @@ private struct ProUpgradeBanner: View {
         }
         .padding(.bottom, 4)
         .contentShape(shape)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Upgrade to Loam Pro")
+        .accessibilityHint("Share every bill, with everyone")
         .accessibilityAddTraits(.isButton)
+    }
+
+    private func copy(accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Upgrade to Loam Pro")
+                .font(.system(.headline, design: .rounded).weight(.heavy))
+                .foregroundStyle(
+                    accent.shadow(.inner(color: .white.opacity(0.55), radius: 1, x: 0.5, y: 1))
+                )
+            Text("Share every bill, with everyone")
+                .font(.footnote)
+                .foregroundStyle(accent.opacity(0.75))
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func getProPill(accent: Color, isDark: Bool) -> some View {
+        // White text on the accent, except when the accent itself is white (black accent in dark mode).
+        let label: Color = HomeTheme.solidAccent == .black && isDark ? .black : .white
+
+        return HStack(spacing: 4) {
+            Text("Get Pro")
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+        }
+        .font(.system(.subheadline, design: .rounded).weight(.bold))
+        .foregroundStyle(label)
+        .lineLimit(1)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(
+            Capsule()
+                .fill(accent.shadow(.inner(color: .white.opacity(0.3), radius: 2, x: 1, y: 1.5)))
+        )
+        .shadow(color: accent.opacity(isDark ? 0 : 0.25), radius: 6, y: 3)
     }
 }
 
