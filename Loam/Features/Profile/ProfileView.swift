@@ -579,6 +579,8 @@ private struct ProUpgradeSection: View {
 
     var body: some View {
         if subscriptions.isAvailable && !subscriptions.isPro {
+            // TEMP: all three banner options stacked so they can be compared on one screen.
+            // Keep the chosen one and delete the rest before merging.
             Section {
                 Button { showsPaywall = true } label: {
                     ProUpgradeBanner()
@@ -587,12 +589,123 @@ private struct ProUpgradeSection: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .proPaywall(isPresented: $showsPaywall)
+            } header: {
+                Text("Option A · Clay tile")
+            }
+
+            Section {
+                Button { showsPaywall = true } label: {
+                    ProUpgradeRow()
+                }
+                .buttonStyle(.plain)
+            } header: {
+                Text("Option B · Settings row")
+            }
+
+            Section {
+                Button { showsPaywall = true } label: {
+                    ProUpgradeCard()
+                }
+                .buttonStyle(LoamPressStyle())
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            } header: {
+                Text("Option C · Accent card")
             }
         }
     }
 }
 
-/// A clay tile in the PRO mark's style: a pale accent face lit from the top left,
+/// Option B: a plain list row like the ones below it, led by the PRO mark.
+/// Quietest of the three; it reads as part of the settings list.
+private struct ProUpgradeRow: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            ProMark(height: 26)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Upgrade to Loam Pro")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text("Share every bill, with everyone")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Upgrade to Loam Pro")
+        .accessibilityHint("Share every bill, with everyone")
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Option C: a solid accent card with the pitch, what Pro adds, and a full-width button.
+/// Loudest of the three; it sells Pro instead of just pointing at it.
+private struct ProUpgradeCard: View {
+    var body: some View {
+        let fill = HomeTheme.accentFill
+        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("LOAM PRO")
+                    .font(.system(.caption, design: .rounded).weight(.heavy))
+                    .tracking(1.2)
+                Spacer()
+                Image(systemName: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityHidden(true)
+            }
+            .foregroundStyle(.white.opacity(0.85))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Share every bill, with everyone")
+                    .font(.system(.title3, design: .rounded).weight(.bold))
+                    .foregroundStyle(.white)
+                Text("Unlimited connections, recurring expenses, notes and your own categories.")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            Text("See plans")
+                .font(.system(.headline, design: .rounded))
+                .foregroundStyle(fill)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(.white, in: Capsule())
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            shape
+                .fill(fill)
+                // A soft highlight from the top left so the flat accent has some depth.
+                .overlay(
+                    shape.fill(
+                        LinearGradient(
+                            colors: [.white.opacity(0.22), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                )
+        }
+        .contentShape(shape)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Upgrade to Loam Pro")
+        .accessibilityHint("Unlimited connections, recurring expenses, notes and your own categories.")
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Option A: a clay tile in the PRO mark's style: a pale accent face lit from the top left,
 /// with a slightly darker edge showing below it. The copy sits on the left and a solid
 /// "Get Pro" pill on the right makes it read as something to tap.
 private struct ProUpgradeBanner: View {
