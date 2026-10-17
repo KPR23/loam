@@ -43,27 +43,25 @@ struct MonthlySpendHero: View {
 
                     // One stack whose size follows the hidden probes, so a new amount rolls its digits
                     // like typing does instead of `ViewThatFits` swapping in a different view.
-                    amountStack(amount: amount, size: amountSize, maxWidth: maxLabelWidth, shrinksToFit: true)
-                        .frame(width: maxLabelWidth)
-                        .background { amountSizeProbe(maxWidth: maxLabelWidth) }
-                        .position(
-                            x: anchor.x,
-                            y: anchor.y + collapseYOffset
-                        )
-                        .opacity(1 - amountOut)
-                        .scaleEffect(1 - 0.12 * amountOut, anchor: .center)
-                        .blur(radius: amountOut * 3)
+                    // The shared line rides under the currency so it reads as part of the amount.
+                    VStack(spacing: 8) {
+                        amountStack(amount: amount, size: amountSize, maxWidth: maxLabelWidth, shrinksToFit: true)
+                        if let sharedLabel {
+                            sharedLine(sharedLabel)
+                        }
+                    }
+                    .frame(width: maxLabelWidth)
+                    .background { amountSizeProbe(maxWidth: maxLabelWidth) }
+                    .position(
+                        x: anchor.x,
+                        y: anchor.y + collapseYOffset
+                    )
+                    .opacity(1 - amountOut)
+                    .scaleEffect(1 - 0.12 * amountOut, anchor: .center)
+                    .blur(radius: amountOut * 3)
                 }
             }
             .frame(height: 260)
-
-            if let sharedCaption {
-                Text(sharedCaption)
-                    .font(.footnote)
-                    .foregroundStyle(HomeTheme.secondary)
-                    .multilineTextAlignment(.center)
-                    .opacity(1 - easedCollapse)
-            }
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
@@ -87,6 +85,25 @@ struct MonthlySpendHero: View {
             return "all of it is shared"
         }
         return "of which \(MoneyFormatter.string(from: sharedShare)) is shared"
+    }
+
+    /// Short form for the hero: "90 zł shared" or "All shared". Nil in the same cases as the caption.
+    private var sharedLabel: String? {
+        guard sharedCaption != nil else { return nil }
+        if sharedShare.amountMinor >= amount.amountMinor { return "All shared" }
+        return "\(MoneyFormatter.string(from: sharedShare)) shared"
+    }
+
+    private func sharedLine(_ label: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "person.2.fill")
+                .imageScale(.small)
+            Text(label)
+        }
+        .font(.footnote.weight(.medium))
+        .foregroundStyle(HomeTheme.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
     }
 
     private var accessibilityTitle: String {
