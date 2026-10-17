@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreMotion
 import PhotosUI
 import RevenueCatUI
 import SafariServices
@@ -240,6 +241,8 @@ struct ProfileView: View {
         }
     }
 
+    static let avatarSize: CGFloat = 96
+
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @EnvironmentObject private var pushStore: PushNotificationStore
@@ -257,16 +260,11 @@ struct ProfileView: View {
             List {
                 Section {
                     VStack(spacing: 12) {
-                        AvatarView(userId: authSession.userId, size: 72)
-                        // The PRO mark hangs off the photo's bottom edge, so it needs room below.
-                        .overlay(alignment: .bottom) {
-                            if subscriptions.isPro {
-                                ProMark(height: 22)
-                                    .offset(y: 11)
-                                    .accessibilityLabel("Loam Pro")
-                            }
+                        if showsProHeader {
+                            ProProfileAvatar(userId: authSession.userId, name: authSession.displayName)
+                        } else {
+                            AvatarView(userId: authSession.userId, size: Self.avatarSize, name: authSession.displayName)
                         }
-                        .padding(.bottom, subscriptions.isPro ? 10 : 0)
                         VStack(spacing: 4) {
                             Text(authSession.displayName ?? "You")
                                 .font(.system(.title, design: .rounded).weight(.semibold))
@@ -282,8 +280,8 @@ struct ProfileView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
-                // Keeps the banner close to the header instead of a full section gap below it.
-                .listSectionSpacing(16)
+                // A little more room than between the rows below, so the header stands on its own.
+                .listSectionSpacing(28)
 
                 ProUpgradeSection()
 
@@ -416,6 +414,15 @@ struct ProfileView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "Version \(version) (\(build))"
+    }
+
+    /// Debug builds can show the Pro header on a free account (launch with
+    /// `-loam.debug.proHeader YES`), so it can be checked without a subscription.
+    private var showsProHeader: Bool {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "loam.debug.proHeader") { return true }
+        #endif
+        return subscriptions.isPro
     }
 
     private var themeSection: some View {
@@ -572,6 +579,85 @@ private struct CompactProfileLabelStyle: LabelStyle {
     }
 }
 
+/// The Pro profile photo with the PRO mark hanging off its bottom edge. The mark tilts with the phone.
+private struct ProProfileAvatar: View {
+    let userId: UUID?
+    var name: String?
+
+    var body: some View {
+        AvatarView(userId: userId, size: ProfileView.avatarSize, name: name)
+            .overlay(alignment: .bottom) {
+                TiltingProMark(height: 22)
+                    .offset(y: 11)
+                    .accessibilityLabel("Loam Pro")
+            }
+            // The mark hangs below the photo, so it needs room under it.
+            .padding(.bottom, 11)
+    }
+}
+
+/// The PRO mark, turning in 3D as the phone tilts, like a physical badge.
+/// Holds still when Reduce Motion is on.
+private struct TiltingProMark: View {
+    var height: CGFloat
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var tilt = DeviceTilt()
+
+    var body: some View {
+        ProMark(height: height)
+            .rotation3DEffect(.degrees(tilt.pitch * 16), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
+            .rotation3DEffect(.degrees(tilt.roll * 22), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
+            .onAppear { if !reduceMotion { tilt.start() } }
+            .onDisappear { tilt.stop() }
+            .onChange(of: reduceMotion) { _, reduced in
+                if reduced { tilt.stop() } else { tilt.start() }
+            }
+    }
+}
+
+/// How far the phone has tilted since it started being watched, from -1 to 1 on each axis.
+/// The first reading is the rest position, so the badge starts flat however the phone is held.
+@MainActor
+private final class DeviceTilt: ObservableObject {
+    @Published private(set) var roll: Double = 0
+    @Published private(set) var pitch: Double = 0
+
+    private let manager = CMMotionManager()
+    private var reference: CMAttitude?
+    /// Radians of tilt that count as a full -1...1 swing.
+    private static let range = 0.6
+
+    func start() {
+        guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
+        reference = nil
+        manager.deviceMotionUpdateInterval = 1 / 60
+        manager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+            guard let self, let attitude = motion?.attitude else { return }
+            MainActor.assumeIsolated { self.update(with: attitude) }
+        }
+    }
+
+    func stop() {
+        manager.stopDeviceMotionUpdates()
+        reference = nil
+        roll = 0
+        pitch = 0
+    }
+
+    private func update(with attitude: CMAttitude) {
+        guard let reference else {
+            reference = attitude.copy() as? CMAttitude
+            return
+        }
+        attitude.multiply(byInverseOf: reference)
+        let clamp = { (value: Double) in min(max(value / Self.range, -1), 1) }
+        // Eases toward the reading, so sensor jitter doesn't shake the badge.
+        roll += (clamp(attitude.roll) - roll) * 0.2
+        pitch += (clamp(attitude.pitch) - pitch) * 0.2
+    }
+}
+
 /// The upgrade row at the top of Profile. Only free accounts see it.
 private struct ProUpgradeSection: View {
     @EnvironmentObject private var subscriptions: SubscriptionStore
@@ -590,12 +676,10 @@ private struct ProUpgradeSection: View {
     }
 }
 
-/// A plain list row like the ones below it, led by the PRO mark.
+/// A plain list row like the ones below it, ending in the PRO mark instead of a chevron.
 private struct ProUpgradeRow: View {
     var body: some View {
         HStack(spacing: 12) {
-            ProMark(height: 22)
-                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Upgrade to Loam Pro")
                     .font(.system(.body, design: .rounded).weight(.semibold))
@@ -606,9 +690,7 @@ private struct ProUpgradeRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
+            ProMark(height: 22)
                 .accessibilityHidden(true)
         }
         .padding(.vertical, 4)
