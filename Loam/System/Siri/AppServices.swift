@@ -55,6 +55,7 @@ final class AppServices {
             if expenseStore.lastError != nil { throw LoamIntentError.loadFailed }
             return expenseStore.summary
         }
+        try await expenseStore.materializeDueRecurring(userId: userId)
         let expenses = try await ExpenseRepositoryFactory.make().fetchExpenses(for: userId, in: period)
         await ExchangeRateStore.shared.ensureRates(for: period)
         return ExpenseStore.makeSummary(expenses: expenses, userId: userId, rates: ExchangeRateStore.shared.rates)

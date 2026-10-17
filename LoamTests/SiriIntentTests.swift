@@ -233,6 +233,8 @@ final class SiriLogicTests: XCTestCase {
             PersonBalance(personId: carol, displayName: "Carol", amountMinor: -300, currencyCode: "PLN"),
         ])
         XCTAssertEqual(SiriText.balances(.empty, friend: nil), "You're all settled up.")
+        let awaitingOnly = BalanceSnapshot(balances: [], awaiting: [AwaitingBalance(personId: bob, amountMinor: 1500, currencyCode: "PLN", expenseCount: 1)])
+        XCTAssertEqual(SiriText.balances(awaitingOnly, friend: nil), "You're settled up, but another 15 zł is waiting for friends to accept.")
         XCTAssertEqual(
             SiriText.balances(snapshot, friend: nil),
             "You're owed 15 zł and you owe 3 zł. Bob owes you 15 zł. You owe Carol 3 zł."
