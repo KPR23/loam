@@ -598,9 +598,10 @@ private struct ProUpgradeRow: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Upgrade to Loam Pro")
-                    .font(.body.weight(.semibold))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
                     .foregroundStyle(.primary)
-                Text("Share every bill, with everyone")
+                // Names what Pro unlocks instead of repeating the paywall's tagline.
+                Text("Unlimited friends, recurring bills & more")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -614,7 +615,7 @@ private struct ProUpgradeRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Upgrade to Loam Pro")
-        .accessibilityHint("Share every bill, with everyone")
+        .accessibilityHint("Unlimited friends, recurring bills and more")
         .accessibilityAddTraits(.isButton)
     }
 }
