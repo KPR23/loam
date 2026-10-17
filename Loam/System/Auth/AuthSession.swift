@@ -62,6 +62,20 @@ final class AuthSession: ObservableObject {
     }
     #endif
 
+    private var bootstrapTask: Task<Void, Never>?
+
+    /// Runs the launch sign-in check once. Siri can start an action before the first screen does.
+    func bootstrapIfNeeded() async {
+        if let bootstrapTask {
+            await bootstrapTask.value
+            return
+        }
+        guard state == .loading else { return }
+        let task = Task { await bootstrap() }
+        bootstrapTask = task
+        await task.value
+    }
+
     func bootstrap() async {
         #if DEBUG
         activeTestAccount = nil

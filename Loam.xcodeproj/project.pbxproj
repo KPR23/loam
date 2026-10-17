@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ED77E6999E13B52DCE98CF54 /* AppServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A0133F77F604D7C864CA85 /* AppServices.swift */; };
+		8E556BBED2BA7EE50E7217F2 /* LoamIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D90D50ABA4E8D562F23AD2 /* LoamIntents.swift */; };
+		8982DC6A2238BAD8CD30CDB6 /* SiriTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE65E68A9DCFB00EEBBBD38D /* SiriTypes.swift */; };
+		6DDB19F41EFB317C5706C453 /* SiriIntentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22FDF86F131C7389810D4B08 /* SiriIntentTests.swift */; };
 		02EDC0B8136EA46F95700486 /* CategoryCustomizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 452162D374274ADBC8769979 /* CategoryCustomizer.swift */; };
 		03D450B1F293CE7B1F650960 /* Money.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6CD835D39E131CEAA0B24E8 /* Money.swift */; };
 		03F95FD08C3EB115517F9DA2 /* CustomCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56D68BA9EE7A91D6D0BBDA2 /* CustomCategory.swift */; };
@@ -159,6 +163,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		68A0133F77F604D7C864CA85 /* AppServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppServices.swift; sourceTree = "<group>"; };
+		90D90D50ABA4E8D562F23AD2 /* LoamIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamIntents.swift; sourceTree = "<group>"; };
+		CE65E68A9DCFB00EEBBBD38D /* SiriTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriTypes.swift; sourceTree = "<group>"; };
+		22FDF86F131C7389810D4B08 /* SiriIntentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriIntentTests.swift; sourceTree = "<group>"; };
 		0074DD56D78CF70693398156 /* LoamUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamUITests.swift; sourceTree = "<group>"; };
 		03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculator.swift; sourceTree = "<group>"; };
 		05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExpenseRepository.swift; sourceTree = "<group>"; };
@@ -452,6 +460,7 @@
 				0A41DDF8012F3E8B600FD54F /* Auth */,
 				A64F5718641EC616AD4D43F7 /* DeepLinks */,
 				86D2722D40EB25C29B05FE70 /* Notifications */,
+				3C7DC294963C863BC4BE3C4D /* Siri */,
 				84D2147BAF88479699EF6841 /* Subscriptions */,
 				62F1CB0A3659025B41BD37A0 /* Telemetry */,
 			);
@@ -550,6 +559,16 @@
 			path = Notifications;
 			sourceTree = "<group>";
 		};
+		3C7DC294963C863BC4BE3C4D /* Siri */ = {
+			isa = PBXGroup;
+			children = (
+				68A0133F77F604D7C864CA85 /* AppServices.swift */,
+				90D90D50ABA4E8D562F23AD2 /* LoamIntents.swift */,
+				CE65E68A9DCFB00EEBBBD38D /* SiriTypes.swift */,
+			);
+			path = Siri;
+			sourceTree = "<group>";
+		};
 		A64F5718641EC616AD4D43F7 /* DeepLinks */ = {
 			isa = PBXGroup;
 			children = (
@@ -577,6 +596,7 @@
 				38B664DBA46BD536B44E5F73 /* BudgetArcLayoutTests.swift */,
 				BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */,
 				F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */,
+				22FDF86F131C7389810D4B08 /* SiriIntentTests.swift */,
 				99A7E2ACFDFFA08B0048B9C9 /* ExpenseSummaryTests.swift */,
 				2F0DE1D0BCC3A80DCC995B92 /* LocalExpenseRepositoryTests.swift */,
 				FE0704D45C9ECCF37BB8E48B /* MoneyTests.swift */,
@@ -848,6 +868,7 @@
 				654413FF7956D9DB29DD830D /* BudgetArcLayoutTests.swift in Sources */,
 				269663C225006F0D994C1708 /* CalendarDateCodecTests.swift in Sources */,
 				699C700B7D9C668D32D611EB /* ExpenseStoreTests.swift in Sources */,
+				6DDB19F41EFB317C5706C453 /* SiriIntentTests.swift in Sources */,
 				4D355CDF8A3D632F730E20FB /* ExpenseSummaryTests.swift in Sources */,
 				2D442E3D2E9D1E5EB68049B5 /* LocalExpenseRepositoryTests.swift in Sources */,
 				1423F9D1B80E8BA997D419E8 /* MoneyTests.swift in Sources */,
@@ -905,6 +926,9 @@
 				3B6CDA37B5479DE4B4111523 /* ConnectionStore.swift in Sources */,
 				03F95FD08C3EB115517F9DA2 /* CustomCategory.swift in Sources */,
 				F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */,
+				ED77E6999E13B52DCE98CF54 /* AppServices.swift in Sources */,
+				8E556BBED2BA7EE50E7217F2 /* LoamIntents.swift in Sources */,
+				8982DC6A2238BAD8CD30CDB6 /* SiriTypes.swift in Sources */,
 				450CF8D24E4AAD123A859E79 /* EditProposalReviewCard.swift in Sources */,
 				126EF1AD57B79B77088CF0D9 /* ExchangeRates.swift in Sources */,
 				543F69BEE3C867F7FB1ED90F /* ExpenseCategoryPicker.swift in Sources */,

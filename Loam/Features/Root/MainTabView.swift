@@ -20,6 +20,7 @@ struct MainTabView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var activityStore: ActivityStore
     @EnvironmentObject private var pushStore: PushNotificationStore
+    @EnvironmentObject private var navigator: AppNavigator
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .expenses
     @State private var showAddExpense = false
@@ -54,6 +55,11 @@ struct MainTabView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await activityStore.refreshBadgeCount(userId: authSession.userId) } }
         }
+        .onChange(of: navigator.pendingScreen, initial: true) { _, screen in
+            guard let screen else { return }
+            navigator.pendingScreen = nil
+            show(screen)
+        }
         .task(id: authSession.userId) {
             guard let userId = authSession.userId,
                   !authSession.usesDemoMode,
@@ -77,6 +83,20 @@ struct MainTabView: View {
 
     private func openAddExpense() {
         showAddExpense = true
+    }
+
+    /// A screen Siri was asked to open.
+    private func show(_ screen: LoamScreen) {
+        switch screen {
+        case .expenses: selection = .expenses
+        case .balances: selection = .balances
+        case .activity: selection = .activity
+        case .profile: selection = .profile
+        case .newExpense:
+            selection = .expenses
+            Telemetry.capture(.addExpenseOpened(source: .siri))
+            showAddExpense = true
+        }
     }
 
     @available(iOS 18.0, *)
@@ -171,4 +191,5 @@ struct MainTabView: View {
         .environmentObject(BalanceStore())
         .environmentObject(ActivityStore())
         .environmentObject(PushNotificationStore.shared)
+        .environmentObject(AppNavigator())
 }
