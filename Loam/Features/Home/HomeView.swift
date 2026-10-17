@@ -94,6 +94,7 @@ struct HomeView: View {
         .expenseActionsHost(selectedExpense: $selectedExpense, request: $actionRequest)
     }
 
+    /// Matches Record repayment on Balances: a full-width accent capsule with subheadline text.
     private var addExpenseButton: some View {
         Button {
             Telemetry.capture(.addExpenseOpened(source: .homeButton))
@@ -101,12 +102,13 @@ struct HomeView: View {
         } label: {
             Label("Add expense", systemImage: "plus")
                 .labelStyle(.titleAndIcon)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.borderedProminent)
         .tint(HomeTheme.accentFill)
-        .controlSize(.large)
+        .buttonBorderShape(.capsule)
+        .padding(.horizontal, 20)
     }
 
     @ViewBuilder
