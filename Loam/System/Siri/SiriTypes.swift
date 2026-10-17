@@ -231,7 +231,13 @@ enum SiriText {
         }
 
         let open = snapshot.balances.filter { $0.amountMinor != 0 }
-        guard !open.isEmpty else { return "You're all settled up." }
+        // Split expenses friends haven't accepted yet aren't in the balance, but they are still owed.
+        let awaiting = snapshot.awaitingTotals.isEmpty
+            ? nil
+            : "\(join(snapshot.awaitingTotals)) is waiting for friends to accept."
+        guard !open.isEmpty else {
+            return awaiting.map { "You're settled up, but another \($0)" } ?? "You're all settled up."
+        }
         let summary: String
         switch (snapshot.owedToYou.isEmpty, snapshot.youOwe.isEmpty) {
         case (false, false): summary = "You're owed \(join(snapshot.owedToYou)) and you owe \(join(snapshot.youOwe))."
@@ -242,7 +248,8 @@ enum SiriText {
             .sorted { abs($0.amountMinor) > abs($1.amountMinor) }
             .prefix(5)
             .map { balanceLine($0, name: $0.displayName) }
-        return ([summary] + people).joined(separator: " ")
+        let pending = awaiting.map { ["Another \($0)"] } ?? []
+        return ([summary] + people + pending).joined(separator: " ")
     }
 
     static func repaymentPrompt(_ direction: RepaymentDirection, money: Money, friend: String) -> String {

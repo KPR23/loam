@@ -758,6 +758,11 @@ final class ExpenseStore: ObservableObject {
     }
 
     /// Creates expense rows for every due occurrence of active rules through today.
+    /// Adds recurring expenses that came due, without reloading the month on screen.
+    func materializeDueRecurring(userId: UUID) async throws {
+        try await materializeDueRecurring(userId: userId, repository: primaryRepository)
+    }
+
     private func materializeDueRecurring(userId: UUID, repository: ExpenseRepository) async throws {
         let today = AppPreferences.calendar.startOfDay(for: Date())
         if try await repository.materializeRecurringRules(through: today) { return }
