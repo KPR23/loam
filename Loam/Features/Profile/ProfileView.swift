@@ -805,39 +805,71 @@ private struct PersonalDetailsView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isUploadingPhoto = false
     @State private var photoError: String?
+    @FocusState private var nameFocused: Bool
     @Environment(\.dismiss) private var dismiss
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canSave: Bool {
+        !isSaving && !trimmedName.isEmpty && trimmedName != authSession.displayName
+    }
 
     var body: some View {
         Form {
-            if !authSession.usesDemoMode {
-                photoSection
-            }
+            photoHeader
+
             Section {
-                LabeledContent("Name") {
-                    TextField("Your name", text: $name)
-                        .textContentType(.name)
-                        .textInputAutocapitalization(.words)
-                        .multilineTextAlignment(.trailing)
-                }
+                TextField("Your name", text: $name)
+                    .textContentType(.name)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .focused($nameFocused)
+                    .onSubmit { if canSave { save() } }
+            } header: {
+                Text("Name")
+            } footer: {
+                Text("Friends see this name on shared expenses and balances.")
+            }
+
+            Section {
                 LabeledContent("E-mail") {
                     Text(authSession.email ?? "Not provided")
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                         .textSelection(.enabled)
                 }
-            } footer: {
-                Text(authSession.usesDemoMode ? "You’re using a local demo account." : "This is the email associated with your sign-in account. Apple may provide a private relay address.")
-            }
-            Section {
-                Button {
-                    showsDeleteConfirmation = true
-                } label: {
-                    HStack {
-                        ProfileRow("Delete account", symbol: "person.crop.circle.badge.minus", color: .red, destructive: true)
-                        if isDeletingAccount { Spacer(); ProgressView() }
+                if !authSession.usesDemoMode {
+                    LabeledContent("Signed in with") {
+                        Label("Apple", systemImage: "apple.logo")
                     }
                 }
+            } header: {
+                Text("Account")
+            } footer: {
+                Text(authSession.usesDemoMode
+                     ? "You’re using a local demo account."
+                     : "Your e-mail comes from Sign in with Apple and can’t be changed here. It may be a private relay address.")
             }
+
             if let error {
                 Section { Text(error).foregroundStyle(.red) }
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    showsDeleteConfirmation = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("Delete account")
+                        if isDeletingAccount { ProgressView() }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            } footer: {
+                Text("Permanently removes your account and data. You’ll be asked to confirm.")
             }
         }
         .navigationTitle("Personal details")
@@ -888,38 +920,80 @@ private struct PersonalDetailsView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button {
-                    isSaving = true
-                    error = nil
-                    Task {
-                        do {
-                            try await authSession.updateDisplayName(name)
-                            dismiss()
-                        } catch { self.error = error.localizedDescription }
-                        isSaving = false
-                    }
+                    save()
                 } label: {
                     if isSaving { ProgressView() } else { Text("Save") }
                 }
-                .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name == authSession.displayName)
+                .disabled(!canSave)
             }
+        }
+    }
+
+    private func save() {
+        nameFocused = false
+        isSaving = true
+        error = nil
+        Task {
+            do {
+                try await authSession.updateDisplayName(trimmedName)
+                dismiss()
+            } catch { self.error = error.localizedDescription }
+            isSaving = false
         }
     }
 }
 
 private extension PersonalDetailsView {
-    var photoSection: some View {
+    /// A large, centred photo in the style of the system account screens. The whole photo is the tap target.
+    var photoHeader: some View {
         Section {
-            HStack(spacing: 16) {
-                AvatarView(userId: authSession.userId, size: 56, name: authSession.displayName)
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    HStack(spacing: 8) {
-                        Text("Change photo")
-                        if isUploadingPhoto { ProgressView() }
+            VStack(spacing: 10) {
+                if authSession.usesDemoMode {
+                    avatar
+                } else {
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        avatar
+                            .overlay(alignment: .bottomTrailing) { cameraBadge }
                     }
+                    .buttonStyle(.borderless)
+                    .disabled(isUploadingPhoto)
+                    .accessibilityLabel("Change photo")
+
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        Text(isUploadingPhoto ? "Uploading…" : "Change photo")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    // Two buttons share this row; borderless keeps each one's own tap target.
+                    .buttonStyle(.borderless)
+                    .disabled(isUploadingPhoto)
+                    .accessibilityHidden(true)
                 }
-                .disabled(isUploadingPhoto)
             }
+            .frame(maxWidth: .infinity)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
         }
+    }
+
+    var avatar: some View {
+        AvatarView(userId: authSession.userId, size: 96, name: trimmedName.isEmpty ? authSession.displayName : trimmedName)
+            .overlay {
+                if isUploadingPhoto {
+                    Circle()
+                        .fill(.black.opacity(0.35))
+                        .overlay { ProgressView().tint(.white) }
+                }
+            }
+    }
+
+    var cameraBadge: some View {
+        Image(systemName: "camera.fill")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 30, height: 30)
+            .background(Circle().fill(.tint))
+            .overlay(Circle().stroke(Color(.systemGroupedBackground), lineWidth: 3))
+            .offset(x: 2, y: 2)
     }
 
     static func avatarJPEG(from image: UIImage) -> Data? {
