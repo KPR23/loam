@@ -45,21 +45,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      # Package checkouts are the slow, network-bound part of a cold run. Package.resolved pins
-      # them, so the cache only changes when a dependency does.
-      - name: Cache Swift packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .spm
-          key: spm-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-${{ runner.os }}-
-
-      - name: Resolve Swift packages
-        run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj -clonedSourcePackagesDirPath .spm
-
       # A fresh simulator per run keeps the test from reusing one that another process booted.
       - name: Create iOS simulator
         id: simulator
@@ -109,8 +94,24 @@ jobs:
           )"
           DEVICE_ID="$(xcrun simctl create "Loam CI ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" "$DEVICE_TYPE" "$RUNTIME")"
           echo "device_id=${DEVICE_ID}" >> "$GITHUB_OUTPUT"
-          # Booting takes minutes on a cold runner, so it runs while the app builds.
+          # Booting takes minutes on a cold runner, so it starts first and runs while packages restore
+          # and the app builds.
           xcrun simctl boot "$DEVICE_ID"
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # Package checkouts are the slow, network-bound part of a cold run. Package.resolved pins
+      # them, so the cache only changes when a dependency does.
+      - name: Cache Swift packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .spm
+          key: spm-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj -clonedSourcePackagesDirPath .spm
 
       # Compilation caching (Xcode 26) keys each compile by its inputs' contents, not file dates,
       # so results stay valid on a fresh checkout. Pull requests can only restore caches saved
