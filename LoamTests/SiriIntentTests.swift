@@ -25,7 +25,7 @@ final class SiriIntentTests: LocalStorageTestCase {
 
     func testAddingAnExpenseByVoiceSavesIt() async throws {
         let me = signIn()
-        var intent = AddExpenseIntent()
+        let intent = AddExpenseIntent()
         intent.amount = amount(Decimal(string: "12.5")!)
         intent.category = .groceries
         intent.title = "Weekly shop"
@@ -44,24 +44,26 @@ final class SiriIntentTests: LocalStorageTestCase {
 
     func testAnExpenseWithoutACategoryIsOther() async throws {
         let me = signIn()
-        var intent = AddExpenseIntent()
+        let intent = AddExpenseIntent()
         intent.amount = amount(20, "EUR")
         _ = try await intent.perform()
 
-        let expense = try XCTUnwrap(try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth).first)
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        let expense = try XCTUnwrap(saved.first)
         XCTAssertEqual(expense.category, .other)
         XCTAssertEqual(expense.currency, "EUR")
     }
 
     func testSplittingWithAFriendAsksThemToAccept() async throws {
         let me = signIn()
-        var intent = AddExpenseIntent()
+        let intent = AddExpenseIntent()
         intent.amount = amount(30)
         intent.category = .dining
         intent.friend = LoamFriendEntity(id: bob, name: "Bob")
         _ = try await intent.perform()
 
-        let expense = try XCTUnwrap(try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth).first)
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        let expense = try XCTUnwrap(saved.first)
         XCTAssertEqual(expense.paidBy, me)
         XCTAssertEqual(expense.shareRecord(for: me)?.amountMinor, 1500)
         XCTAssertEqual(expense.shareRecord(for: bob)?.amountMinor, 1500)
@@ -70,7 +72,7 @@ final class SiriIntentTests: LocalStorageTestCase {
 
     func testSplittingWithSomeoneWhoIsNotAFriendIsRefused() async throws {
         let me = signIn()
-        var intent = AddExpenseIntent()
+        let intent = AddExpenseIntent()
         intent.amount = amount(30)
         intent.friend = LoamFriendEntity(id: TestUser.carol, name: "Carol")
         do {
@@ -85,7 +87,7 @@ final class SiriIntentTests: LocalStorageTestCase {
 
     func testUnsupportedCurrencyIsRefused() async throws {
         signIn()
-        var intent = AddExpenseIntent()
+        let intent = AddExpenseIntent()
         intent.amount = amount(10, "GBP")
         do {
             _ = try await intent.perform()
@@ -122,7 +124,7 @@ final class SiriIntentTests: LocalStorageTestCase {
 
     func testSettlingUpWithoutAnAmountClearsTheBalance() async throws {
         let me = signIn()
-        var add = AddExpenseIntent()
+        let add = AddExpenseIntent()
         add.amount = amount(30)
         add.friend = LoamFriendEntity(id: bob, name: "Bob")
         _ = try await add.perform()
@@ -155,7 +157,7 @@ final class SiriIntentTests: LocalStorageTestCase {
 
     func testOpeningAScreenAsksTheTabsToShowIt() async throws {
         signIn()
-        var intent = OpenLoamScreenIntent()
+        let intent = OpenLoamScreenIntent()
         intent.screen = .balances
         _ = try await intent.perform()
         XCTAssertEqual(services.navigator.pendingScreen, .balances)
