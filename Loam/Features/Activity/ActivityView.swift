@@ -167,14 +167,21 @@ struct ActivityView: View {
 
                     Spacer(minLength: 0)
 
-                    Button("Not now", systemImage: "xmark") { promptDismissed = true }
-                        .labelStyle(.iconOnly)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(HomeTheme.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(HomeTheme.tileEmpty, in: .circle)
-                        .contentShape(.circle)
-                        .buttonStyle(.plain)
+                    Button {
+                        promptDismissed = true
+                    } label: {
+                        // A 28pt circle inside a 44pt tap target; the negative padding keeps the row's layout.
+                        Image(systemName: "xmark")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(HomeTheme.secondary)
+                            .frame(width: 28, height: 28)
+                            .background(HomeTheme.tileEmpty, in: .circle)
+                            .frame(width: 44, height: 44)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(-8)
+                    .accessibilityLabel("Not now")
                 }
 
                 Button {
