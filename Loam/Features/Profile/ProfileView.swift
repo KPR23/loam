@@ -821,20 +821,16 @@ private struct PersonalDetailsView: View {
             photoHeader
 
             Section {
-                TextField("Your name", text: $name)
-                    .textContentType(.name)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-                    .submitLabel(.done)
-                    .focused($nameFocused)
-                    .onSubmit { if canSave { save() } }
-            } header: {
-                Text("Name")
-            } footer: {
-                Text("Friends see this name on shared expenses and balances.")
-            }
-
-            Section {
+                LabeledContent("Name") {
+                    TextField("Your name", text: $name)
+                        .multilineTextAlignment(.trailing)
+                        .textContentType(.name)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .focused($nameFocused)
+                        .onSubmit { if canSave { save() } }
+                }
                 LabeledContent("E-mail") {
                     Text(authSession.email ?? "Not provided")
                         .lineLimit(1)
@@ -845,8 +841,8 @@ private struct PersonalDetailsView: View {
                 Text("Account")
             } footer: {
                 Text(authSession.usesDemoMode
-                     ? "You’re using a local demo account."
-                     : "Managed by your Apple Account. It may be a private relay address.")
+                     ? "Friends see your name on shared expenses. You’re using a local demo account."
+                     : "Friends see your name on shared expenses. Your e-mail comes from your Apple Account and may be a private relay address.")
             }
 
             if let error {
