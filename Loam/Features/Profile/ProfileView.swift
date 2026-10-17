@@ -841,12 +841,6 @@ private struct PersonalDetailsView: View {
                         .truncationMode(.middle)
                         .textSelection(.enabled)
                 }
-                if !authSession.usesDemoMode {
-                    LabeledContent("Sign-in") {
-                        Label("Apple", systemImage: "apple.logo")
-                            .labelStyle(.titleAndIcon)
-                    }
-                }
             } header: {
                 Text("Account")
             } footer: {
