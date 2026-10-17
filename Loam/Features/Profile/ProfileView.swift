@@ -278,11 +278,12 @@ struct ProfileView: View {
                     }
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 4)
-                    .padding(.bottom, 12)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
+                // Keeps the banner close to the header instead of a full section gap below it.
+                .listSectionSpacing(16)
 
                 ProUpgradeSection()
 
@@ -383,6 +384,7 @@ struct ProfileView: View {
                 #endif
             }
             .listStyle(.insetGrouped)
+            .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background)
             .navigationTitle("Profile")
