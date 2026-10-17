@@ -800,6 +800,8 @@ private struct PersonalDetailsView: View {
     @State private var isSaving = false
     @State private var isDeletingAccount = false
     @State private var showsDeleteConfirmation = false
+    @State private var showsDiscardConfirmation = false
+    @State private var hasLoadedName = false
     @State private var error: String?
     @State private var deletionAuthorization = AppleDeletionAuthorization()
     @State private var selectedPhoto: PhotosPickerItem?
@@ -814,6 +816,11 @@ private struct PersonalDetailsView: View {
 
     private var canSave: Bool {
         !isSaving && !trimmedName.isEmpty && trimmedName != authSession.displayName
+    }
+
+    /// The photo uploads as soon as it's picked, so only the name can be left unsaved.
+    private var hasUnsavedChanges: Bool {
+        hasLoadedName && !isSaving && trimmedName != (authSession.displayName ?? "")
     }
 
     var body: some View {
@@ -863,8 +870,23 @@ private struct PersonalDetailsView: View {
         }
         .navigationTitle("Personal details")
         .navigationBarTitleDisplayMode(.inline)
+        // A custom back button lets us ask before throwing away an unsaved name.
+        // Hiding the system one also turns off swipe-back, which would skip the prompt.
+        .navigationBarBackButtonHidden(hasUnsavedChanges)
+        .confirmationDialog("You have unsaved changes", isPresented: $showsDiscardConfirmation, titleVisibility: .visible) {
+            if canSave {
+                Button("Save") { save() }
+            }
+            Button("Discard changes", role: .destructive) { dismiss() }
+            Button("Keep editing", role: .cancel) {}
+        } message: {
+            Text("Your new name hasn’t been saved yet.")
+        }
         .disabled(isSaving || isDeletingAccount)
-        .onAppear { name = authSession.displayName ?? "" }
+        .onAppear {
+            name = authSession.displayName ?? ""
+            hasLoadedName = true
+        }
         .onChange(of: selectedPhoto) { _, photo in
             guard let photo, let userId = authSession.userId else { return }
             isUploadingPhoto = true
@@ -907,6 +929,17 @@ private struct PersonalDetailsView: View {
                  : "Your sign-in, profile photo, private expenses and usage analytics will be removed. Shared expenses and balances remain for other participants under the name Deleted user. This can’t be undone.")
         }
         .toolbar {
+            if hasUnsavedChanges {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        nameFocused = false
+                        showsDiscardConfirmation = true
+                    } label: {
+                        Image(systemName: "chevron.backward")
+                    }
+                    .accessibilityLabel("Back")
+                }
+            }
             ToolbarItem(placement: .confirmationAction) {
                 Button {
                     save()
