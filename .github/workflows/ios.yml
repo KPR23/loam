@@ -112,6 +112,17 @@ jobs:
           # Booting takes minutes on a cold runner, so it runs while the app builds.
           xcrun simctl boot "$DEVICE_ID"
 
+      # Compilation caching (Xcode 26) keys each compile by its inputs' contents, not file dates,
+      # so results stay valid on a fresh checkout. Pull requests can only restore caches saved
+      # on their base branch, so main and release pushes save; every run restores the newest one.
+      - name: Restore compilation cache
+        id: compilation-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/DerivedData/CompilationCache.noindex
+          key: xcode-cas-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: xcode-cas-${{ runner.os }}-
+
       # Nothing reads the index on CI, so writing it only slows the compile.
       - name: Build
         run: |
@@ -125,7 +136,19 @@ jobs:
             -skipPackagePluginValidation \
             -disableAutomaticPackageResolution \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
-            COMPILER_INDEX_STORE_ENABLE=NO
+            -showBuildTimingSummary \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            COMPILATION_CACHE_ENABLE_CACHING=YES
+
+      - name: Show compilation cache size
+        run: du -sh "$RUNNER_TEMP/DerivedData/CompilationCache.noindex" || true
+
+      - name: Save compilation cache
+        if: github.event_name == 'push'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/DerivedData/CompilationCache.noindex
+          key: ${{ steps.compilation-cache.outputs.cache-primary-key }}
 
       - name: Wait for the simulator
         # Launching tests into a half-booted simulator fails with "server died".
