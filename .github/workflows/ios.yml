@@ -112,6 +112,7 @@ jobs:
           # Booting takes minutes on a cold runner, so it runs while the app builds.
           xcrun simctl boot "$DEVICE_ID"
 
+      # Nothing reads the index on CI, so writing it only slows the compile.
       - name: Build
         run: |
           set -o pipefail
@@ -122,7 +123,9 @@ jobs:
             -clonedSourcePackagesDirPath .spm \
             CODE_SIGNING_ALLOWED=NO \
             -skipPackagePluginValidation \
-            -derivedDataPath "$RUNNER_TEMP/DerivedData"
+            -disableAutomaticPackageResolution \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Wait for the simulator
         # Launching tests into a half-booted simulator fails with "server died".
@@ -132,6 +135,8 @@ jobs:
 
       - name: Test
         # A failed test launch otherwise waits 10 minutes for simulator diagnostics.
+        # Without the package directory the test command resolves every package again from
+        # GitHub into a fresh location, which took about 4 minutes before any test ran.
         run: |
           set -o pipefail
           xcodebuild test-without-building \
@@ -139,6 +144,8 @@ jobs:
             -scheme Loam \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -clonedSourcePackagesDirPath .spm \
+            -disableAutomaticPackageResolution \
             -collect-test-diagnostics never \
             -resultBundlePath "$RUNNER_TEMP/Loam.xcresult"
 
