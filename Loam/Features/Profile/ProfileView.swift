@@ -873,12 +873,12 @@ private struct PersonalDetailsView: View {
         // A custom back button lets us ask before throwing away an unsaved name.
         // Hiding the system one also turns off swipe-back, which would skip the prompt.
         .navigationBarBackButtonHidden(hasUnsavedChanges)
-        .confirmationDialog("You have unsaved changes", isPresented: $showsDiscardConfirmation, titleVisibility: .visible) {
+        .alert("You have unsaved changes", isPresented: $showsDiscardConfirmation) {
             if canSave {
                 Button("Save") { save() }
             }
             Button("Discard changes", role: .destructive) { dismiss() }
-            Button("Keep editing", role: .cancel) {}
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Your new name hasn’t been saved yet.")
         }
