@@ -58,7 +58,7 @@ struct ActivityView: View {
                             LoamFeedback.tap()
                             markRead(notifications)
                         } label: {
-                            Label("Mark all read", systemImage: "checkmark.circle")
+                            Text("Mark all read")
                         }
                     }
                 }
@@ -146,35 +146,48 @@ struct ActivityView: View {
     /// Asked here, where the value is obvious, instead of at launch.
     private var notificationPrompt: some View {
         Section {
-            VStack(alignment: .leading, spacing: 12) {
-                Label {
-                    Text("Get notified")
-                        .font(.system(.headline, design: .rounded))
-                        .foregroundStyle(HomeTheme.text)
-                } icon: {
-                    Image(systemName: "bell.badge.fill").foregroundStyle(HomeTheme.accent)
-                }
-                Text("Hear about shared expenses, replies and repayments as they happen. You choose which ones in Profile.")
-                    .font(.subheadline)
-                    .foregroundStyle(HomeTheme.secondary)
-                HStack(spacing: 12) {
-                    Button {
-                        LoamFeedback.tap()
-                        Task { await pushStore.requestPermission() }
-                    } label: {
-                        Text("Turn on notifications")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(minHeight: 36)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(HomeTheme.accentFill)
-                    .buttonBorderShape(.capsule)
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.title3)
+                        .foregroundStyle(HomeTheme.accent)
+                        .frame(width: 40, height: 40)
+                        .background(HomeTheme.accent.opacity(0.12), in: .circle)
+                        .accessibilityHidden(true)
 
-                    Button("Not now") { promptDismissed = true }
-                        .font(.subheadline.weight(.medium))
-                        .buttonStyle(.borderless)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Get notified")
+                            .font(.system(.headline, design: .rounded))
+                            .foregroundStyle(HomeTheme.text)
+                        Text("Know when friends split an expense, reply or pay you back.")
+                            .font(.subheadline)
+                            .foregroundStyle(HomeTheme.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Button("Not now", systemImage: "xmark") { promptDismissed = true }
+                        .labelStyle(.iconOnly)
+                        .font(.caption.weight(.bold))
                         .foregroundStyle(HomeTheme.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(HomeTheme.tileEmpty, in: .circle)
+                        .contentShape(.circle)
+                        .buttonStyle(.plain)
                 }
+
+                Button {
+                    LoamFeedback.tap()
+                    Task { await pushStore.requestPermission() }
+                } label: {
+                    Text("Turn on notifications")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(HomeTheme.accentFill)
+                .buttonBorderShape(.capsule)
             }
             .padding(.vertical, 6)
         }
