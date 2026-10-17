@@ -842,8 +842,9 @@ private struct PersonalDetailsView: View {
                         .textSelection(.enabled)
                 }
                 if !authSession.usesDemoMode {
-                    LabeledContent("Signed in with") {
+                    LabeledContent("Sign-in") {
                         Label("Apple", systemImage: "apple.logo")
+                            .labelStyle(.titleAndIcon)
                     }
                 }
             } header: {
@@ -851,7 +852,7 @@ private struct PersonalDetailsView: View {
             } footer: {
                 Text(authSession.usesDemoMode
                      ? "You’re using a local demo account."
-                     : "Your e-mail comes from Sign in with Apple and can’t be changed here. It may be a private relay address.")
+                     : "Managed by your Apple Account. It may be a private relay address.")
             }
 
             if let error {
@@ -868,8 +869,6 @@ private struct PersonalDetailsView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-            } footer: {
-                Text("Permanently removes your account and data. You’ll be asked to confirm.")
             }
         }
         .navigationTitle("Personal details")
@@ -944,39 +943,36 @@ private struct PersonalDetailsView: View {
 }
 
 private extension PersonalDetailsView {
-    /// A large, centred photo in the style of the system account screens. The whole photo is the tap target.
+    /// A large, centred photo with an "Edit photo" link under it, as in Instagram, Beli and Gentler Streak.
+    /// Photo and link form one button, so either one opens the picker.
     var photoHeader: some View {
         Section {
-            VStack(spacing: 10) {
+            Group {
                 if authSession.usesDemoMode {
                     avatar
                 } else {
                     PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        avatar
-                            .overlay(alignment: .bottomTrailing) { cameraBadge }
+                        VStack(spacing: 12) {
+                            avatar
+                            Text(isUploadingPhoto ? "Uploading…" : "Edit photo")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.tint)
+                        }
+                        .contentShape(.rect)
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.plain)
                     .disabled(isUploadingPhoto)
-                    .accessibilityLabel("Change photo")
-
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        Text(isUploadingPhoto ? "Uploading…" : "Change photo")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    // Two buttons share this row; borderless keeps each one's own tap target.
-                    .buttonStyle(.borderless)
-                    .disabled(isUploadingPhoto)
-                    .accessibilityHidden(true)
+                    .accessibilityLabel("Edit photo")
                 }
             }
             .frame(maxWidth: .infinity)
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
+            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         }
     }
 
     var avatar: some View {
-        AvatarView(userId: authSession.userId, size: 96, name: trimmedName.isEmpty ? authSession.displayName : trimmedName)
+        AvatarView(userId: authSession.userId, size: 104, name: trimmedName.isEmpty ? authSession.displayName : trimmedName)
             .overlay {
                 if isUploadingPhoto {
                     Circle()
@@ -984,16 +980,6 @@ private extension PersonalDetailsView {
                         .overlay { ProgressView().tint(.white) }
                 }
             }
-    }
-
-    var cameraBadge: some View {
-        Image(systemName: "camera.fill")
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 30, height: 30)
-            .background(Circle().fill(.tint))
-            .overlay(Circle().stroke(Color(.systemGroupedBackground), lineWidth: 3))
-            .offset(x: 2, y: 2)
     }
 
     static func avatarJPEG(from image: UIImage) -> Data? {
