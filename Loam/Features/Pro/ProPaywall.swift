@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreMotion
 import RevenueCat
 
 extension View {
@@ -382,7 +383,8 @@ private struct PaywallAlert {
     let message: String
 }
 
-/// The paywall's hero: the PRO mark, drifting and tilting slightly. Holds still with Reduce Motion.
+/// The paywall's hero: the PRO mark, floating gently and tilting with the phone.
+/// Holds still with Reduce Motion.
 private struct ProEmblem: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -391,9 +393,7 @@ private struct ProEmblem: View {
             let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
             let lift = sin(t * 1.1) * 2.5
 
-            ProMark()
-                .rotation3DEffect(.degrees(sin(t * 0.8) * 3), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
-                .rotation3DEffect(.degrees(cos(t * 0.6) * 5), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
+            TiltingProMark(height: ProMark.baseSize.height)
                 .shadow(color: .black.opacity(0.12), radius: 12 - lift, y: 10 - lift)
                 .offset(y: -lift)
         }
@@ -454,6 +454,68 @@ struct ProMark: View {
         UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
         let mix = { (channel: CGFloat) in channel * (1 - blackness) }
         return Color(red: mix(red), green: mix(green), blue: mix(blue))
+    }
+}
+
+/// The PRO mark, turning in 3D as the phone tilts, like a physical badge.
+/// Holds still when Reduce Motion is on.
+struct TiltingProMark: View {
+    var height: CGFloat
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var tilt = DeviceTilt()
+
+    var body: some View {
+        ProMark(height: height)
+            .rotation3DEffect(.degrees(tilt.pitch * 16), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
+            .rotation3DEffect(.degrees(tilt.roll * 22), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
+            .onAppear { if !reduceMotion { tilt.start() } }
+            .onDisappear { tilt.stop() }
+            .onChange(of: reduceMotion) { _, reduced in
+                if reduced { tilt.stop() } else { tilt.start() }
+            }
+    }
+}
+
+/// How far the phone has tilted since it started being watched, from -1 to 1 on each axis.
+/// The first reading is the rest position, so the badge starts flat however the phone is held.
+@MainActor
+final class DeviceTilt: ObservableObject {
+    @Published private(set) var roll: Double = 0
+    @Published private(set) var pitch: Double = 0
+
+    private let manager = CMMotionManager()
+    private var reference: CMAttitude?
+    /// Radians of tilt that count as a full -1...1 swing.
+    private static let range = 0.6
+
+    func start() {
+        guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
+        reference = nil
+        manager.deviceMotionUpdateInterval = 1 / 60
+        manager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+            guard let self, let attitude = motion?.attitude else { return }
+            MainActor.assumeIsolated { self.update(with: attitude) }
+        }
+    }
+
+    func stop() {
+        manager.stopDeviceMotionUpdates()
+        reference = nil
+        roll = 0
+        pitch = 0
+    }
+
+    private func update(with attitude: CMAttitude) {
+        guard let reference else {
+            reference = attitude.copy() as? CMAttitude
+            return
+        }
+        attitude.multiply(byInverseOf: reference)
+        let clamp = { (value: Double) in min(max(value / Self.range, -1), 1) }
+        // Eases toward the reading, so sensor jitter doesn't shake the badge.
+        roll += (clamp(attitude.roll) - roll) * 0.2
+        pitch += (clamp(attitude.pitch) - pitch) * 0.2
     }
 }
 
