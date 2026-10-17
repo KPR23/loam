@@ -570,52 +570,25 @@ private struct CompactProfileLabelStyle: LabelStyle {
     }
 }
 
-/// The upgrade banner at the top of Profile. Only free accounts see it.
+/// The upgrade row at the top of Profile. Only free accounts see it.
 private struct ProUpgradeSection: View {
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var showsPaywall = false
 
     var body: some View {
         if subscriptions.isAvailable && !subscriptions.isPro {
-            // TEMP: all three banner options stacked so they can be compared on one screen.
-            // Keep the chosen one and delete the rest before merging.
-            Section {
-                Button { showsPaywall = true } label: {
-                    ProUpgradeBanner()
-                }
-                .buttonStyle(LoamPressStyle())
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .proPaywall(isPresented: $showsPaywall)
-            } header: {
-                Text("Option A · Clay tile")
-            }
-
             Section {
                 Button { showsPaywall = true } label: {
                     ProUpgradeRow()
                 }
                 .buttonStyle(.plain)
-            } header: {
-                Text("Option B · Settings row")
-            }
-
-            Section {
-                Button { showsPaywall = true } label: {
-                    ProUpgradeCard()
-                }
-                .buttonStyle(LoamPressStyle())
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-            } header: {
-                Text("Option C · Accent card")
+                .proPaywall(isPresented: $showsPaywall)
             }
         }
     }
 }
 
-/// Option B: a plain list row like the ones below it, led by the PRO mark.
-/// Quietest of the three; it reads as part of the settings list.
+/// A plain list row like the ones below it, led by the PRO mark.
 private struct ProUpgradeRow: View {
     var body: some View {
         HStack(spacing: 12) {
@@ -641,154 +614,6 @@ private struct ProUpgradeRow: View {
         .accessibilityLabel("Upgrade to Loam Pro")
         .accessibilityHint("Share every bill, with everyone")
         .accessibilityAddTraits(.isButton)
-    }
-}
-
-/// Option C: a solid accent card with the pitch, what Pro adds, and a full-width button.
-/// Loudest of the three; it sells Pro instead of just pointing at it.
-private struct ProUpgradeCard: View {
-    var body: some View {
-        let fill = HomeTheme.accentFill
-        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
-
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("LOAM PRO")
-                    .font(.system(.caption, design: .rounded).weight(.heavy))
-                    .tracking(1.2)
-                Spacer()
-                Image(systemName: "sparkles")
-                    .font(.subheadline.weight(.semibold))
-                    .accessibilityHidden(true)
-            }
-            .foregroundStyle(.white.opacity(0.85))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Share every bill, with everyone")
-                    .font(.system(.title3, design: .rounded).weight(.bold))
-                    .foregroundStyle(.white)
-                Text("Unlimited connections, recurring expenses, notes and your own categories.")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.85))
-            }
-            .fixedSize(horizontal: false, vertical: true)
-
-            Text("See plans")
-                .font(.system(.headline, design: .rounded))
-                .foregroundStyle(fill)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .background(.white, in: Capsule())
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            shape
-                .fill(fill)
-                // A soft highlight from the top left so the flat accent has some depth.
-                .overlay(
-                    shape.fill(
-                        LinearGradient(
-                            colors: [.white.opacity(0.22), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                )
-        }
-        .contentShape(shape)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Upgrade to Loam Pro")
-        .accessibilityHint("Unlimited connections, recurring expenses, notes and your own categories.")
-        .accessibilityAddTraits(.isButton)
-    }
-}
-
-/// Option A: a clay tile in the PRO mark's style: a pale accent face lit from the top left,
-/// with a slightly darker edge showing below it. The copy sits on the left and a solid
-/// "Get Pro" pill on the right makes it read as something to tap.
-private struct ProUpgradeBanner: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        let isDark = colorScheme == .dark
-        // The tile mixes the accent into its face, so black stays black, or white on dark surfaces.
-        let accent = HomeTheme.solidAccent == .black && isDark ? Color.white : HomeTheme.solidAccent
-        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
-        // A pale face glares against dark surfaces, so dark mode shades the accent toward black instead.
-        let face = isDark ? ProMark.shaded(of: accent, blackness: 0.62) : ProMark.pastel(of: accent)
-        let edge = isDark ? ProMark.shaded(of: accent, blackness: 0.78) : ProMark.pastel(of: accent, whiteness: 0.72)
-
-        // Large text sizes don't fit the pill beside the copy, so it drops below instead.
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) {
-                copy(accent: accent)
-                Spacer(minLength: 4)
-                getProPill(isDark: isDark)
-            }
-            VStack(alignment: .leading, spacing: 12) {
-                copy(accent: accent)
-                getProPill(isDark: isDark)
-            }
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            ZStack {
-                // Thickness: a slightly darker copy just below the face.
-                shape
-                    .fill(edge)
-                    .offset(y: 4)
-                // Face: lit from the top left, shaded toward the bottom right, like soft plastic.
-                shape
-                    .fill(
-                        face
-                            .shadow(.inner(color: .white.opacity(isDark ? 0.18 : 0.9), radius: 6, x: 3, y: 4))
-                            .shadow(.inner(color: (isDark ? Color.black : accent).opacity(0.22), radius: 10, x: -4, y: -6))
-                    )
-            }
-        }
-        .padding(.bottom, 4)
-        .contentShape(shape)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Upgrade to Loam Pro")
-        .accessibilityHint("Share every bill, with everyone")
-        .accessibilityAddTraits(.isButton)
-    }
-
-    private func copy(accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("Upgrade to Loam Pro")
-                .font(.system(.headline, design: .rounded).weight(.heavy))
-                .foregroundStyle(
-                    accent.shadow(.inner(color: .white.opacity(0.55), radius: 1, x: 0.5, y: 1))
-                )
-            Text("Share every bill, with everyone")
-                .font(.footnote)
-                .foregroundStyle(accent.opacity(0.75))
-        }
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private func getProPill(isDark: Bool) -> some View {
-        // accentFill is the app's fill for white-text buttons; it keeps black readable in dark mode.
-        let fill = HomeTheme.accentFill
-
-        return HStack(spacing: 4) {
-            Text("Get Pro")
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-        }
-        .font(.system(.subheadline, design: .rounded).weight(.bold))
-        .foregroundStyle(.white)
-        .lineLimit(1)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(
-            Capsule()
-                .fill(fill.shadow(.inner(color: .white.opacity(0.3), radius: 2, x: 1, y: 1.5)))
-        )
-        .shadow(color: fill.opacity(isDark ? 0 : 0.25), radius: 6, y: 3)
     }
 }
 
