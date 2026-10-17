@@ -176,7 +176,7 @@ struct ShareConnectionCodeView: View {
         }
         .alert("Couldn’t create a code", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
     }
-    /// The server enforces the same limit; checking first just opens the paywall sooner.
+    /// The server enforces the same limit; checking first skips a request that would be refused.
     private var needsPro: Bool {
         !subscriptions.isPro && connectionStore.connections.filter { !$0.isPlaceholder }.count >= SubscriptionStore.freeConnectionLimit
     }
@@ -185,7 +185,7 @@ struct ShareConnectionCodeView: View {
         guard !isWorking else { return }; isWorking = true; defer { isWorking = false }
         do {
             if let active = try await connectionStore.activeInvitation() { invitation = active }
-            else if needsPro { showPaywall() }
+            else if needsPro { requiresPro = true }
             else { await createInvitation() }
         } catch { self.error = error.localizedDescription }
     }
@@ -195,13 +195,12 @@ struct ShareConnectionCodeView: View {
             // A fresh purchase can beat RevenueCat's webhook to the backend.
             await subscriptions.syncBackendEntitlement()
             do { invitation = try await connectionStore.createInvitation() }
-            catch ConnectionError.proRequired { showPaywall() }
+            catch ConnectionError.proRequired { requiresPro = true }
             catch { self.error = error.localizedDescription }
         }
-        catch ConnectionError.proRequired { showPaywall() }
+        catch ConnectionError.proRequired { requiresPro = true }
         catch { self.error = error.localizedDescription }
     }
-    private func showPaywall() { requiresPro = true; showsPaywall = true }
     private func revoke() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; do { try await connectionStore.revokeInvitation(); invitation = nil } catch { self.error = error.localizedDescription } }
 }
 
