@@ -1,5 +1,4 @@
 import SwiftUI
-import CoreMotion
 import PhotosUI
 import RevenueCatUI
 import SafariServices
@@ -593,68 +592,6 @@ private struct ProProfileAvatar: View {
             }
             // The mark hangs below the photo, so it needs room under it.
             .padding(.bottom, 11)
-    }
-}
-
-/// The PRO mark, turning in 3D as the phone tilts, like a physical badge.
-/// Holds still when Reduce Motion is on.
-private struct TiltingProMark: View {
-    var height: CGFloat
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @StateObject private var tilt = DeviceTilt()
-
-    var body: some View {
-        ProMark(height: height)
-            .rotation3DEffect(.degrees(tilt.pitch * 16), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
-            .rotation3DEffect(.degrees(tilt.roll * 22), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
-            .onAppear { if !reduceMotion { tilt.start() } }
-            .onDisappear { tilt.stop() }
-            .onChange(of: reduceMotion) { _, reduced in
-                if reduced { tilt.stop() } else { tilt.start() }
-            }
-    }
-}
-
-/// How far the phone has tilted since it started being watched, from -1 to 1 on each axis.
-/// The first reading is the rest position, so the badge starts flat however the phone is held.
-@MainActor
-private final class DeviceTilt: ObservableObject {
-    @Published private(set) var roll: Double = 0
-    @Published private(set) var pitch: Double = 0
-
-    private let manager = CMMotionManager()
-    private var reference: CMAttitude?
-    /// Radians of tilt that count as a full -1...1 swing.
-    private static let range = 0.6
-
-    func start() {
-        guard manager.isDeviceMotionAvailable, !manager.isDeviceMotionActive else { return }
-        reference = nil
-        manager.deviceMotionUpdateInterval = 1 / 60
-        manager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
-            guard let self, let attitude = motion?.attitude else { return }
-            MainActor.assumeIsolated { self.update(with: attitude) }
-        }
-    }
-
-    func stop() {
-        manager.stopDeviceMotionUpdates()
-        reference = nil
-        roll = 0
-        pitch = 0
-    }
-
-    private func update(with attitude: CMAttitude) {
-        guard let reference else {
-            reference = attitude.copy() as? CMAttitude
-            return
-        }
-        attitude.multiply(byInverseOf: reference)
-        let clamp = { (value: Double) in min(max(value / Self.range, -1), 1) }
-        // Eases toward the reading, so sensor jitter doesn't shake the badge.
-        roll += (clamp(attitude.roll) - roll) * 0.2
-        pitch += (clamp(attitude.pitch) - pitch) * 0.2
     }
 }
 
