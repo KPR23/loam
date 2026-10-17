@@ -181,6 +181,7 @@ enum ProductEvent {
     enum AddExpenseSource: String {
         case homeButton = "home_button"
         case emptyState = "empty_state"
+        case siri
     }
 
     var name: String {

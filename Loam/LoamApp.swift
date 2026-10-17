@@ -10,11 +10,13 @@ struct LoamApp: App {
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
     @AppStorage(AppPreferences.timeZoneKey) private var timeZoneIdentifier = ""
     @AppStorage(AppPreferences.defaultCurrencyKey) private var defaultCurrency = AppPreferences.fallbackCurrencyCode
-    @StateObject private var authSession = AuthSession()
-    @StateObject private var expenseStore = ExpenseStore()
-    @StateObject private var balanceStore = BalanceStore()
+    // Shared with the Siri actions, which can run before any screen exists.
+    @StateObject private var authSession = AppServices.shared.authSession
+    @StateObject private var expenseStore = AppServices.shared.expenseStore
+    @StateObject private var balanceStore = AppServices.shared.balanceStore
+    @StateObject private var connectionStore = AppServices.shared.connectionStore
+    @StateObject private var navigator = AppServices.shared.navigator
     @StateObject private var activityStore = ActivityStore()
-    @StateObject private var connectionStore = ConnectionStore()
     @StateObject private var subscriptionStore = SubscriptionStore()
     @StateObject private var pushStore = PushNotificationStore.shared
 
@@ -57,9 +59,10 @@ struct LoamApp: App {
             .environmentObject(connectionStore)
             .environmentObject(subscriptionStore)
             .environmentObject(pushStore)
+            .environmentObject(navigator)
             .task {
                 LegacyDemoFixtureCleanup.removeIfNeeded()
-                await authSession.bootstrap()
+                await authSession.bootstrapIfNeeded()
                 // Analytics resume at launch as the last account left them; a launch that
                 // ends signed out changes no user ID, so settle it here.
                 Telemetry.setUser(accountId)
@@ -69,6 +72,10 @@ struct LoamApp: App {
             }
             .task(id: authSession.userId) {
                 await CustomCategoryStore.shared.load(userId: authSession.userId)
+            }
+            .onChange(of: connectionStore.connections, initial: true) { _, _ in
+                // Lets Siri recognize friends' names in phrases like "Settle up with Julia".
+                LoamShortcuts.updateAppShortcutParameters()
             }
             .task(id: accountId) {
                 await subscriptionStore.identify(userId: accountId)
