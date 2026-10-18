@@ -593,8 +593,9 @@ struct AddExpenseView: View {
                     userId: userId
                 )
             } else {
+                let savedOffline = OfflineSync.shared.savedOfflineCount
                 try await saveCreate(money: money, userId: userId)
-                ToastCenter.shared.showSuccess(isSplit ? "Expense added and shared" : "Expense added")
+                OfflineSync.shared.showSuccess(isSplit ? "Expense added and shared" : "Expense added", unlessSavedOfflineSince: savedOffline)
             }
             LoamFeedback.success()
             dismiss()

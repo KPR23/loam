@@ -105,6 +105,10 @@ final class AuthSession: ObservableObject {
             } else {
                 apply(user: session.user)
             }
+        } catch where Connectivity.isOfflineError(error) && client.auth.currentSession != nil {
+            // Offline with an expired token: stay signed in with the saved session. It refreshes
+            // once the connection is back, and changes made meanwhile wait on the device.
+            apply(user: client.auth.currentSession!.user)
         } catch {
             state = .signedOut
         }
@@ -122,6 +126,11 @@ final class AuthSession: ObservableObject {
                       SupabaseClientProvider.activeDevice == observedDevice else { return }
                 switch event {
                 case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:
+                    if event == .initialSession, let session, session.isExpired,
+                       self.state == .signedIn, self.userId == session.user.id {
+                        // Signed in offline with a saved session that is still refreshing.
+                        break
+                    }
                     if let session, !session.isExpired {
                         guard expectedUserId == nil || session.user.id == expectedUserId else {
                             #if DEBUG
@@ -364,6 +373,7 @@ final class AuthSession: ObservableObject {
             lastError = "Couldn't confirm your deletion request. Check its status before trying again."
             await refreshDeletionStatus()
             try? await client.auth.signOut(scope: .local)
+            forgetOfflineData(for: deletingAccountId)
             clearSession()
             return
         }
@@ -375,7 +385,14 @@ final class AuthSession: ObservableObject {
         #if DEBUG
         savedMainAccount = nil
         #endif
+        forgetOfflineData(for: deletingAccountId)
         clearSession()
+    }
+
+    /// A deleted account's saved screens and unsynced changes have nowhere to go.
+    private func forgetOfflineData(for accountId: UUID) {
+        OfflineCache.removeAll(for: accountId)
+        OfflineSync.shared.reset()
     }
 
     private static func isDefinitiveDeletionRejection(_ statusCode: Int) -> Bool {
@@ -504,6 +521,10 @@ final class AuthSession: ObservableObject {
             savedMainAccount = nil
         }
         #endif
+        // What this device kept for offline use goes; changes that haven't synced
+        // stay and are sent the next time this account signs in.
+        if let userId, !usesDemoMode { OfflineCache.removeSnapshots(for: userId) }
+        OfflineSync.shared.reset()
         clearSession()
     }
 

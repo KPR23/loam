@@ -20,6 +20,8 @@ final class ExpenseStore: ObservableObject {
     }
     /// Replaces the backend lookup of every expense still waiting on a user, so tests can make it fail.
     var pendingAcceptanceLookup: ((UUID) async throws -> [ExpenseRecord])?
+    /// Keeps changes made offline until they sync; tests use their own.
+    var sync: OfflineSync = .shared
 
     @Published private(set) var period: DatePeriod = .currentMonth
 
@@ -78,6 +80,7 @@ final class ExpenseStore: ObservableObject {
     }
 
     func refresh(userId: UUID?) async {
+        let sameAccount = currentUserId == userId
         // Changes waiting on Undo belong to the account that made them.
         if userId != currentUserId { stagedChanges = [:] }
         currentUserId = userId
@@ -96,13 +99,23 @@ final class ExpenseStore: ObservableObject {
         lastError = nil
         defer { isLoading = false }
 
+        // Changes made offline go first, so the fetch below already includes them.
+        await sync.flush(userId: userId)
+        guard isUsableOnline else {
+            showSavedCopy(userId: userId, sameAccount: sameAccount)
+            return
+        }
+
         do {
             try await materializeDueRecurring(userId: userId, repository: primaryRepository)
-            let fetched = withStagedChanges(try await primaryRepository.fetchExpenses(for: userId, in: period))
-            expenses = fetched
-            summary = makeSummary(fetched, userId: userId)
+            let fetched = try await primaryRepository.fetchExpenses(for: userId, in: period)
+            expenses = withStagedChanges(withPendingChanges(fetched, userId: userId))
+            summary = makeSummary(expenses, userId: userId)
             recurringStartDatesById = await loadRecurringStartDates(for: fetched)
             lastError = nil
+        } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
+            showSavedCopy(userId: userId, sameAccount: sameAccount)
+            return
         } catch {
             lastError = UserFacingError.message(for: error)
         }
@@ -116,8 +129,87 @@ final class ExpenseStore: ObservableObject {
 
         let proposals = (try? await primaryRepository.fetchPendingProposals(for: userId)) ?? []
         pendingProposals = proposals
-        proposalExpenses = withStagedChanges(await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses))
-        detachedExpenses = withStagedChanges(await refreshDetachedExpenses(userId: userId))
+        let resolvedProposalExpenses = await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses)
+        proposalExpenses = withStagedChanges(withPendingChanges(resolvedProposalExpenses, userId: userId, addsMissing: false))
+        let resolvedDetachedExpenses = await refreshDetachedExpenses(userId: userId)
+        detachedExpenses = withStagedChanges(withPendingChanges(resolvedDetachedExpenses, userId: userId, addsMissing: false))
+        saveCopy(userId: userId)
+    }
+
+    // MARK: Offline
+
+    /// Whether to reach the server now. Demo storage is always reachable.
+    private var isUsableOnline: Bool {
+        !sync.isEnabled() || sync.isOnline()
+    }
+
+    /// The month as last loaded, with what was changed offline on top.
+    private func showSavedCopy(userId: UUID, sameAccount: Bool) {
+        let saved = OfflineCache.load(OfflineSnapshot.self, key: period.offlineCacheKey, userId: userId)
+        // A month never loaded before keeps whatever of it is already on screen.
+        let fallback = sameAccount ? expenses.filter { period.contains($0.spentAt) } : []
+        expenses = withStagedChanges(withPendingChanges(saved?.expenses ?? fallback, userId: userId))
+        if let saved {
+            pendingProposals = saved.proposals
+            proposalExpenses = withStagedChanges(withPendingChanges(saved.proposalExpenses, userId: userId, addsMissing: false))
+        } else if !sameAccount {
+            pendingProposals = []
+            proposalExpenses = []
+            detachedExpenses = []
+        }
+        detachedExpenses = withStagedChanges(withPendingChanges(detachedExpenses, userId: userId, addsMissing: false))
+        summary = makeSummary(expenses, userId: userId)
+        lastError = nil
+    }
+
+    private func saveCopy(userId: UUID) {
+        guard sync.isEnabled(), currentUserId == userId else { return }
+        let snapshot = OfflineSnapshot(expenses: expenses, proposals: pendingProposals, proposalExpenses: proposalExpenses)
+        OfflineCache.save(snapshot, key: period.offlineCacheKey, userId: userId)
+    }
+
+    private func withPendingChanges(_ list: [ExpenseRecord], userId: UUID, addsMissing: Bool = true) -> [ExpenseRecord] {
+        guard sync.isEnabled() else { return list }
+        let changes = sync.pendingChanges(for: userId)
+        guard !changes.isEmpty else { return list }
+        return PendingChange.apply(changes, to: list, userId: userId, period: addsMissing ? period : nil, addsMissing: addsMissing)
+    }
+
+    /// Sends a change, or keeps it on the device when there's no connection. A change also waits
+    /// when an earlier one to the same expense hasn't synced, so the two arrive in order.
+    private func sendOrQueue(_ change: PendingChange, userId: UUID, send: () async throws -> Void) async throws -> WriteOutcome {
+        if sync.shouldQueue(change, userId: userId) {
+            let offline = !sync.isOnline()
+            queue(change, userId: userId, announce: offline)
+            // Online, it only waited its turn; send it with the earlier change now.
+            if !offline {
+                await sync.flush(userId: userId)
+                await refresh(userId: userId)
+            }
+            return .queued
+        }
+        do {
+            try await send()
+            return .sent
+        } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
+            queue(change, userId: userId, announce: true)
+            return .queued
+        }
+    }
+
+    private func queue(_ change: PendingChange, userId: UUID, announce: Bool) {
+        sync.enqueue(change, userId: userId, announce: announce)
+        guard currentUserId == userId else { return }
+        expenses = PendingChange.apply([change], to: expenses, userId: userId, period: period)
+        proposalExpenses = PendingChange.apply([change], to: proposalExpenses, userId: userId, period: nil, addsMissing: false)
+        detachedExpenses = PendingChange.apply([change], to: detachedExpenses, userId: userId, period: nil, addsMissing: false)
+        summary = makeSummary(expenses, userId: userId)
+        saveCopy(userId: userId)
+    }
+
+    private enum WriteOutcome {
+        case sent
+        case queued
     }
 
     func expense(forProposal proposal: ExpenseEditProposal) -> ExpenseRecord? {
@@ -241,7 +333,7 @@ final class ExpenseStore: ObservableObject {
         )
 
         let activeRepository = repository(forSplitWith: partnerUserIds)
-        let usersTrustingCreator = await usersTrusting(
+        let usersTrustingCreator = await usersTrustingIfOnline(
             creatorId: userId,
             partnerUserIds: partnerUserIds,
             repository: activeRepository
@@ -276,15 +368,18 @@ final class ExpenseStore: ObservableObject {
             recurringId: recurringRule?.id,
             shares: shareRecords
         )
-        _ = try await LoamErrorCapture.withCapture("expense.shared_create_failed") {
-            if let recurringRule {
-                return try await activeRepository.createRecurringExpense(expense, rule: recurringRule)
+        let outcome = try await sendOrQueue(.saveExpense(expense, isNew: true, rule: recurringRule), userId: userId) {
+            _ = try await LoamErrorCapture.withCapture("expense.shared_create_failed") {
+                if let recurringRule {
+                    return try await activeRepository.createRecurringExpense(expense, rule: recurringRule)
+                }
+                return try await activeRepository.create(expense)
             }
-            return try await activeRepository.create(expense)
         }
         Telemetry.capture(.expenseCreated(shared: true, recurring: recurringRule != nil, participantCount: shareRecords.count))
-        await recordActivity(kind: .shared, actorId: userId, expense: expense, recipients: partnerUserIds)
         RecentSplitPartners.record(partnerUserIds, for: userId)
+        guard outcome == .sent else { return }
+        await recordActivity(kind: .shared, actorId: userId, expense: expense, recipients: partnerUserIds)
         if recurringRule != nil {
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
@@ -332,13 +427,16 @@ final class ExpenseStore: ObservableObject {
             recurringId: recurringRule?.id,
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
-        _ = try await LoamErrorCapture.withCapture("expense.personal_create_failed") {
-            if let recurringRule {
-                return try await activeRepository.createRecurringExpense(expense, rule: recurringRule)
+        let outcome = try await sendOrQueue(.saveExpense(expense, isNew: true, rule: recurringRule), userId: userId) {
+            _ = try await LoamErrorCapture.withCapture("expense.personal_create_failed") {
+                if let recurringRule {
+                    return try await activeRepository.createRecurringExpense(expense, rule: recurringRule)
+                }
+                return try await activeRepository.create(expense)
             }
-            return try await activeRepository.create(expense)
         }
         Telemetry.capture(.expenseCreated(shared: false, recurring: recurringRule != nil, participantCount: 1))
+        guard outcome == .sent else { return }
         if recurringRule != nil {
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
@@ -406,7 +504,7 @@ final class ExpenseStore: ObservableObject {
                 participantPercentages: participantPercentages,
                 participantExactAmountMinors: participantExactAmountMinors
             )
-            let usersTrustingCreator = await usersTrusting(
+            let usersTrustingCreator = await usersTrustingIfOnline(
                 creatorId: userId,
                 partnerUserIds: partnerUserIds,
                 repository: activeRepository
@@ -420,9 +518,12 @@ final class ExpenseStore: ObservableObject {
 
         let updated = expense
         let persist: @MainActor () async throws -> Void = { [self] in
-            _ = try await LoamErrorCapture.withCapture("expense.update_failed") {
-                try await activeRepository.update(updated)
+            let outcome = try await sendOrQueue(.saveExpense(updated, isNew: false, rule: nil), userId: userId) {
+                _ = try await LoamErrorCapture.withCapture("expense.update_failed") {
+                    try await activeRepository.update(updated)
+                }
             }
+            guard outcome == .sent else { return }
             if updated.isShared || originalExpense.isShared {
                 let removed = Set(originalExpense.shares.map(\.userId)).subtracting(updated.shares.map(\.userId))
                 await recordActivity(kind: .edited, actorId: userId, expense: updated, recipients: updated.shares.map(\.userId).filter { $0 != userId })
@@ -497,10 +598,13 @@ final class ExpenseStore: ObservableObject {
     ) async throws {
         if let expense {
             let activeRepository = repository(for: expense)
-            try await activeRepository.delete(id: id)
+            let outcome = try await sendOrQueue(.deleteExpense(expense, recurringMode: recurringMode), userId: userId) {
+                try await activeRepository.delete(id: id)
+            }
+            guard outcome == .sent else { return }
             if expense.isShared { await recordActivity(kind: .deleted, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId }) }
             if let recurringId = expense.recurringId, let mode = recurringMode {
-                try await applyRecurringDeletion(
+                try await Self.applyRecurringDeletion(
                     recurringId: recurringId,
                     occurrenceDate: expense.spentAt,
                     mode: mode,
@@ -542,7 +646,8 @@ final class ExpenseStore: ObservableObject {
         return AppPreferences.calendar.isDate(expense.spentAt, inSameDayAs: startDate)
     }
 
-    private func applyRecurringDeletion(
+    /// Also replays a deletion made offline, once it syncs.
+    static func applyRecurringDeletion(
         recurringId: UUID,
         occurrenceDate: Date,
         mode: RecurringDeletionMode,
@@ -595,7 +700,7 @@ final class ExpenseStore: ObservableObject {
 
         expense.paidBy = paidBy
         let activeRepository = repository(forSplitWith: partnerUserIds)
-        let usersTrustingCreator = await usersTrusting(
+        let usersTrustingCreator = await usersTrustingIfOnline(
             creatorId: userId,
             partnerUserIds: partnerUserIds,
             repository: activeRepository
@@ -609,9 +714,12 @@ final class ExpenseStore: ObservableObject {
 
         let updated = expense
         let persist: @MainActor () async throws -> Void = { [self] in
-            _ = try await LoamErrorCapture.withCapture("expense.split_setup_failed") {
-                try await activeRepository.update(updated)
+            let outcome = try await sendOrQueue(.saveExpense(updated, isNew: false, rule: nil), userId: userId) {
+                _ = try await LoamErrorCapture.withCapture("expense.split_setup_failed") {
+                    try await activeRepository.update(updated)
+                }
             }
+            guard outcome == .sent else { return }
             await recordActivity(kind: .edited, actorId: userId, expense: updated, recipients: updated.shares.map(\.userId).filter { $0 != userId })
         }
         RecentSplitPartners.record(partnerUserIds, for: userId)
@@ -812,6 +920,7 @@ final class ExpenseStore: ObservableObject {
         summary = makeSummary(expenses, userId: userId)
 
         do {
+            let savedOfflineBefore = sync.savedOfflineCount
             var trustedScopes: Set<String> = []
             for target in targets {
                 // Trust once per creator when bulk-accepting with trust.
@@ -828,14 +937,17 @@ final class ExpenseStore: ObservableObject {
                     itemAction = action
                 }
                 let activeRepository = repository(for: target.expense)
-                try await activeRepository.respondToShare(
-                    expenseId: target.id,
-                    userId: userId,
-                    action: itemAction
-                )
+                let outcome = try await sendOrQueue(.respondToShare(target.expense, action: itemAction), userId: userId) {
+                    try await activeRepository.respondToShare(
+                        expenseId: target.id,
+                        userId: userId,
+                        action: itemAction
+                    )
+                }
+                guard outcome == .sent else { continue }
                 await recordActivity(kind: itemAction == .reject ? .rejected : .accepted, actorId: userId, expense: target.expense, recipients: [target.expense.createdBy])
             }
-            ToastCenter.shared.showSuccess(Self.shareResponseMessage(action: action, count: targets.count))
+            sync.showSuccess(Self.shareResponseMessage(action: action, count: targets.count), unlessSavedOfflineSince: savedOfflineBefore)
             await refresh(userId: userId)
         } catch {
             LoamErrorCapture.capture("expense.share_response_failed")
@@ -889,6 +1001,8 @@ final class ExpenseStore: ObservableObject {
         message: String?,
         clearsCustomCategory: Bool = false
     ) async throws {
+        // A suggestion is checked against the version it was made on, so it needs a connection.
+        guard isUsableOnline else { throw OfflineError.requiresConnection }
         let proposal = ExpenseEditProposal(
             expenseId: expense.id,
             proposedBy: userId,
@@ -915,6 +1029,10 @@ final class ExpenseStore: ObservableObject {
     }
 
     func respondToProposal(proposalId: UUID, userId: UUID, accept: Bool) async {
+        guard isUsableOnline else {
+            lastError = OfflineError.requiresConnection.localizedDescription
+            return
+        }
         if let expenseId = pendingProposals.first(where: { $0.id == proposalId })?.expenseId {
             await settleStagedChange(for: expenseId)
         }
@@ -1066,6 +1184,16 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
+    /// Offline, partners show as waiting; the server applies their trust when the change syncs.
+    private func usersTrustingIfOnline(
+        creatorId: UUID,
+        partnerUserIds: [UUID],
+        repository: ExpenseRepository
+    ) async -> Set<UUID> {
+        guard isUsableOnline else { return [] }
+        return await usersTrusting(creatorId: creatorId, partnerUserIds: partnerUserIds, repository: repository)
+    }
+
     private func usersTrusting(
         creatorId: UUID,
         partnerUserIds: [UUID],
@@ -1172,4 +1300,11 @@ final class ExpenseStore: ObservableObject {
             unconvertedCount: unconverted
         )
     }
+}
+
+/// One month as last loaded, kept for opening Loam offline.
+private struct OfflineSnapshot: Codable {
+    var expenses: [ExpenseRecord]
+    var proposals: [ExpenseEditProposal]
+    var proposalExpenses: [ExpenseRecord]
 }

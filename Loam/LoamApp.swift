@@ -20,6 +20,7 @@ struct LoamApp: App {
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var subscriptionStore = SubscriptionStore()
     @StateObject private var pushStore = PushNotificationStore.shared
+    @StateObject private var connectivity = Connectivity.shared
     @StateObject private var toastCenter = ToastCenter.shared
 
     init() {
@@ -82,6 +83,7 @@ struct LoamApp: App {
             )
             .environmentObject(navigator)
             .task {
+                connectivity.start()
                 LegacyDemoFixtureCleanup.removeIfNeeded()
                 await authSession.bootstrapIfNeeded()
                 // Analytics resume at launch as the last account left them; a launch that
@@ -113,6 +115,14 @@ struct LoamApp: App {
             .onChange(of: authSession.userId) { _, _ in
                 Telemetry.setUser(accountId)
             }
+            .onChange(of: connectivity.isOnline) { _, isOnline in
+                guard let userId = accountId, authSession.state == .signedIn else { return }
+                if isOnline {
+                    Task { await syncAfterReconnecting(userId: userId) }
+                } else {
+                    OfflineSync.shared.notice = .wentOffline
+                }
+            }
             .onChange(of: defaultCurrency) { _, _ in
                 // Totals follow the new currency; expenses keep the one they were added in.
                 expenseStore.recomputeSummary()
@@ -141,6 +151,17 @@ struct LoamApp: App {
                     }
                 }
             }
+    }
+
+    /// Sends what was changed offline, then reloads every screen from the server.
+    private func syncAfterReconnecting(userId: UUID) async {
+        await OfflineSync.shared.flush(userId: userId)
+        guard authSession.userId == userId else { return }
+        await expenseStore.refresh(userId: userId)
+        await balanceStore.refresh(userId: userId)
+        await activityStore.refresh(userId: userId)
+        await connectionStore.refresh(userId: userId)
+        await CustomCategoryStore.shared.load(userId: userId)
     }
 
     /// The badge follows the Activity count once iOS allows it.
@@ -231,7 +252,8 @@ enum LoamErrorCapture {
         }
     }
 
+    /// Cancelled requests, and ones that couldn't reach the server, aren't failures worth reporting.
     private static func isCancellation(_ error: Error) -> Bool {
-        error is CancellationError || (error as? URLError)?.code == .cancelled
+        error is CancellationError || (error as? URLError)?.code == .cancelled || Connectivity.isOfflineError(error)
     }
 }

@@ -26,6 +26,7 @@ final class ActivityStore: ObservableObject {
     private var foldedIds: [UUID: [UUID]] = [:]
     /// Bumped by each refresh so a page fetched before it can't land on the new list.
     private var generation = 0
+    private static let cacheKey = "activity"
 
     func refreshBadgeCount(userId: UUID?) async {
         guard let userId else { badgeCount = 0; return }
@@ -54,10 +55,18 @@ final class ActivityStore: ObservableObject {
         accountId = userId; isLoading = true; lastError = nil
         defer { if generation == current { isLoading = false } }
         let repository = ActivityRepositoryFactory.make()
+        let keepsCopy = !ExpenseRepositoryFactory.usesLocalStorage
         do {
             let page = try await repository.fetchUnreadEvents(for: userId, before: nil)
             guard accountId == userId, generation == current else { return }
             setEvents(page.events); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil
+            if keepsCopy { OfflineCache.save(page.events, key: Self.cacheKey, userId: userId) }
+        } catch where keepsCopy && Connectivity.isOfflineError(error) {
+            // Offline: the inbox as last loaded; more pages come back with the connection.
+            guard accountId == userId, generation == current else { return }
+            if let saved = OfflineCache.load([ActivityEvent].self, key: Self.cacheKey, userId: userId) { setEvents(saved) }
+            nextCursor = nil; canLoadMore = false
+            return
         } catch { guard accountId == userId else { return }; lastError = UserFacingError.message(for: error) }
         if isInboxVisible { await markSeen(userId: userId) } else { await refreshBadgeCount(userId: userId) }
     }
@@ -82,7 +91,8 @@ final class ActivityStore: ObservableObject {
             await refreshBadgeCount(userId: userId)
         } catch {
             guard accountId == userId else { return }
-            lastError = UserFacingError.message(for: error)
+            // Offline, the events simply come back; marking them read needs a connection.
+            if !Connectivity.isOfflineError(error) { lastError = UserFacingError.message(for: error) }
             await refresh(userId: userId)
         }
     }

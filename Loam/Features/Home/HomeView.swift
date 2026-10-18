@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
+    @ObservedObject private var offlineSync = OfflineSync.shared
 
     var arcReloadToken: Int = 0
     var onAddExpense: () -> Void = {}
@@ -403,7 +404,8 @@ struct HomeView: View {
         HomeExpenseRow(
             expense: expense,
             myUserId: authSession.userId,
-            highlightsRecurringIcon: expenseStore.isInitialRecurringOccurrence(expense)
+            highlightsRecurringIcon: expenseStore.isInitialRecurringOccurrence(expense),
+            isWaitingToSync: offlineSync.pendingExpenseIds.contains(expense.id)
         )
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
