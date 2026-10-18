@@ -22,8 +22,8 @@ struct ToastOverlay: View {
                 }
                 .id(toast.id)
                 .offset(y: min(dragOffset, 0) + max(dragOffset, 0) * 0.15)
-                .gesture(dismissGesture(for: toast.id))
-                .onTapGesture { center.dismiss(toast.id) }
+                // Swipe up to dismiss. No tap-to-dismiss: on the card it took taps meant for Undo.
+                .simultaneousGesture(dismissGesture(for: toast.id))
                 .background(
                     GeometryReader { proxy in
                         Color.clear
