@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..7' as plan;
+select '1..8' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.c',gen_random_uuid()::text,true),set_config('test.cat',gen_random_uuid()::text,true),
  set_config('test.e',gen_random_uuid()::text,true),set_config('test.rule',gen_random_uuid()::text,true);
@@ -112,4 +112,23 @@ do $$ begin
  assert not has_table_privilege('authenticated','public.custom_category','INSERT'),'Clients can write categories directly';
 end $$;
 select 'ok 7 - hidden categories are private, and writes go through the RPCs' as result;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+select public.set_category_order(array['other','groceries']);
+select public.set_category_order(array['groceries','other',current_setting('test.cat')]);
+do $$ begin
+ assert (select keys[1]='groceries' and cardinality(keys)=3 from public.category_order),'Category order not replaced';
+end $$;
+select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
+do $$ declare denied boolean:=false; begin
+ assert not exists(select 1 from public.category_order),'Another member''s order is visible';
+ begin perform public.set_category_order(array['dining']); exception when others then denied:=true; end;
+ assert denied,'A free account reordered categories';
+end $$;
+reset role;
+do $$ begin
+ assert not has_table_privilege('authenticated','public.category_order','INSERT'),'Clients can write the order directly';
+end $$;
+select 'ok 8 - only Pro members order categories, privately' as result;
 rollback;

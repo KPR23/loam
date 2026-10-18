@@ -20,6 +20,16 @@ struct CategorySettingsView: View {
     var body: some View {
         List {
             Section {
+                NavigationLink {
+                    CategoryOrderView()
+                } label: {
+                    Label("Reorder", systemImage: "arrow.up.arrow.down")
+                }
+            } footer: {
+                Text("The order you pick categories in, on every screen.")
+            }
+
+            Section {
                 ForEach(store.categories) { category in
                     NavigationLink {
                         CustomCategoryEditorView(category: category)
@@ -110,6 +120,32 @@ struct CategorySettingsView: View {
         Task {
             do { try await store.setHidden(category, isHidden) } catch { self.error = UserFacingError.message(for: error) }
         }
+    }
+}
+
+/// Drag categories into the order the picker lists them.
+private struct CategoryOrderView: View {
+    @State private var options = CustomCategoryStore.shared.pickerOptions(isPro: true)
+    @State private var error: String?
+
+    var body: some View {
+        List {
+            ForEach(options) { option in
+                CategoryRow(name: option.displayName, symbol: option.systemImage, color: option.color)
+            }
+            .onMove { source, destination in
+                options.move(fromOffsets: source, toOffset: destination)
+                LoamFeedback.selection()
+                let moved = options
+                Task {
+                    do { try await CustomCategoryStore.shared.setOrder(moved) } catch { self.error = UserFacingError.message(for: error) }
+                }
+            }
+        }
+        .environment(\.editMode, .constant(.active))
+        .navigationTitle("Reorder")
+        .navigationBarTitleDisplayMode(.inline)
+        .errorToast($error)
     }
 }
 
