@@ -419,6 +419,12 @@ struct HomeView: View {
             selectedExpense = expense
         }
         .contextMenu {
+            // Someone else's expense offers no other actions, so the menu would otherwise be empty.
+            if !isCreator(of: expense) {
+                Button("View details", systemImage: "info.circle") {
+                    selectedExpense = expense
+                }
+            }
             if canEdit(expense) {
                 Button("Edit", systemImage: "pencil") {
                     presentEdit(for: expense)
