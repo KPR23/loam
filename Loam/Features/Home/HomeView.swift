@@ -221,19 +221,21 @@ struct HomeView: View {
                     ForEach(section.expenses) { expense in
                         expenseRow(expense)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                // Avoid `role: .destructive` — it triggers immediate row removal
-                                // before the confirmation alert; tint keeps the delete styling.
-                                Button {
-                                    presentDeleteConfirmation(for: expense)
-                                } label: {
-                                    Label {
-                                        Text("Delete")
-                                            .fontWeight(.semibold)
-                                    } icon: {
-                                        Image(systemName: "trash")
+                                if canDelete(expense) {
+                                    // Avoid `role: .destructive` — it triggers immediate row removal
+                                    // before the confirmation alert; tint keeps the delete styling.
+                                    Button {
+                                        presentDeleteConfirmation(for: expense)
+                                    } label: {
+                                        Label {
+                                            Text("Delete")
+                                                .fontWeight(.semibold)
+                                        } icon: {
+                                            Image(systemName: "trash")
+                                        }
                                     }
+                                    .tint(.red)
                                 }
-                                .tint(.red)
                             }
                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                 if canEdit(expense) {
@@ -430,23 +432,35 @@ struct HomeView: View {
                     presentSplit(for: expense)
                 }
             }
-            Button(role: .destructive) {
-                presentDeleteConfirmation(for: expense)
-            } label: {
-                DestructiveMenuLabel(title: "Delete", systemImage: "trash")
+            if canDelete(expense) {
+                Button(role: .destructive) {
+                    presentDeleteConfirmation(for: expense)
+                } label: {
+                    DestructiveMenuLabel(title: "Delete", systemImage: "trash")
+                }
             }
         }
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Shows expense details")
     }
 
+    // Only the creator can change or delete an expense; the server rejects anyone else.
+    private func isCreator(of expense: ExpenseRecord) -> Bool {
+        guard let userId = authSession.userId else { return false }
+        return expense.createdBy == userId
+    }
+
     private func canSplit(_ expense: ExpenseRecord) -> Bool {
-        SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
+        isCreator(of: expense)
+            && SplitPartnerOption.isSplitAvailable(usesRemoteBackend: SupabaseConfig.isConfigured)
     }
 
     private func canEdit(_ expense: ExpenseRecord) -> Bool {
-        guard let userId = authSession.userId else { return false }
-        return expense.createdBy == userId
+        isCreator(of: expense)
+    }
+
+    private func canDelete(_ expense: ExpenseRecord) -> Bool {
+        isCreator(of: expense)
     }
 
     private func presentSplit(for expense: ExpenseRecord) {
