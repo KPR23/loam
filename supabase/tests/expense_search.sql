@@ -12,10 +12,10 @@ insert into public.user_connection(user_a,user_b,created_by,accepted_at)
 set local role authenticated;
 select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
 -- A: a private coffee, and a groceries trip split with B.
-select public.save_expense(jsonb_build_object('amount_minor',900,'currency','PLN','category','other','title','Secret coffee',
+select public.save_expense(jsonb_build_object('id',gen_random_uuid(),'amount_minor',900,'currency','PLN','category','other','title','Secret coffee',
   'spent_at',current_date,'paid_by',current_setting('test.a'),'shares',jsonb_build_array(
   jsonb_build_object('user_id',current_setting('test.a'),'amount_minor',900))));
-select public.save_expense(jsonb_build_object('amount_minor',2000,'currency','PLN','category','other','title','Groceries 100%',
+select public.save_expense(jsonb_build_object('id',gen_random_uuid(),'amount_minor',2000,'currency','PLN','category','other','title','Groceries 100%',
   'note','weekly shop','spent_at',current_date,'paid_by',current_setting('test.a'),'shares',jsonb_build_array(
   jsonb_build_object('user_id',current_setting('test.a'),'amount_minor',1000),
   jsonb_build_object('user_id',current_setting('test.b'),'amount_minor',1000))));
