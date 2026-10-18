@@ -245,6 +245,7 @@ struct ProfileView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @EnvironmentObject private var pushStore: PushNotificationStore
+    @EnvironmentObject private var appLock: AppLock
     @AppStorage("loam.appearance") private var appearance: AppAppearance = .system
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
     @AppStorage(AppPreferences.defaultCurrencyKey) private var defaultCurrency = "PLN"
@@ -326,6 +327,7 @@ struct ProfileView: View {
 
                 themeSection
                 preferencesSection
+                securitySection
                 if let userId = authSession.userId, !authSession.usesDemoMode, Telemetry.isAnalyticsAvailable {
                     privacySection(userId: userId)
                 }
@@ -391,6 +393,8 @@ struct ProfileView: View {
                     isSigningOut = true
                     Task {
                         await authSession.signOut()
+                        // The next person to sign in here starts without the lock.
+                        if authSession.state == .signedOut { appLock.reset() }
                         isSigningOut = false
                     }
                 }
@@ -480,6 +484,29 @@ struct ProfileView: View {
         } footer: {
             if !authSession.usesDemoMode {
                 Text("Accept every expense a friend shares with you automatically, without reviewing it first.")
+            }
+        }
+    }
+
+    private var securitySection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { appLock.isEnabled },
+                set: { enabled in Task { await appLock.setEnabled(enabled) } }
+            )) {
+                ProfileRow("\(appLock.method.title) lock", symbol: appLock.method.symbolName, color: .green)
+            }
+            .tint(HomeTheme.accentFill)
+            .disabled(appLock.isAuthenticating || (appLock.method == .unavailable && !appLock.isEnabled))
+        } header: {
+            Text("Security")
+        } footer: {
+            if appLock.method == .unavailable {
+                Text("Set a passcode in iOS Settings to lock Loam.")
+            } else if appLock.method == .passcode {
+                Text("Ask for your iPhone passcode whenever you open Loam.")
+            } else {
+                Text("Ask for \(appLock.method.title) whenever you open Loam. Your iPhone passcode works too.")
             }
         }
     }
@@ -789,6 +816,7 @@ private struct ProfileRow: View {
 
 private struct PersonalDetailsView: View {
     @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var appLock: AppLock
     @State private var name = ""
     @State private var isSaving = false
     @State private var isDeletingAccount = false
@@ -910,6 +938,8 @@ private struct PersonalDetailsView: View {
                         // Cancelling this system prompt exits without touching the account.
                         let credential = try await deletionAuthorization.request()
                         try await authSession.deleteAccount(credential: credential)
+                        // Whoever signs up next on this device starts without the lock.
+                        appLock.reset()
                     } catch {
                         self.error = error.localizedDescription
                     }
@@ -1279,4 +1309,5 @@ private struct ProfileDeveloperView: View {
         .environmentObject(AuthSession())
         .environmentObject(ExpenseStore())
         .environmentObject(SubscriptionStore())
+        .environmentObject(AppLock())
 }

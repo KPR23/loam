@@ -40,6 +40,8 @@
 	<string>$(LOAM_TEST_SUPABASE_URL)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Loam uses Face ID to unlock the app when App Lock is on.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Loam uses your location to suggest nearby stores when adding an expense.</string>
 	<key>POSTHOG_PROJECT_TOKEN</key>
