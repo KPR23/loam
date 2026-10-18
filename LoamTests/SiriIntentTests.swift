@@ -85,16 +85,21 @@ final class SiriIntentTests: LocalStorageTestCase {
         XCTAssertTrue(saved.isEmpty)
     }
 
-    func testUnsupportedCurrencyIsRefused() async throws {
-        signIn()
-        let intent = AddExpenseIntent()
-        intent.amount = amount(10, "GBP")
-        do {
-            _ = try await intent.perform()
-            XCTFail("Expected GBP to be refused")
-        } catch {
-            XCTAssertEqual(error as? LoamIntentError, .unsupportedCurrency("GBP"))
+    func testAnUnusableAmountIsAskedForAgain() async throws {
+        let me = signIn()
+        // Shortcuts pre-fills an empty amount in the region's currency, e.g. 0 ADP.
+        for unusable in [amount(10, "GBP"), amount(0, "ADP"), amount(0, "PLN")] {
+            let intent = AddExpenseIntent()
+            intent.amount = unusable
+            do {
+                _ = try await intent.perform()
+                XCTFail("Expected \(unusable.amount) \(unusable.currencyCode) to be asked for again")
+            } catch {
+                XCTAssertNil(error as? LoamIntentError, "Siri asks for the amount instead of failing")
+            }
         }
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertTrue(saved.isEmpty)
     }
 
     func testSignedOutActionsAskToSignIn() async throws {
