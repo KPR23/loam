@@ -485,7 +485,7 @@ final class ExpenseStore: ObservableObject {
         participantPercentages: [UUID: Int] = [:],
         participantExactAmountMinors: [UUID: Int] = [:]
     ) async throws {
-        guard var expense = knownExpense(id: expenseId) else {
+        guard var expense = knownExpense(id: expenseId), expense.createdBy == userId else {
             throw ExpenseRepositoryError.notFound
         }
 
