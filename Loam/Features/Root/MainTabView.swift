@@ -191,5 +191,6 @@ struct MainTabView: View {
         .environmentObject(BalanceStore())
         .environmentObject(ActivityStore())
         .environmentObject(PushNotificationStore.shared)
+        .environmentObject(AppLock())
         .environmentObject(AppNavigator())
 }

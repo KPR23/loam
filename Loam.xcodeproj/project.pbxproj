@@ -143,6 +143,9 @@
 		FC41BF6EF404674A922E2D42 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5950FD4B0A003B32224F60B /* HomeView.swift */; };
 		FC4A1FAF6F7BE333CFB3523B /* NotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3408CE057B81668CC45F1E68 /* NotificationPreferences.swift */; };
 		FDF41AA79A0BDAB289F21E58 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D4F8162B4C53DEDDD87E91 /* Telemetry.swift */; };
+		E0C5B7367EE0F2E2EBF5F59C /* AppLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21363752A9770E523A548AAE /* AppLock.swift */; };
+		F50C9A595705F5CC230E5925 /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F255357FFEE1179BDFAEF2 /* AppLockView.swift */; };
+		7534F780698EFC70E52229F3 /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -304,6 +307,9 @@
 		FB5855509A815413C1C6AFA1 /* ActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityStore.swift; sourceTree = "<group>"; };
 		FE0704D45C9ECCF37BB8E48B /* MoneyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyTests.swift; sourceTree = "<group>"; };
 		FE507A81DBF873171B9032A1 /* Loam.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Loam.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		21363752A9770E523A548AAE /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
+		67F255357FFEE1179BDFAEF2 /* AppLockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockView.swift; sourceTree = "<group>"; };
+		E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -460,6 +466,7 @@
 				0A41DDF8012F3E8B600FD54F /* Auth */,
 				A64F5718641EC616AD4D43F7 /* DeepLinks */,
 				86D2722D40EB25C29B05FE70 /* Notifications */,
+				462ACF27AA31E1285B716548 /* Security */,
 				3C7DC294963C863BC4BE3C4D /* Siri */,
 				84D2147BAF88479699EF6841 /* Subscriptions */,
 				62F1CB0A3659025B41BD37A0 /* Telemetry */,
@@ -591,6 +598,7 @@
 			isa = PBXGroup;
 			children = (
 				13D25BE098D9080B05430BFE /* Support */,
+				E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */,
 				08BD81EDCA6E65CC7B05C125 /* BalanceSimplifierTests.swift */,
 				0FE8A1B337206BA768F605F5 /* BalanceTests.swift */,
 				38B664DBA46BD536B44E5F73 /* BudgetArcLayoutTests.swift */,
@@ -707,6 +715,15 @@
 				1A7D71C5B5A83B152966ED5D /* Staging.xcconfig */,
 			);
 			path = Config;
+			sourceTree = "<group>";
+		};
+		462ACF27AA31E1285B716548 /* Security */ = {
+			isa = PBXGroup;
+			children = (
+				21363752A9770E523A548AAE /* AppLock.swift */,
+				67F255357FFEE1179BDFAEF2 /* AppLockView.swift */,
+			);
+			path = Security;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -863,6 +880,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7534F780698EFC70E52229F3 /* AppLockTests.swift in Sources */,
 				945CD0EFC0BA56FC01958837 /* BalanceSimplifierTests.swift in Sources */,
 				9989E533A949D6EFCA50F732 /* BalanceTests.swift in Sources */,
 				654413FF7956D9DB29DD830D /* BudgetArcLayoutTests.swift in Sources */,
@@ -906,6 +924,8 @@
 				467725D06126E3596075B358 /* AmountEntryField.swift in Sources */,
 				B15A5DE17E5C3637738DD0C8 /* AnalyticsConsentSheet.swift in Sources */,
 				D65A26025578725DA81C1FB5 /* AppDelegate.swift in Sources */,
+				E0C5B7367EE0F2E2EBF5F59C /* AppLock.swift in Sources */,
+				F50C9A595705F5CC230E5925 /* AppLockView.swift in Sources */,
 				DC095034852A514D28B3744F /* AppPreferences.swift in Sources */,
 				5197538023662FCC33542AE3 /* AppleDeletionAuthorization.swift in Sources */,
 				D02FC6D36FA2D65A11C60DBA /* AuthSession.swift in Sources */,

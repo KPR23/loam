@@ -19,6 +19,7 @@ struct LoamApp: App {
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var subscriptionStore = SubscriptionStore()
     @StateObject private var pushStore = PushNotificationStore.shared
+    @StateObject private var appLock = AppLock()
 
     init() {
         #if DEBUG
@@ -59,6 +60,18 @@ struct LoamApp: App {
             .environmentObject(connectionStore)
             .environmentObject(subscriptionStore)
             .environmentObject(pushStore)
+            .environmentObject(appLock)
+            .background(
+                AppLockWindowInstaller(
+                    isLocked: showsAppLock,
+                    coversOnBackground: appLock.isEnabled && authSession.state == .signedIn
+                ) {
+                    AppLockView(isPresented: showsAppLock && scenePhase == .active)
+                        .preferredColorScheme(appearance.colorScheme)
+                        .tint(accentColor.color)
+                        .environmentObject(appLock)
+                }
+            )
             .environmentObject(navigator)
             .task {
                 LegacyDemoFixtureCleanup.removeIfNeeded()
@@ -105,7 +118,9 @@ struct LoamApp: App {
                 }
             }
             .onChange(of: scenePhase) { _, phase in
+                if phase == .background { appLock.appDidEnterBackground() }
                 if phase == .active {
+                    appLock.refreshMethod()
                     Task {
                         await authSession.refreshDeletionStatus()
                         await connectionStore.refresh(userId: authSession.userId)
@@ -118,6 +133,9 @@ struct LoamApp: App {
 
     /// The badge follows the Activity count once iOS allows it.
     private var pushBadge: String { "\(activityStore.badgeCount)-\(pushStore.permission == .allowed)-\(accountId?.uuidString ?? "")" }
+
+    /// The lock guards a signed-in session; sign-in and onboarding stay reachable.
+    private var showsAppLock: Bool { appLock.isLocked && authSession.state == .signedIn }
 
     /// Demo IDs are not real accounts, so their purchases and telemetry stay anonymous.
     private var accountId: UUID? {
