@@ -146,6 +146,7 @@
 		E0C5B7367EE0F2E2EBF5F59C /* AppLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21363752A9770E523A548AAE /* AppLock.swift */; };
 		F50C9A595705F5CC230E5925 /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F255357FFEE1179BDFAEF2 /* AppLockView.swift */; };
 		7534F780698EFC70E52229F3 /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */; };
+		C4A7E1D2B3F4A5968778C101 /* CategoryCustomizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A7E1D2B3F4A5968778C102 /* CategoryCustomizerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -310,6 +311,7 @@
 		21363752A9770E523A548AAE /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		67F255357FFEE1179BDFAEF2 /* AppLockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockView.swift; sourceTree = "<group>"; };
 		E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockTests.swift; sourceTree = "<group>"; };
+		C4A7E1D2B3F4A5968778C102 /* CategoryCustomizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryCustomizerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -599,6 +601,7 @@
 			children = (
 				13D25BE098D9080B05430BFE /* Support */,
 				E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */,
+				C4A7E1D2B3F4A5968778C102 /* CategoryCustomizerTests.swift */,
 				08BD81EDCA6E65CC7B05C125 /* BalanceSimplifierTests.swift */,
 				0FE8A1B337206BA768F605F5 /* BalanceTests.swift */,
 				38B664DBA46BD536B44E5F73 /* BudgetArcLayoutTests.swift */,
@@ -881,6 +884,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7534F780698EFC70E52229F3 /* AppLockTests.swift in Sources */,
+				C4A7E1D2B3F4A5968778C101 /* CategoryCustomizerTests.swift in Sources */,
 				945CD0EFC0BA56FC01958837 /* BalanceSimplifierTests.swift in Sources */,
 				9989E533A949D6EFCA50F732 /* BalanceTests.swift in Sources */,
 				654413FF7956D9DB29DD830D /* BudgetArcLayoutTests.swift in Sources */,
