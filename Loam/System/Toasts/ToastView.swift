@@ -74,7 +74,7 @@ struct ToastCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: toast.style.symbolName)
+            Image(systemName: toast.symbolName ?? toast.style.symbolName)
                 .font(.system(size: 20, weight: .semibold))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(toast.style == .info ? HomeTheme.text : toast.style.tint)
@@ -111,8 +111,8 @@ struct ToastCard: View {
         .padding(.trailing, 16)
         .padding(.vertical, toast.action == nil ? 14 : 4)
         .frame(minHeight: 52)
-        // White in light mode, black in dark mode, so it reads as a pill over either.
-        .background(pill.fill(isDark ? Color.black : Color.white))
+        // White in light mode; in dark mode the gray of a Home expense row.
+        .background(pill.fill(isDark ? HomeTheme.surface : Color.white))
         .overlay(pill.strokeBorder(Color.primary.opacity(isDark ? 0.18 : 0.06), lineWidth: 1))
         .shadow(color: .black.opacity(isDark ? 0.5 : 0.14), radius: 18, y: 6)
         .accessibilityElement(children: .combine)

@@ -685,8 +685,8 @@ final class ExpenseStore: ObservableObject {
         if currentUserId == userId { summary = makeSummary(expenses, userId: userId) }
         LoamFeedback.tap()
         switch change.kind {
-        case .delete: ToastCenter.shared.show(.info("Expense restored"))
-        case .save: ToastCenter.shared.show(.info("Change undone"))
+        case .delete: ToastCenter.shared.show(.undone("Expense restored"))
+        case .save: ToastCenter.shared.show(.undone("Change undone"))
         }
     }
 
