@@ -42,7 +42,7 @@ struct AddExpenseIntent: AppIntent {
 
         if let friend {
             guard await services.friends(userId: userId).contains(where: { $0.userId == friend.id }) else {
-                throw LoamIntentError.noFriend
+                throw services.friendsFailedToLoad ? LoamIntentError.loadFailed : LoamIntentError.noFriend
             }
             try await services.expenseStore.addSplit(
                 amountMinor: money.amountMinor,
@@ -159,8 +159,12 @@ struct SettleUpIntent: AppIntent {
             return .result(dialog: "\(SiriText.balances(snapshot, friend: friend))")
         case .needsAmount:
             throw $amount.needsValueError("How much did you settle with \(friend.name)?")
-        case .needsDirection:
-            throw $direction.needsValueError("Did you pay \(friend.name), or did \(friend.name) pay you?")
+        case .nothingToSettle:
+            let text = "There's nothing to settle that way. \(SiriText.balances(snapshot, friend: friend))"
+            return .result(dialog: "\(text)")
+        case let .exceedsBalance(direction, balance):
+            let text = SiriText.repaymentLimit(direction, balance: balance, friend: friend.name)
+            throw $amount.needsValueError("\(text)")
         case let .record(direction, money):
             let prompt = SiriText.repaymentPrompt(direction, money: money, friend: friend.name)
             try await requestConfirmation(result: .result(dialog: "\(prompt)"), confirmationActionName: .log)
@@ -213,6 +217,8 @@ struct OpenLoamScreenIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        // Signed out, the app opens on sign-in; don't jump to the screen after a later sign-in.
+        guard (try? await AppServices.shared.signedInUserId()) != nil else { return .result() }
         AppServices.shared.navigator.pendingScreen = screen
         return .result()
     }
