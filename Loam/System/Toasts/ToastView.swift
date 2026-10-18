@@ -4,8 +4,9 @@ import UIKit
 /// The toast card and its slide in from the top edge.
 struct ToastOverlay: View {
     @ObservedObject var center: ToastCenter
-    /// Reports the card's frame in window coordinates, so touches elsewhere pass through.
-    let onFrameChange: (CGRect) -> Void
+    /// Reports each card's frame in window coordinates, or nil once it's gone,
+    /// so touches elsewhere pass through.
+    let onFrameChange: (Toast.ID, CGRect?) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragOffset: CGFloat = 0
 
@@ -26,11 +27,12 @@ struct ToastOverlay: View {
                 .background(
                     GeometryReader { proxy in
                         Color.clear
-                            .onAppear { onFrameChange(proxy.frame(in: .global)) }
-                            .onChange(of: proxy.frame(in: .global)) { _, frame in onFrameChange(frame) }
+                            .onAppear { onFrameChange(toast.id, proxy.frame(in: .global)) }
+                            .onChange(of: proxy.frame(in: .global)) { _, frame in onFrameChange(toast.id, frame) }
                     }
                 )
-                .onDisappear { onFrameChange(.zero) }
+                // A replaced card can leave after the next one arrives, so each clears only its own frame.
+                .onDisappear { onFrameChange(toast.id, nil) }
                 .transition(
                     reduceMotion
                         ? AnyTransition.opacity
@@ -171,7 +173,7 @@ extension Toast.Style {
 /// Below the lock screen, which covers everything.
 struct ToastWindowInstaller<Content: View>: UIViewRepresentable {
     @ObservedObject var center: ToastCenter
-    @ViewBuilder let content: (_ onFrameChange: @escaping (CGRect) -> Void) -> Content
+    @ViewBuilder let content: (_ onFrameChange: @escaping (Toast.ID, CGRect?) -> Void) -> Content
 
     func makeUIView(context: Context) -> ToastAnchorView<Content> {
         ToastAnchorView(makeContent: content)
@@ -189,10 +191,10 @@ struct ToastWindowInstaller<Content: View>: UIViewRepresentable {
 final class ToastAnchorView<Content: View>: UIView {
     private var toastWindow: ToastWindow?
     private var host: UIHostingController<Content>?
-    private var makeContent: (_ onFrameChange: @escaping (CGRect) -> Void) -> Content
+    private var makeContent: (_ onFrameChange: @escaping (Toast.ID, CGRect?) -> Void) -> Content
     private var hideWork: DispatchWorkItem?
 
-    init(makeContent: @escaping (_ onFrameChange: @escaping (CGRect) -> Void) -> Content) {
+    init(makeContent: @escaping (_ onFrameChange: @escaping (Toast.ID, CGRect?) -> Void) -> Content) {
         self.makeContent = makeContent
         super.init(frame: .zero)
         isUserInteractionEnabled = false
@@ -206,7 +208,7 @@ final class ToastAnchorView<Content: View>: UIView {
         installIfNeeded()
     }
 
-    func update(isShowing: Bool, makeContent: @escaping (_ onFrameChange: @escaping (CGRect) -> Void) -> Content) {
+    func update(isShowing: Bool, makeContent: @escaping (_ onFrameChange: @escaping (Toast.ID, CGRect?) -> Void) -> Content) {
         self.makeContent = makeContent
         installIfNeeded()
         host?.rootView = content()
@@ -216,7 +218,10 @@ final class ToastAnchorView<Content: View>: UIView {
             toastWindow.isHidden = false
         } else {
             // Kept up until the slide-out animation finishes.
-            let work = DispatchWorkItem { [weak toastWindow] in toastWindow?.isHidden = true }
+            let work = DispatchWorkItem { [weak toastWindow] in
+                toastWindow?.isHidden = true
+                toastWindow?.toastFrames = [:]
+            }
             hideWork = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
         }
@@ -230,7 +235,7 @@ final class ToastAnchorView<Content: View>: UIView {
     }
 
     private func content() -> Content {
-        makeContent { [weak self] frame in self?.toastWindow?.toastFrame = frame }
+        makeContent { [weak self] id, frame in self?.toastWindow?.toastFrames[id] = frame }
     }
 
     private func installIfNeeded() {
@@ -251,10 +256,10 @@ final class ToastAnchorView<Content: View>: UIView {
 /// Takes touches only on the toast itself; everything else reaches the app below.
 /// Never key, so typing stays in the app's text fields.
 final class ToastWindow: UIWindow {
-    var toastFrame: CGRect = .zero
+    var toastFrames: [Toast.ID: CGRect] = [:]
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        guard !toastFrame.isEmpty, toastFrame.insetBy(dx: 0, dy: -8).contains(point) else { return nil }
+        guard toastFrames.values.contains(where: { $0.insetBy(dx: 0, dy: -8).contains(point) }) else { return nil }
         return super.hitTest(point, with: event)
     }
 

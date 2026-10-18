@@ -16,7 +16,7 @@ final class ExpenseStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var lastError: String? {
         // Every failure reaches the person as a toast, wherever they are in the app.
-        didSet { if let lastError, lastError != oldValue { ToastCenter.shared.showError(lastError) } }
+        didSet { if let lastError { ToastCenter.shared.showError(lastError) } }
     }
     /// Replaces the backend lookup of every expense still waiting on a user, so tests can make it fail.
     var pendingAcceptanceLookup: ((UUID) async throws -> [ExpenseRecord])?
@@ -51,6 +51,8 @@ final class ExpenseStore: ObservableObject {
         let original: ExpenseRecord
         /// Where the deleted expense sat in `expenses`, to put it back on Undo.
         let index: Int?
+        /// The month on screen when it was staged; Undo only puts a row back into that month.
+        var period: DatePeriod = .currentMonth
         let failureMessage: String
         /// Writes the change; the refresh after it is the store's.
         let persist: @MainActor () async throws -> Void
@@ -76,6 +78,8 @@ final class ExpenseStore: ObservableObject {
     }
 
     func refresh(userId: UUID?) async {
+        // Changes waiting on Undo belong to the account that made them.
+        if userId != currentUserId { stagedChanges = [:] }
         currentUserId = userId
         guard let userId else {
             expenses = []
@@ -646,6 +650,9 @@ final class ExpenseStore: ObservableObject {
 
     private func stage(_ change: StagedChange, message: String, userId: UUID) {
         let id = change.original.id
+        var change = change
+        change.period = period
+        change.isCommitting = false
         stagedChanges[id] = change
         expenses = withStagedChanges(expenses)
         proposalExpenses = withStagedChanges(proposalExpenses)
@@ -665,7 +672,8 @@ final class ExpenseStore: ObservableObject {
         switch change.kind {
         case .delete:
             if let index = change.index {
-                expenses.insert(original, at: min(index, expenses.count))
+                // Another month may be on screen by now; the next refresh finds it there.
+                if change.period == period { expenses.insert(original, at: min(index, expenses.count)) }
             } else {
                 detachedExpenses.append(original)
             }
@@ -700,18 +708,36 @@ final class ExpenseStore: ObservableObject {
             }
             guard let self else { return }
             self.stagedChanges[id] = nil
+            // Shows the expense as saved, or as it was when the save failed. A store
+            // that has moved on to another account keeps that account's expenses.
+            if self.currentUserId == userId { await self.refresh(userId: userId) }
             if let failure {
                 let reason = UserFacingError.message(for: failure) ?? UserFacingError.fallback
-                ToastCenter.shared.showError("\(change.failureMessage) \(reason)")
+                // The sheet is closed by now, so Retry keeps the change instead of losing it.
+                ToastCenter.shared.showError("\(change.failureMessage) \(reason)", action: Toast.Action(title: "Retry") { [weak self] in
+                    guard let self, self.currentUserId == userId, self.stagedChanges[id] == nil else { return }
+                    self.retry(change, userId: userId)
+                })
             }
-            // Shows the expense as saved, or as it was when the save failed.
-            await self.refresh(userId: userId)
         }
         commitTasks[id] = task
         Task { [weak self] in
             await task.value
             if self?.commitTasks[id] == task { self?.commitTasks[id] = nil }
         }
+    }
+
+    /// Saves a change whose first save failed, showing it again until the save finishes.
+    private func retry(_ change: StagedChange, userId: UUID) {
+        let id = change.original.id
+        var change = change
+        change.isCommitting = false
+        stagedChanges[id] = change
+        expenses = withStagedChanges(expenses)
+        proposalExpenses = withStagedChanges(proposalExpenses)
+        detachedExpenses = withStagedChanges(detachedExpenses)
+        summary = makeSummary(expenses, userId: userId)
+        commitStagedChange(id: id, userId: userId)
     }
 
     /// Saves every change still waiting on Undo and waits for every save in flight.
@@ -745,6 +771,7 @@ final class ExpenseStore: ObservableObject {
         userId: UUID,
         action: ExpenseShareResponseAction
     ) async {
+        for id in expenseIds { await settleStagedChange(for: id) }
         var targets: [(id: UUID, expense: ExpenseRecord)] = expenseIds.compactMap { id in
             guard let expense = knownExpense(id: id),
                   expense.isPendingAcceptance(for: userId) else { return nil }
@@ -888,6 +915,9 @@ final class ExpenseStore: ObservableObject {
     }
 
     func respondToProposal(proposalId: UUID, userId: UUID, accept: Bool) async {
+        if let expenseId = pendingProposals.first(where: { $0.id == proposalId })?.expenseId {
+            await settleStagedChange(for: expenseId)
+        }
         do {
             let expenseId = pendingProposals.first(where: { $0.id == proposalId })?.expenseId
             let expense = expenseId.flatMap { knownExpense(id: $0) }

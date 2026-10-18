@@ -6,7 +6,7 @@ final class BalanceStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var lastError: String? {
         // Every failure reaches the person as a toast, wherever they are in the app.
-        didSet { if let lastError, lastError != oldValue { ToastCenter.shared.showError(lastError) } }
+        didSet { if let lastError { ToastCenter.shared.showError(lastError) } }
     }
     private var accountId: UUID?
 

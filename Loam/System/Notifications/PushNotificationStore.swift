@@ -13,7 +13,7 @@ final class PushNotificationStore: ObservableObject {
     @Published private(set) var preferencesState: PreferencesState = .idle
     @Published var lastError: String? {
         // Every failure reaches the person as a toast, wherever they are in the app.
-        didSet { if let lastError, lastError != oldValue { ToastCenter.shared.showError(lastError) } }
+        didSet { if let lastError { ToastCenter.shared.showError(lastError) } }
     }
     /// Set when a push is tapped; Activity consumes it.
     @Published var pendingRoute: NotificationRoute?
