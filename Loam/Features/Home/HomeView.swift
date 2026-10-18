@@ -294,14 +294,6 @@ struct HomeView: View {
                 }
             }
         }
-
-        if let error = expenseStore.lastError {
-            Section {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-            }
-        }
     }
 
     private var showsCurrentMonthEmptyState: Bool {

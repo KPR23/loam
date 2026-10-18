@@ -27,14 +27,7 @@ struct AutoAcceptExpensesToggle: View {
         .tint(HomeTheme.accentFill)
         .disabled(!hasLoaded || isSaving)
         .task(id: authSession.userId) { await load() }
-        .alert("Couldn’t update the setting", isPresented: Binding(
-            get: { error != nil },
-            set: { if !$0 { error = nil } }
-        )) {
-            Button("OK") { error = nil }
-        } message: {
-            Text(error ?? "")
-        }
+        .errorToast($error)
     }
 
     private var binding: Binding<Bool> {
@@ -79,7 +72,7 @@ struct AutoAcceptExpensesToggle: View {
             if enabled { await expenseStore.refresh(userId: userId) }
         } catch {
             LoamErrorCapture.capture("profile.auto_accept_failed")
-            self.error = error.localizedDescription
+            self.error = UserFacingError.message(for: error)
         }
     }
 }

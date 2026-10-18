@@ -691,7 +691,7 @@ private struct ExpenseActionsHost: ViewModifier {
                 }
                 Button("Delete", role: .destructive) {
                     guard let expense = expensePendingDelete, let userId = authSession.userId else { return }
-                    Task { await expenseStore.delete(id: expense.id, userId: userId) }
+                    Task { await expenseStore.deleteWithUndo(id: expense.id, userId: userId) }
                     expensePendingDelete = nil
                 }
                 Button("Cancel", role: .cancel) {
@@ -812,7 +812,7 @@ private struct ExpenseActionsHost: ViewModifier {
     private func deletePendingRecurringExpense(mode: RecurringDeletionMode) {
         guard let expense = expensePendingDelete, let userId = authSession.userId else { return }
         Task {
-            await expenseStore.delete(id: expense.id, userId: userId, recurringMode: mode)
+            await expenseStore.deleteWithUndo(id: expense.id, userId: userId, recurringMode: mode)
         }
         expensePendingDelete = nil
     }

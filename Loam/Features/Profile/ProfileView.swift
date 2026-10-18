@@ -405,11 +405,6 @@ struct ProfileView: View {
                 SafariView(url: destination.url)
                     .ignoresSafeArea()
             }
-            .alert("Account", isPresented: Binding(get: { authSession.lastError != nil }, set: { if !$0 { authSession.lastError = nil } })) {
-                Button("OK") { authSession.lastError = nil }
-            } message: {
-                Text(authSession.lastError ?? "")
-            }
         }
     }
 
@@ -873,10 +868,6 @@ private struct PersonalDetailsView: View {
                      : "Friends see your name on shared expenses. Your e-mail comes from your Apple Account and may be a private relay address.")
             }
 
-            if let error {
-                Section { Text(error).foregroundStyle(.red) }
-            }
-
             Section {
                 Button(role: .destructive) {
                     showsDeleteConfirmation = true
@@ -918,17 +909,14 @@ private struct PersonalDetailsView: View {
                     guard let data = try await photo.loadTransferable(type: Data.self),
                           let image = UIImage(data: data),
                           let jpeg = Self.avatarJPEG(from: image) else {
-                        throw NSError(domain: "LoamAvatar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not read that photo."])
+                        throw NSError(domain: "LoamAvatar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Couldn't read that photo. Try another one."])
                     }
                     try await AvatarStore.shared.upload(jpeg, for: userId)
-                } catch { photoError = error.localizedDescription }
+                } catch { photoError = UserFacingError.message(for: error) }
             }
         }
-        .alert("Profile photo", isPresented: Binding(get: { photoError != nil }, set: { if !$0 { photoError = nil } })) {
-            Button("OK") { photoError = nil }
-        } message: {
-            Text(photoError ?? "")
-        }
+        .errorToast($photoError)
+        .errorToast($error)
         .confirmationDialog("Delete your account?", isPresented: $showsDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete account", role: .destructive) {
                 isDeletingAccount = true
@@ -941,7 +929,7 @@ private struct PersonalDetailsView: View {
                         // Whoever signs up next on this device starts without the lock.
                         appLock.reset()
                     } catch {
-                        self.error = error.localizedDescription
+                        self.error = UserFacingError.message(for: error)
                     }
                     isDeletingAccount = false
                 }
@@ -981,8 +969,9 @@ private struct PersonalDetailsView: View {
         Task {
             do {
                 try await authSession.updateDisplayName(trimmedName)
+                ToastCenter.shared.showSuccess("Name updated")
                 dismiss()
-            } catch { self.error = error.localizedDescription }
+            } catch { self.error = UserFacingError.message(for: error) }
             isSaving = false
         }
     }
@@ -1250,14 +1239,6 @@ private struct ProfileDeveloperView: View {
                         Text(testAccountsUnavailableMessage)
                             .font(.footnote)
                             .foregroundStyle(HomeTheme.secondary)
-                    }
-                }
-
-                if let error = authSession.lastError {
-                    Section("Account switching") {
-                        Text(error)
-                            .foregroundStyle(.red)
-                        Button("Dismiss") { authSession.lastError = nil }
                     }
                 }
 

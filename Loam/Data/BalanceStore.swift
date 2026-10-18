@@ -4,7 +4,10 @@ import Foundation
 final class BalanceStore: ObservableObject {
     @Published private(set) var snapshot = BalanceSnapshot.empty
     @Published private(set) var isLoading = false
-    @Published var lastError: String?
+    @Published var lastError: String? {
+        // Every failure reaches the person as a toast, wherever they are in the app.
+        didSet { if let lastError, lastError != oldValue { ToastCenter.shared.showError(lastError) } }
+    }
     private var accountId: UUID?
 
     func refresh(userId: UUID?) async {
@@ -19,7 +22,7 @@ final class BalanceStore: ObservableObject {
         } catch {
             // Leaving the tab cancels the load; that is not a failure.
             guard accountId == userId, !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
         }
     }
 

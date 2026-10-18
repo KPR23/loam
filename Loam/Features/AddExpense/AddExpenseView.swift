@@ -102,15 +102,7 @@ struct AddExpenseView: View {
                 guard step == .amount else { return }
                 await focusAmountField()
             }
-            .sensoryFeedback(.error, trigger: errorMessage) { _, newValue in newValue != nil }
-            .alert("Couldn’t save", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "")
-            }
+            .errorToast($errorMessage)
         }
         .sheet(isPresented: $isSplitSheetPresented) {
             splitConfigurationSheet
@@ -602,11 +594,12 @@ struct AddExpenseView: View {
                 )
             } else {
                 try await saveCreate(money: money, userId: userId)
+                ToastCenter.shared.showSuccess(isSplit ? "Expense added and shared" : "Expense added")
             }
             LoamFeedback.success()
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = UserFacingError.message(for: error)
         }
     }
 
@@ -692,7 +685,8 @@ struct AddExpenseView: View {
                 myPercentage: myPercentage,
                 myExactAmountMinor: Money(majorString: myExactAmountText, currencyCode: currencyCode)?.amountMinor,
                 participantPercentages: participantPercentages,
-                participantExactAmountMinors: participantExactAmountMinors
+                participantExactAmountMinors: participantExactAmountMinors,
+                undoable: true
             )
         } else {
             try await expenseStore.update(
@@ -707,7 +701,8 @@ struct AddExpenseView: View {
                 userId: userId,
                 splitMode: .equal,
                 paidBy: userId,
-                partnerUserIds: []
+                partnerUserIds: [],
+                undoable: true
             )
         }
     }
@@ -738,7 +733,8 @@ struct AddExpenseView: View {
             myPercentage: myPercentage,
             myExactAmountMinor: Money(majorString: myExactAmountText, currencyCode: currencyCode)?.amountMinor,
             participantPercentages: participantPercentages,
-            participantExactAmountMinors: participantExactAmountMinors
+            participantExactAmountMinors: participantExactAmountMinors,
+            undoable: true
         )
     }
 

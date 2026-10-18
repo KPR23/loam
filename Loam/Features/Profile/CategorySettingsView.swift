@@ -94,24 +94,21 @@ struct CategorySettingsView: View {
                 Task {
                     do {
                         try await store.delete(category)
+                        ToastCenter.shared.showSuccess("Category deleted")
                         // Loaded expenses still hold the deleted category; reload them under Other.
                         await expenseStore.refresh(userId: authSession.userId)
-                    } catch { self.error = error.localizedDescription }
+                    } catch { self.error = UserFacingError.message(for: error) }
                 }
             }
         } message: { _ in
             Text("Its expenses move to Other, for you and for friends you shared them with.")
         }
-        .alert("Couldn't update categories", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(error ?? "")
-        }
+        .errorToast($error)
     }
 
     private func setHidden(_ category: ExpenseCategory, _ isHidden: Bool) {
         Task {
-            do { try await store.setHidden(category, isHidden) } catch { self.error = error.localizedDescription }
+            do { try await store.setHidden(category, isHidden) } catch { self.error = UserFacingError.message(for: error) }
         }
     }
 }
@@ -196,11 +193,7 @@ private struct CustomCategoryEditorView: View {
                 .disabled(trimmedName.isEmpty || isSaving)
             }
         }
-        .alert("Couldn't save category", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(error ?? "")
-        }
+        .errorToast($error)
     }
 
     private func save() async {
@@ -217,10 +210,11 @@ private struct CustomCategoryEditorView: View {
             try await CustomCategoryStore.shared.save(saved)
             // Loaded expenses hold a copy of the category; reload them to show the new name, icon and color.
             if category != nil { await expenseStore.refresh(userId: authSession.userId) }
+            ToastCenter.shared.showSuccess(category == nil ? "Category added" : "Category saved")
             LoamFeedback.success()
             dismiss()
         } catch {
-            self.error = error.localizedDescription
+            self.error = UserFacingError.message(for: error)
         }
     }
 }

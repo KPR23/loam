@@ -113,15 +113,7 @@ struct SplitExpenseSheet: View {
                     .disabled(isSaving || validationError != nil)
                 }
             }
-            .sensoryFeedback(.error, trigger: errorMessage) { _, newValue in newValue != nil }
-            .alert("Couldn’t save split", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "")
-            }
+            .errorToast($errorMessage)
         }
     }
 
@@ -146,12 +138,13 @@ struct SplitExpenseSheet: View {
                 myPercentage: formState.myPercentage,
                 myExactAmountMinor: Money(majorString: formState.myExactAmountText)?.amountMinor,
                 participantPercentages: formState.participantPercentages,
-                participantExactAmountMinors: participantExactAmountMinors
+                participantExactAmountMinors: participantExactAmountMinors,
+                undoable: true
             )
             LoamFeedback.success()
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = UserFacingError.message(for: error)
         }
     }
 

@@ -28,13 +28,6 @@ struct AuthView: View {
                             deletionStatusCard
                         }
 
-                        if let error = authSession.lastError {
-                            Text(error)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                                .multilineTextAlignment(.center)
-                        }
-
                         SignInWithAppleButton(.continue) { request in
                             request.requestedScopes = [.fullName, .email]
                             request.nonce = authSession.prepareAppleSignInNonce()
@@ -75,7 +68,7 @@ struct AuthView: View {
         switch result {
         case .success(let authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-                authSession.lastError = "Unexpected Apple credential."
+                authSession.lastError = "Sign in with Apple didn't finish. Try again."
                 return
             }
             await authSession.signInWithApple(credential: credential)
@@ -84,7 +77,7 @@ struct AuthView: View {
             if !SupabaseConfig.isConfigured {
                 authSession.signInDemo()
             } else {
-                authSession.lastError = error.localizedDescription
+                authSession.lastError = UserFacingError.message(for: error)
             }
         }
     }

@@ -205,7 +205,7 @@ struct PersonBalanceView: View {
             // Leaving the screen cancels the load; that is not a failure.
             guard request == historyRequest,
                   !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
-            loadError = error.localizedDescription
+            loadError = UserFacingError.message(for: error)
         }
         hasLoaded = true
     }
