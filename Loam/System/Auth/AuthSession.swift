@@ -63,6 +63,8 @@ final class AuthSession: ObservableObject {
     #endif
 
     private var bootstrapTask: Task<Void, Never>?
+    /// When the launch sign-in check finished; an expired token may still be refreshing just after.
+    private(set) var bootstrapFinishedAt: Date?
 
     /// Runs the launch sign-in check once. Siri can start an action before the first screen does.
     func bootstrapIfNeeded() async {
@@ -71,7 +73,10 @@ final class AuthSession: ObservableObject {
             return
         }
         guard state == .loading else { return }
-        let task = Task { await bootstrap() }
+        let task = Task {
+            await bootstrap()
+            bootstrapFinishedAt = Date()
+        }
         bootstrapTask = task
         await task.value
     }

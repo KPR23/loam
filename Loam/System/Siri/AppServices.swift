@@ -20,9 +20,12 @@ final class AppServices {
     /// The signed-in account, after the launch sign-in check has finished.
     func signedInUserId() async throws -> UUID {
         await authSession.bootstrapIfNeeded()
-        // An expired access token refreshes just after launch; give it a moment.
-        if authSession.state != .signedIn, SupabaseClientProvider.shared != nil {
-            for _ in 0..<30 where authSession.state != .signedIn {
+        // An expired access token refreshes just after launch; give it a moment then, and only then.
+        if authSession.state != .signedIn,
+           SupabaseClientProvider.shared != nil,
+           let launchedAt = authSession.bootstrapFinishedAt {
+            let deadline = launchedAt.addingTimeInterval(3)
+            while authSession.state != .signedIn, Date() < deadline {
                 try await Task.sleep(for: .milliseconds(100))
             }
         }
