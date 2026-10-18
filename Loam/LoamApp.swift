@@ -16,10 +16,10 @@ struct LoamApp: App {
     @StateObject private var balanceStore = AppServices.shared.balanceStore
     @StateObject private var connectionStore = AppServices.shared.connectionStore
     @StateObject private var navigator = AppServices.shared.navigator
+    @StateObject private var appLock = AppServices.shared.appLock
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var subscriptionStore = SubscriptionStore()
     @StateObject private var pushStore = PushNotificationStore.shared
-    @StateObject private var appLock = AppLock()
 
     init() {
         #if DEBUG

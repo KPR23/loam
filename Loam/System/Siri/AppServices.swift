@@ -11,6 +11,8 @@ final class AppServices {
     let balanceStore = BalanceStore()
     let connectionStore = ConnectionStore()
     let navigator = AppNavigator()
+    /// Shared so Siri answers only while the app is unlocked. A variable so tests can swap it.
+    var appLock = AppLock()
 
     /// Replaces the friend lookup, so tests never reach the backend.
     var friendsOverride: [SplitPartnerOption]?
@@ -33,6 +35,13 @@ final class AppServices {
             throw LoamIntentError.signedOut
         }
         return userId
+    }
+
+    /// The signed-in account, as long as App Lock isn't holding the app locked. With the lock
+    /// off this is the same as `signedInUserId()`.
+    func unlockedUserId() async throws -> UUID {
+        guard !appLock.isLocked else { throw LoamIntentError.locked }
+        return try await signedInUserId()
     }
 
     /// The people this account can split with, the same list Add Expense offers.
