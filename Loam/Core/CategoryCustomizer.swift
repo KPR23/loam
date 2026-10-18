@@ -123,7 +123,18 @@ enum CategoryStyleOptions {
         "ticket.fill", "bag.fill", "airplane.circle.fill", "ellipsis.circle.fill", "car.fill", "fuelpump.fill",
         "cup.and.saucer.fill", "gift.fill", "graduationcap.fill", "pawprint.fill", "gamecontroller.fill", "book.fill",
         "tshirt.fill", "wrench.and.screwdriver.fill", "figure.run", "music.note", "film.fill", "stethoscope",
-        "leaf.fill", "star.fill", "tram.fill", "bed.double.fill", "wifi", "creditcard.fill"
+        "leaf.fill", "star.fill", "tram.fill", "bed.double.fill", "wifi", "creditcard.fill",
+        "fork.knife", "takeoutbag.and.cup.and.straw.fill", "wineglass.fill", "birthday.cake.fill", "carrot.fill", "basket.fill",
+        "bicycle", "scooter", "ferry.fill", "sailboat.fill", "parkingsign", "train.side.front.car",
+        "dumbbell.fill", "figure.yoga", "figure.hiking", "soccerball", "tennis.racket", "figure.pool.swim",
+        "pills.fill", "cross.case.fill", "syringe.fill", "eyeglasses", "comb.fill", "scissors",
+        "iphone", "laptopcomputer", "headphones", "tv.fill", "camera.fill", "printer.fill",
+        "lightbulb.fill", "drop.fill", "flame.fill", "washer.fill", "sofa.fill", "hammer.fill",
+        "person.2.fill", "face.smiling.fill", "hare.fill", "tortoise.fill", "bird.fill", "ant.fill",
+        "banknote.fill", "percent", "chart.line.uptrend.xyaxis", "building.columns.fill", "briefcase.fill", "shield.fill",
+        "sun.max.fill", "beach.umbrella.fill", "tent.fill", "mountain.2.fill", "globe.europe.africa.fill", "suitcase.fill",
+        "party.popper.fill", "balloon.fill", "theatermasks.fill", "paintpalette.fill", "guitars.fill", "popcorn.fill",
+        "pencil.and.ruler.fill", "bell.fill", "heart.text.square.fill", "hands.sparkles.fill", "cross.fill", "tag.fill"
     ]
 }
 

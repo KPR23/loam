@@ -82,24 +82,40 @@ final class CustomCategoryStore {
 
     private(set) var categories: [CustomCategory] = []
     private(set) var hidden: Set<ExpenseCategory> = []
+    /// Keys of the member's chosen order (`SpendCategory.id`); categories not listed follow the listed ones.
+    private(set) var order: [String] = []
     private var userId: UUID?
     @ObservationIgnored private var hiddenWrite: Task<Void, Error>?
+    @ObservationIgnored private var orderWrite: Task<Void, Error>?
 
     private init() {}
 
-    /// The picker's choices, in order: built-in categories that aren't hidden, then custom ones.
+    /// The picker's choices: built-in categories that aren't hidden, then custom ones, in the member's order.
     func pickerOptions(isPro: Bool) -> [SpendCategory] {
         let builtIns = ExpenseCategory.allCases.filter { !isPro || $0 == .other || !hidden.contains($0) }
-        return builtIns.map(SpendCategory.builtIn) + (isPro ? categories.map(SpendCategory.custom) : [])
+        let options = builtIns.map(SpendCategory.builtIn) + (isPro ? categories.map(SpendCategory.custom) : [])
+        return isPro ? Self.sorted(options, by: order) : options
+    }
+
+    /// Listed categories first, in list order; the rest keep their relative order after them.
+    static func sorted(_ options: [SpendCategory], by order: [String]) -> [SpendCategory] {
+        let position = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        return options.enumerated()
+            .sorted { lhs, rhs in
+                let l = position[lhs.element.id] ?? Int.max, r = position[rhs.element.id] ?? Int.max
+                return l != r ? l < r : lhs.offset < rhs.offset
+            }
+            .map(\.element)
     }
 
     func load(userId: UUID?) async {
-        if userId != self.userId { categories = []; hidden = [] }
+        if userId != self.userId { categories = []; hidden = []; order = [] }
         self.userId = userId
         guard let userId else { return }
         guard let loaded = try? await repository.load(userId: userId), self.userId == userId else { return }
         categories = loaded.categories.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         hidden = loaded.hidden
+        order = loaded.order
     }
 
     /// Creates or updates one of the member's categories; the owner is always the signed-in member.
@@ -135,6 +151,22 @@ final class CustomCategoryStore {
         try await write.value
     }
 
+    /// Saves the picker order; `options` is the whole visible list in its new order.
+    func setOrder(_ options: [SpendCategory]) async throws {
+        guard let userId else { return }
+        while let running = orderWrite { _ = await running.result }
+        guard self.userId == userId else { return }
+        let keys = options.map(\.id)
+        let write = Task { [self] in
+            try await repository.setOrder(keys, userId: userId)
+            guard self.userId == userId else { return }
+            order = keys
+        }
+        orderWrite = write
+        defer { if orderWrite == write { orderWrite = nil } }
+        try await write.value
+    }
+
     private var repository: any CustomCategoryRepository {
         ExpenseRepositoryFactory.usesLocalStorage
             ? LocalCustomCategoryRepository()
@@ -142,11 +174,18 @@ final class CustomCategoryStore {
     }
 }
 
+struct CustomCategoryData: Sendable {
+    var categories: [CustomCategory]
+    var hidden: Set<ExpenseCategory>
+    var order: [String] = []
+}
+
 protocol CustomCategoryRepository: Sendable {
-    func load(userId: UUID) async throws -> (categories: [CustomCategory], hidden: Set<ExpenseCategory>)
+    func load(userId: UUID) async throws -> CustomCategoryData
     func save(_ category: CustomCategory, userId: UUID) async throws
     func delete(_ category: CustomCategory, userId: UUID) async throws
     func setHidden(_ hidden: Set<ExpenseCategory>, userId: UUID) async throws
+    func setOrder(_ keys: [String], userId: UUID) async throws
 }
 
 actor SupabaseCustomCategoryRepository: CustomCategoryRepository {
@@ -154,8 +193,9 @@ actor SupabaseCustomCategoryRepository: CustomCategoryRepository {
 
     init(client: SupabaseClient) { self.client = client }
 
-    func load(userId: UUID) async throws -> (categories: [CustomCategory], hidden: Set<ExpenseCategory>) {
+    func load(userId: UUID) async throws -> CustomCategoryData {
         struct HiddenRow: Decodable { let category: String }
+        struct OrderRow: Decodable { let keys: [String] }
         async let categories: [CustomCategory] = client.from("custom_category")
             .select("id, owner_id, name, symbol, color_hex")
             .eq("owner_id", value: userId)
@@ -163,7 +203,14 @@ actor SupabaseCustomCategoryRepository: CustomCategoryRepository {
         async let hiddenRows: [HiddenRow] = client.from("hidden_category")
             .select("category")
             .execute().value
-        return try await (categories, Set(hiddenRows.compactMap { ExpenseCategory(rawValue: $0.category) }))
+        async let orderRows: [OrderRow] = client.from("category_order")
+            .select("keys")
+            .execute().value
+        return try await CustomCategoryData(
+            categories: categories,
+            hidden: Set(hiddenRows.compactMap { ExpenseCategory(rawValue: $0.category) }),
+            order: orderRows.first?.keys ?? []
+        )
     }
 
     func save(_ category: CustomCategory, userId: UUID) async throws {
@@ -188,6 +235,12 @@ actor SupabaseCustomCategoryRepository: CustomCategoryRepository {
         struct Params: Encodable { let pCategories: [String]; enum CodingKeys: String, CodingKey { case pCategories = "p_categories" } }
         try await client.rpc("set_hidden_categories", params: Params(pCategories: hidden.map(\.rawValue).sorted())).execute()
     }
+
+    func setOrder(_ keys: [String], userId: UUID) async throws {
+        _ = userId
+        struct Params: Encodable { let pKeys: [String]; enum CodingKeys: String, CodingKey { case pKeys = "p_keys" } }
+        try await client.rpc("set_category_order", params: Params(pKeys: keys)).execute()
+    }
 }
 
 /// Demo accounts keep their categories on the device. Deleting one files its
@@ -195,10 +248,15 @@ actor SupabaseCustomCategoryRepository: CustomCategoryRepository {
 struct LocalCustomCategoryRepository: CustomCategoryRepository {
     private static let categoriesKey = "loam.local.customCategories"
     private static let hiddenKey = "loam.local.hiddenCategories"
+    private static let orderKey = "loam.local.categoryOrder"
 
-    func load(userId: UUID) async throws -> (categories: [CustomCategory], hidden: Set<ExpenseCategory>) {
+    func load(userId: UUID) async throws -> CustomCategoryData {
         let hidden = (UserDefaults.standard.stringArray(forKey: Self.hiddenKey) ?? []).compactMap(ExpenseCategory.init(rawValue:))
-        return (Self.stored().filter { $0.ownerId == userId }, Set(hidden))
+        return CustomCategoryData(
+            categories: Self.stored().filter { $0.ownerId == userId },
+            hidden: Set(hidden),
+            order: UserDefaults.standard.stringArray(forKey: Self.orderKey) ?? []
+        )
     }
 
     func save(_ category: CustomCategory, userId: UUID) async throws {
@@ -219,6 +277,10 @@ struct LocalCustomCategoryRepository: CustomCategoryRepository {
 
     func setHidden(_ hidden: Set<ExpenseCategory>, userId: UUID) async throws {
         UserDefaults.standard.set(hidden.map(\.rawValue).sorted(), forKey: Self.hiddenKey)
+    }
+
+    func setOrder(_ keys: [String], userId: UUID) async throws {
+        UserDefaults.standard.set(keys, forKey: Self.orderKey)
     }
 
     private static func stored() -> [CustomCategory] {

@@ -435,4 +435,22 @@ final class LocalCustomCategoryTests: LocalStorageTestCase {
         let loaded = try await repository.load(userId: TestUser.alice)
         XCTAssertTrue(loaded.categories.isEmpty)
     }
+
+    func testCategoryOrderIsSavedAndListedCategoriesComeFirst() async throws {
+        let repository = LocalCustomCategoryRepository()
+        let pets = CustomCategory(id: UUID(), ownerId: TestUser.alice, name: "Pets", symbol: "pawprint.fill", colorHex: "9C7A55")
+        let options: [SpendCategory] = [.builtIn(.groceries), .builtIn(.dining), .builtIn(.other), .custom(pets)]
+
+        let keys = [pets.id.uuidString, "other", "groceries"]
+        try await repository.setOrder(keys, userId: TestUser.alice)
+        let loaded = try await repository.load(userId: TestUser.alice)
+        XCTAssertEqual(loaded.order, keys)
+
+        // Dining isn't listed, so it follows the listed categories.
+        XCTAssertEqual(
+            CustomCategoryStore.sorted(options, by: loaded.order),
+            [.custom(pets), .builtIn(.other), .builtIn(.groceries), .builtIn(.dining)]
+        )
+        XCTAssertEqual(CustomCategoryStore.sorted(options, by: []), options)
+    }
 }
