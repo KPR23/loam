@@ -58,6 +58,25 @@ final class UndoableChangeTests: LocalStorageTestCase {
         XCTAssertNotNil(kept)
     }
 
+    func testAnotherUndoableChangeSavesTheFirstOne() async throws {
+        let store = ExpenseStore()
+        try await store.addPersonal(amountMinor: 1000, currency: "PLN", category: .groceries, title: "First", note: nil, spentAt: Date(), userId: me)
+        try await store.addPersonal(amountMinor: 2000, currency: "PLN", category: .groceries, title: "Second", note: nil, spentAt: Date(), userId: me)
+        let first = try XCTUnwrap(store.expenses.first { $0.title == "First" })
+        let second = try XCTUnwrap(store.expenses.first { $0.title == "Second" })
+
+        await store.deleteWithUndo(id: first.id, userId: me)
+        await store.deleteWithUndo(id: second.id, userId: me)
+        try tapUndo()
+        await store.settleStagedChanges()
+
+        let firstSaved = try await savedExpense(id: first.id)
+        let secondSaved = try await savedExpense(id: second.id)
+        XCTAssertNil(firstSaved, "The replaced toast's delete never saved")
+        XCTAssertNotNil(secondSaved)
+        XCTAssertEqual(store.expenses.map(\.id), [second.id])
+    }
+
     func testUndoingAnEditPutsTheOriginalBack() async throws {
         let store = ExpenseStore()
         try await store.addPersonal(amountMinor: 1000, currency: "PLN", category: .dining, note: nil, spentAt: Date(), userId: me)

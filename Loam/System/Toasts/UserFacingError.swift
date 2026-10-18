@@ -28,6 +28,10 @@ enum UserFacingError {
         }
         let nsError = error as NSError
         if nsError.domain == NSURLErrorDomain { return message(for: URLError(URLError.Code(rawValue: nsError.code))) }
+        // Loam's own NSErrors carry sentences written for people.
+        if nsError.domain.hasPrefix("Loam"), let description = nsError.userInfo[NSLocalizedDescriptionKey] as? String {
+            return description
+        }
         return fallback
     }
 

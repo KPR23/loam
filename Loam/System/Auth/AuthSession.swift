@@ -21,7 +21,7 @@ final class AuthSession: ObservableObject {
     @Published private(set) var email: String?
     @Published var lastError: String? {
         // Every failure reaches the person as a toast, wherever they are in the app.
-        didSet { if let lastError, lastError != oldValue { ToastCenter.shared.showError(lastError) } }
+        didSet { if let lastError { ToastCenter.shared.showError(lastError) } }
     }
     @Published private(set) var deletionPending = false
     @Published private(set) var deletionStatus: DeletionStatus = .none
@@ -218,6 +218,7 @@ final class AuthSession: ObservableObject {
 
     func switchToTestAccount(_ account: TestAccount) async {
         lastError = nil
+        await settleChangesWaitingOnUndo()
         guard SupabaseConfig.allowsTestAccounts, account.isConfigured,
               let expectedUserId = account.userId,
               let client = SupabaseClientProvider.client(for: account.device) else {
@@ -258,6 +259,7 @@ final class AuthSession: ObservableObject {
 
     func switchBackToMainAccount() async {
         lastError = nil
+        await settleChangesWaitingOnUndo()
         await restoreMainAccountAfterFailedSwitch()
     }
     #endif
@@ -477,6 +479,7 @@ final class AuthSession: ObservableObject {
 
     func signOut() async {
         lastError = nil
+        await settleChangesWaitingOnUndo()
         #if DEBUG
         let signedOutTestDevice = isTestAccountActive
         #endif
@@ -502,6 +505,12 @@ final class AuthSession: ObservableObject {
         }
         #endif
         clearSession()
+    }
+
+    /// A change still showing Undo saves under the account that made it, before that session ends.
+    private func settleChangesWaitingOnUndo() async {
+        ToastCenter.shared.expireCurrent()
+        await AppServices.shared.expenseStore.settleStagedChanges()
     }
 
     private func clearSession() {

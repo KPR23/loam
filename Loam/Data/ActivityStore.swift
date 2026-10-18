@@ -9,7 +9,7 @@ final class ActivityStore: ObservableObject {
     @Published var lastError: String? {
         // Every failure reaches the person as a toast, wherever they are in the app.
         didSet {
-            guard let lastError, lastError != oldValue else { return }
+            guard let lastError else { return }
             let userId = accountId
             ToastCenter.shared.showError(lastError, action: Toast.Action(title: "Retry") { [weak self] in
                 Task { await self?.refresh(userId: userId) }
