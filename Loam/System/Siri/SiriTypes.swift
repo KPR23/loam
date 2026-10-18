@@ -83,11 +83,11 @@ struct LoamFriendQuery: EntityStringQuery {
         await Self.friends()
     }
 
-    /// Signed out, there is nobody to suggest.
+    /// Signed out or locked, there is nobody to suggest.
     @MainActor
     private static func friends() async -> [LoamFriendEntity] {
         let services = AppServices.shared
-        guard let userId = try? await services.signedInUserId() else { return [] }
+        guard let userId = try? await services.unlockedUserId() else { return [] }
         return await services.friends(userId: userId)
             .map(LoamFriendEntity.init)
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -116,6 +116,7 @@ enum LoamFriendMatcher {
 
 enum LoamIntentError: Error, Equatable, CustomLocalizedStringResourceConvertible {
     case signedOut
+    case locked
     case unsupportedCurrency(String)
     case invalidAmount
     case noFriend
@@ -125,6 +126,8 @@ enum LoamIntentError: Error, Equatable, CustomLocalizedStringResourceConvertible
         switch self {
         case .signedOut:
             "Open Loam and sign in first."
+        case .locked:
+            "Loam is locked. Open Loam and unlock it first."
         case let .unsupportedCurrency(code):
             "Loam doesn't support \(code). Use złoty, euros or dollars."
         case .invalidAmount:

@@ -8,9 +8,22 @@ final class SiriIntentTests: LocalStorageTestCase {
     let bob = TestUser.bob
     private var services: AppServices { AppServices.shared }
 
-    /// The demo account, with Bob as its only friend.
+    private static let lockDomain = "SiriIntentTests.appLock"
+    private var lockAuthenticator: SiriLockAuthenticator!
+
+    /// Gives the services an App Lock with its own storage, on or off.
+    private func useAppLock(enabled: Bool) {
+        let defaults = UserDefaults(suiteName: Self.lockDomain)!
+        defaults.removePersistentDomain(forName: Self.lockDomain)
+        defaults.set(enabled, forKey: AppLock.enabledKey)
+        lockAuthenticator = SiriLockAuthenticator()
+        services.appLock = AppLock(defaults: defaults, authenticator: lockAuthenticator)
+    }
+
+    /// The demo account, with Bob as its only friend, and App Lock off.
     @discardableResult
     private func signIn() -> UUID {
+        useAppLock(enabled: false)
         services.friendsOverride = [SplitPartnerOption(userId: bob, displayName: "Bob")]
         services.navigator.pendingScreen = nil
         services.authSession.signInDemo()
@@ -114,6 +127,63 @@ final class SiriIntentTests: LocalStorageTestCase {
         }
     }
 
+    // MARK: App Lock
+
+    func testLockedAppAnswersNothing() async throws {
+        let me = signIn()
+        useAppLock(enabled: true)
+        XCTAssertTrue(services.appLock.isLocked)
+
+        let add = AddExpenseIntent()
+        add.amount = amount(20)
+        await assertLocked { _ = try await add.perform() }
+        await assertLocked { _ = try await GetMonthlySpendingIntent().perform() }
+        await assertLocked { _ = try await GetBalancesIntent().perform() }
+        await assertLocked { _ = try await GetPendingExpensesIntent().perform() }
+        let settle = SettleUpIntent()
+        settle.friend = LoamFriendEntity(id: bob, name: "Bob")
+        await assertLocked { _ = try await settle.perform() }
+
+        let suggested = try await LoamFriendQuery().suggestedEntities()
+        XCTAssertTrue(suggested.isEmpty)
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertTrue(saved.isEmpty)
+    }
+
+    func testUnlockedAppAnswersAgain() async throws {
+        signIn()
+        useAppLock(enabled: true)
+        lockAuthenticator.result = .success
+        await services.appLock.unlock()
+        XCTAssertFalse(services.appLock.isLocked)
+
+        _ = try await GetBalancesIntent().perform()
+        let suggested = try await LoamFriendQuery().suggestedEntities()
+        XCTAssertEqual(suggested.map(\.id), [bob])
+    }
+
+    func testLockTurnedOffChangesNothing() async throws {
+        let me = signIn()
+        XCTAssertFalse(services.appLock.isEnabled)
+        services.appLock.appDidEnterBackground()
+        XCTAssertFalse(services.appLock.isLocked)
+
+        let intent = AddExpenseIntent()
+        intent.amount = amount(15)
+        _ = try await intent.perform()
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertEqual(saved.count, 1)
+    }
+
+    private func assertLocked(_ action: () async throws -> Void, line: UInt = #line) async {
+        do {
+            try await action()
+            XCTFail("Expected the locked error", line: line)
+        } catch {
+            XCTAssertEqual(error as? LoamIntentError, .locked, line: line)
+        }
+    }
+
     // MARK: Spending, balances and pending expenses
 
     func testMonthlySpendingCountsWhatWasAdded() async throws {
@@ -179,6 +249,16 @@ final class SiriIntentTests: LocalStorageTestCase {
         let suggested = try await LoamFriendQuery().suggestedEntities()
         XCTAssertEqual(suggested.map(\.name), ["Bob Kowalski", "Carol"])
     }
+}
+
+/// Answers every App Lock prompt with `result`.
+@MainActor
+private final class SiriLockAuthenticator: DeviceAuthenticating {
+    var result: DeviceAuthenticationResult = .failed
+
+    func unlockMethod() -> DeviceUnlockMethod { .faceID }
+
+    func authenticate(reason: String) async -> DeviceAuthenticationResult { result }
 }
 
 /// The parts of the Siri actions that need no storage.

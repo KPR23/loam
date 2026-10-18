@@ -32,7 +32,7 @@ struct AddExpenseIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let services = AppServices.shared
-        let userId = try await services.signedInUserId()
+        let userId = try await services.unlockedUserId()
         // Shortcuts can hand over an empty amount in the region's currency; ask instead of failing.
         guard let money = try? SiriAmount.money(from: amount) else {
             throw $amount.needsValueError(SiriAmount.askAgain)
@@ -87,7 +87,7 @@ struct GetMonthlySpendingIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let services = AppServices.shared
-        let userId = try await services.signedInUserId()
+        let userId = try await services.unlockedUserId()
         let summary = try await services.currentMonthSummary(userId: userId)
         let text = SiriText.monthlySpending(summary, category: category)
         return .result(dialog: "\(text)")
@@ -109,7 +109,7 @@ struct GetBalancesIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let services = AppServices.shared
-        let userId = try await services.signedInUserId()
+        let userId = try await services.unlockedUserId()
         let snapshot = try await services.balances(userId: userId)
         let text = SiriText.balances(snapshot, friend: friend)
         return .result(dialog: "\(text)")
@@ -140,7 +140,7 @@ struct SettleUpIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let services = AppServices.shared
-        let userId = try await services.signedInUserId()
+        let userId = try await services.unlockedUserId()
         var requested: Money?
         if let amount, amount.amount > 0 {
             guard let money = try? SiriAmount.money(from: amount) else {
@@ -195,7 +195,7 @@ struct GetPendingExpensesIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let services = AppServices.shared
-        let userId = try await services.signedInUserId()
+        let userId = try await services.unlockedUserId()
         // Loads friends' names for the answer.
         _ = await services.friends(userId: userId)
         let pending = try await services.pendingExpenses(userId: userId)
