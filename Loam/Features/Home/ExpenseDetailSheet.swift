@@ -505,14 +505,12 @@ struct ExpenseDetailSheet: View {
     private func recurringStatusLabel(for rule: RecurringRuleRecord) -> some View {
         let isActive = rule.isActive && !rule.hasEnded
         let isFailing = isActive && rule.generationFailure != nil
-        Label {
-            Text(isFailing ? "Needs attention" : isActive ? "Active" : "Inactive")
-        } icon: {
+        HStack(spacing: 4) {
             Image(systemName: isFailing ? "exclamationmark.triangle.fill" : isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
+            Text(isFailing ? "Needs attention" : isActive ? "Active" : "Inactive")
         }
         .font(.body.weight(.medium))
         .foregroundStyle(isFailing ? Color.orange : isActive ? Color.green : Color.red)
-        .labelStyle(.titleAndIcon)
     }
 
     private func pendingActionsBar(_ actions: ExpenseDetailPendingActions) -> some View {
