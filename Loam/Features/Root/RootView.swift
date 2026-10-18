@@ -71,6 +71,7 @@ private struct KeyboardDismissalInstaller: UIViewRepresentable {
 private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
     private let keyboardGap: CGFloat = 16
     private var hideButtonBottomConstraint: NSLayoutConstraint?
+    private var hideKeyboardWindow: HideKeyboardWindow?
 
     private lazy var dismissalTap: UITapGestureRecognizer = {
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
@@ -114,6 +115,8 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
         // Not in deinit on purpose: didMoveToWindow re-observes after every move.
         NotificationCenter.default.removeObserver(self) // swiftlint:disable:this notification_center_detachment
         hideKeyboardButton.removeFromSuperview()
+        hideKeyboardWindow?.isHidden = true
+        hideKeyboardWindow = nil
         hideButtonBottomConstraint = nil
     }
 
@@ -125,14 +128,25 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
         window?.endEditing(true)
     }
 
+    /// The button lives in its own window above the app so sheets and their dimming never cover it.
     private func installHideKeyboardButton(in window: UIWindow) {
-        window.addSubview(hideKeyboardButton)
+        guard let scene = window.windowScene else { return }
+        let buttonWindow = HideKeyboardWindow(windowScene: scene)
+        buttonWindow.windowLevel = .normal + 1
+        buttonWindow.backgroundColor = .clear
+        buttonWindow.rootViewController = UIViewController()
+        buttonWindow.rootViewController?.view.backgroundColor = .clear
+        buttonWindow.button = hideKeyboardButton
+        buttonWindow.isHidden = false
+        hideKeyboardWindow = buttonWindow
+        let container = buttonWindow
+        container.addSubview(hideKeyboardButton)
         hideButtonBottomConstraint = hideKeyboardButton.bottomAnchor.constraint(
-            equalTo: window.bottomAnchor,
+            equalTo: container.bottomAnchor,
             constant: -keyboardGap
         )
         NSLayoutConstraint.activate([
-            hideKeyboardButton.trailingAnchor.constraint(equalTo: window.trailingAnchor, constant: -16),
+            hideKeyboardButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
             hideButtonBottomConstraint!,
             hideKeyboardButton.widthAnchor.constraint(equalToConstant: 48),
             hideKeyboardButton.heightAnchor.constraint(equalToConstant: 48)
@@ -155,6 +169,7 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
               let hideButtonBottomConstraint else { return }
 
         let keyboardFrame = window.convert(frameValue.cgRectValue, from: nil)
+        let layoutWindow: UIWindow = hideKeyboardWindow ?? window
         let keyboardHeight = max(0, window.bounds.maxY - keyboardFrame.minY)
         let isKeyboardVisible = keyboardHeight > 0
         let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval ?? 0.25
@@ -170,7 +185,7 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
 
         hideButtonBottomConstraint.constant = -(keyboardHeight + keyboardGap)
         UIView.animate(withDuration: duration, delay: 0, options: [options, .beginFromCurrentState]) {
-            window.layoutIfNeeded()
+            layoutWindow.layoutIfNeeded()
         }
     }
 
@@ -193,4 +208,16 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
     ) -> Bool {
         true
     }
+}
+
+/// Takes touches only on the hide-keyboard button; never key, so typing stays in the app.
+private final class HideKeyboardWindow: UIWindow {
+    weak var button: UIView?
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let button, !button.isHidden, button.frame.insetBy(dx: -8, dy: -8).contains(point) else { return nil }
+        return super.hitTest(point, with: event)
+    }
+
+    override var canBecomeKey: Bool { false }
 }
