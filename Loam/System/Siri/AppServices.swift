@@ -38,7 +38,8 @@ final class AppServices {
     /// The people this account can split with, the same list Add Expense offers.
     func friends(userId: UUID) async -> [SplitPartnerOption] {
         if let friendsOverride { return friendsOverride }
-        if ExpenseRepositoryFactory.usesLocalStorage {
+        // Same rule as the Add Expense screen.
+        if !SupabaseConfig.isConfigured {
             #if DEBUG
             return SplitPartnerOption.available(for: userId, savedMainAccount: authSession.savedMainAccountPartnerOption)
             #else
@@ -47,6 +48,11 @@ final class AppServices {
         }
         await connectionStore.refresh(userId: userId)
         return connectionStore.connections.filter { $0.userId != userId }
+    }
+
+    /// True when the last friend lookup failed, so an unknown name may still be a friend.
+    var friendsFailedToLoad: Bool {
+        friendsOverride == nil && SupabaseConfig.isConfigured && connectionStore.lastError != nil
     }
 
     /// This month's totals, in the default currency.

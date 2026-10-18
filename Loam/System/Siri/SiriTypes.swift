@@ -163,28 +163,37 @@ enum SiriAmount {
 }
 
 /// What settling up with someone should record, from what was said and the current balance.
+/// A repayment always goes the way the balance does and never exceeds it, like on the Balances screen.
 enum RepaymentPlan: Equatable {
     case record(RepaymentDirection, Money)
     case settledUp
-    /// Balances in several currencies, or nothing owed the way that was said; an amount is needed.
+    /// Balances in several currencies; an amount picks one.
     case needsAmount
-    case needsDirection
+    /// Nothing is owed in that currency, or it is owed the other way.
+    case nothingToSettle
+    /// More than the balance; carries the most that can be recorded.
+    case exceedsBalance(RepaymentDirection, Money)
 
     /// `balances` are the ones with this friend. Positive means they owe the viewer.
     static func make(balances: [PersonBalance], amount: Money?, direction: RepaymentDirection?) -> RepaymentPlan {
         let open = balances.filter { $0.amountMinor != 0 }
-        guard let amount else {
+        let balance: PersonBalance
+        if let amount {
+            guard let match = open.first(where: { $0.currencyCode.uppercased() == amount.currencyCode }) else {
+                return .nothingToSettle
+            }
+            balance = match
+        } else {
             guard !open.isEmpty else { return .settledUp }
-            guard open.count == 1, let balance = open.first else { return .needsAmount }
-            let owed: RepaymentDirection = balance.amountMinor > 0 ? .theyPaidMe : .iPaidThem
-            if let direction, direction != owed { return .needsAmount }
-            return .record(owed, Money(amountMinor: abs(balance.amountMinor), currencyCode: balance.currencyCode))
+            guard open.count == 1, let only = open.first else { return .needsAmount }
+            balance = only
         }
-        if let direction { return .record(direction, amount) }
-        guard let balance = open.first(where: { $0.currencyCode.uppercased() == amount.currencyCode }) else {
-            return .needsDirection
-        }
-        return .record(balance.amountMinor > 0 ? .theyPaidMe : .iPaidThem, amount)
+        let owed: RepaymentDirection = balance.amountMinor > 0 ? .theyPaidMe : .iPaidThem
+        if let direction, direction != owed { return .nothingToSettle }
+        let full = Money(amountMinor: abs(balance.amountMinor), currencyCode: balance.currencyCode.uppercased())
+        guard let amount else { return .record(owed, full) }
+        guard amount.amountMinor <= full.amountMinor else { return .exceedsBalance(owed, full) }
+        return .record(owed, amount)
     }
 }
 
@@ -260,6 +269,14 @@ enum SiriText {
         switch direction {
         case .iPaidThem: return "Record that you paid \(friend) \(amount)?"
         case .theyPaidMe: return "Record that \(friend) paid you \(amount)?"
+        }
+    }
+
+    static func repaymentLimit(_ direction: RepaymentDirection, balance: Money, friend: String) -> String {
+        let amount = MoneyFormatter.string(from: balance)
+        switch direction {
+        case .iPaidThem: return "You only owe \(friend) \(amount). How much did you pay?"
+        case .theyPaidMe: return "\(friend) only owes you \(amount). How much did they pay?"
         }
     }
 

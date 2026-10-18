@@ -209,16 +209,25 @@ final class SiriLogicTests: XCTestCase {
         XCTAssertEqual(RepaymentPlan.make(balances: [], amount: nil, direction: nil), .settledUp)
         XCTAssertEqual(RepaymentPlan.make(balances: [balance(0)], amount: nil, direction: nil), .settledUp)
         XCTAssertEqual(RepaymentPlan.make(balances: [balance(1500), balance(200, "EUR")], amount: nil, direction: nil), .needsAmount)
-        XCTAssertEqual(RepaymentPlan.make(balances: [balance(1500)], amount: nil, direction: .iPaidThem), .needsAmount, "Bob owes me, so I have nothing to pay back")
+        XCTAssertEqual(RepaymentPlan.make(balances: [balance(1500)], amount: nil, direction: .iPaidThem), .nothingToSettle, "Bob owes me, so I have nothing to pay back")
     }
 
     func testSettlingUpPartOfABalance() {
         let part = Money(amountMinor: 500, currencyCode: "PLN")
         XCTAssertEqual(RepaymentPlan.make(balances: [balance(1500)], amount: part, direction: nil), .record(.theyPaidMe, part))
         XCTAssertEqual(RepaymentPlan.make(balances: [balance(-1500)], amount: part, direction: nil), .record(.iPaidThem, part))
-        XCTAssertEqual(RepaymentPlan.make(balances: [], amount: part, direction: nil), .needsDirection)
-        XCTAssertEqual(RepaymentPlan.make(balances: [balance(200, "EUR")], amount: part, direction: nil), .needsDirection)
-        XCTAssertEqual(RepaymentPlan.make(balances: [], amount: part, direction: .iPaidThem), .record(.iPaidThem, part))
+        XCTAssertEqual(RepaymentPlan.make(balances: [balance(1500)], amount: part, direction: .theyPaidMe), .record(.theyPaidMe, part))
+    }
+
+    func testSettlingUpNeverRecordsWhatTheBalanceWouldRefuse() {
+        let part = Money(amountMinor: 500, currencyCode: "PLN")
+        let pln = { Money(amountMinor: $0, currencyCode: "PLN") }
+        XCTAssertEqual(RepaymentPlan.make(balances: [], amount: part, direction: nil), .nothingToSettle)
+        XCTAssertEqual(RepaymentPlan.make(balances: [balance(200, "EUR")], amount: part, direction: nil), .nothingToSettle)
+        XCTAssertEqual(RepaymentPlan.make(balances: [], amount: part, direction: .iPaidThem), .nothingToSettle)
+        XCTAssertEqual(RepaymentPlan.make(balances: [balance(1500)], amount: part, direction: .iPaidThem), .nothingToSettle, "Bob owes me, not the other way")
+        XCTAssertEqual(RepaymentPlan.make(balances: [balance(1500)], amount: pln(2000), direction: nil), .exceedsBalance(.theyPaidMe, pln(1500)))
+        XCTAssertEqual(RepaymentPlan.make(balances: [balance(-1500)], amount: pln(1500), direction: nil), .record(.iPaidThem, pln(1500)))
     }
 
     func testFriendNamesMatchByWordIgnoringCaseAndAccents() {
