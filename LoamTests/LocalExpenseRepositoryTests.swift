@@ -16,6 +16,25 @@ final class LocalExpenseRepositoryTests: LocalStorageTestCase {
         )
     }
 
+    func testSearchMatchesOnlyMyExpensesAcrossMonthsIgnoringCaseAndShortQueries() async throws {
+        let repository = LocalExpenseRepository()
+        let today = AppPreferences.calendar.startOfDay(for: Date())
+        let lastYear = AppPreferences.calendar.date(byAdding: .year, value: -1, to: today)!
+        var mine = personalExpense(100, spentAt: today)
+        mine.title = "Morning Coffee"
+        var old = personalExpense(200, spentAt: lastYear)
+        old.note = "coffee beans"
+        var theirs = personalExpense(300, by: other, spentAt: today)
+        theirs.title = "Coffee for Bob"
+        for expense in [mine, old, theirs] { _ = try await repository.create(expense) }
+
+        let found = try await repository.searchExpenses(matching: " COFFEE ", for: user, limit: 50)
+        let tooShort = try await repository.searchExpenses(matching: "c", for: user, limit: 50)
+
+        XCTAssertEqual(found.map(\.id), [mine.id, old.id])
+        XCTAssertTrue(tooShort.isEmpty)
+    }
+
     func testFetchReturnsMyNonRejectedExpensesInThePeriodNewestFirst() async throws {
         let repository = LocalExpenseRepository()
         let today = AppPreferences.calendar.startOfDay(for: Date())
