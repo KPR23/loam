@@ -203,6 +203,50 @@ struct ShareConnectionCodeView: View {
     private func revoke() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; do { try await connectionStore.revokeInvitation(); invitation = nil } catch { self.error = UserFacingError.message(for: error) } }
 }
 
+/// A small bottom sheet with one text field and one action, used instead of a system alert
+/// so the keyboard's hide button stays above it.
+private struct CompactEntrySheet<Field: View>: View {
+    let title: String
+    let message: String
+    let actionTitle: String
+    let actionDisabled: Bool
+    let onCancel: () -> Void
+    let onAction: () -> Void
+    @ViewBuilder let field: Field
+
+    var body: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 6) {
+                Text(title).font(.headline)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            field
+                .font(.system(.title3, design: .rounded, weight: .semibold))
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 16)
+                .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            HStack(spacing: 12) {
+                Button("Cancel", role: .cancel, action: onCancel)
+                    .buttonStyle(.bordered)
+                Button(actionTitle, action: onAction)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(actionDisabled)
+            }
+            .controlSize(.large)
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 12)
+        .presentationDetents([.height(300)])
+        .presentationDragIndicator(.visible)
+    }
+}
+
 private struct ConnectionCodePrompt: ViewModifier {
     @EnvironmentObject private var connectionStore: ConnectionStore
     @Binding var isPresented: Bool
@@ -211,25 +255,30 @@ private struct ConnectionCodePrompt: ViewModifier {
     @State private var inviterName: String?
     @State private var error: String?
     @State private var isWorking = false
+    @FocusState private var isFocused: Bool
     func body(content: Content) -> some View {
         content
-            .alert("Enter a code", isPresented: $isPresented) {
-                TextField("Code", text: codeBinding)
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
-                Button("Cancel", role: .cancel) {}
-                // Not disabled by the code's length: alert buttons don't reliably re-enable
-                // as the text field changes, so preview() checks the length instead.
-                Button("Continue") { Task { await preview() } }
-                    .disabled(isWorking)
-            } message: {
-                Text("Enter the eight-character code your friend shared with you.")
-            }
-            .confirmationDialog("Connect with \(inviterName ?? "this person")?", isPresented: Binding(get: { inviterName != nil }, set: { if !$0 { inviterName = nil } })) {
-                Button("Connect") { Task { await redeem() } }
-                Button("Cancel", role: .cancel) { inviterName = nil }
-            } message: {
-                Text("Connecting allows shared expenses. It does not expose personal expenses or approve splits automatically.")
+            .sheet(isPresented: $isPresented) {
+                CompactEntrySheet(
+                    title: inviterName.map { "Connect with \($0)?" } ?? "Enter a code",
+                    message: inviterName == nil
+                        ? "Enter the eight-character code your friend shared with you."
+                        : "Connecting allows shared expenses. It does not expose personal expenses or approve splits automatically.",
+                    actionTitle: inviterName == nil ? "Continue" : "Connect",
+                    actionDisabled: isWorking || (inviterName == nil && normalizedCode.count < 8),
+                    onCancel: { isPresented = false },
+                    onAction: { Task { if inviterName == nil { await preview() } else { await redeem() } } }
+                ) {
+                    if inviterName == nil {
+                        TextField("Code", text: codeBinding)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .focused($isFocused)
+                            .onAppear { isFocused = true }
+                    } else {
+                        Text(code.uppercased())
+                    }
+                }
             }
             .errorToast($error)
             .onChange(of: isPresented) { _, shown in
@@ -250,7 +299,15 @@ private struct ConnectionCodePrompt: ViewModifier {
         isWorking = true; defer { isWorking = false }
         do { inviterName = try await connectionStore.preview(code: normalizedCode) } catch { self.error = UserFacingError.message(for: error) }
     }
-    private func redeem() async { isWorking = true; defer { isWorking = false }; do { let friend = try await connectionStore.redeem(code: normalizedCode); inviterName = nil; onConnected?(friend); ToastCenter.shared.showSuccess("Connected with \(friend.displayName)") } catch { self.error = UserFacingError.message(for: error) } }
+    private func redeem() async {
+        isWorking = true; defer { isWorking = false }
+        do {
+            let friend = try await connectionStore.redeem(code: normalizedCode)
+            isPresented = false
+            onConnected?(friend)
+            ToastCenter.shared.showSuccess("Connected with \(friend.displayName)")
+        } catch { self.error = UserFacingError.message(for: error) }
+    }
 }
 
 /// Asks for a name and adds someone without an account as a friend.
@@ -260,17 +317,24 @@ private struct PlaceholderFriendPrompt: ViewModifier {
     let onCreated: (SplitPartnerOption) -> Void
     @State private var name = ""
     @State private var error: String?
+    @FocusState private var isFocused: Bool
 
     func body(content: Content) -> some View {
         content
-            .alert("Add someone without an account", isPresented: $isPresented) {
-                TextField("Name", text: $name)
-                    .textInputAutocapitalization(.words)
-                Button("Cancel", role: .cancel) {}
-                Button("Add") { Task { await create() } }
-                    .disabled(trimmedName.isEmpty)
-            } message: {
-                Text("They appear in your friends like anyone else, and every expense you split with them is accepted right away.")
+            .sheet(isPresented: $isPresented) {
+                CompactEntrySheet(
+                    title: "Add someone without an account",
+                    message: "They appear in your friends like anyone else, and every expense you split with them is accepted right away.",
+                    actionTitle: "Add",
+                    actionDisabled: trimmedName.isEmpty,
+                    onCancel: { isPresented = false },
+                    onAction: { Task { await create() } }
+                ) {
+                    TextField("Name", text: $name)
+                        .textInputAutocapitalization(.words)
+                        .focused($isFocused)
+                        .onAppear { isFocused = true }
+                }
             }
             .errorToast($error)
             .onChange(of: isPresented) { _, shown in
@@ -285,6 +349,7 @@ private struct PlaceholderFriendPrompt: ViewModifier {
         guard !chosen.isEmpty else { return }
         do {
             onCreated(try await connectionStore.createPlaceholder(name: chosen))
+            isPresented = false
             ToastCenter.shared.showSuccess("Added \(chosen)")
         }
         catch { self.error = UserFacingError.message(for: error) }
