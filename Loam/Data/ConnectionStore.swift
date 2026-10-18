@@ -6,7 +6,10 @@ final class ConnectionStore: ObservableObject {
     @Published private(set) var connections: [SplitPartnerOption] = []
     @Published private(set) var isLoading = false
     @Published private(set) var hasLoadedConnections = false
-    @Published var lastError: String?
+    @Published var lastError: String? {
+        // Every failure reaches the person as a toast, wherever they are in the app.
+        didSet { if let lastError, lastError != oldValue { ToastCenter.shared.showError(lastError) } }
+    }
     private var accountId: UUID?
     private var requestID = UUID()
 
@@ -30,7 +33,7 @@ final class ConnectionStore: ObservableObject {
             let fetched = try await SupabaseConnectionRepository(client: client).listConnections()
             guard requestID == token, accountId == userId else { return }
             connections = fetched; ConnectionDirectory.shared.replace(fetched); hasLoadedConnections = true; lastError = nil
-        } catch { guard requestID == token else { return }; lastError = error.localizedDescription }
+        } catch { guard requestID == token else { return }; lastError = UserFacingError.message(for: error) }
     }
     func createInvitation() async throws -> ConnectionInvitation { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; return try await LoamErrorCapture.withCapture("connections.invitation_create_failed") { try await SupabaseConnectionRepository(client: client).createInvitation() } }
     func activeInvitation() async throws -> ConnectionInvitation? { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; return try await SupabaseConnectionRepository(client: client).activeInvitation() }

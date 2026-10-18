@@ -53,11 +53,6 @@ struct NotificationSettingsView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await pushStore.refreshPermission() } }
         }
-        .alert("Couldn't save", isPresented: Binding(get: { pushStore.lastError != nil }, set: { if !$0 { pushStore.lastError = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(pushStore.lastError ?? "")
-        }
     }
 
     @ViewBuilder

@@ -150,15 +150,7 @@ struct ProposeEditSheet: View {
                     .disabled(isSaving || validationError != nil)
                 }
             }
-            .sensoryFeedback(.error, trigger: errorMessage) { _, newValue in newValue != nil }
-            .alert("Couldn't send proposal", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "")
-            }
+            .errorToast($errorMessage)
         }
     }
 
@@ -215,10 +207,11 @@ struct ProposeEditSheet: View {
                 // Built-in Other on an expense in a custom category moves it out; `.other` alone keeps it.
                 clearsCustomCategory: expense.customCategory != nil && formState.category == .builtIn(.other)
             )
+            ToastCenter.shared.showSuccess("Suggestion sent")
             LoamFeedback.success()
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = UserFacingError.message(for: error)
         }
     }
 

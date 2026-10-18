@@ -123,14 +123,7 @@ struct RepaymentSheet: View {
             }
             // A new recipient or currency, or the old one disappearing, restarts at the full balance.
             .onChange(of: target?.id) { _, _ in amountText = fullAmountText }
-            .alert("Couldn’t record repayment", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "")
-            }
+            .errorToast($errorMessage)
         }
     }
 
@@ -265,11 +258,11 @@ struct RepaymentSheet: View {
                     userId: userId
                 )
             }
+            ToastCenter.shared.showSuccess(isReceiving ? "Payment recorded" : "Repayment recorded")
             LoamFeedback.success()
             dismiss()
         } catch {
-            LoamFeedback.error()
-            errorMessage = error.localizedDescription
+            errorMessage = UserFacingError.message(for: error)
         }
     }
 }

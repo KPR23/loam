@@ -39,7 +39,6 @@ private struct ProPaywallView: View {
     @State private var isLoading = true
     @State private var isPurchasing = false
     @State private var isRestoring = false
-    @State private var alert: PaywallAlert?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -87,15 +86,6 @@ private struct ProPaywallView: View {
         }
         .interactiveDismissDisabled(isBusy)
         .task { await loadPackages() }
-        .alert(
-            alert?.title ?? "",
-            isPresented: Binding(get: { alert != nil }, set: { if !$0 { alert = nil } }),
-            presenting: alert
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { alert in
-            Text(alert.message)
-        }
     }
 
     // MARK: Sections
@@ -343,13 +333,13 @@ private struct ProPaywallView: View {
             let result = try await Purchases.shared.purchase(package: package)
             guard !result.userCancelled else { return }
             LoamFeedback.success()
+            ToastCenter.shared.showSuccess("Welcome to Loam Pro")
             dismiss()
             await subscriptions.didUpdate(result.customerInfo)
         } catch {
             if (error as? ErrorCode) == .purchaseCancelledError { return }
             LoamErrorCapture.capture("subscriptions.purchase_failed")
-            LoamFeedback.error()
-            alert = PaywallAlert(title: "Purchase Failed", message: error.localizedDescription)
+            ToastCenter.shared.showError(Self.message(for: error, failure: "Purchase didn't go through."))
         }
     }
 
@@ -361,26 +351,32 @@ private struct ProPaywallView: View {
             let info = try await Purchases.shared.restorePurchases()
             if info.entitlements.active[SubscriptionStore.entitlementId] != nil {
                 LoamFeedback.success()
+                ToastCenter.shared.showSuccess("Loam Pro restored")
                 dismiss()
                 await subscriptions.didUpdate(info)
             } else {
                 await subscriptions.didUpdate(info)
-                alert = PaywallAlert(
-                    title: "Nothing to Restore",
-                    message: "This Apple Account has no Loam Pro purchase."
-                )
+                ToastCenter.shared.show(.warning("This Apple Account has no Loam Pro purchase."))
             }
         } catch {
             LoamErrorCapture.capture("subscriptions.restore_failed")
-            LoamFeedback.error()
-            alert = PaywallAlert(title: "Restore Failed", message: error.localizedDescription)
+            ToastCenter.shared.showError(Self.message(for: error, failure: "Couldn't restore purchases."))
         }
     }
-}
 
-private struct PaywallAlert {
-    let title: String
-    let message: String
+    /// RevenueCat's own wording is long and technical; these say what to do next.
+    private static func message(for error: Error, failure: String) -> String {
+        switch error as? ErrorCode {
+        case .networkError?, .offlineConnectionError?: return UserFacingError.offline
+        case .paymentPendingError?: return "Your purchase is waiting for approval."
+        case .productAlreadyPurchasedError?: return "You already have Loam Pro. Try Restore."
+        case .purchaseNotAllowedError?: return "Purchases aren't allowed on this device."
+        case .purchaseInvalidError?, .invalidReceiptError?: return "\(failure) Check your payment method."
+        case .storeProblemError?: return "\(failure) The App Store had a problem. Try again."
+        case .productNotAvailableForPurchaseError?: return "Loam Pro isn't available right now."
+        default: return "\(failure) Try again."
+        }
+    }
 }
 
 /// The paywall's hero: the PRO mark, floating gently and tilting with the phone.

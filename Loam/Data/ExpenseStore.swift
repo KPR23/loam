@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 @MainActor
 final class ExpenseStore: ObservableObject {
@@ -13,7 +14,10 @@ final class ExpenseStore: ObservableObject {
     @Published private(set) var failingRecurringRules: [RecurringRuleRecord] = []
     @Published private(set) var summary: MonthSpendSummary = .zero(currency: AppPreferences.defaultCurrencyCode)
     @Published private(set) var isLoading = false
-    @Published var lastError: String?
+    @Published var lastError: String? {
+        // Every failure reaches the person as a toast, wherever they are in the app.
+        didSet { if let lastError, lastError != oldValue { ToastCenter.shared.showError(lastError) } }
+    }
     /// Replaces the backend lookup of every expense still waiting on a user, so tests can make it fail.
     var pendingAcceptanceLookup: ((UUID) async throws -> [ExpenseRecord])?
 
@@ -30,6 +34,28 @@ final class ExpenseStore: ObservableObject {
     }
 
     private var currentUserId: UUID?
+
+    /// Changes shown with Undo, keyed by expense. Nothing reaches the backend until
+    /// their toast goes away, so an undone change never notifies anyone.
+    private var stagedChanges: [UUID: StagedChange] = [:]
+    /// Saves in flight, so the next change to the same expense waits for its version.
+    private var commitTasks: [UUID: Task<Void, Never>] = [:]
+
+    private struct StagedChange {
+        enum Kind {
+            case delete
+            case save(ExpenseRecord)
+        }
+
+        let kind: Kind
+        let original: ExpenseRecord
+        /// Where the deleted expense sat in `expenses`, to put it back on Undo.
+        let index: Int?
+        let failureMessage: String
+        /// Writes the change; the refresh after it is the store's.
+        let persist: @MainActor () async throws -> Void
+        var isCommitting = false
+    }
 
     func setPeriod(_ newPeriod: DatePeriod, userId: UUID?) async {
         guard period != newPeriod else { return }
@@ -68,13 +94,13 @@ final class ExpenseStore: ObservableObject {
 
         do {
             try await materializeDueRecurring(userId: userId, repository: primaryRepository)
-            let fetched = try await primaryRepository.fetchExpenses(for: userId, in: period)
+            let fetched = withStagedChanges(try await primaryRepository.fetchExpenses(for: userId, in: period))
             expenses = fetched
             summary = makeSummary(fetched, userId: userId)
             recurringStartDatesById = await loadRecurringStartDates(for: fetched)
             lastError = nil
         } catch {
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
         }
 
         // Other currencies convert at their day's rate, which may need downloading first.
@@ -86,8 +112,8 @@ final class ExpenseStore: ObservableObject {
 
         let proposals = (try? await primaryRepository.fetchPendingProposals(for: userId)) ?? []
         pendingProposals = proposals
-        proposalExpenses = await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses)
-        detachedExpenses = await refreshDetachedExpenses(userId: userId)
+        proposalExpenses = withStagedChanges(await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses))
+        detachedExpenses = withStagedChanges(await refreshDetachedExpenses(userId: userId))
     }
 
     func expense(forProposal proposal: ExpenseEditProposal) -> ExpenseRecord? {
@@ -103,14 +129,16 @@ final class ExpenseStore: ObservableObject {
 
     /// Used by Activity after an event is selected; a missing row is expected for deleted/inaccessible history.
     func fetchExpense(id: UUID, userId: UUID) async -> ExpenseRecord? {
+        if case .delete? = stagedChanges[id]?.kind { return nil }
         if let cached = expenses.first(where: { $0.id == id }) { return cached }
         guard let fetched = try? await primaryRepository.fetchExpenses(ids: [id]).first(where: { $0.shareRecord(for: userId) != nil }) else {
             detachedExpenses.removeAll { $0.id == id }
             return nil
         }
         detachedExpenses.removeAll { $0.id == id }
-        detachedExpenses.append(fetched)
-        return fetched
+        guard let shown = withStagedChanges([fetched]).first else { return nil }
+        detachedExpenses.append(shown)
+        return shown
     }
 
     /// Loads expenses Activity refers to that aren't loaded yet (e.g. outside the
@@ -121,7 +149,7 @@ final class ExpenseStore: ObservableObject {
         guard !missing.isEmpty,
               let fetched = try? await primaryRepository.fetchExpenses(ids: missing),
               currentUserId == userId else { return }
-        detachedExpenses.append(contentsOf: fetched.filter { $0.shareRecord(for: userId) != nil && knownExpense(id: $0.id) == nil })
+        detachedExpenses.append(contentsOf: withStagedChanges(fetched).filter { $0.shareRecord(for: userId) != nil && knownExpense(id: $0.id) == nil })
     }
 
     /// Reloads one expense and the pending proposals so its detail screen shows
@@ -130,9 +158,11 @@ final class ExpenseStore: ObservableObject {
         guard currentUserId == userId else { return }
         if let proposals = try? await primaryRepository.fetchPendingProposals(for: userId) {
             pendingProposals = proposals
-            proposalExpenses = await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses)
+            proposalExpenses = withStagedChanges(await resolveProposalExpenses(proposals: proposals, periodExpenses: expenses))
         }
-        guard let fetched = try? await primaryRepository.fetchExpenses(ids: [expenseId]).first,
+        // A change waiting on Undo stays as shown until it is saved.
+        guard stagedChanges[expenseId] == nil,
+              let fetched = try? await primaryRepository.fetchExpenses(ids: [expenseId]).first,
               fetched.shareRecord(for: userId) != nil,
               currentUserId == userId else { return }
         if let index = expenses.firstIndex(where: { $0.id == expenseId }) {
@@ -327,8 +357,10 @@ final class ExpenseStore: ObservableObject {
         myPercentage: Int = 50,
         myExactAmountMinor: Int? = nil,
         participantPercentages: [UUID: Int] = [:],
-        participantExactAmountMinors: [UUID: Int] = [:]
+        participantExactAmountMinors: [UUID: Int] = [:],
+        undoable: Bool = false
     ) async throws {
+        await settleStagedChange(for: expenseId)
         guard var expense = knownExpense(id: expenseId) else {
             throw ExpenseRepositoryError.notFound
         }
@@ -358,9 +390,6 @@ final class ExpenseStore: ObservableObject {
             expense.shares = SplitCalculator.personal(totalMinor: amountMinor, userId: userId).map {
                 ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor)
             }
-            _ = try await LoamErrorCapture.withCapture("expense.update_failed") {
-                try await activeRepository.update(expense)
-            }
         } else {
             let calculatedShares = SplitCalculator.split(
                 totalMinor: amountMinor,
@@ -383,43 +412,99 @@ final class ExpenseStore: ObservableObject {
                 expense: expense,
                 usersTrustingCreator: usersTrustingCreator
             )
+        }
+
+        let updated = expense
+        let persist: @MainActor () async throws -> Void = { [self] in
             _ = try await LoamErrorCapture.withCapture("expense.update_failed") {
-                try await activeRepository.update(expense)
+                try await activeRepository.update(updated)
+            }
+            if updated.isShared || originalExpense.isShared {
+                let removed = Set(originalExpense.shares.map(\.userId)).subtracting(updated.shares.map(\.userId))
+                await recordActivity(kind: .edited, actorId: userId, expense: updated, recipients: updated.shares.map(\.userId).filter { $0 != userId })
+                for participant in removed {
+                    await recordActivity(kind: .participantRemoved, actorId: userId, expense: originalExpense, recipients: [participant])
+                }
             }
         }
 
-        if expense.isShared || originalExpense.isShared {
-            let removed = Set(originalExpense.shares.map(\.userId)).subtracting(expense.shares.map(\.userId))
-            await recordActivity(kind: .edited, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId })
-            for participant in removed {
-                await recordActivity(kind: .participantRemoved, actorId: userId, expense: originalExpense, recipients: [participant])
-            }
+        if undoable {
+            stage(
+                StagedChange(
+                    kind: .save(updated),
+                    original: originalExpense,
+                    index: nil,
+                    failureMessage: "Couldn't save your changes to \u{201C}\(updated.displayTitle)\u{201D}.",
+                    persist: persist
+                ),
+                message: "Expense updated",
+                userId: userId
+            )
+        } else {
+            try await persist()
+            await refresh(userId: userId)
         }
-
-        await refresh(userId: userId)
     }
 
     func delete(id: UUID, userId: UUID, recurringMode: RecurringDeletionMode? = nil) async {
+        await settleStagedChange(for: id)
         do {
-            if let expense = knownExpense(id: id) {
-                let activeRepository = repository(for: expense)
-                try await activeRepository.delete(id: id)
-                if expense.isShared { await recordActivity(kind: .deleted, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId }) }
-                if let recurringId = expense.recurringId, let mode = recurringMode {
-                    try await applyRecurringDeletion(
-                        recurringId: recurringId,
-                        occurrenceDate: expense.spentAt,
-                        mode: mode,
-                        repository: activeRepository
-                    )
-                }
-            } else {
-                try await primaryRepository.delete(id: id)
-            }
+            try await performDelete(expense: knownExpense(id: id), id: id, userId: userId, recurringMode: recurringMode)
             await refresh(userId: userId)
         } catch {
             LoamErrorCapture.capture("expense.delete_failed")
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
+        }
+    }
+
+    /// Hides the expense at once and deletes it when its Undo toast goes away.
+    func deleteWithUndo(id: UUID, userId: UUID, recurringMode: RecurringDeletionMode? = nil) async {
+        await settleStagedChange(for: id)
+        guard let expense = knownExpense(id: id) else {
+            await delete(id: id, userId: userId, recurringMode: recurringMode)
+            return
+        }
+        let message = recurringMode == .stopRecurring ? "Expense deleted and stopped repeating" : "Expense deleted"
+        stage(
+            StagedChange(
+                kind: .delete,
+                original: expense,
+                index: expenses.firstIndex(where: { $0.id == id }),
+                failureMessage: "Couldn't delete \u{201C}\(expense.displayTitle)\u{201D}.",
+                persist: { [self] in
+                    do {
+                        try await performDelete(expense: expense, id: id, userId: userId, recurringMode: recurringMode)
+                    } catch {
+                        LoamErrorCapture.capture("expense.delete_failed")
+                        throw error
+                    }
+                }
+            ),
+            message: message,
+            userId: userId
+        )
+    }
+
+    private func performDelete(
+        expense: ExpenseRecord?,
+        id: UUID,
+        userId: UUID,
+        recurringMode: RecurringDeletionMode?
+    ) async throws {
+        if let expense {
+            let activeRepository = repository(for: expense)
+            try await activeRepository.delete(id: id)
+            if expense.isShared { await recordActivity(kind: .deleted, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId }) }
+            if let recurringId = expense.recurringId, let mode = recurringMode {
+                try await applyRecurringDeletion(
+                    recurringId: recurringId,
+                    occurrenceDate: expense.spentAt,
+                    mode: mode,
+                    repository: activeRepository
+                )
+            }
+        } else {
+            try await primaryRepository.delete(id: id)
         }
     }
 
@@ -433,7 +518,7 @@ final class ExpenseStore: ObservableObject {
                 lastError = "Cleared expenses you created. \(expenses.count) shared expense(s) from others remain."
             }
         } catch {
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
         }
     }
     #endif
@@ -483,11 +568,14 @@ final class ExpenseStore: ObservableObject {
         myPercentage: Int = 50,
         myExactAmountMinor: Int? = nil,
         participantPercentages: [UUID: Int] = [:],
-        participantExactAmountMinors: [UUID: Int] = [:]
+        participantExactAmountMinors: [UUID: Int] = [:],
+        undoable: Bool = false
     ) async throws {
+        await settleStagedChange(for: expenseId)
         guard var expense = knownExpense(id: expenseId), expense.createdBy == userId else {
             throw ExpenseRepositoryError.notFound
         }
+        let originalExpense = expense
 
         let shares = SplitCalculator.split(
             totalMinor: expense.amountMinor,
@@ -515,12 +603,132 @@ final class ExpenseStore: ObservableObject {
         )
         expense.updatedAt = Date()
 
-        _ = try await LoamErrorCapture.withCapture("expense.split_setup_failed") {
-            try await activeRepository.update(expense)
+        let updated = expense
+        let persist: @MainActor () async throws -> Void = { [self] in
+            _ = try await LoamErrorCapture.withCapture("expense.split_setup_failed") {
+                try await activeRepository.update(updated)
+            }
+            await recordActivity(kind: .edited, actorId: userId, expense: updated, recipients: updated.shares.map(\.userId).filter { $0 != userId })
         }
-        await recordActivity(kind: .edited, actorId: userId, expense: expense, recipients: expense.shares.map(\.userId).filter { $0 != userId })
         RecentSplitPartners.record(partnerUserIds, for: userId)
-        await refresh(userId: userId)
+
+        if undoable {
+            stage(
+                StagedChange(
+                    kind: .save(updated),
+                    original: originalExpense,
+                    index: nil,
+                    failureMessage: "Couldn't save the split for \u{201C}\(updated.displayTitle)\u{201D}.",
+                    persist: persist
+                ),
+                message: originalExpense.isShared ? "Split updated" : "Expense split",
+                userId: userId
+            )
+        } else {
+            try await persist()
+            await refresh(userId: userId)
+        }
+    }
+
+    // MARK: - Undo
+
+    /// The loaded copies as people see them, with changes waiting on Undo applied.
+    private func withStagedChanges(_ list: [ExpenseRecord]) -> [ExpenseRecord] {
+        guard !stagedChanges.isEmpty else { return list }
+        return list.compactMap { expense in
+            switch stagedChanges[expense.id]?.kind {
+            case .delete?: return nil
+            case let .save(updated)?: return updated
+            case nil: return expense
+            }
+        }
+    }
+
+    private func stage(_ change: StagedChange, message: String, userId: UUID) {
+        let id = change.original.id
+        stagedChanges[id] = change
+        expenses = withStagedChanges(expenses)
+        proposalExpenses = withStagedChanges(proposalExpenses)
+        detachedExpenses = withStagedChanges(detachedExpenses)
+        summary = makeSummary(expenses, userId: userId)
+        ToastCenter.shared.show(.undoable(
+            message,
+            undo: { [weak self] in self?.undoStagedChange(id: id, userId: userId) },
+            commit: { [weak self] in self?.commitStagedChange(id: id, userId: userId) }
+        ))
+    }
+
+    private func undoStagedChange(id: UUID, userId: UUID) {
+        guard let change = stagedChanges[id], !change.isCommitting else { return }
+        stagedChanges[id] = nil
+        let original = change.original
+        switch change.kind {
+        case .delete:
+            if let index = change.index {
+                expenses.insert(original, at: min(index, expenses.count))
+            } else {
+                detachedExpenses.append(original)
+            }
+        case .save:
+            if let index = expenses.firstIndex(where: { $0.id == id }) { expenses[index] = original }
+            if let index = proposalExpenses.firstIndex(where: { $0.id == id }) { proposalExpenses[index] = original }
+            if let index = detachedExpenses.firstIndex(where: { $0.id == id }) { detachedExpenses[index] = original }
+        }
+        if currentUserId == userId { summary = makeSummary(expenses, userId: userId) }
+        LoamFeedback.tap()
+        switch change.kind {
+        case .delete: ToastCenter.shared.show(.info("Expense restored"))
+        case .save: ToastCenter.shared.show(.info("Change undone"))
+        }
+    }
+
+    /// Saves the change. It stays on screen while saving, then the refresh shows the saved copy.
+    private func commitStagedChange(id: UUID, userId: UUID) {
+        guard let change = stagedChanges[id], !change.isCommitting else { return }
+        stagedChanges[id]?.isCommitting = true
+        let previous = commitTasks[id]
+        let task = Task { [weak self] in
+            await previous?.value
+            // Finishes the save if the app moves to the background meanwhile.
+            let backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "Save expense change")
+            defer { UIApplication.shared.endBackgroundTask(backgroundTask) }
+            var failure: Error?
+            do {
+                try await change.persist()
+            } catch {
+                failure = error
+            }
+            guard let self else { return }
+            self.stagedChanges[id] = nil
+            if let failure {
+                let reason = UserFacingError.message(for: failure) ?? UserFacingError.fallback
+                ToastCenter.shared.showError("\(change.failureMessage) \(reason)")
+            }
+            // Shows the expense as saved, or as it was when the save failed.
+            await self.refresh(userId: userId)
+        }
+        commitTasks[id] = task
+        Task { [weak self] in
+            await task.value
+            if self?.commitTasks[id] == task { self?.commitTasks[id] = nil }
+        }
+    }
+
+    /// Saves every change still waiting on Undo and waits for every save in flight.
+    func settleStagedChanges() async {
+        for id in Array(stagedChanges.keys) { await settleStagedChange(for: id) }
+        for task in Array(commitTasks.values) { await task.value }
+    }
+
+    /// Saves a change still waiting on Undo, and any save in flight, before the
+    /// expense changes again, so the next save starts from the saved version.
+    private func settleStagedChange(for id: UUID) async {
+        if let change = stagedChanges[id], !change.isCommitting {
+            // Only the toast on screen can hold a change, so ending it commits this one.
+            ToastCenter.shared.expireCurrent()
+            if let userId = currentUserId { commitStagedChange(id: id, userId: userId) }
+        }
+        await commitTasks[id]?.value
     }
 
     func respondToShare(
@@ -600,13 +808,22 @@ final class ExpenseStore: ObservableObject {
                 )
                 await recordActivity(kind: itemAction == .reject ? .rejected : .accepted, actorId: userId, expense: target.expense, recipients: [target.expense.createdBy])
             }
+            ToastCenter.shared.showSuccess(Self.shareResponseMessage(action: action, count: targets.count))
             await refresh(userId: userId)
         } catch {
             LoamErrorCapture.capture("expense.share_response_failed")
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
             await refresh(userId: userId)
         }
         if let lookupWarning, lastError == nil { lastError = lookupWarning }
+    }
+
+    nonisolated static func shareResponseMessage(action: ExpenseShareResponseAction, count: Int) -> String {
+        let noun = count == 1 ? "Expense" : "\(count) expenses"
+        switch action {
+        case .reject: return "\(noun) declined"
+        case .accept, .acceptWithTrust: return "\(noun) accepted"
+        }
     }
 
     private func applyOptimisticShareResponse(
@@ -682,9 +899,10 @@ final class ExpenseStore: ObservableObject {
                 let proposer = pendingProposals.first(where: { $0.id == proposalId })?.proposedBy
                 await recordActivity(kind: accept ? .proposalAccepted : .proposalRejected, actorId: userId, expense: expense, recipients: proposer.map { [$0] } ?? [])
             }
+            ToastCenter.shared.showSuccess(accept ? "Suggestion accepted" : "Suggestion declined")
             await refresh(userId: userId)
         } catch {
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
         }
     }
 

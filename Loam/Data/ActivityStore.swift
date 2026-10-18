@@ -6,7 +6,16 @@ final class ActivityStore: ObservableObject {
     @Published private(set) var events: [ActivityEvent] = []
     @Published private(set) var isLoading = false
     @Published private(set) var canLoadMore = false
-    @Published var lastError: String?
+    @Published var lastError: String? {
+        // Every failure reaches the person as a toast, wherever they are in the app.
+        didSet {
+            guard let lastError, lastError != oldValue else { return }
+            let userId = accountId
+            ToastCenter.shared.showError(lastError, action: Toast.Action(title: "Retry") { [weak self] in
+                Task { await self?.refresh(userId: userId) }
+            })
+        }
+    }
     /// Unread events not seen yet; drives the tab and app icon badges.
     @Published private(set) var badgeCount = 0
     /// While Activity is on screen, every refresh marks what it loaded as seen.
@@ -49,7 +58,7 @@ final class ActivityStore: ObservableObject {
             let page = try await repository.fetchUnreadEvents(for: userId, before: nil)
             guard accountId == userId, generation == current else { return }
             setEvents(page.events); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil
-        } catch { guard accountId == userId else { return }; lastError = error.localizedDescription }
+        } catch { guard accountId == userId else { return }; lastError = UserFacingError.message(for: error) }
         if isInboxVisible { await markSeen(userId: userId) } else { await refreshBadgeCount(userId: userId) }
     }
 
@@ -57,7 +66,7 @@ final class ActivityStore: ObservableObject {
         guard !isLoading, canLoadMore, let cursor = nextCursor else { return }; isLoading = true
         let current = generation
         defer { if generation == current { isLoading = false } }
-        do { let page = try await ActivityRepositoryFactory.make().fetchUnreadEvents(for: userId, before: cursor); guard accountId == userId, generation == current else { return }; setEvents(events + page.events, keepingFolds: true); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil } catch { guard generation == current else { return }; lastError = error.localizedDescription }
+        do { let page = try await ActivityRepositoryFactory.make().fetchUnreadEvents(for: userId, before: cursor); guard accountId == userId, generation == current else { return }; setEvents(events + page.events, keepingFolds: true); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil } catch { guard generation == current else { return }; lastError = UserFacingError.message(for: error) }
         if isInboxVisible, generation == current { await markSeen(userId: userId) }
     }
 
@@ -73,7 +82,7 @@ final class ActivityStore: ObservableObject {
             await refreshBadgeCount(userId: userId)
         } catch {
             guard accountId == userId else { return }
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
             await refresh(userId: userId)
         }
     }

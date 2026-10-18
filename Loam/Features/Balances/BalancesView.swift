@@ -114,14 +114,6 @@ struct BalancesView: View {
                     }
             }
         }
-        .alert("Couldn’t load balances", isPresented: Binding(
-            get: { balanceStore.lastError != nil },
-            set: { if !$0 { balanceStore.lastError = nil } }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(balanceStore.lastError ?? "")
-        }
     }
 
     private var repaymentButton: some View {

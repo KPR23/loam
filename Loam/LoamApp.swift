@@ -20,6 +20,7 @@ struct LoamApp: App {
     @StateObject private var activityStore = ActivityStore()
     @StateObject private var subscriptionStore = SubscriptionStore()
     @StateObject private var pushStore = PushNotificationStore.shared
+    @StateObject private var toastCenter = ToastCenter.shared
 
     init() {
         #if DEBUG
@@ -72,6 +73,13 @@ struct LoamApp: App {
                         .environmentObject(appLock)
                 }
             )
+            .background(
+                ToastWindowInstaller(center: toastCenter) { onFrameChange in
+                    ToastOverlay(center: toastCenter, onFrameChange: onFrameChange)
+                        .preferredColorScheme(appearance.colorScheme)
+                        .tint(accentColor.color)
+                }
+            )
             .environmentObject(navigator)
             .task {
                 LegacyDemoFixtureCleanup.removeIfNeeded()
@@ -118,7 +126,11 @@ struct LoamApp: App {
                 }
             }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .background { appLock.appDidEnterBackground() }
+                if phase == .background {
+                    // A change still waiting on Undo is saved before iOS can suspend the app.
+                    toastCenter.expireCurrent()
+                    appLock.appDidEnterBackground()
+                }
                 if phase == .active {
                     appLock.refreshMethod()
                     Task {

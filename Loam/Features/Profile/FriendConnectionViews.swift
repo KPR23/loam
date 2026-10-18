@@ -106,8 +106,11 @@ struct FriendsView: View {
                 guard let friend = friendPendingRemoval else { return }
                 friendPendingRemoval = nil
                 Task {
-                    do { try await connectionStore.remove(friend) }
-                    catch { removalError = error.localizedDescription }
+                    do {
+                        try await connectionStore.remove(friend)
+                        ToastCenter.shared.showSuccess("Removed \(friend.displayName)")
+                    }
+                    catch { removalError = UserFacingError.message(for: error) }
                 }
             }
         } message: {
@@ -115,11 +118,7 @@ struct FriendsView: View {
                  ? "Anything they owe or are owed is settled, and expenses you already shared stay in your history."
                  : "You won’t be able to share new expenses until you connect again. Expenses you already shared stay in your history.")
         }
-        .alert("Couldn’t remove friend", isPresented: Binding(get: { removalError != nil }, set: { if !$0 { removalError = nil } })) {
-            Button("OK") { removalError = nil }
-        } message: {
-            Text(removalError ?? "")
-        }
+        .errorToast($removalError)
     }
 }
 
@@ -174,7 +173,7 @@ struct ShareConnectionCodeView: View {
         .onChange(of: subscriptions.isPro) { _, isPro in
             if isPro, requiresPro { requiresPro = false; Task { await create() } }
         }
-        .alert("Couldn’t create a code", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
+        .errorToast($error)
     }
     /// The server enforces the same limit; checking first skips a request that would be refused.
     private var needsPro: Bool {
@@ -187,7 +186,7 @@ struct ShareConnectionCodeView: View {
             if let active = try await connectionStore.activeInvitation() { invitation = active }
             else if needsPro { requiresPro = true }
             else { await createInvitation() }
-        } catch { self.error = error.localizedDescription }
+        } catch { self.error = UserFacingError.message(for: error) }
     }
     private func createInvitation() async {
         do { invitation = try await connectionStore.createInvitation() }
@@ -196,12 +195,12 @@ struct ShareConnectionCodeView: View {
             await subscriptions.syncBackendEntitlement()
             do { invitation = try await connectionStore.createInvitation() }
             catch ConnectionError.proRequired { requiresPro = true }
-            catch { self.error = error.localizedDescription }
+            catch { self.error = UserFacingError.message(for: error) }
         }
         catch ConnectionError.proRequired { requiresPro = true }
-        catch { self.error = error.localizedDescription }
+        catch { self.error = UserFacingError.message(for: error) }
     }
-    private func revoke() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; do { try await connectionStore.revokeInvitation(); invitation = nil } catch { self.error = error.localizedDescription } }
+    private func revoke() async { guard !isWorking else { return }; isWorking = true; defer { isWorking = false }; do { try await connectionStore.revokeInvitation(); invitation = nil } catch { self.error = UserFacingError.message(for: error) } }
 }
 
 private struct ConnectionCodePrompt: ViewModifier {
@@ -232,7 +231,7 @@ private struct ConnectionCodePrompt: ViewModifier {
             } message: {
                 Text("Connecting allows shared expenses. It does not expose personal expenses or approve splits automatically.")
             }
-            .alert("Connection unavailable", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
+            .errorToast($error)
             .onChange(of: isPresented) { _, shown in
                 if shown { code = ""; inviterName = nil; error = nil }
             }
@@ -249,9 +248,9 @@ private struct ConnectionCodePrompt: ViewModifier {
     private func preview() async {
         guard normalizedCode.count == 8 else { error = "Codes are eight characters long. Check it and try again."; return }
         isWorking = true; defer { isWorking = false }
-        do { inviterName = try await connectionStore.preview(code: normalizedCode) } catch { self.error = error.localizedDescription }
+        do { inviterName = try await connectionStore.preview(code: normalizedCode) } catch { self.error = UserFacingError.message(for: error) }
     }
-    private func redeem() async { isWorking = true; defer { isWorking = false }; do { let friend = try await connectionStore.redeem(code: normalizedCode); inviterName = nil; onConnected?(friend) } catch { self.error = error.localizedDescription } }
+    private func redeem() async { isWorking = true; defer { isWorking = false }; do { let friend = try await connectionStore.redeem(code: normalizedCode); inviterName = nil; onConnected?(friend); ToastCenter.shared.showSuccess("Connected with \(friend.displayName)") } catch { self.error = UserFacingError.message(for: error) } }
 }
 
 /// Asks for a name and adds someone without an account as a friend.
@@ -273,11 +272,7 @@ private struct PlaceholderFriendPrompt: ViewModifier {
             } message: {
                 Text("They appear in your friends like anyone else, and every expense you split with them is accepted right away.")
             }
-            .alert("Couldn’t add them", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-                Button("OK") { error = nil }
-            } message: {
-                Text(error ?? "")
-            }
+            .errorToast($error)
             .onChange(of: isPresented) { _, shown in
                 if shown { name = ""; error = nil }
             }
@@ -288,8 +283,11 @@ private struct PlaceholderFriendPrompt: ViewModifier {
     private func create() async {
         let chosen = trimmedName
         guard !chosen.isEmpty else { return }
-        do { onCreated(try await connectionStore.createPlaceholder(name: chosen)) }
-        catch { self.error = error.localizedDescription }
+        do {
+            onCreated(try await connectionStore.createPlaceholder(name: chosen))
+            ToastCenter.shared.showSuccess("Added \(chosen)")
+        }
+        catch { self.error = UserFacingError.message(for: error) }
     }
 }
 

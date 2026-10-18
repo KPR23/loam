@@ -19,7 +19,10 @@ final class AuthSession: ObservableObject {
     @Published private(set) var userId: UUID?
     @Published private(set) var displayName: String?
     @Published private(set) var email: String?
-    @Published var lastError: String?
+    @Published var lastError: String? {
+        // Every failure reaches the person as a toast, wherever they are in the app.
+        didSet { if let lastError, lastError != oldValue { ToastCenter.shared.showError(lastError) } }
+    }
     @Published private(set) var deletionPending = false
     @Published private(set) var deletionStatus: DeletionStatus = .none
     @Published private(set) var deletionUpdatedAt: Date?
@@ -165,7 +168,7 @@ final class AuthSession: ObservableObject {
               let tokenData = credential.identityToken,
               let idToken = String(data: tokenData, encoding: .utf8) else {
             LoamErrorCapture.capture("auth.apple_identity_token_unavailable")
-            lastError = "Could not read Apple identity token."
+            lastError = "Sign in with Apple didn't finish. Try again."
             return
         }
 
@@ -198,7 +201,7 @@ final class AuthSession: ObservableObject {
             }
         } catch {
             LoamErrorCapture.capture("auth.apple_sign_in_failed")
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
             state = .signedOut
         }
     }
@@ -248,7 +251,7 @@ final class AuthSession: ObservableObject {
             displayName = account.displayName
             listenForAuthChanges(client: client, expectedUserId: expectedUserId)
         } catch {
-            lastError = error.localizedDescription
+            lastError = UserFacingError.message(for: error)
             await restoreMainAccountAfterFailedSwitch()
         }
     }
@@ -356,7 +359,7 @@ final class AuthSession: ObservableObject {
             // The server may have committed acceptance before the response was
             // lost. Preserve the receipt and reconcile against its status endpoint.
             LoamErrorCapture.capture("account_deletion.response_uncertain")
-            lastError = "We couldn’t confirm the request response. Check deletion status before trying again."
+            lastError = "Couldn't confirm your deletion request. Check its status before trying again."
             await refreshDeletionStatus()
             try? await client.auth.signOut(scope: .local)
             clearSession()
@@ -485,7 +488,7 @@ final class AuthSession: ObservableObject {
             } catch {
                 await PushNotificationStore.shared.signOutFailed()
                 LoamErrorCapture.capture("auth.sign_out_failed")
-                lastError = error.localizedDescription
+                lastError = UserFacingError.message(for: error)
                 return
             }
         }

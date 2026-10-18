@@ -147,6 +147,10 @@
 		F50C9A595705F5CC230E5925 /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F255357FFEE1179BDFAEF2 /* AppLockView.swift */; };
 		7534F780698EFC70E52229F3 /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */; };
 		C4A7E1D2B3F4A5968778C101 /* CategoryCustomizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A7E1D2B3F4A5968778C102 /* CategoryCustomizerTests.swift */; };
+		B5333E2BC9ABA402B8BCE74A /* ToastCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C1F262C926CE9DD1E859578 /* ToastCenter.swift */; };
+		3838CA4EFC4883586C21FE8E /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5190CCFBEB409353A715E3 /* ToastView.swift */; };
+		C9F0D906C34F98D9DCAB1725 /* UserFacingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B20FCC4A367D8CDB5CBC64 /* UserFacingError.swift */; };
+		3DB925F2182F0511CD7BDC47 /* ToastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2694D8353B8ACA4A5A448F /* ToastTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -312,6 +316,10 @@
 		67F255357FFEE1179BDFAEF2 /* AppLockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockView.swift; sourceTree = "<group>"; };
 		E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockTests.swift; sourceTree = "<group>"; };
 		C4A7E1D2B3F4A5968778C102 /* CategoryCustomizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryCustomizerTests.swift; sourceTree = "<group>"; };
+		4C1F262C926CE9DD1E859578 /* ToastCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastCenter.swift; sourceTree = "<group>"; };
+		5C5190CCFBEB409353A715E3 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
+		69B20FCC4A367D8CDB5CBC64 /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
+		AD2694D8353B8ACA4A5A448F /* ToastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -472,6 +480,7 @@
 				3C7DC294963C863BC4BE3C4D /* Siri */,
 				84D2147BAF88479699EF6841 /* Subscriptions */,
 				62F1CB0A3659025B41BD37A0 /* Telemetry */,
+				3C62B0C5B46BDDD478D13870 /* Toasts */,
 			);
 			path = System;
 			sourceTree = "<group>";
@@ -619,6 +628,7 @@
 				6C0334CD52C6BA2DB298B560 /* SplitPartnerOptionTests.swift */,
 				B3AA130246F214EF2F1E6209 /* SplitValidationTests.swift */,
 				3E49E2A84778450763BB7A2F /* SupabaseConfigTests.swift */,
+				AD2694D8353B8ACA4A5A448F /* ToastTests.swift */,
 				0A8497DC733F24030334FBDB /* UITestStorageTests.swift */,
 				DF8A5809B2CCE000E48B749B /* WireFormatTests.swift */,
 			);
@@ -727,6 +737,16 @@
 				67F255357FFEE1179BDFAEF2 /* AppLockView.swift */,
 			);
 			path = Security;
+			sourceTree = "<group>";
+		};
+		3C62B0C5B46BDDD478D13870 /* Toasts */ = {
+			isa = PBXGroup;
+			children = (
+				4C1F262C926CE9DD1E859578 /* ToastCenter.swift */,
+				5C5190CCFBEB409353A715E3 /* ToastView.swift */,
+				69B20FCC4A367D8CDB5CBC64 /* UserFacingError.swift */,
+			);
+			path = Toasts;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -903,6 +923,7 @@
 				F2C7F92037180D928A23DEB6 /* SplitValidationTests.swift in Sources */,
 				40CE985228700649412B0057 /* SupabaseConfigTests.swift in Sources */,
 				A15AFB79C7F55A44566E7A2E /* TestSupport.swift in Sources */,
+				3DB925F2182F0511CD7BDC47 /* ToastTests.swift in Sources */,
 				F6A051DA5229C09A10E1D723 /* UITestStorageTests.swift in Sources */,
 				1FE82009647DEFA6B7980F0A /* WireFormatTests.swift in Sources */,
 			);
@@ -1026,6 +1047,9 @@
 				8B95AFDA7E6069FB3CDE3769 /* SupabaseConnectionRepository.swift in Sources */,
 				EC885C4695DC4841AD1668D2 /* SupabaseExpenseRepository.swift in Sources */,
 				FDF41AA79A0BDAB289F21E58 /* Telemetry.swift in Sources */,
+				B5333E2BC9ABA402B8BCE74A /* ToastCenter.swift in Sources */,
+				3838CA4EFC4883586C21FE8E /* ToastView.swift in Sources */,
+				C9F0D906C34F98D9DCAB1725 /* UserFacingError.swift in Sources */,
 				A155F15886F6FED9D59F1145 /* TestAccount.swift in Sources */,
 				8D81E161CCD796A4BD558382 /* TestPartner.swift in Sources */,
 			);

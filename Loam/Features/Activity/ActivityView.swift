@@ -9,7 +9,6 @@ struct ActivityView: View {
     @EnvironmentObject private var pushStore: PushNotificationStore
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedExpense: ExpenseRecord?
-    @State private var unavailableMessage: String?
     @AppStorage("loam.notificationPromptDismissed") private var promptDismissed = false
 
     var body: some View {
@@ -90,23 +89,6 @@ struct ActivityView: View {
             // Answers given on the detail screen read their requests; show that on return.
             guard oldValue != nil, newValue == nil else { return }
             Task { await reload() }
-        }
-        .alert("Expense unavailable", isPresented: Binding(
-            get: { unavailableMessage != nil },
-            set: { if !$0 { unavailableMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(unavailableMessage ?? "")
-        }
-        .alert("Couldn’t load activity", isPresented: Binding(
-            get: { activityStore.lastError != nil },
-            set: { if !$0 { activityStore.lastError = nil } }
-        )) {
-            Button("Retry") { Task { await reload() } }
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(activityStore.lastError ?? "")
         }
     }
 
@@ -208,7 +190,7 @@ struct ActivityView: View {
         if let fetched = await expenseStore.fetchExpense(id: expenseId, userId: userId) {
             selectedExpense = fetched
         } else {
-            unavailableMessage = "This expense was deleted or you no longer have access to it."
+            ToastCenter.shared.show(.warning("This expense was deleted or you no longer have access to it."))
         }
     }
 
@@ -261,14 +243,14 @@ struct ActivityView: View {
 
     private func open(_ event: ActivityEvent) {
         guard let id = event.expenseId, let userId = authSession.userId else {
-            unavailableMessage = "This expense is no longer available."
+            ToastCenter.shared.show(.warning("This expense is no longer available."))
             return
         }
         Task {
             if let fetched = await expenseStore.fetchExpense(id: id, userId: userId) {
                 selectedExpense = fetched
             } else {
-                unavailableMessage = "This expense was deleted or you no longer have access to it."
+                ToastCenter.shared.show(.warning("This expense was deleted or you no longer have access to it."))
             }
         }
     }
