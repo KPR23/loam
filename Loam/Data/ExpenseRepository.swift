@@ -3,6 +3,8 @@ import Foundation
 protocol ExpenseRepository: Sendable {
     func fetchExpenses(for userId: UUID, in period: DatePeriod) async throws -> [ExpenseRecord]
     func fetchExpenses(ids: [UUID]) async throws -> [ExpenseRecord]
+    /// Expenses of `userId` (never anyone else's) whose title, note or place contains `query`, newest first.
+    func searchExpenses(matching query: String, for userId: UUID, limit: Int) async throws -> [ExpenseRecord]
     /// Expenses still waiting for `userId` to answer, whatever month they fall in.
     func fetchPendingAcceptance(for userId: UUID) async throws -> [ExpenseRecord]
     func create(_ expense: ExpenseRecord) async throws -> ExpenseRecord

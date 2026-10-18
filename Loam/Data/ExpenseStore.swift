@@ -79,6 +79,21 @@ final class ExpenseStore: ObservableObject {
         await refresh(userId: userId)
     }
 
+    /// Searches the signed-in account's expenses across all months. Staged (not yet saved)
+    /// deletes and edits are applied so results match what Home shows.
+    func search(_ query: String, userId: UUID?) async -> [ExpenseRecord] {
+        guard let userId else { return [] }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return [] }
+        do {
+            let found = try await primaryRepository.searchExpenses(matching: trimmed, for: userId, limit: 50)
+            return withStagedChanges(found).filter { !$0.isPendingAcceptance(for: userId) }
+        } catch {
+            lastError = UserFacingError.message(for: error)
+            return []
+        }
+    }
+
     func refresh(userId: UUID?) async {
         let sameAccount = currentUserId == userId
         // Changes waiting on Undo belong to the account that made them.

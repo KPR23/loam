@@ -207,6 +207,19 @@ actor SupabaseExpenseRepository: ExpenseRepository {
         return rows.compactMap { $0.toRecord() }
     }
 
+    func searchExpenses(matching query: String, for userId: UUID, limit: Int) async throws -> [ExpenseRecord] {
+        // The database function only ever returns expenses the signed-in account created
+        // or holds a share of; the filter below keeps that true if the server ever slips.
+        let ids: [UUID] = try await client.rpc("search_expenses", params: SearchExpensesParams(
+            pQuery: query, pLimit: limit
+        )).execute().value
+        let rows = try await fetchExpenses(ids: ids)
+        let order = Dictionary(uniqueKeysWithValues: ids.enumerated().map { ($1, $0) })
+        return rows
+            .filter { ($0.shareRecord(for: userId)?.status ?? .rejected) != .rejected || $0.createdBy == userId }
+            .sorted { (order[$0.id] ?? 0) < (order[$1.id] ?? 0) }
+    }
+
     func fetchPendingProposals(for userId: UUID) async throws -> [ExpenseEditProposal] {
         let rows: [ExpenseEditProposalDTO] = try await client
             .from("expense_edit_proposal")
@@ -332,6 +345,11 @@ private struct SaveExpenseParams: Encodable {
     let pExpense: ExpenseInsertDTO
     let pExpectedVersion: Int?
     enum CodingKeys: String, CodingKey { case pExpense = "p_expense", pExpectedVersion = "p_expected_version" }
+}
+private struct SearchExpensesParams: Encodable {
+    let pQuery: String
+    let pLimit: Int
+    enum CodingKeys: String, CodingKey { case pQuery = "p_query", pLimit = "p_limit" }
 }
 private struct SaveRecurringParams: Encodable {
     let pRule: RecurringRuleInsertDTO

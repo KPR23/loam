@@ -14,6 +14,10 @@ struct HomeView: View {
     @State private var actionRequest: ExpenseActionRequest?
     @State private var selectedExpense: ExpenseRecord?
     @State private var showAllPendingExpenses = false
+    @State private var searchText = ""
+    @State private var isSearchPresented = false
+    @State private var searchResults: [ExpenseRecord] = []
+    @State private var isSearching = false
 
     private let homePendingPreviewLimit = 2
 
@@ -74,6 +78,19 @@ struct HomeView: View {
                     }
                 }
             }
+            // Pull down on the list to reveal the search field; it stays hidden until then.
+            .searchable(
+                text: $searchText,
+                isPresented: $isSearchPresented,
+                placement: .navigationBarDrawer(displayMode: .automatic),
+                prompt: "Search expenses"
+            )
+            .overlay {
+                if isSearchPresented { searchResultsView }
+            }
+            .task(id: searchText) {
+                await runSearch()
+            }
             .task(id: authSession.userId) {
                 await expenseStore.refresh(userId: authSession.userId)
             }
@@ -93,6 +110,64 @@ struct HomeView: View {
             }
         }
         .expenseActionsHost(selectedExpense: $selectedExpense, request: $actionRequest)
+    }
+
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Waits for a pause in typing, then searches; a newer keystroke cancels this task.
+    private func runSearch() async {
+        let query = trimmedSearchText
+        guard query.count >= 2 else {
+            searchResults = []
+            isSearching = false
+            return
+        }
+        isSearching = true
+        try? await Task.sleep(for: .milliseconds(250))
+        guard !Task.isCancelled else { return }
+        let found = await expenseStore.search(query, userId: authSession.userId)
+        guard !Task.isCancelled else { return }
+        searchResults = found
+        isSearching = false
+    }
+
+    private var searchResultsByDay: [(date: Date, expenses: [ExpenseRecord])] {
+        let calendar = AppPreferences.calendar
+        return Dictionary(grouping: searchResults) { calendar.startOfDay(for: $0.spentAt) }
+            .map { (date: $0.key, expenses: $0.value.sorted { $0.createdAt > $1.createdAt }) }
+            .sorted { $0.date > $1.date }
+    }
+
+    @ViewBuilder
+    private var searchResultsView: some View {
+        List {
+            ForEach(searchResultsByDay, id: \.date) { section in
+                Section {
+                    ForEach(section.expenses) { expenseRow($0) }
+                } header: {
+                    Text(section.date.formatted(
+                        Date.FormatStyle(timeZone: AppPreferences.calendar.timeZone).day().month(.abbreviated).year()
+                    ))
+                    .font(.subheadline)
+                    .foregroundStyle(HomeTheme.secondary)
+                    .textCase(nil)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
+        .scrollDismissesKeyboard(.interactively)
+        .overlay {
+            if trimmedSearchText.count < 2 {
+                ContentUnavailableView("Search expenses", systemImage: "magnifyingglass",
+                    description: Text("Find an expense by its title, note or place."))
+            } else if searchResults.isEmpty && !isSearching {
+                ContentUnavailableView.search(text: trimmedSearchText)
+            }
+        }
     }
 
     /// Matches Record repayment on Balances: a full-width accent capsule with subheadline text.

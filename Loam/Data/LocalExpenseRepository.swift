@@ -30,6 +30,21 @@ actor LocalExpenseRepository: ExpenseRepository {
         return try load().filter { wanted.contains($0.id) }
     }
 
+    func searchExpenses(matching query: String, for userId: UUID, limit: Int) async throws -> [ExpenseRecord] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard needle.count >= 2 else { return [] }
+        func matches(_ text: String?) -> Bool {
+            text?.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
+        let found = try load()
+            .filter { expense in
+                guard let share = expense.shareRecord(for: userId), share.status != .rejected else { return false }
+                return matches(expense.title) || matches(expense.note) || matches(expense.location?.name)
+            }
+            .sorted { $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt) }
+        return Array(found.prefix(limit))
+    }
+
     func fetchPendingAcceptance(for userId: UUID) async throws -> [ExpenseRecord] {
         try load().filter { $0.isPendingAcceptance(for: userId) }
     }
