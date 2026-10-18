@@ -224,6 +224,7 @@ struct OpenLoamScreenIntent: AppIntent {
     }
 }
 
+/// Siri also hears "Loam" in RC builds (named "Loam RC") through INAlternativeAppNames in Info.plist.
 struct LoamShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -232,6 +233,12 @@ struct LoamShortcuts: AppShortcutsProvider {
                 "Add an expense in \(.applicationName)",
                 "Add expense in \(.applicationName)",
                 "Log an expense in \(.applicationName)",
+                "Add an expense to \(.applicationName)",
+                "Add expense to \(.applicationName)",
+                "Log an expense with \(.applicationName)",
+                "New expense in \(.applicationName)",
+                "\(.applicationName) add an expense",
+                "\(.applicationName) add expense",
                 "Add a \(\.$category) expense in \(.applicationName)",
                 "Split an expense with \(\.$friend) in \(.applicationName)",
             ],
@@ -244,6 +251,8 @@ struct LoamShortcuts: AppShortcutsProvider {
                 "How much have I spent in \(.applicationName)",
                 "How much did I spend this month in \(.applicationName)",
                 "Check my spending in \(.applicationName)",
+                "Check my spending with \(.applicationName)",
+                "\(.applicationName) spending",
                 "How much did I spend on \(\.$category) in \(.applicationName)",
             ],
             shortTitle: "Monthly Spending",
@@ -253,6 +262,8 @@ struct LoamShortcuts: AppShortcutsProvider {
             intent: GetBalancesIntent(),
             phrases: [
                 "Check my balances in \(.applicationName)",
+                "Check my balances with \(.applicationName)",
+                "\(.applicationName) balances",
                 "Who owes me in \(.applicationName)",
                 "Who do I owe in \(.applicationName)",
                 "What's my balance with \(\.$friend) in \(.applicationName)",
@@ -265,6 +276,8 @@ struct LoamShortcuts: AppShortcutsProvider {
             phrases: [
                 "Settle up in \(.applicationName)",
                 "Record a repayment in \(.applicationName)",
+                "Settle up with \(.applicationName)",
+                "\(.applicationName) settle up",
                 "Settle up with \(\.$friend) in \(.applicationName)",
             ],
             shortTitle: "Settle Up",
@@ -275,6 +288,7 @@ struct LoamShortcuts: AppShortcutsProvider {
             phrases: [
                 "Do I have pending expenses in \(.applicationName)",
                 "Check pending expenses in \(.applicationName)",
+                "\(.applicationName) pending expenses",
             ],
             shortTitle: "Pending Expenses",
             systemImageName: "clock"
@@ -284,6 +298,7 @@ struct LoamShortcuts: AppShortcutsProvider {
             phrases: [
                 "Open \(\.$screen) in \(.applicationName)",
                 "Show \(\.$screen) in \(.applicationName)",
+                "Open \(.applicationName) \(\.$screen)",
             ],
             shortTitle: "Open Screen",
             systemImageName: "rectangle.portrait.and.arrow.right"

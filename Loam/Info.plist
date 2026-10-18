@@ -20,6 +20,21 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Loam</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>lohm</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Loam app</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>lohm app</string>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LOAM_ENVIRONMENT</key>
