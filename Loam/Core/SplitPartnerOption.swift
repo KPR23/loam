@@ -1,6 +1,6 @@
 import Foundation
 
-struct SplitPartnerOption: Identifiable, Equatable, Hashable, Sendable {
+struct SplitPartnerOption: Identifiable, Equatable, Hashable, Codable, Sendable {
     let userId: UUID
     let displayName: String
     /// Someone added by name who has no account. Expenses with them are accepted at once.

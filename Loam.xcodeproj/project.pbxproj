@@ -146,6 +146,10 @@
 		E0C5B7367EE0F2E2EBF5F59C /* AppLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21363752A9770E523A548AAE /* AppLock.swift */; };
 		F50C9A595705F5CC230E5925 /* AppLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F255357FFEE1179BDFAEF2 /* AppLockView.swift */; };
 		7534F780698EFC70E52229F3 /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */; };
+		211F96511E9074ACDECBFBFE /* Connectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D120BE9CC8F79522046595D /* Connectivity.swift */; };
+		817265BBBB80FF5DD31CE764 /* OfflineCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C0C1BAD52AB76AA084AC9A /* OfflineCache.swift */; };
+		BC3E133D7D91DBF067492484 /* PendingChanges.swift in Sources */ = {isa = PBXBuildFile; fileRef = 857B4A137CDB56EFED20C2C0 /* PendingChanges.swift */; };
+		01E6C244F5D39888B700F57D /* OfflineSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54220007002B0CCCA774D842 /* OfflineSyncTests.swift */; };
 		C4A7E1D2B3F4A5968778C101 /* CategoryCustomizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A7E1D2B3F4A5968778C102 /* CategoryCustomizerTests.swift */; };
 		B5333E2BC9ABA402B8BCE74A /* ToastCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C1F262C926CE9DD1E859578 /* ToastCenter.swift */; };
 		3838CA4EFC4883586C21FE8E /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5190CCFBEB409353A715E3 /* ToastView.swift */; };
@@ -315,6 +319,10 @@
 		21363752A9770E523A548AAE /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		67F255357FFEE1179BDFAEF2 /* AppLockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockView.swift; sourceTree = "<group>"; };
 		E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockTests.swift; sourceTree = "<group>"; };
+		4D120BE9CC8F79522046595D /* Connectivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Connectivity.swift; sourceTree = "<group>"; };
+		21C0C1BAD52AB76AA084AC9A /* OfflineCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCache.swift; sourceTree = "<group>"; };
+		857B4A137CDB56EFED20C2C0 /* PendingChanges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingChanges.swift; sourceTree = "<group>"; };
+		54220007002B0CCCA774D842 /* OfflineSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncTests.swift; sourceTree = "<group>"; };
 		C4A7E1D2B3F4A5968778C102 /* CategoryCustomizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryCustomizerTests.swift; sourceTree = "<group>"; };
 		4C1F262C926CE9DD1E859578 /* ToastCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastCenter.swift; sourceTree = "<group>"; };
 		5C5190CCFBEB409353A715E3 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
@@ -610,6 +618,7 @@
 			children = (
 				13D25BE098D9080B05430BFE /* Support */,
 				E19210E5B98CB2B4EC76B11E /* AppLockTests.swift */,
+				54220007002B0CCCA774D842 /* OfflineSyncTests.swift */,
 				C4A7E1D2B3F4A5968778C102 /* CategoryCustomizerTests.swift */,
 				08BD81EDCA6E65CC7B05C125 /* BalanceSimplifierTests.swift */,
 				0FE8A1B337206BA768F605F5 /* BalanceTests.swift */,
@@ -679,6 +688,9 @@
 				8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */,
 				0E1012DBC07DE41C99246EE9 /* ExpenseRepositoryFactory.swift */,
 				591C0E16AC62C2272FA783EA /* ExpenseStore.swift */,
+				857B4A137CDB56EFED20C2C0 /* PendingChanges.swift */,
+				21C0C1BAD52AB76AA084AC9A /* OfflineCache.swift */,
+				4D120BE9CC8F79522046595D /* Connectivity.swift */,
 				56BB79807AD4FC553913CD02 /* LegacyDemoFixtureCleanup.swift */,
 				0ACAD5F32C6AA82B9023FCEF /* LocalActivityRepository.swift */,
 				77BE2F6FFD644CB69CAA1578 /* LocalBalanceRepository.swift */,
@@ -904,6 +916,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7534F780698EFC70E52229F3 /* AppLockTests.swift in Sources */,
+				01E6C244F5D39888B700F57D /* OfflineSyncTests.swift in Sources */,
 				C4A7E1D2B3F4A5968778C101 /* CategoryCustomizerTests.swift in Sources */,
 				945CD0EFC0BA56FC01958837 /* BalanceSimplifierTests.swift in Sources */,
 				9989E533A949D6EFCA50F732 /* BalanceTests.swift in Sources */,
@@ -988,6 +1001,9 @@
 				174A10F4525A9C72D9869593 /* ExpenseShareAcceptance.swift in Sources */,
 				CF22202F705F49295851F0ED /* ExpenseShareStatus.swift in Sources */,
 				79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */,
+				BC3E133D7D91DBF067492484 /* PendingChanges.swift in Sources */,
+				817265BBBB80FF5DD31CE764 /* OfflineCache.swift in Sources */,
+				211F96511E9074ACDECBFBFE /* Connectivity.swift in Sources */,
 				B2F75633AB5044BB813FD2A1 /* FeatureFlags.swift in Sources */,
 				D0664FAE4C2311269CBD8628 /* Formatters.swift in Sources */,
 				3642DFE98565927A4CADF9BA /* FriendConnectionViews.swift in Sources */,

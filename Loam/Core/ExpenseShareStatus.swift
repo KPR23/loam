@@ -10,7 +10,7 @@ enum ExpenseShareStatus: String, Codable, Hashable, Sendable {
     }
 }
 
-enum ExpenseShareResponseAction: String, Sendable {
+enum ExpenseShareResponseAction: String, Codable, Sendable {
     case accept
     case reject
     case acceptWithTrust = "accept_with_trust"

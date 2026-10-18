@@ -518,7 +518,7 @@ struct RecurringRuleDTO: Decodable, Sendable {
     }
 }
 
-enum RecurringDeletionMode: Sendable {
+enum RecurringDeletionMode: String, Codable, Sendable {
     /// Remove this occurrence only; future repeats continue.
     case occurrenceOnly
     /// Remove this occurrence and stop the recurring rule.

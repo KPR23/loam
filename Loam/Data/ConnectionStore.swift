@@ -33,6 +33,15 @@ final class ConnectionStore: ObservableObject {
             let fetched = try await SupabaseConnectionRepository(client: client).listConnections()
             guard requestID == token, accountId == userId else { return }
             connections = fetched; ConnectionDirectory.shared.replace(fetched); hasLoadedConnections = true; lastError = nil
+            OfflineCache.save(fetched, key: "connections", userId: userId)
+        } catch where Connectivity.isOfflineError(error) {
+            // Offline, friends as last loaded, so expenses can still be split with them.
+            guard requestID == token, accountId == userId else { return }
+            if let saved = OfflineCache.load([SplitPartnerOption].self, key: "connections", userId: userId) {
+                connections = saved; ConnectionDirectory.shared.replace(saved); hasLoadedConnections = true; lastError = nil
+            } else {
+                lastError = UserFacingError.message(for: error)
+            }
         } catch { guard requestID == token else { return }; lastError = UserFacingError.message(for: error) }
     }
     func createInvitation() async throws -> ConnectionInvitation { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; return try await LoamErrorCapture.withCapture("connections.invitation_create_failed") { try await SupabaseConnectionRepository(client: client).createInvitation() } }

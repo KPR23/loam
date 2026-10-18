@@ -18,6 +18,8 @@ struct HomeExpenseRow: View {
     var onTap: (() -> Void)? = nil
     /// When true, the recurring glyph uses `HomeTheme.recurringHighlight` (seed occurrence of that series only).
     var highlightsRecurringIcon: Bool = false
+    /// Changed offline and not on the server yet.
+    var isWaitingToSync: Bool = false
 
     private var myShare: Money {
         guard let myUserId else { return expense.money }
@@ -95,6 +97,9 @@ struct HomeExpenseRow: View {
 
             VStack(alignment: .trailing, spacing: 2) {
                 HStack(spacing: 6) {
+                    if isWaitingToSync {
+                        amountAccessoryIcon("arrow.triangle.2.circlepath", color: .orange)
+                    }
                     if acceptance == nil {
                         if expense.isRecurring {
                             amountAccessoryIcon(
@@ -161,6 +166,9 @@ struct HomeExpenseRow: View {
         }
         if expense.isRecurring {
             parts.append("recurring")
+        }
+        if isWaitingToSync {
+            parts.append("waiting to sync")
         }
         return parts.joined(separator: ", ")
     }

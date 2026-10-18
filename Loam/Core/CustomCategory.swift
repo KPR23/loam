@@ -97,9 +97,25 @@ final class CustomCategoryStore {
         if userId != self.userId { categories = []; hidden = [] }
         self.userId = userId
         guard let userId else { return }
-        guard let loaded = try? await repository.load(userId: userId), self.userId == userId else { return }
+        let keepsCopy = !ExpenseRepositoryFactory.usesLocalStorage
+        let loaded: (categories: [CustomCategory], hidden: Set<ExpenseCategory>)
+        if let fetched = try? await repository.load(userId: userId) {
+            loaded = fetched
+            if keepsCopy { OfflineCache.save(SavedCategories(categories: fetched.categories, hidden: fetched.hidden), key: "categories", userId: userId) }
+        } else if keepsCopy, let saved = OfflineCache.load(SavedCategories.self, key: "categories", userId: userId) {
+            // Offline, the categories as last loaded, so new expenses can still use them.
+            loaded = (saved.categories, saved.hidden)
+        } else {
+            return
+        }
+        guard self.userId == userId else { return }
         categories = loaded.categories.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         hidden = loaded.hidden
+    }
+
+    private struct SavedCategories: Codable {
+        var categories: [CustomCategory]
+        var hidden: Set<ExpenseCategory>
     }
 
     /// Creates or updates one of the member's categories; the owner is always the signed-in member.
