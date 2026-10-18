@@ -142,6 +142,9 @@ enum SiriAmount {
     /// One billion in major units; anything above is a misheard number.
     static let maximumMinor = 100_000_000_000
 
+    /// Asked when the amount is missing, zero, or in a currency Loam doesn't use.
+    static var askAgain: IntentDialog { "How much was it, in złoty, euros or dollars?" }
+
     static func money(from amount: IntentCurrencyAmount) throws -> Money {
         try money(amount: amount.amount, currencyCode: amount.currencyCode)
     }

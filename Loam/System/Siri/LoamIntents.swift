@@ -33,7 +33,10 @@ struct AddExpenseIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let services = AppServices.shared
         let userId = try await services.signedInUserId()
-        let money = try SiriAmount.money(from: amount)
+        // Shortcuts can hand over an empty amount in the region's currency; ask instead of failing.
+        guard let money = try? SiriAmount.money(from: amount) else {
+            throw $amount.needsValueError(SiriAmount.askAgain)
+        }
         let category = category ?? .other
         let spentAt = date ?? Date()
 
@@ -138,7 +141,13 @@ struct SettleUpIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let services = AppServices.shared
         let userId = try await services.signedInUserId()
-        let requested = try amount.map(SiriAmount.money(from:))
+        var requested: Money?
+        if let amount, amount.amount > 0 {
+            guard let money = try? SiriAmount.money(from: amount) else {
+                throw $amount.needsValueError(SiriAmount.askAgain)
+            }
+            requested = money
+        }
         let snapshot = try await services.balances(userId: userId)
         let plan = RepaymentPlan.make(
             balances: snapshot.balances.filter { $0.personId == friend.id },
