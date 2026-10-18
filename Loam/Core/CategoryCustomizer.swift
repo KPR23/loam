@@ -9,6 +9,16 @@ struct CategoryStyleOverride: Codable, Equatable, Sendable {
     var colorHex: String?
 
     var isEmpty: Bool { name == nil && symbol == nil && colorHex == nil }
+
+    /// Drops a color that matches the category's built-in one, so the category keeps following
+    /// its default if that ever changes instead of pinning today's value.
+    func normalized(for category: ExpenseCategory) -> CategoryStyleOverride {
+        var style = self
+        if let hex = style.colorHex, hex.caseInsensitiveCompare(category.defaultColorHex) == .orderedSame {
+            style.colorHex = nil
+        }
+        return style
+    }
 }
 
 /// Holds category customizations, which are stored on this device and only applied while the
@@ -28,9 +38,19 @@ final class CategoryCustomizer: @unchecked Sendable {
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.defaultsKey),
            let saved = try? JSONDecoder().decode([String: CategoryStyleOverride].self, from: data) {
-            overrides = saved
+            overrides = Self.normalized(saved)
+            if overrides != saved { persistLocked() }
         } else {
             overrides = [:]
+        }
+    }
+
+    /// Earlier versions saved the built-in color when it was picked from the swatches; drop those
+    /// so they follow the default again.
+    static func normalized(_ saved: [String: CategoryStyleOverride]) -> [String: CategoryStyleOverride] {
+        saved.reduce(into: [:]) { result, entry in
+            let style = ExpenseCategory(rawValue: entry.key).map(entry.value.normalized(for:)) ?? entry.value
+            if !style.isEmpty { result[entry.key] = style }
         }
     }
 
@@ -65,6 +85,7 @@ final class CategoryCustomizer: @unchecked Sendable {
     }
 
     func save(_ style: CategoryStyleOverride, for category: ExpenseCategory) {
+        let style = style.normalized(for: category)
         lock.lock()
         if style.isEmpty {
             overrides.removeValue(forKey: category.rawValue)
