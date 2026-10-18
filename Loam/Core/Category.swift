@@ -59,17 +59,22 @@ enum ExpenseCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 
     var defaultColor: Color {
+        Color(hex: defaultColorHex) ?? .gray
+    }
+
+    /// Built-in colors as hex; `CategoryStyleOptions.colors` offers the same set in the editor.
+    var defaultColorHex: String {
         switch self {
-        case .groceries: return Color(red: 102 / 255, green: 194 / 255, blue: 64 / 255)
-        case .dining: return Color(red: 0.96, green: 0.40, blue: 0.32)
-        case .transport: return Color(red: 0.15, green: 0.50, blue: 0.98)
-        case .housing: return Color(red: 0.88, green: 0.45, blue: 0.18)
-        case .utilities: return Color(red: 0.96, green: 0.68, blue: 0.18)
-        case .health: return Color(red: 0.96, green: 0.22, blue: 0.34)
-        case .entertainment: return Color(red: 0.68, green: 0.24, blue: 0.96)
-        case .shopping: return Color(red: 0.98, green: 0.24, blue: 0.58)
-        case .travel: return Color(red: 0.12, green: 0.78, blue: 0.88)
-        case .other: return Color(red: 0.42, green: 0.38, blue: 0.98)
+        case .groceries: return "1FA85A"
+        case .dining: return "F06400"
+        case .transport: return "1185E8"
+        case .housing: return "4A55E6"
+        case .utilities: return "E59A00"
+        case .health: return "E63946"
+        case .entertainment: return "7E4CF5"
+        case .shopping: return "E6408F"
+        case .travel: return "0FA3A8"
+        case .other: return "7C8595"
         }
     }
 }

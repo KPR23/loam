@@ -92,9 +92,9 @@ final class CategoryCustomizer: @unchecked Sendable {
 /// The choices the category editor offers.
 enum CategoryStyleOptions {
     static let colors: [(name: String, hex: String)] = [
-        ("Green", "66C240"), ("Red", "F56652"), ("Blue", "2680FA"), ("Orange", "E07330"),
-        ("Yellow", "F5AD2E"), ("Rose", "F5384F"), ("Purple", "AD3DF5"), ("Pink", "FA3D94"),
-        ("Teal", "1FC7E0"), ("Indigo", "6B61FA"), ("Brown", "9C7A55"), ("Graphite", "6E7480")
+        ("Green", "1FA85A"), ("Orange", "F06400"), ("Blue", "1185E8"), ("Indigo", "4A55E6"),
+        ("Yellow", "E59A00"), ("Red", "E63946"), ("Purple", "7E4CF5"), ("Pink", "E6408F"),
+        ("Teal", "0FA3A8"), ("Graphite", "7C8595"), ("Brown", "9C7A55")
     ]
 
     static let symbols: [String] = [
@@ -107,7 +107,7 @@ enum CategoryStyleOptions {
 }
 
 extension Color {
-    /// Six hex digits, e.g. "66C240".
+    /// Six hex digits, e.g. "1FA85A".
     init?(hex: String) {
         guard hex.count == 6, let value = UInt32(hex, radix: 16) else { return nil }
         self.init(
