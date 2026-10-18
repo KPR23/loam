@@ -98,7 +98,7 @@ final class CustomCategoryStore {
     }
 
     /// Listed categories first, in list order; the rest keep their relative order after them.
-    static func sorted(_ options: [SpendCategory], by order: [String]) -> [SpendCategory] {
+    nonisolated static func sorted(_ options: [SpendCategory], by order: [String]) -> [SpendCategory] {
         let position = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
         return options.enumerated()
             .sorted { lhs, rhs in
