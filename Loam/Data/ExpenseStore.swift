@@ -39,7 +39,11 @@ final class ExpenseStore: ObservableObject {
 
     /// Changes shown with Undo, keyed by expense. Nothing reaches the backend until
     /// their toast goes away, so an undone change never notifies anyone.
-    private var stagedChanges: [UUID: StagedChange] = [:]
+    private var stagedChanges: [UUID: StagedChange] = [:] {
+        didSet { searchRevision += 1 }
+    }
+    /// Bumps whenever a delete, edit or split is staged, undone or saved, so an open search can refresh.
+    @Published private(set) var searchRevision = 0
     /// Saves in flight, so the next change to the same expense waits for its version.
     private var commitTasks: [UUID: Task<Void, Never>] = [:]
 

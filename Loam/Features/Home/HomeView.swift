@@ -18,6 +18,7 @@ struct HomeView: View {
     @State private var isSearchPresented = false
     @State private var searchResults: [ExpenseRecord] = []
     @State private var isSearching = false
+    @State private var lastSearchedQuery = ""
 
     private let homePendingPreviewLimit = 2
 
@@ -88,7 +89,7 @@ struct HomeView: View {
             .overlay {
                 if isSearchPresented { searchResultsView }
             }
-            .task(id: searchText) {
+            .task(id: SearchTrigger(text: searchText, revision: expenseStore.searchRevision)) {
                 await runSearch()
             }
             .task(id: authSession.userId) {
@@ -112,6 +113,11 @@ struct HomeView: View {
         .expenseActionsHost(selectedExpense: $selectedExpense, request: $actionRequest)
     }
 
+    private struct SearchTrigger: Equatable {
+        let text: String
+        let revision: Int
+    }
+
     private var trimmedSearchText: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -121,15 +127,20 @@ struct HomeView: View {
         let query = trimmedSearchText
         guard query.count >= 2 else {
             searchResults = []
+            lastSearchedQuery = ""
             isSearching = false
             return
         }
         isSearching = true
-        try? await Task.sleep(for: .milliseconds(250))
-        guard !Task.isCancelled else { return }
+        // Typing waits for a pause; a refresh after a delete, edit or undo runs at once.
+        if query != lastSearchedQuery {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+        }
         let found = await expenseStore.search(query, userId: authSession.userId)
         guard !Task.isCancelled else { return }
         searchResults = found
+        lastSearchedQuery = query
         isSearching = false
     }
 

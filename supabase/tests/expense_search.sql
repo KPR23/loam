@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..4' as plan;
+select '1..6' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.c',gen_random_uuid()::text,true);
 insert into auth.users(id,email) values(current_setting('test.a')::uuid,'search-a@example.invalid'),
@@ -41,6 +41,13 @@ do $$ begin
 end $$;
 select 'ok 3 - participants only find expenses they are on' as result;
 
+-- B rejects the shared expense: it leaves their results but stays with A.
+select public.respond_to_expense_share(e.id,'reject') from public.expense e where e.title='Groceries 100%';
+do $$ begin assert (select count(*) from public.search_expenses('groceries'))=0,'A rejected expense is still searchable'; end $$;
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+do $$ begin assert (select count(*) from public.search_expenses('groceries'))=1,'Rejection hid the expense from its creator'; end $$;
+select 'ok 4 - rejected expenses drop out for the rejecter only' as result;
+
 select set_config('request.jwt.claim.sub',current_setting('test.c'),true);
 do $$ begin
  assert (select count(*) from public.search_expenses('coffee'))=0 and (select count(*) from public.search_expenses('groceries'))=0,
@@ -53,5 +60,13 @@ do $$ declare denied boolean:=false; begin
  reset role;
  assert denied,'Anon can run search';
 end $$;
-select 'ok 4 - strangers and anon get nothing' as result;
+select 'ok 5 - strangers and anon get nothing' as result;
+
+-- A closed account searches nothing, even its own expenses.
+reset role;
+update public.profile set deleted_at=now() where id=current_setting('test.a')::uuid;
+set local role authenticated;
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+do $$ begin assert (select count(*) from public.search_expenses('coffee'))=0,'A deleted account can search'; end $$;
+select 'ok 6 - deleted accounts get nothing' as result;
 rollback;

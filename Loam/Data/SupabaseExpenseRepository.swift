@@ -214,7 +214,7 @@ actor SupabaseExpenseRepository: ExpenseRepository {
             pQuery: query, pLimit: limit
         )).execute().value
         let rows = try await fetchExpenses(ids: ids)
-        let order = Dictionary(uniqueKeysWithValues: ids.enumerated().map { ($1, $0) })
+        let order = Dictionary(ids.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
         return rows
             .filter { ($0.shareRecord(for: userId)?.status ?? .rejected) != .rejected || $0.createdBy == userId }
             .sorted { (order[$0.id] ?? 0) < (order[$1.id] ?? 0) }
