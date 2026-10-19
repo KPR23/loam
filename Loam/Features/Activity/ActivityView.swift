@@ -19,8 +19,10 @@ struct ActivityView: View {
                     Section {
                         SkeletonRows(count: 4, leading: .avatar(40), showsAmount: false)
                     }
+                    .listRowBackground(HomeTheme.surface)
                 } else if activityStore.events.isEmpty {
                     Section { emptyState }
+                    .listRowBackground(HomeTheme.surface)
                 } else {
                     if !requests.isEmpty {
                         Section {
@@ -28,6 +30,7 @@ struct ActivityView: View {
                         } header: {
                             sectionHeader("Waiting on you")
                         }
+                        .listRowBackground(HomeTheme.surface)
                     }
 
                     ForEach(groupedEvents(notifications)) { group in
@@ -36,10 +39,12 @@ struct ActivityView: View {
                         } header: {
                             sectionHeader(group.title)
                         }
+                        .listRowBackground(HomeTheme.surface)
                     }
 
                     if activityStore.canLoadMore {
                         Section { loadMoreButton }
+                        .listRowBackground(HomeTheme.surface)
                     }
                 }
             }
@@ -180,6 +185,7 @@ struct ActivityView: View {
             }
             .padding(.vertical, 6)
         }
+        .listRowBackground(HomeTheme.surface)
     }
 
     /// A tapped push lands here: refresh, then open the expense it was about.

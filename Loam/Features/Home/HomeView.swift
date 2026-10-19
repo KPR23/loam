@@ -288,6 +288,7 @@ struct HomeView: View {
                         previewLimit: homePendingPreviewLimit
                     )
                 }
+                .listRowBackground(HomeTheme.surface)
             }
         }
     }
@@ -333,6 +334,7 @@ struct HomeView: View {
                         .font(.subheadline.weight(.semibold))
                         .textCase(nil)
                 }
+                .listRowBackground(HomeTheme.surface)
             }
         }
     }
@@ -343,10 +345,12 @@ struct HomeView: View {
             Section {
                 SkeletonRows()
             }
+            .listRowBackground(HomeTheme.surface)
         } else if expenseStore.expenses.isEmpty {
             Section {
                 emptyState
             }
+            .listRowBackground(HomeTheme.surface)
         } else {
             ForEach(expensesByDay, id: \.date) { section in
                 Section {
@@ -401,6 +405,7 @@ struct HomeView: View {
                 } header: {
                     daySectionHeader(date: section.date, expenses: section.expenses)
                 }
+                .listRowBackground(HomeTheme.surface)
             }
         }
 
@@ -425,6 +430,7 @@ struct HomeView: View {
                     .foregroundStyle(.orange)
                 }
             }
+            .listRowBackground(HomeTheme.surface)
         }
     }
 

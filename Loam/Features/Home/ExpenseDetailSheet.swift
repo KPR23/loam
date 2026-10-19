@@ -185,6 +185,7 @@ struct ExpenseDetailSheet: View {
                         }
                     }
                 }
+                .listRowBackground(HomeTheme.surface)
 
                 if let recurringRule {
                     Section {
@@ -216,12 +217,14 @@ struct ExpenseDetailSheet: View {
                             Text("The next charge couldn't be added: \(failure). It will be retried.")
                         }
                     }
+                    .listRowBackground(HomeTheme.surface)
                 } else if expense.isRecurring {
                     Section("Recurring") {
                         LabeledContent("Type") {
                             Label("Recurring", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
                         }
                     }
+                    .listRowBackground(HomeTheme.surface)
                 }
 
                 if expense.isShared {
@@ -238,10 +241,13 @@ struct ExpenseDetailSheet: View {
                             }
                         }
                     }
+                    .listRowBackground(HomeTheme.surface)
 
                     historySection
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(HomeTheme.background.ignoresSafeArea())
             .navigationTitle("Expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -339,6 +345,7 @@ struct ExpenseDetailSheet: View {
         } footer: {
             Text(statusFooter)
         }
+        .listRowBackground(HomeTheme.surface)
     }
 
     /// The proposer, then the owner who has to decide, then anyone else
@@ -469,6 +476,7 @@ struct ExpenseDetailSheet: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .listRowBackground(HomeTheme.surface)
     }
 
     private func historyRow(_ event: ActivityEvent) -> some View {

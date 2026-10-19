@@ -66,7 +66,7 @@ struct ExpenseCategoryPicker: View {
             }
             .padding(.horizontal, 14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+            .background(HomeTheme.surface, in: Capsule())
             .contentShape(Capsule())
         }
         .accessibilityLabel("Category")

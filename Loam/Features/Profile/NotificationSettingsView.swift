@@ -30,6 +30,7 @@ struct NotificationSettingsView: View {
             } footer: {
                 Text("These match what appears in your Activity tab. Your own actions never notify you.")
             }
+            .listRowBackground(HomeTheme.surface)
             .disabled(pushStore.permission != .allowed || pushStore.preferencesState != .loaded)
 
             if pushStore.preferencesState == .failed {
@@ -38,6 +39,7 @@ struct NotificationSettingsView: View {
                         .foregroundStyle(.secondary)
                     Button("Retry") { Task { await pushStore.loadPreferences() } }
                 }
+                .listRowBackground(HomeTheme.surface)
             }
         }
         .listStyle(.insetGrouped)
@@ -64,6 +66,7 @@ struct NotificationSettingsView: View {
             } footer: {
                 Text("Loam asks iOS for permission the first time. You can change it later.")
             }
+            .listRowBackground(HomeTheme.surface)
         case .denied:
             Section {
                 Label {
@@ -77,6 +80,7 @@ struct NotificationSettingsView: View {
             } footer: {
                 Text("Turn on Allow Notifications in iOS Settings to hear about activity. Your choices below are kept.")
             }
+            .listRowBackground(HomeTheme.surface)
         case .allowed, .unknown:
             EmptyView()
         }

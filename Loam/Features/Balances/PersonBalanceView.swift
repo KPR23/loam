@@ -148,6 +148,7 @@ struct PersonBalanceView: View {
             Section {
                 SkeletonRows(count: 4)
             }
+            .listRowBackground(HomeTheme.surface)
         } else if let loadError, history.isEmpty {
             Section {
                 LoamEmptyState(title: "Couldn’t load history", message: loadError, systemImage: "exclamationmark.triangle") {
@@ -159,6 +160,7 @@ struct PersonBalanceView: View {
                     }
                 }
             }
+            .listRowBackground(HomeTheme.surface)
         } else if history.isEmpty {
             Section {
                 LoamEmptyState(
@@ -167,6 +169,7 @@ struct PersonBalanceView: View {
                     systemImage: "clock.arrow.circlepath"
                 )
             }
+            .listRowBackground(HomeTheme.surface)
         } else {
             ForEach(monthGroups, id: \.month) { group in
                 Section {
@@ -178,6 +181,7 @@ struct PersonBalanceView: View {
                         .font(.subheadline.weight(.semibold))
                         .textCase(nil)
                 }
+                .listRowBackground(HomeTheme.surface)
             }
         }
     }

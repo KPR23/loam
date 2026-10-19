@@ -85,6 +85,7 @@ struct ProposeEditSheet: View {
                         .font(.footnote)
                         .foregroundStyle(HomeTheme.secondary)
                 }
+                .listRowBackground(HomeTheme.surface)
 
                 Section("Amount") {
                     HStack {
@@ -95,6 +96,7 @@ struct ProposeEditSheet: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .listRowBackground(HomeTheme.surface)
 
                 Section("Details") {
                     TextField("Title (optional)", text: $formState.title)
@@ -109,6 +111,7 @@ struct ProposeEditSheet: View {
                     TextField("Note", text: $formState.note, axis: .vertical)
                         .lineLimit(2...4)
                 }
+                .listRowBackground(HomeTheme.surface)
 
                 SplitExpenseSection(
                     totalMinor: Money(majorString: formState.amountText, currencyCode: expense.currency)?.amountMinor ?? 0,
@@ -129,7 +132,10 @@ struct ProposeEditSheet: View {
                     TextField("Optional note explaining your changes", text: $formState.message, axis: .vertical)
                         .lineLimit(2...4)
                 }
+                .listRowBackground(HomeTheme.surface)
             }
+            .scrollContentBackground(.hidden)
+            .background(HomeTheme.background.ignoresSafeArea())
             .task { await connectionStore.refresh(userId: myUserId) }
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)

@@ -35,6 +35,7 @@ struct FriendsView: View {
             } footer: {
                 Text("Connecting lets you share expenses. It does not reveal personal expenses or automatically approve a split. People without an account are only tracked by you.")
             }
+            .listRowBackground(HomeTheme.surface)
 
             Section {
                 if connectionStore.connections.isEmpty {
@@ -89,7 +90,10 @@ struct FriendsView: View {
                     Text("Swipe a friend to remove them. Past shared expenses stay in your history.")
                 }
             }
+            .listRowBackground(HomeTheme.surface)
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle("Friends")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search friends")
@@ -153,6 +157,7 @@ struct ShareConnectionCodeView: View {
                 } footer: {
                     Text("Send this code to someone you trust. They’ll enter it in Loam to connect with you.")
                 }
+                .listRowBackground(HomeTheme.surface)
             }
             if requiresPro {
                 Section {
@@ -162,10 +167,14 @@ struct ShareConnectionCodeView: View {
                 } footer: {
                     Text("Loam Free includes one connection. Upgrade to invite more. Joining with a code someone sends you is always free.")
                 }
+                .listRowBackground(HomeTheme.surface)
             } else {
                 Section { Button { Task { await create() } } label: { Label(invitation == nil ? "Create code" : "Replace code", systemImage: "arrow.clockwise") }.disabled(isWorking) }
+                .listRowBackground(HomeTheme.surface)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle("Share my code")
         .navigationBarTitleDisplayMode(.inline)
         .task { if invitation == nil { await loadOrCreate() } }
@@ -373,11 +382,15 @@ struct AddFriendView: View {
     var body: some View {
         List {
             Section { Text("Connect to share expenses. Personal expenses stay private, and every split still needs approval.").foregroundStyle(.secondary) }
+            .listRowBackground(HomeTheme.surface)
             Section {
                 NavigationLink("Share my code") { ShareConnectionCodeView() }
                 Button("Enter a code") { showsConnectionCodePrompt = true }
             }
+            .listRowBackground(HomeTheme.surface)
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle("Add friend").navigationBarTitleDisplayMode(.inline)
         .connectionCodePrompt(isPresented: $showsConnectionCodePrompt, onConnected: { friend in
             onConnected(friend)

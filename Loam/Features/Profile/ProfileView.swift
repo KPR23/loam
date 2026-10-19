@@ -296,6 +296,7 @@ struct ProfileView: View {
                     }
                     SubscriptionRow()
                 }
+                .listRowBackground(HomeTheme.surface)
 
                 if authSession.deletionPending {
                     Section("Account deletion") {
@@ -322,6 +323,7 @@ struct ProfileView: View {
                             }
                         }
                     }
+                    .listRowBackground(HomeTheme.surface)
                     .task { await authSession.watchDeletionStatus() }
                 }
 
@@ -361,6 +363,7 @@ struct ProfileView: View {
                     }
                     .accessibilityHint("Opens Loam's terms of use")
                 }
+                .listRowBackground(HomeTheme.surface)
 
                 Section {
                     Button { showsSignOut = true } label: {
@@ -371,6 +374,7 @@ struct ProfileView: View {
                     }
                     .disabled(isSigningOut)
                 }
+                .listRowBackground(HomeTheme.surface)
 
                 #if DEBUG
                 Section {
@@ -380,6 +384,7 @@ struct ProfileView: View {
                         ProfileRow("Developer", symbol: "hammer", color: .gray)
                     }
                 }
+                .listRowBackground(HomeTheme.surface)
                 #endif
             }
             .listStyle(.insetGrouped)
@@ -449,6 +454,7 @@ struct ProfileView: View {
             .pickerStyle(.menu)
             .tint(HomeTheme.secondary)
         }
+        .listRowBackground(HomeTheme.surface)
     }
 
     private var preferencesSection: some View {
@@ -481,6 +487,7 @@ struct ProfileView: View {
                 Text("Accept every expense a friend shares with you automatically, without reviewing it first.")
             }
         }
+        .listRowBackground(HomeTheme.surface)
     }
 
     private var securitySection: some View {
@@ -531,6 +538,7 @@ struct ProfileView: View {
         } footer: {
             Text("No amounts, descriptions or names are ever included. Crash reports are always sent.")
         }
+        .listRowBackground(HomeTheme.surface)
     }
 
     private func preferenceLabel(_ title: String, symbol: String, color: Color) -> some View {
@@ -746,6 +754,7 @@ private struct SubscriptionView: View {
                     }
                 }
             }
+            .listRowBackground(HomeTheme.surface)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -867,7 +876,7 @@ private struct PersonalDetailsView: View {
                      ? "Friends see your name on shared expenses. You’re using a local demo account."
                      : "Friends see your name on shared expenses. Your e-mail comes from your Apple Account and may be a private relay address.")
             }
-
+            .listRowBackground(HomeTheme.surface)
             Section {
                 Button(role: .destructive) {
                     showsDeleteConfirmation = true
@@ -880,6 +889,8 @@ private struct PersonalDetailsView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle("Personal details")
         .navigationBarTitleDisplayMode(.inline)
         // A custom back button lets us ask before throwing away an unsaved name.
@@ -1004,6 +1015,7 @@ private extension PersonalDetailsView {
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         }
+        .listRowBackground(HomeTheme.surface)
     }
 
     var avatar: some View {
@@ -1064,7 +1076,10 @@ private struct DefaultCurrencySettingsView: View {
             } footer: {
                 Text("New expenses use this currency. Existing expenses keep the currency they were added in; totals convert them at the exchange rate of the day they were spent.")
             }
+            .listRowBackground(HomeTheme.surface)
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle("Default currency")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -1091,6 +1106,7 @@ private struct TimeZoneSettingsView: View {
             } footer: {
                 Text("Used for calendar dates and recurring expenses.")
             }
+            .listRowBackground(HomeTheme.surface)
 
             Section("Time zones") {
                 ForEach(identifiers, id: \.self) { identifier in
@@ -1101,7 +1117,10 @@ private struct TimeZoneSettingsView: View {
                     )
                 }
             }
+            .listRowBackground(HomeTheme.surface)
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .searchable(text: $searchText, prompt: "Search city or time zone")
         .navigationTitle("Time zone")
         .navigationBarTitleDisplayMode(.inline)
@@ -1213,6 +1232,7 @@ private struct ProfileDeveloperView: View {
                             .font(.footnote)
                             .foregroundStyle(HomeTheme.secondary)
                     }
+                    .listRowBackground(HomeTheme.surface)
                 } else if SupabaseConfig.allowsTestAccounts,
                           !TestAccount.configured.isEmpty {
                     Section("Test accounts") {
@@ -1234,12 +1254,14 @@ private struct ProfileDeveloperView: View {
                             .font(.footnote)
                             .foregroundStyle(HomeTheme.secondary)
                     }
+                    .listRowBackground(HomeTheme.surface)
                 } else {
                     Section("Test accounts") {
                         Text(testAccountsUnavailableMessage)
                             .font(.footnote)
                             .foregroundStyle(HomeTheme.secondary)
                     }
+                    .listRowBackground(HomeTheme.surface)
                 }
 
                 Section("Developer") {
@@ -1247,7 +1269,10 @@ private struct ProfileDeveloperView: View {
                         showClearAllExpensesConfirm = true
                     }
                 }
+                .listRowBackground(HomeTheme.surface)
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle("Developer")
         .alert("Clear expenses you created?", isPresented: $showClearAllExpensesConfirm) {
             Button("Clear mine", role: .destructive) {
