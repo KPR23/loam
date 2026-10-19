@@ -113,9 +113,9 @@ final class CategoryCustomizer: @unchecked Sendable {
 /// The choices the category editor offers.
 enum CategoryStyleOptions {
     static let colors: [(name: String, hex: String)] = [
-        ("Green", "1FA85A"), ("Orange", "F06400"), ("Blue", "1185E8"), ("Indigo", "4A55E6"),
-        ("Yellow", "E59A00"), ("Red", "E63946"), ("Purple", "7E4CF5"), ("Pink", "E6408F"),
-        ("Teal", "0FA3A8"), ("Graphite", "7C8595"), ("Brown", "9C7A55")
+        ("Green", "33C571"), ("Orange", "FF7303"), ("Blue", "219FFB"), ("Indigo", "5D6BFF"),
+        ("Yellow", "FFB300"), ("Red", "FF4D5E"), ("Purple", "9768FE"), ("Pink", "FF5CAD"),
+        ("Teal", "14C4C4"), ("Graphite", "98A2B3"), ("Brown", "9C7A55")
     ]
 
     static let symbols: [String] = [

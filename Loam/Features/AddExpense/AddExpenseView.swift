@@ -150,7 +150,7 @@ struct AddExpenseView: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(Color.accentColor)
-                            .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+                            .background(HomeTheme.surface, in: Capsule())
                             .disabled(!canContinue)
                             .accessibilityHint("Saves this expense without opening details")
                             .frame(width: buttonWidth, height: 44)
@@ -183,7 +183,7 @@ struct AddExpenseView: View {
             .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .background(HomeTheme.background)
     }
 
     private var amountDisplay: some View {
@@ -234,6 +234,7 @@ struct AddExpenseView: View {
             } header: {
                 Text("Details")
             }
+            .listRowBackground(HomeTheme.surface)
 
             if canShowSplitRow {
                 Section {
@@ -265,6 +266,7 @@ struct AddExpenseView: View {
                 } header: {
                     Text("Split")
                 }
+                .listRowBackground(HomeTheme.surface)
             }
 
             if FeatureFlags.merchant {
@@ -273,6 +275,7 @@ struct AddExpenseView: View {
                 } header: {
                     Text("Merchant")
                 }
+                .listRowBackground(HomeTheme.surface)
             }
 
             if !isEditing {
@@ -323,6 +326,7 @@ struct AddExpenseView: View {
                         Text(repeatFooterText)
                     }
                 }
+                .listRowBackground(HomeTheme.surface)
                 .onChange(of: repeatPreset) { _, newValue in
                     if let interval = newValue.interval {
                         repeatInterval = interval.unit
@@ -336,6 +340,8 @@ struct AddExpenseView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .proPaywall(isPresented: $showsPaywall)
         .onAppear {
             if paidByUserId == nil {
@@ -532,6 +538,8 @@ struct AddExpenseView: View {
                     participantAmountTexts: $participantAmountTexts
                 )
             }
+            .scrollContentBackground(.hidden)
+            .background(HomeTheme.background.ignoresSafeArea())
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)
             .navigationTitle("Split expense")

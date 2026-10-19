@@ -76,7 +76,7 @@ private struct ProPaywallView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .safeAreaInset(edge: .bottom) { purchaseBar }
-            .background(Color(.systemBackground))
+            .background(HomeTheme.background)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     SheetCloseButton { dismiss() }
@@ -172,12 +172,12 @@ private struct ProPaywallView: View {
                         .opacity(isPurchasing || isLoading ? 0 : 1)
                     if isPurchasing || isLoading {
                         ProgressView()
-                            .tint(Color(.systemBackground))
+                            .tint(HomeTheme.background)
                             .accessibilityHidden(true)
                     }
                 }
                 .font(.system(.headline, design: .rounded))
-                .foregroundStyle(Color(.systemBackground))
+                .foregroundStyle(HomeTheme.background)
                 .frame(maxWidth: .infinity, minHeight: 58)
                 .background(Color.primary, in: Capsule())
                 .contentShape(Capsule())
@@ -211,10 +211,10 @@ private struct ProPaywallView: View {
         .padding(.bottom, 4)
         .background {
             // Content scrolls under the purchase bar and fades out rather than being cut off.
-            Color(.systemBackground)
+            HomeTheme.background
                 .overlay(alignment: .top) {
                     LinearGradient(
-                        colors: [Color(.systemBackground).opacity(0), Color(.systemBackground)],
+                        colors: [HomeTheme.background.opacity(0), HomeTheme.background],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -552,7 +552,7 @@ private struct ProComparisonCard: View {
         .padding(.vertical, 24)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(.systemBackground))
+                .fill(HomeTheme.background)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)

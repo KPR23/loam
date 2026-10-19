@@ -88,6 +88,7 @@ struct PendingExpensesSheet: View {
                                 count: group.expenses.count
                             )
                         }
+                        .listRowBackground(HomeTheme.surface)
                     }
                 } else {
                     Section {
@@ -110,6 +111,7 @@ struct PendingExpensesSheet: View {
                     } header: {
                         summaryHeader
                     }
+                    .listRowBackground(HomeTheme.surface)
                 }
             }
             .listStyle(.insetGrouped)

@@ -86,7 +86,7 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
         var configuration = UIButton.Configuration.plain()
         configuration.image = UIImage(systemName: "keyboard.chevron.compact.down")
         configuration.baseForegroundColor = .systemBlue
-        configuration.background.backgroundColor = .systemBackground
+        configuration.background.backgroundColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: 0x2A2C33) : .systemBackground }
         configuration.background.cornerRadius = 24
         configuration.contentInsets = .init(top: 12, leading: 12, bottom: 12, trailing: 12)
 

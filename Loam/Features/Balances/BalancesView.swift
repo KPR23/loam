@@ -27,8 +27,10 @@ struct BalancesView: View {
                     Section {
                         SkeletonRows(count: 3, leading: .avatar(40))
                     }
+                    .listRowBackground(HomeTheme.surface)
                 } else if isEmpty {
                     Section { emptyState }
+                    .listRowBackground(HomeTheme.surface)
                 } else {
                     Section {
                         BalancesHero(snapshot: snapshot)
@@ -72,6 +74,7 @@ struct BalancesView: View {
                         } header: {
                             sectionHeader("Settled up")
                         }
+                        .listRowBackground(HomeTheme.surface)
                     }
                 }
             }
@@ -155,6 +158,7 @@ struct BalancesView: View {
             } header: {
                 sectionHeader(title)
             }
+            .listRowBackground(HomeTheme.surface)
         }
     }
 

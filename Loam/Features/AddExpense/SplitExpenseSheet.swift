@@ -76,6 +76,7 @@ struct SplitExpenseSheet: View {
                             Text(note)
                         }
                     }
+                    .listRowBackground(HomeTheme.surface)
                 }
 
                 SplitExpenseSection(
@@ -93,6 +94,8 @@ struct SplitExpenseSheet: View {
                     participantAmountTexts: $formState.participantAmountTexts
                 )
             }
+            .scrollContentBackground(.hidden)
+            .background(HomeTheme.background.ignoresSafeArea())
             .task { await connectionStore.refresh(userId: myUserId) }
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)

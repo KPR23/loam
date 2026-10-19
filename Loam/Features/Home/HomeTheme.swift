@@ -43,8 +43,9 @@ enum AppAccentColor: String, CaseIterable, Identifiable {
 }
 
 enum HomeTheme {
-    static let background = Color(.systemGroupedBackground)
-    static let surface = Color(.secondarySystemGroupedBackground)
+    /// Dark mode uses a soft charcoal instead of pure black, with raised surfaces a step lighter.
+    static let background = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: 0x1C1D22) : .systemGroupedBackground })
+    static let surface = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: 0x2A2C33) : .secondarySystemGroupedBackground })
     static let text = Color.primary
     static let secondary = Color.secondary
     static let tertiary = Color(.tertiaryLabel)
@@ -66,7 +67,7 @@ enum HomeTheme {
     }
 
     /// Blue tint for the first recurring expense indicator on Home.
-    static let recurringHighlight = Color(red: 0.15, green: 0.50, blue: 0.98)
+    static let recurringHighlight = Color(hex: "219FFB") ?? .blue
 
     /// Unfilled arc tiles.
     static let tileEmpty = Color(.quaternaryLabel).opacity(0.45)
@@ -234,5 +235,16 @@ extension LabelStyle where Self == ProminentButtonLabelStyle {
 extension LoamEmptyState where Action == EmptyView {
     init(title: String, message: String, systemImage: String) {
         self.init(title: title, message: message, systemImage: systemImage) { EmptyView() }
+    }
+}
+
+extension UIColor {
+    convenience init(hex: UInt32) {
+        self.init(
+            red: CGFloat((hex >> 16) & 0xFF) / 255,
+            green: CGFloat((hex >> 8) & 0xFF) / 255,
+            blue: CGFloat(hex & 0xFF) / 255,
+            alpha: 1
+        )
     }
 }

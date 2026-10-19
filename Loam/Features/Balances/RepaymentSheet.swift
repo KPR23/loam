@@ -102,7 +102,7 @@ struct RepaymentSheet: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(.systemGroupedBackground))
+            .background(HomeTheme.background)
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)
             .navigationTitle("Record repayment")

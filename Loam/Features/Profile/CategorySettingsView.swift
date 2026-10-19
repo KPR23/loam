@@ -54,6 +54,7 @@ struct CategorySettingsView: View {
             } footer: {
                 Text("Friends see your categories on expenses you share with them.")
             }
+            .listRowBackground(HomeTheme.surface)
 
             Section {
                 ForEach(visibleBuiltIns) { category in
@@ -79,6 +80,7 @@ struct CategorySettingsView: View {
             } footer: {
                 Text("Swipe to remove a category from the list you pick from. Expenses already in it keep it. Names, icons and colors you change here show up on this device.")
             }
+            .listRowBackground(HomeTheme.surface)
 
             if !hiddenBuiltIns.isEmpty {
                 Section("Removed") {
@@ -90,8 +92,11 @@ struct CategorySettingsView: View {
                         }
                     }
                 }
+                .listRowBackground(HomeTheme.surface)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle("Categories")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(
@@ -203,6 +208,7 @@ private struct CustomCategoryEditorView: View {
             Section {
                 CategoryPreview(name: trimmedName.isEmpty ? "New category" : trimmedName, symbol: symbol, color: Color(hex: colorHex) ?? .gray)
             }
+            .listRowBackground(HomeTheme.surface)
             Section("Name") {
                 TextField("Pets, Gym, Kids…", text: $name)
                     .textInputAutocapitalization(.words)
@@ -212,9 +218,12 @@ private struct CustomCategoryEditorView: View {
                         }
                     }
             }
+            .listRowBackground(HomeTheme.surface)
             CategoryColorSection(colorHex: $colorHex, defaultColor: nil)
             CategoryIconSection(symbol: $symbol, options: CategoryStyleOptions.symbols, color: Color(hex: colorHex) ?? .gray)
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle(category == nil ? "New category" : "Edit category")
         .navigationBarTitleDisplayMode(.inline)
         .disabled(isSaving)
@@ -284,6 +293,7 @@ private struct CategoryEditorView: View {
             Section {
                 CategoryPreview(name: trimmedName.isEmpty ? category.defaultDisplayName : trimmedName, symbol: symbol, color: previewColor)
             }
+            .listRowBackground(HomeTheme.surface)
 
             Section("Name") {
                 TextField(category.defaultDisplayName, text: $name)
@@ -294,6 +304,7 @@ private struct CategoryEditorView: View {
                         }
                     }
             }
+            .listRowBackground(HomeTheme.surface)
 
             CategoryColorSection(colorHex: $colorHex, defaultColor: category.defaultColor)
             CategoryIconSection(symbol: $symbol, options: iconOptions, color: previewColor)
@@ -305,8 +316,11 @@ private struct CategoryEditorView: View {
                         dismiss()
                     }
                 }
+                .listRowBackground(HomeTheme.surface)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background.ignoresSafeArea())
         .navigationTitle(category.defaultDisplayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -374,6 +388,7 @@ private struct CategoryColorSection: View {
             }
             .padding(.vertical, 4)
         }
+        .listRowBackground(HomeTheme.surface)
     }
 
     private func swatch(hex: String, color: Color, label: String) -> some View {
@@ -427,5 +442,6 @@ private struct CategoryIconSection: View {
             }
             .padding(.vertical, 4)
         }
+        .listRowBackground(HomeTheme.surface)
     }
 }
