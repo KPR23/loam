@@ -38,7 +38,9 @@ actor LocalExpenseRepository: ExpenseRepository {
         }
         let found = try load()
             .filter { expense in
-                guard let share = expense.shareRecord(for: userId), share.status != .rejected else { return false }
+                // Same rule as the server: the creator, or a participant who hasn't rejected.
+                guard expense.createdBy == userId || expense.shareRecord(for: userId).map({ $0.status != .rejected }) == true
+                else { return false }
                 return matches(expense.title) || matches(expense.note) || matches(expense.location?.name)
             }
             .sorted { $0.spentAt > $1.spentAt || ($0.spentAt == $1.spentAt && $0.createdAt > $1.createdAt) }
