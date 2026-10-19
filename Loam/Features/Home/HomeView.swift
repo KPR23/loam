@@ -19,6 +19,7 @@ struct HomeView: View {
     @State private var searchResults: [ExpenseRecord] = []
     @State private var isSearching = false
     @State private var lastSearchedQuery = ""
+    @FocusState private var isSearchFieldFocused: Bool
 
     private let homePendingPreviewLimit = 2
 
@@ -55,7 +56,7 @@ struct HomeView: View {
             }
             .listStyle(.insetGrouped)
             .coordinateSpace(name: "homeScroll")
-            .trackHomeScrollCollapse($collapseProgress)
+            .trackHomeScrollCollapse($collapseProgress, onPullDown: openSearch)
             .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
@@ -79,15 +80,9 @@ struct HomeView: View {
                     }
                 }
             }
-            // Pull down on the list to reveal the search field; it stays hidden until then.
-            .searchable(
-                text: $searchText,
-                isPresented: $isSearchPresented,
-                placement: .navigationBarDrawer(displayMode: .automatic),
-                prompt: "Search expenses"
-            )
+            // The search field stays hidden until the list is pulled down past its top.
             .overlay {
-                if isSearchPresented { searchResultsView }
+                if isSearchPresented { searchOverlay }
             }
             .task(id: SearchTrigger(text: searchText, revision: expenseStore.searchRevision)) {
                 await runSearch()
@@ -149,6 +144,56 @@ struct HomeView: View {
         return Dictionary(grouping: searchResults) { calendar.startOfDay(for: $0.spentAt) }
             .map { (date: $0.key, expenses: $0.value.sorted { $0.createdAt > $1.createdAt }) }
             .sorted { $0.date > $1.date }
+    }
+
+    private func openSearch() {
+        guard !isSearchPresented else { return }
+        isSearchPresented = true
+        isSearchFieldFocused = true
+    }
+
+    private func closeSearch() {
+        isSearchFieldFocused = false
+        isSearchPresented = false
+        searchText = ""
+        searchResults = []
+    }
+
+    private var searchOverlay: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(HomeTheme.secondary)
+                    TextField("Search expenses", text: $searchText)
+                        .focused($isSearchFieldFocused)
+                        .submitLabel(.search)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(HomeTheme.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Clear search")
+                    }
+                }
+                .padding(.horizontal, 12)
+                .frame(minHeight: 40)
+                .background(.regularMaterial, in: Capsule())
+
+                Button("Cancel", action: closeSearch)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+
+            searchResultsView
+        }
+        .background(HomeTheme.background.ignoresSafeArea())
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     @ViewBuilder
