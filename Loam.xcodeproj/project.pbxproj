@@ -98,6 +98,9 @@
 		A155F15886F6FED9D59F1145 /* TestAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D15723F1C7A5EE473CA2889 /* TestAccount.swift */; };
 		A15AFB79C7F55A44566E7A2E /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2945E6BB2BB8D085C50A455A /* TestSupport.swift */; };
 		A385DC89F56B32C668A7375C /* AddExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD805CDE31A24AD630A9703 /* AddExpenseView.swift */; };
+		5C0A11E0000000000000A001 /* ScreenshotTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0A11E0000000000000B001 /* ScreenshotTestCase.swift */; };
+		5C0A11E0000000000000A002 /* StandardScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0A11E0000000000000B002 /* StandardScreenshots.swift */; };
+		5C0A11E0000000000000A003 /* RequestedScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0A11E0000000000000B003 /* RequestedScreenshots.swift */; };
 		A3D3837FCD2233B631CAD203 /* LoamUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0074DD56D78CF70693398156 /* LoamUITests.swift */; };
 		A5132B6C21AC8FDFF1CE911A /* LoamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C15AD0F34F080CB70FB979F /* LoamApp.swift */; };
 		A78741AF07C3F1BCDAC00470 /* ExpenseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB962B524FB4DB50BDBCECD /* ExpenseDTO.swift */; };
@@ -179,6 +182,9 @@
 		90D90D50ABA4E8D562F23AD2 /* LoamIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamIntents.swift; sourceTree = "<group>"; };
 		CE65E68A9DCFB00EEBBBD38D /* SiriTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriTypes.swift; sourceTree = "<group>"; };
 		22FDF86F131C7389810D4B08 /* SiriIntentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriIntentTests.swift; sourceTree = "<group>"; };
+		5C0A11E0000000000000B001 /* ScreenshotTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTestCase.swift; sourceTree = "<group>"; };
+		5C0A11E0000000000000B002 /* StandardScreenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardScreenshots.swift; sourceTree = "<group>"; };
+		5C0A11E0000000000000B003 /* RequestedScreenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestedScreenshots.swift; sourceTree = "<group>"; };
 		0074DD56D78CF70693398156 /* LoamUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamUITests.swift; sourceTree = "<group>"; };
 		03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitCalculator.swift; sourceTree = "<group>"; };
 		05706E000FCC890A47AF659A /* LocalExpenseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExpenseRepository.swift; sourceTree = "<group>"; };
@@ -551,6 +557,9 @@
 			isa = PBXGroup;
 			children = (
 				0074DD56D78CF70693398156 /* LoamUITests.swift */,
+				5C0A11E0000000000000B003 /* RequestedScreenshots.swift */,
+				5C0A11E0000000000000B002 /* StandardScreenshots.swift */,
+				5C0A11E0000000000000B001 /* ScreenshotTestCase.swift */,
 			);
 			path = LoamUITests;
 			sourceTree = "<group>";
@@ -947,6 +956,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				A3D3837FCD2233B631CAD203 /* LoamUITests.swift in Sources */,
+				5C0A11E0000000000000A003 /* RequestedScreenshots.swift in Sources */,
+				5C0A11E0000000000000A002 /* StandardScreenshots.swift in Sources */,
+				5C0A11E0000000000000A001 /* ScreenshotTestCase.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
