@@ -1,0 +1,318 @@
+name: Screenshots
+
+# Add the "screenshots" label to a pull request to get simulator screenshots of its screens, light and
+# dark, in a comment. Nothing here is a required check, so merging never waits for it.
+#
+# The simulator needs a macOS runner and the backend needs Docker, which macOS runners lack, so the
+# backend runs on Linux and reaches the simulator through a temporary Cloudflare quick tunnel. It is
+# a fresh local Supabase stack with the pull request's own migrations and the fake data in
+# scripts/screenshots/seed.sql, so no secrets are involved. Fork pull requests are skipped: they run
+# the contributor's code and get no write token anyway.
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+    branches: [main, "release/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # Sample users from scripts/screenshots/seed-backend.sh. The password only ever opens a database that is
+  # destroyed with the runner.
+  SAMPLE_JULIA_ID: 00000000-0000-4000-8000-0000000000a1
+  SAMPLE_JULIA_EMAIL: julia@screenshots.invalid
+  SAMPLE_JULIA_PASSWORD: screenshot-julia
+  SAMPLE_PHILIP_ID: 00000000-0000-4000-8000-0000000000b2
+  SAMPLE_PHILIP_EMAIL: philip@screenshots.invalid
+  SAMPLE_PHILIP_PASSWORD: screenshot-philip
+
+jobs:
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+      screens: ${{ steps.decide.outputs.screens }}
+    steps:
+      - id: decide
+        env:
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'screenshots') }}
+          # Other labels being added must not start a run.
+          RELEVANT: ${{ github.event.action != 'labeled' || github.event.label.name == 'screenshots' }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "run=$([[ $SAME_REPO == true && $HAS_LABEL == true && $RELEVANT == true ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          # Extra screens come from a `Screenshots: a, b` line in the PR description. The body is
+          # untrusted text, so only lowercase names, digits, dashes and commas get through.
+          screens="$(printf '%s\n' "$PR_BODY" | tr -d '\r' | sed -n 's/^[Ss]creenshots:[[:space:]]*//p' | head -1 | tr 'A-Z ' 'a-z,' | tr -cd 'a-z0-9,-')"
+          echo "screens=$screens" >> "$GITHUB_OUTPUT"
+
+  backend:
+    name: Backend
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-supabase
+      - name: Pin the Postgres image
+        run: mkdir -p supabase/.temp && printf 17.6.1.166 > supabase/.temp/postgres-version
+      # Migrations are applied by `supabase start`. Edge functions, realtime and the rest are not needed to browse the app.
+      - name: Start the local backend
+        run: supabase start -x studio,logflare,vector,imgproxy,mailpit,edge-runtime,realtime,postgres-meta
+      - name: Load the sample data
+        run: scripts/screenshots/seed-backend.sh
+      - name: Open a tunnel
+        run: |
+          docker run -d --name tunnel --network host cloudflare/cloudflared:2025.8.1 tunnel --no-autoupdate --url http://127.0.0.1:54321
+          for _ in $(seq 60); do
+            url="$(docker logs tunnel 2>&1 | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1 || true)"
+            [[ -n $url ]] && break
+            sleep 2
+          done
+          test -n "$url" || { docker logs tunnel; echo "No tunnel URL" >&2; exit 1; }
+          eval "$(supabase status -o env | grep -E '^ANON_KEY=')"
+          # The tunnel answers 502/404 for a while after it prints the URL.
+          for _ in $(seq 60); do
+            curl --silent --fail --max-time 10 --output /dev/null "$url/auth/v1/health" --header "apikey: $ANON_KEY" && break
+            sleep 3
+          done
+          curl --silent --fail --max-time 10 --output /dev/null "$url/auth/v1/health" --header "apikey: $ANON_KEY"
+          # Signing in through the tunnel is what the app does, so a failure here explains one there.
+          curl --silent --max-time 20 "$url/auth/v1/token?grant_type=password" --header "apikey: $ANON_KEY" --header 'Content-Type: application/json' \
+            --data "{\"email\":\"$SAMPLE_JULIA_EMAIL\",\"password\":\"$SAMPLE_JULIA_PASSWORD\"}" \
+            | jq -r '"Sign-in check: user \(.user.id // .error_description // .msg // "none"), expected '"$SAMPLE_JULIA_ID"'"'
+          jq -n --arg url "$url" --arg anon "$ANON_KEY" '{url:$url,anon_key:$anon}' > "$RUNNER_TEMP/backend.json"
+      - name: Share the backend address
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend
+          path: ${{ runner.temp }}/backend.json
+          retention-days: 1
+      # The tunnel has to stay up until the capture job is done with it.
+      - name: Keep the backend until the capture finishes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for _ in $(seq 280); do
+            status="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" --jq '[.jobs[] | select(.name == "Capture")][0].status')"
+            [[ $status == completed ]] && exit 0
+            sleep 10
+          done
+      - name: Stop local services
+        if: always()
+        run: |
+          docker rm -f tunnel || true
+          supabase stop --no-backup
+
+  capture:
+    name: Capture
+    # Not after the backend: that job waits for this one. It starts with the Swift packages and waits for
+    # the backend's address before building, since the address is baked into the app.
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Cache Swift packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .spm
+          key: spm-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj -clonedSourcePackagesDirPath .spm
+
+      - name: Create iOS simulator
+        id: simulator
+        run: |
+          read -r DEVICE_TYPE RUNTIME <<< "$(
+            python3 - <<'PY'
+          import json, subprocess, sys
+          data = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"], text=True))
+          runtimes = sorted(r for r in data["devices"] if "SimRuntime.iOS" in r)
+          for name in ["iPhone 17 Pro", "iPhone 17", "iPhone 16 Pro", "iPhone 16"]:
+              for runtime in reversed(runtimes):
+                  for device in data["devices"][runtime]:
+                      if device.get("isAvailable") and device["name"] == name:
+                          print(device["deviceTypeIdentifier"], runtime)
+                          sys.exit(0)
+          sys.exit("No suitable iPhone simulator found on runner")
+          PY
+          )"
+          DEVICE_ID="$(xcrun simctl create "Loam Screenshots ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" "$DEVICE_TYPE" "$RUNTIME")"
+          echo "device_id=${DEVICE_ID}" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$DEVICE_ID"
+
+      - name: Wait for the backend
+        id: backend
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/backend"
+          for _ in $(seq 120); do
+            gh run download "$GITHUB_RUN_ID" --name backend --dir "$RUNNER_TEMP/backend" 2>/dev/null && break
+            sleep 10
+          done
+          test -f "$RUNNER_TEMP/backend/backend.json" || { echo "The backend never came up" >&2; exit 1; }
+          echo "url=$(jq -r .url "$RUNNER_TEMP/backend/backend.json")" >> "$GITHUB_OUTPUT"
+          echo "anon_key=$(jq -r .anon_key "$RUNNER_TEMP/backend/backend.json")" >> "$GITHUB_OUTPUT"
+
+      # Debug builds only allow the test-account buttons when the build's own backend address is the
+      # allowlisted one, so the sample users and the address are build settings, not launch values.
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project Loam.xcodeproj \
+            -scheme Loam \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
+            -clonedSourcePackagesDirPath .spm \
+            CODE_SIGNING_ALLOWED=NO \
+            -skipPackagePluginValidation \
+            -disableAutomaticPackageResolution \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            "SUPABASE_URL=${{ steps.backend.outputs.url }}" \
+            "LOAM_TEST_SUPABASE_URL=${{ steps.backend.outputs.url }}" \
+            "SUPABASE_ANON_KEY=${{ steps.backend.outputs.anon_key }}" \
+            "LOAM_TEST_JULIA_USER_ID=$SAMPLE_JULIA_ID" "LOAM_TEST_JULIA_EMAIL=$SAMPLE_JULIA_EMAIL" "LOAM_TEST_JULIA_PASSWORD=$SAMPLE_JULIA_PASSWORD" \
+            "LOAM_TEST_PHILIP_USER_ID=$SAMPLE_PHILIP_ID" "LOAM_TEST_PHILIP_EMAIL=$SAMPLE_PHILIP_EMAIL" "LOAM_TEST_PHILIP_PASSWORD=$SAMPLE_PHILIP_PASSWORD"
+
+      - name: Wait for the simulator
+        run: xcrun simctl bootstatus "${{ steps.simulator.outputs.device_id }}" -b
+
+      - name: Take screenshots
+        env:
+          TEST_RUNNER_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
+          TEST_RUNNER_SCREENSHOT_SCREENS: ${{ needs.gate.outputs.screens }}
+        run: |
+          set -o pipefail
+          # The flows run once per appearance: the simulator's setting is the one the app reliably follows.
+          for appearance in light dark; do
+            xcrun simctl ui "${{ steps.simulator.outputs.device_id }}" appearance "$appearance"
+            TEST_RUNNER_SCREENSHOT_APPEARANCE="$appearance" xcodebuild test-without-building \
+              -project Loam.xcodeproj \
+              -scheme Loam \
+              -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
+              -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+              -clonedSourcePackagesDirPath .spm \
+              -disableAutomaticPackageResolution \
+              -collect-test-diagnostics never \
+              -only-testing:LoamUITests \
+              -skip-testing:LoamUITests/LoamUITests \
+              -resultBundlePath "$RUNNER_TEMP/Screenshots-$appearance.xcresult"
+          done
+          ls -l "$RUNNER_TEMP/screenshots"
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshots
+          path: ${{ runner.temp }}/screenshots
+          retention-days: 7
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshot-results-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/Screenshots.xcresult
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Delete iOS simulator
+        if: always() && steps.simulator.outputs.device_id != ''
+        run: |
+          xcrun simctl shutdown "${{ steps.simulator.outputs.device_id }}" || true
+          xcrun simctl delete "${{ steps.simulator.outputs.device_id }}"
+
+  # The only job with write access. It never builds or runs the pull request's code, only copies the images.
+  publish:
+    name: Publish
+    needs: [gate, capture]
+    # Also after a failed capture, so the screens taken before the failure show what went wrong.
+    if: always() && needs.gate.outputs.run == 'true' && (needs.capture.result == 'success' || needs.capture.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Download screenshots
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name screenshots --dir shots
+
+      # One shared branch holds every pull request's images, one folder per pull request, and only the newest
+      # commit's images are kept in it.
+      - name: Push to pr-screenshots
+        run: |
+          set -euo pipefail
+          sha="${HEAD_SHA:0:8}"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git config --global user.name "Kacper Zabłudowski"
+          git config --global user.email "62148831+KPR23@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            rm -rf branch
+            if git ls-remote --exit-code --heads "$remote" pr-screenshots >/dev/null; then
+              git clone --quiet --depth 1 --branch pr-screenshots "$remote" branch
+            else
+              git init --quiet branch
+              git -C branch checkout --quiet --orphan pr-screenshots
+              git -C branch remote add origin "$remote"
+            fi
+            rm -rf "branch/pr-$PR_NUMBER"
+            mkdir -p "branch/pr-$PR_NUMBER/$sha"
+            cp shots/*.png "branch/pr-$PR_NUMBER/$sha/"
+            git -C branch add -A
+            git -C branch commit --quiet -m "Screenshots for #$PR_NUMBER at $sha"
+            git -C branch push --quiet origin pr-screenshots && break
+            [[ $attempt == 4 ]] && exit 1
+            sleep $((attempt * 3))
+          done
+          echo "SHA_DIR=$sha" >> "$GITHUB_ENV"
+
+      - name: Comment on the pull request
+        run: |
+          set -euo pipefail
+          base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/pr-screenshots/pr-${PR_NUMBER}/${SHA_DIR}"
+          {
+            echo '<!-- loam-screenshots -->'
+            echo "Simulator screenshots at \`${SHA_DIR}\`, from the sample data in \`scripts/screenshots/seed.sql\`."
+            echo
+            echo '| Screen | Light | Dark |'
+            echo '| --- | --- | --- |'
+            for light in shots/*-light.png; do
+              name="$(basename "$light" -light.png)"
+              echo "| ${name} | <img src=\"${base}/${name}-light.png\" width=\"240\"> | <img src=\"${base}/${name}-dark.png\" width=\"240\"> |"
+            done
+          } > comment.md
+          id="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
+            --jq '[.[] | select(.body | startswith("<!-- loam-screenshots -->"))][0].id // empty')"
+          if [[ -n $id ]]; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" --field body=@comment.md
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --field body=@comment.md
+          fi
