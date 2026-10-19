@@ -143,12 +143,46 @@ enum SupabaseClientProvider {
         return SupabaseClient(
             supabaseURL: url,
             supabaseKey: SupabaseConfig.anonKey,
-            options: SupabaseClientOptions(
-                auth: .init(
-                    storageKey: storageKey,
-                    emitLocalSessionAsInitialSession: true
-                )
-            )
+            options: SupabaseClientOptions(auth: authOptions(storageKey: storageKey))
         )
     }
+
+    private static func authOptions(storageKey: String?) -> SupabaseClientOptions.AuthOptions {
+        #if DEBUG
+        // The Keychain refuses writes from the unsigned builds CI makes, so a UI-test run keeps the session in memory.
+        if LaunchEnvironment.isUITesting {
+            return .init(
+                storage: InMemoryAuthStorage(),
+                storageKey: storageKey,
+                emitLocalSessionAsInitialSession: true
+            )
+        }
+        #endif
+        return .init(storageKey: storageKey, emitLocalSessionAsInitialSession: true)
+    }
 }
+
+#if DEBUG
+private final class InMemoryAuthStorage: AuthLocalStorage, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: Data] = [:]
+
+    func store(key: String, value: Data) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        values[key] = value
+    }
+
+    func retrieve(key: String) throws -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return values[key]
+    }
+
+    func remove(key: String) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        values[key] = nil
+    }
+}
+#endif
