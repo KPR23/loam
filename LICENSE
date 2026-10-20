@@ -12,7 +12,10 @@ The "Loam" name, logo, and app icon are not licensed for any use.
 
 Third-party components keep their own licenses. In particular,
 .claude/skills/swiftui-pro is vendored from twostraws/swiftui-agent-skill
-under the MIT License.
+under the MIT License. .claude/skills/apple-design is vendored from
+dickwu/apple-design-skill, which publishes no license file; its README
+provides the skill as is, and the Human Interface Guidelines text it
+reproduces belongs to Apple Inc.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED.
