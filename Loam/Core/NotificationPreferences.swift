@@ -28,11 +28,11 @@ enum NotificationCategory: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Drawn white on `tint`, like a Settings row.
+    /// Outline glyphs, like the rows in Profile.
     var symbolName: String {
         switch self {
-        case .requests: "tray.and.arrow.down.fill"
-        case .replies: "arrowshape.turn.up.left.fill"
+        case .requests: "tray.and.arrow.down"
+        case .replies: "arrowshape.turn.up.left"
         case .changes: "pencil"
         case .repayments: RepaymentRecord.symbolName
         }

@@ -72,7 +72,7 @@ struct NotificationSettingsView: View {
                 Label {
                     Text("Notifications are off for Loam")
                 } icon: {
-                    NotificationCategoryIcon(symbolName: "bell.slash.fill", tint: Color(.systemGray))
+                    NotificationCategoryIcon(symbolName: "bell.slash", tint: Color(.systemGray))
                 }
                 Button("Open iOS Settings") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
@@ -94,17 +94,16 @@ struct NotificationSettingsView: View {
     }
 }
 
-/// A white glyph on a rounded colored tile, the way iOS Settings marks its rows.
+/// A plain tinted glyph, the way the rows in Profile mark themselves.
 private struct NotificationCategoryIcon: View {
     let symbolName: String
     let tint: Color
 
     var body: some View {
         Image(systemName: symbolName)
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 29, height: 29)
-            .background(tint.gradient, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 24, height: 24)
             .accessibilityHidden(true)
     }
 }

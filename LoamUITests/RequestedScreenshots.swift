@@ -19,6 +19,16 @@ enum RequestedScreens {
             test.settle(1)
             try test.capture("profile-bottom")
         },
+        "notification-settings": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            let row = test.app.buttons["Notifications"].firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 5), "Notifications row is missing in Profile")
+            row.tap()
+            test.settle(1.5)
+            try test.capture("notification-settings")
+            test.app.navigationBars.buttons.firstMatch.tap()
+        },
         "expense-menu": { test in
             let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Weekly shop'")).firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded expense 'Weekly shop' is missing")
