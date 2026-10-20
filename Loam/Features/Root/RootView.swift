@@ -55,6 +55,18 @@ struct RootView: View {
     }
 }
 
+/// Screens that already dismiss the keyboard themselves opt out of the floating hide button.
+extension View {
+    func hidesFloatingKeyboardButton() -> some View {
+        onAppear { FloatingKeyboardButton.suppressionCount += 1 }
+            .onDisappear { FloatingKeyboardButton.suppressionCount -= 1 }
+    }
+}
+
+enum FloatingKeyboardButton {
+    @MainActor static var suppressionCount = 0
+}
+
 /// Install once per window so presented sheets receive the same behavior.
 private struct KeyboardDismissalInstaller: UIViewRepresentable {
     func makeUIView(context: Context) -> KeyboardDismissalView {
@@ -176,7 +188,7 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
         let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt ?? 7
         let options = UIView.AnimationOptions(rawValue: curveValue << 16)
 
-        if isKeyboardVisible {
+        if isKeyboardVisible, FloatingKeyboardButton.suppressionCount == 0 {
             hideKeyboardButton.isHidden = false
         } else {
             // Avoid leaving the control visible after the keyboard has already gone away.

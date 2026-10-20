@@ -104,6 +104,7 @@ struct AddExpenseView: View {
             }
             .errorToast($errorMessage)
         }
+        .hidesFloatingKeyboardButton()
         .sheet(isPresented: $isSplitSheetPresented) {
             splitConfigurationSheet
         }
