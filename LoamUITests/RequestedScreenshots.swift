@@ -27,7 +27,10 @@ enum RequestedScreens {
             row.tap()
             test.settle(1.5)
             try test.capture("notification-settings")
-            test.app.navigationBars.buttons.firstMatch.tap()
+            // Edge swipe back: the navigation bar's back button isn't reliably exposed to queries.
+            let edge = test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.5))
+            edge.press(forDuration: 0.1, thenDragTo: test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)))
+            test.settle(1)
         },
         "expense-menu": { test in
             let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Weekly shop'")).firstMatch
