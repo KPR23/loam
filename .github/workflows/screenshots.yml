@@ -245,7 +245,7 @@ jobs:
           xcrun simctl shutdown "${{ steps.simulator.outputs.device_id }}" || true
           xcrun simctl delete "${{ steps.simulator.outputs.device_id }}"
 
-  # The only job with write access. It never builds or runs the pull request's code, only copies the images.
+  # The only job with write access. It never builds or runs the pull request's code, only uploads the images.
   publish:
     name: Publish
     needs: [gate, capture]
@@ -254,7 +254,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
       actions: read
     env:
@@ -265,54 +265,23 @@ jobs:
       - name: Download screenshots
         run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name screenshots --dir shots
 
-      # One shared branch holds every pull request's images, one folder per pull request, and only the newest
-      # commit's images are kept in it.
-      - name: Push to pr-screenshots
-        run: |
-          set -euo pipefail
-          sha="${HEAD_SHA:0:8}"
-          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git config --global user.name "Kacper Zabłudowski"
-          git config --global user.email "62148831+KPR23@users.noreply.github.com"
-          for attempt in 1 2 3 4; do
-            rm -rf branch
-            if git ls-remote --exit-code --heads "$remote" pr-screenshots >/dev/null; then
-              git clone --quiet --depth 1 --branch pr-screenshots "$remote" branch
-            else
-              git init --quiet branch
-              git -C branch checkout --quiet --orphan pr-screenshots
-              git -C branch remote add origin "$remote"
-            fi
-            rm -rf "branch/pr-$PR_NUMBER"
-            mkdir -p "branch/pr-$PR_NUMBER/$sha"
-            cp shots/*.png "branch/pr-$PR_NUMBER/$sha/"
-            git -C branch add -A
-            git -C branch commit --quiet -m "Screenshots for #$PR_NUMBER at $sha"
-            git -C branch push --quiet origin pr-screenshots && break
-            [[ $attempt == 4 ]] && exit 1
-            sleep $((attempt * 3))
-          done
-          echo "SHA_DIR=$sha" >> "$GITHUB_ENV"
-
+      # `gh --attach` uploads each image to GitHub and swaps the local path in the body for the hosted URL,
+      # so no branch holds the images.
       - name: Comment on the pull request
         run: |
           set -euo pipefail
-          base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/pr-screenshots/pr-${PR_NUMBER}/${SHA_DIR}"
+          sha="${HEAD_SHA:0:8}"
+          attach=()
           {
             echo '<!-- loam-screenshots -->'
-            echo "Simulator screenshots at \`${SHA_DIR}\`, from the sample data in \`scripts/screenshots/seed.sql\`."
+            echo "Simulator screenshots at \`${sha}\`, from the sample data in \`scripts/screenshots/seed.sql\`."
             echo
             echo '| Screen | Light | Dark |'
             echo '| --- | --- | --- |'
             for light in shots/*-light.png; do
               name="$(basename "$light" -light.png)"
-              echo "| ${name} | <img src=\"${base}/${name}-light.png\" width=\"240\"> | <img src=\"${base}/${name}-dark.png\" width=\"240\"> |"
+              echo "| ${name} | ![${name} light](shots/${name}-light.png) | ![${name} dark](shots/${name}-dark.png) |"
+              attach+=(--attach "shots/${name}-light.png" --attach "shots/${name}-dark.png")
             done
           } > comment.md
-          id="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
-            --jq '[.[] | select(.body | startswith("<!-- loam-screenshots -->"))][0].id // empty')"
-          if [[ -n $id ]]; then
-            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" --field body=@comment.md
-          else
-            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --field body=@comment.md
-          fi
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --edit-last --create-if-none --body-file comment.md "${attach[@]}"
