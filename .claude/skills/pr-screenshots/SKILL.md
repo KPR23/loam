@@ -5,7 +5,7 @@ description: Gets simulator screenshots for a Loam UI PR from CI. Use when a PR 
 
 # PR screenshots
 
-Add the `screenshots` label to a same-repo PR. The **Screenshots** workflow then builds the app on a macOS runner, runs the screenshot flows against a throwaway local Supabase stack (the PR's own migrations plus `scripts/screenshots/seed.sql`), and posts one comment on the PR with every screen in light and dark. Each push to the PR refreshes the comment while the label stays; remove the label to stop. Images live on the shared `pr-screenshots` branch, in `pr-<number>/<short sha>/`.
+Add the `screenshots` label to a same-repo PR. The **Screenshots** workflow then builds the app on a macOS runner, runs the screenshot flows against a throwaway local Supabase stack (the PR's own migrations plus `scripts/screenshots/seed.sql`), and posts one comment on the PR with every screen in light and dark. Each push to the PR refreshes the comment while the label stays; remove the label to stop. The images are uploaded with `gh pr comment --attach`, so no branch holds them.
 
 ## Merging does not wait
 
