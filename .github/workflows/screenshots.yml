@@ -267,7 +267,11 @@ jobs:
 
       # `gh --attach` uploads each image to GitHub and swaps the local path in the body for the hosted URL,
       # so no branch holds the images.
+      # The built-in token is rejected for attachments ("unsupported authentication type"), so this step
+      # uses a personal access token stored as the SCREENSHOTS_TOKEN secret. The comment posts as its owner.
       - name: Comment on the pull request
+        env:
+          GH_TOKEN: ${{ secrets.SCREENSHOTS_TOKEN }}
         run: |
           set -euo pipefail
           sha="${HEAD_SHA:0:8}"
