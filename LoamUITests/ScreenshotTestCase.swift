@@ -12,6 +12,19 @@ class ScreenshotTestCase: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments = ["-uiTesting", "-resetLocalData", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // The backend's address is only known once the workflow's tunnel is up, which is after the app is
+        // built, so it reaches the app at launch (TEST_RUNNER_SCREENSHOT_BACKEND_URL / _ANON_KEY).
+        let environment = ProcessInfo.processInfo.environment
+        if let url = environment["SCREENSHOT_BACKEND_URL"], let anonKey = environment["SCREENSHOT_BACKEND_ANON_KEY"] {
+            app.launchEnvironment = ["SUPABASE_URL": url, "SUPABASE_ANON_KEY": anonKey, "LOAM_TEST_SUPABASE_URL": url]
+        }
+    }
+
+    /// The names from the PR's `Screenshots:` line (SCREENSHOT_SCREENS). `standard` is not a screen: it keeps
+    /// the standard set when other screens are named.
+    static var requestedNames: [String] {
+        (ProcessInfo.processInfo.environment["SCREENSHOT_SCREENS"] ?? "")
+            .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
     /// The workflow sets this through TEST_RUNNER_SCREENSHOT_DIR.

@@ -1,8 +1,11 @@
 import XCTest
 
 /// The screens every UI PR shows: each main tab and the add-expense sheet, with the seeded sample data.
+/// A PR that names screens in its `Screenshots:` line gets only those, unless the line also says `standard`.
 final class StandardScreenshots: ScreenshotTestCase {
     func testMainScreens() throws {
+        let names = Self.requestedNames
+        try XCTSkipIf(!names.isEmpty && !names.contains("standard"), "Only the requested screens were asked for")
         signIn()
         settle(3)
         try capture("01-home")

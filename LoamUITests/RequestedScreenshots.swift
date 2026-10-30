@@ -43,11 +43,10 @@ enum RequestedScreens {
     ]
 }
 
-/// Runs the screens named in SCREENSHOT_SCREENS after the default set. Nothing is requested on most PRs.
+/// Runs the screens named in SCREENSHOT_SCREENS after the standard set (or instead of it). Nothing is requested on most PRs.
 final class RequestedScreenshots: ScreenshotTestCase {
     func testRequestedScreens() throws {
-        let names = (ProcessInfo.processInfo.environment["SCREENSHOT_SCREENS"] ?? "")
-            .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        let names = Self.requestedNames.filter { $0 != "standard" }
         try XCTSkipIf(names.isEmpty, "No extra screens requested")
         let unknown = names.filter { RequestedScreens.steps[$0] == nil }
         XCTAssertTrue(unknown.isEmpty, "Unknown screens \(unknown). Known: \(RequestedScreens.steps.keys.sorted()). Add one in RequestedScreenshots.swift.")

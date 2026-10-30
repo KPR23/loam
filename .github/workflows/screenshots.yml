@@ -136,6 +136,15 @@ jobs:
           key: spm-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
+      # Incremental builds: package products and unchanged targets are reused. The backend's address is not a
+      # build setting (it reaches the app at launch), so it does not invalidate this.
+      - name: Cache build products
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/DerivedData
+          key: derived-${{ runner.os }}-${{ hashFiles('Loam.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'project.yml') }}
+          restore-keys: derived-${{ runner.os }}-
+
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj -clonedSourcePackagesDirPath .spm
 
@@ -156,9 +165,32 @@ jobs:
           sys.exit("No suitable iPhone simulator found on runner")
           PY
           )"
-          DEVICE_ID="$(xcrun simctl create "Loam Screenshots ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" "$DEVICE_TYPE" "$RUNTIME")"
-          echo "device_id=${DEVICE_ID}" >> "$GITHUB_OUTPUT"
-          xcrun simctl boot "$DEVICE_ID"
+          # One simulator per appearance, so light and dark run side by side.
+          for appearance in light dark; do
+            device_id="$(xcrun simctl create "Loam Screenshots ${appearance} ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" "$DEVICE_TYPE" "$RUNTIME")"
+            echo "${appearance}_id=${device_id}" >> "$GITHUB_OUTPUT"
+            # Booting carries on in the background while the app builds.
+            xcrun simctl boot "$device_id"
+          done
+
+      # The sample users are build settings. The backend's address is a launch value, so the build does not
+      # wait for the backend.
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project Loam.xcodeproj \
+            -scheme Loam \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.light_id }}" \
+            -clonedSourcePackagesDirPath .spm \
+            CODE_SIGNING_ALLOWED=NO \
+            -skipPackagePluginValidation \
+            -disableAutomaticPackageResolution \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            "LOAM_TEST_JULIA_USER_ID=$SAMPLE_JULIA_ID" "LOAM_TEST_JULIA_EMAIL=$SAMPLE_JULIA_EMAIL" "LOAM_TEST_JULIA_PASSWORD=$SAMPLE_JULIA_PASSWORD" \
+            "LOAM_TEST_PHILIP_USER_ID=$SAMPLE_PHILIP_ID" "LOAM_TEST_PHILIP_EMAIL=$SAMPLE_PHILIP_EMAIL" "LOAM_TEST_PHILIP_PASSWORD=$SAMPLE_PHILIP_PASSWORD"
 
       - name: Wait for the backend
         id: backend
@@ -174,53 +206,50 @@ jobs:
           echo "url=$(jq -r .url "$RUNNER_TEMP/backend/backend.json")" >> "$GITHUB_OUTPUT"
           echo "anon_key=$(jq -r .anon_key "$RUNNER_TEMP/backend/backend.json")" >> "$GITHUB_OUTPUT"
 
-      # Debug builds only allow the test-account buttons when the build's own backend address is the
-      # allowlisted one, so the sample users and the address are build settings, not launch values.
-      - name: Build
+      - name: Wait for the simulators
         run: |
-          set -o pipefail
-          xcodebuild build-for-testing \
-            -project Loam.xcodeproj \
-            -scheme Loam \
-            -configuration Debug \
-            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
-            -clonedSourcePackagesDirPath .spm \
-            CODE_SIGNING_ALLOWED=NO \
-            -skipPackagePluginValidation \
-            -disableAutomaticPackageResolution \
-            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            "SUPABASE_URL=${{ steps.backend.outputs.url }}" \
-            "LOAM_TEST_SUPABASE_URL=${{ steps.backend.outputs.url }}" \
-            "SUPABASE_ANON_KEY=${{ steps.backend.outputs.anon_key }}" \
-            "LOAM_TEST_JULIA_USER_ID=$SAMPLE_JULIA_ID" "LOAM_TEST_JULIA_EMAIL=$SAMPLE_JULIA_EMAIL" "LOAM_TEST_JULIA_PASSWORD=$SAMPLE_JULIA_PASSWORD" \
-            "LOAM_TEST_PHILIP_USER_ID=$SAMPLE_PHILIP_ID" "LOAM_TEST_PHILIP_EMAIL=$SAMPLE_PHILIP_EMAIL" "LOAM_TEST_PHILIP_PASSWORD=$SAMPLE_PHILIP_PASSWORD"
-
-      - name: Wait for the simulator
-        run: xcrun simctl bootstatus "${{ steps.simulator.outputs.device_id }}" -b
+          for id in "${{ steps.simulator.outputs.light_id }}" "${{ steps.simulator.outputs.dark_id }}"; do
+            xcrun simctl bootstatus "$id" -b
+          done
+          # The simulator's setting is the appearance the app reliably follows.
+          xcrun simctl ui "${{ steps.simulator.outputs.light_id }}" appearance light
+          xcrun simctl ui "${{ steps.simulator.outputs.dark_id }}" appearance dark
 
       - name: Take screenshots
         env:
           TEST_RUNNER_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
           TEST_RUNNER_SCREENSHOT_SCREENS: ${{ needs.gate.outputs.screens }}
+          TEST_RUNNER_SCREENSHOT_BACKEND_URL: ${{ steps.backend.outputs.url }}
+          TEST_RUNNER_SCREENSHOT_BACKEND_ANON_KEY: ${{ steps.backend.outputs.anon_key }}
         run: |
-          set -o pipefail
-          # The flows run once per appearance: the simulator's setting is the one the app reliably follows.
-          for appearance in light dark; do
-            xcrun simctl ui "${{ steps.simulator.outputs.device_id }}" appearance "$appearance"
-            TEST_RUNNER_SCREENSHOT_APPEARANCE="$appearance" xcodebuild test-without-building \
+          # Both appearances run at once, each on its own simulator and result bundle. (macOS bash is 3.x:
+          # no associative arrays.)
+          run_flows() {
+            TEST_RUNNER_SCREENSHOT_APPEARANCE="$1" xcodebuild test-without-building \
               -project Loam.xcodeproj \
               -scheme Loam \
-              -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
+              -destination "platform=iOS Simulator,id=$2" \
               -derivedDataPath "$RUNNER_TEMP/DerivedData" \
               -clonedSourcePackagesDirPath .spm \
               -disableAutomaticPackageResolution \
               -collect-test-diagnostics never \
               -only-testing:LoamUITests \
               -skip-testing:LoamUITests/LoamUITests \
-              -resultBundlePath "$RUNNER_TEMP/Screenshots-$appearance.xcresult"
+              -resultBundlePath "$RUNNER_TEMP/Screenshots-$1.xcresult" \
+              > "$RUNNER_TEMP/test-$1.log" 2>&1
+          }
+          run_flows light "${{ steps.simulator.outputs.light_id }}" & light_pid=$!
+          run_flows dark "${{ steps.simulator.outputs.dark_id }}" & dark_pid=$!
+          failed=0
+          wait "$light_pid" || failed=1
+          wait "$dark_pid" || failed=1
+          for appearance in light dark; do
+            echo "::group::xcodebuild test ($appearance)"
+            tail -n 60 "$RUNNER_TEMP/test-$appearance.log"
+            echo "::endgroup::"
           done
           ls -l "$RUNNER_TEMP/screenshots"
+          exit $failed
 
       - name: Upload screenshots
         if: always()
@@ -235,15 +264,17 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshot-results-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/Screenshots.xcresult
+          path: ${{ runner.temp }}/Screenshots-*.xcresult
           retention-days: 7
           if-no-files-found: ignore
 
-      - name: Delete iOS simulator
-        if: always() && steps.simulator.outputs.device_id != ''
+      - name: Delete iOS simulators
+        if: always() && steps.simulator.outputs.light_id != ''
         run: |
-          xcrun simctl shutdown "${{ steps.simulator.outputs.device_id }}" || true
-          xcrun simctl delete "${{ steps.simulator.outputs.device_id }}"
+          for id in "${{ steps.simulator.outputs.light_id }}" "${{ steps.simulator.outputs.dark_id }}"; do
+            xcrun simctl shutdown "$id" || true
+            xcrun simctl delete "$id"
+          done
 
   # The only job with write access. It never builds or runs the pull request's code, only uploads the images.
   publish:

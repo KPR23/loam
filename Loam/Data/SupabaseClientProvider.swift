@@ -34,7 +34,9 @@ enum SupabaseConfig {
     }
 
     static var testProjectURL: String {
-        ((Bundle.main.object(forInfoDictionaryKey: "LOAM_TEST_SUPABASE_URL") as? String) ?? "")
+        (ProcessInfo.processInfo.environment["LOAM_TEST_SUPABASE_URL"]
+            ?? Bundle.main.object(forInfoDictionaryKey: "LOAM_TEST_SUPABASE_URL") as? String
+            ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
