@@ -35,6 +35,9 @@ begin
   where owner_user_id<>p_user_id and exists(select 1 from jsonb_array_elements(r.shares) s where (s->>'user_id')::uuid=p_user_id);
   delete from public.recurring_rule where owner_user_id=p_user_id;
   delete from public.activity_event where audience_user_id=p_user_id or audience_user_id=any(v_placeholders);
+  -- Push tokens and notification choices belong to the live account only.
+  delete from private.push_device where user_id=p_user_id;
+  delete from private.notification_preference where user_id=p_user_id;
   delete from public.connection_invitation where created_by=p_user_id or invited_user_id=p_user_id;
   delete from public.expense_share_trust where user_id=p_user_id or trusted_user_id=p_user_id;
   delete from public.user_connection where user_a=p_user_id or user_b=p_user_id or user_a=any(v_placeholders) or user_b=any(v_placeholders);
