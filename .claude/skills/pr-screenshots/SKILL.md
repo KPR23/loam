@@ -19,8 +19,8 @@ The workflow is not a required check. Small PRs can merge without it, and a red 
 
 ## Which screens get captured
 
-- **Always:** the standard set in `StandardScreenshots.swift` (Expenses, Add expense, Balances, Activity, Profile), light and dark.
-- **Extra, by name:** put a line in the PR description, for example `Screenshots: profile-bottom, expense-menu`. The workflow reads the first `Screenshots:` line (lowercase names, comma or space separated) and `RequestedScreenshots` runs each name after the standard set. An unknown name fails the run and lists the known ones.
+- **By default:** the standard set in `StandardScreenshots.swift` (Expenses, Add expense, Balances, Activity, Profile), light and dark. Naming screens in a `Screenshots:` line (below) replaces it with just those, which is faster; add `standard` to the line to keep it.
+- **Extra, by name:** put a line in the PR description, for example `Screenshots: profile-bottom, expense-menu`. The workflow reads the first `Screenshots:` line (lowercase names, comma or space separated) and `RequestedScreenshots` runs each name. An unknown name fails the run and lists the known ones.
 - **A screen that needs setup** (open sheet, pull-down search, long-press menu, scrolling): add an entry to `RequestedScreens.steps` in `LoamUITests/RequestedScreenshots.swift` in the same PR. The closure starts on the Expenses tab, does the taps and gestures the screen needs, and calls `try test.capture("name")`. `expense-menu` (long-press) and `profile-bottom` (scrolling) are examples. For a whole new flow, subclass `ScreenshotTestCase` instead.
 - Each capture saves `<name>-light.png` and `<name>-dark.png`. Screenshot classes skip themselves outside the workflow, so normal `Build & Test` runs are unaffected. New files must be added to `Loam.xcodeproj` (run `xcodegen generate`).
 
