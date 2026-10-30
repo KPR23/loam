@@ -16,6 +16,11 @@ enum PendingChange: Codable, Hashable, Sendable {
         }
     }
 
+    var isNewExpense: Bool {
+        if case .saveExpense(_, true, _) = self { return true }
+        return false
+    }
+
     var title: String {
         switch self {
         case let .saveExpense(expense, _, _), let .deleteExpense(expense, _), let .respondToShare(expense, _): expense.displayTitle

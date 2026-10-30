@@ -46,6 +46,24 @@ final class OfflineSyncTests: LocalStorageTestCase {
 
     // MARK: Store
 
+    func testANewExpenseThatHangsIsSavedOnTheDeviceAndSentLater() async throws {
+        let store = makeStore()
+        store.newExpenseTimeout = .milliseconds(50)
+        await store.refresh(userId: me)
+        let expense = ExpenseRecord(amountMinor: 900, currency: "PLN", category: .groceries, title: "Slow", paidBy: me, createdBy: me, shares: [ExpenseShareRecord(userId: me, amountMinor: 900)])
+
+        let outcome = try await store.sendOrQueue(.saveExpense(expense, isNew: true, rule: nil), userId: me) {
+            try await Task.sleep(for: .seconds(30))
+        }
+
+        XCTAssertEqual(outcome, .queued)
+        XCTAssertEqual(sync.changes.count, 1)
+        XCTAssertEqual(sync.notice?.kind, .savedOffline)
+        await sync.flush(userId: me)
+        let stored = try await repository.fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertEqual(stored.map(\.title), ["Slow"])
+    }
+
     func testAnExpenseAddedOfflineShowsAtOnceAndSyncsWhenBackOnline() async throws {
         let store = makeStore()
         await store.refresh(userId: me)

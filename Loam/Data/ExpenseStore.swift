@@ -196,7 +196,7 @@ final class ExpenseStore: ObservableObject {
 
     /// Sends a change, or keeps it on the device when there's no connection. A change also waits
     /// when an earlier one to the same expense hasn't synced, so the two arrive in order.
-    private func sendOrQueue(_ change: PendingChange, userId: UUID, send: () async throws -> Void) async throws -> WriteOutcome {
+    func sendOrQueue(_ change: PendingChange, userId: UUID, send: () async throws -> Void) async throws -> WriteOutcome {
         if sync.shouldQueue(change, userId: userId) {
             let offline = !sync.isOnline()
             queue(change, userId: userId, announce: offline)
@@ -207,12 +207,41 @@ final class ExpenseStore: ObservableObject {
             }
             return .queued
         }
+        // A new expense that hangs on a bad connection is kept on the device instead of holding the sheet open.
+        // Resending it is safe: the server treats an expense it already has as synced.
+        let timeout: Duration? = sync.isEnabled() && change.isNewExpense ? newExpenseTimeout : nil
         do {
-            try await send()
+            try await Self.run(send, timeout: timeout)
             return .sent
-        } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
+        } catch where sync.isEnabled() && (error is SendTimedOut || Connectivity.isOfflineError(error)) {
             queue(change, userId: userId, announce: true)
             return .queued
+        }
+    }
+
+    /// How long a new expense may take to reach the server before it is saved on the device and sent later.
+    var newExpenseTimeout: Duration = .seconds(5)
+
+    private struct SendTimedOut: Error {}
+
+    /// Runs `send`, cancelling it and throwing `SendTimedOut` once `timeout` passes.
+    private static func run(_ send: () async throws -> Void, timeout: Duration?) async throws {
+        guard let timeout else { return try await send() }
+        try await withoutActuallyEscaping(send) { send in
+            let work = Task { try await send() }
+            var timedOut = false
+            let timer = Task {
+                try await Task.sleep(for: timeout)
+                timedOut = true
+                work.cancel()
+            }
+            defer { timer.cancel() }
+            do {
+                try await work.value
+            } catch {
+                if timedOut { throw SendTimedOut() }
+                throw error
+            }
         }
     }
 
@@ -226,7 +255,7 @@ final class ExpenseStore: ObservableObject {
         saveCopy(userId: userId)
     }
 
-    private enum WriteOutcome {
+    enum WriteOutcome {
         case sent
         case queued
     }
