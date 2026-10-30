@@ -22,6 +22,8 @@ final class ExpenseStore: ObservableObject {
     var pendingAcceptanceLookup: ((UUID) async throws -> [ExpenseRecord])?
     /// Keeps changes made offline until they sync; tests use their own.
     var sync: OfflineSync = .shared
+    /// How long a new expense waits for the server before it is saved on the device and sent in the background.
+    var createTimeout: Duration = .seconds(5)
 
     @Published private(set) var period: DatePeriod = .currentMonth
 
@@ -196,7 +198,9 @@ final class ExpenseStore: ObservableObject {
 
     /// Sends a change, or keeps it on the device when there's no connection. A change also waits
     /// when an earlier one to the same expense hasn't synced, so the two arrive in order.
-    private func sendOrQueue(_ change: PendingChange, userId: UUID, send: () async throws -> Void) async throws -> WriteOutcome {
+    /// A slow `send` (`timeout`) is saved on the device like an offline change and keeps running; the
+    /// queued copy then finds the expense already there, or sends it.
+    private func sendOrQueue(_ change: PendingChange, userId: UUID, timeout: Duration? = nil, send: @escaping () async throws -> Void) async throws -> WriteOutcome {
         if sync.shouldQueue(change, userId: userId) {
             let offline = !sync.isOnline()
             queue(change, userId: userId, announce: offline)
@@ -208,11 +212,53 @@ final class ExpenseStore: ObservableObject {
             return .queued
         }
         do {
-            try await send()
+            if let timeout, sync.isEnabled() {
+                guard try await Self.finishes(send, within: timeout) else {
+                    queue(change, userId: userId, announce: true)
+                    Task {
+                        await sync.flush(userId: userId)
+                        await refresh(userId: userId)
+                    }
+                    return .queued
+                }
+            } else {
+                try await send()
+            }
             return .sent
         } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
             queue(change, userId: userId, announce: true)
             return .queued
+        }
+    }
+
+    /// False when `work` is still running after `timeout`; it is left to finish on its own.
+    private static func finishes(_ work: @escaping () async throws -> Void, within timeout: Duration) async throws -> Bool {
+        let box = TimeoutRace()
+        return try await withCheckedThrowingContinuation { continuation in
+            box.continuation = continuation
+            Task {
+                do {
+                    try await work()
+                    box.finish(.success(true))
+                } catch {
+                    box.finish(.failure(error))
+                }
+            }
+            Task {
+                try? await Task.sleep(for: timeout)
+                box.finish(.success(false))
+            }
+        }
+    }
+
+    /// Resumes its continuation once, for whichever of the work or the timer ends first.
+    @MainActor
+    private final class TimeoutRace {
+        var continuation: CheckedContinuation<Bool, Error>?
+
+        func finish(_ result: Result<Bool, Error>) {
+            continuation?.resume(with: result)
+            continuation = nil
         }
     }
 
@@ -387,7 +433,7 @@ final class ExpenseStore: ObservableObject {
             recurringId: recurringRule?.id,
             shares: shareRecords
         )
-        let outcome = try await sendOrQueue(.saveExpense(expense, isNew: true, rule: recurringRule), userId: userId) {
+        let outcome = try await sendOrQueue(.saveExpense(expense, isNew: true, rule: recurringRule), userId: userId, timeout: createTimeout) {
             _ = try await LoamErrorCapture.withCapture("expense.shared_create_failed") {
                 if let recurringRule {
                     return try await activeRepository.createRecurringExpense(expense, rule: recurringRule)
@@ -446,7 +492,7 @@ final class ExpenseStore: ObservableObject {
             recurringId: recurringRule?.id,
             shares: shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
         )
-        let outcome = try await sendOrQueue(.saveExpense(expense, isNew: true, rule: recurringRule), userId: userId) {
+        let outcome = try await sendOrQueue(.saveExpense(expense, isNew: true, rule: recurringRule), userId: userId, timeout: createTimeout) {
             _ = try await LoamErrorCapture.withCapture("expense.personal_create_failed") {
                 if let recurringRule {
                     return try await activeRepository.createRecurringExpense(expense, rule: recurringRule)
