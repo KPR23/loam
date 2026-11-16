@@ -241,7 +241,7 @@ struct HomeScrollCollapseModifier: ViewModifier {
     @State private var pullArmed = true
 
     private let collapseDistance: CGFloat = 150
-    private let pullDistance: CGFloat = 70
+    private let pullDistance: CGFloat = 140
 
     func body(content: Content) -> some View {
         content
@@ -257,7 +257,7 @@ struct HomeScrollCollapseModifier: ViewModifier {
                 let scrolled = baselineOffset - minY
                 collapseProgress = min(max(scrolled / collapseDistance, 0), 1)
 
-                // Dragging the list down past its top opens search; it re-arms once the list settles.
+                // Pull-to-refresh fires first; dragging well past it reveals search. It re-arms once the list settles.
                 if scrolled < -pullDistance, pullArmed {
                     pullArmed = false
                     onPullDown()
