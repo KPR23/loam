@@ -148,8 +148,8 @@ struct HomeView: View {
 
     private func openSearch() {
         guard !isSearchPresented else { return }
-        isSearchPresented = true
-        isSearchFieldFocused = true
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.snappy) { isSearchPresented = true }
     }
 
     private func closeSearch() {
@@ -183,7 +183,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 12)
                 .frame(minHeight: 40)
-                .background(.regularMaterial, in: Capsule())
+                .background(HomeTheme.surface, in: Capsule())
 
                 Button("Cancel", action: closeSearch)
             }
