@@ -132,7 +132,7 @@ After each archive, `ci_scripts/ci_post_xcodebuild.sh` uploads the dSYMs to Sent
 
 `scripts/release.sh rc release/x.y.z` tags an rc on a release branch, so a patch can go to TestFlight without moving `main`'s version. `ship` shows what it will tag and delete and asks before doing it.
 
-Hotfixes: `scripts/release.sh hotfix [ref]` branches `release/x.y.(z+1)` from `ref` (default: the latest `vx.y.z` tag) and sets its version. Merge the fix into `main`, `pick` it, submit, then `ship`.
+Patch releases (1.1.1 on top of 1.1.0 while `main` moves on to 1.2): `scripts/release.sh hotfix [ref]` opens `patch/x.y.(z+1)` from the latest `vx.y.z` tag (or `hotfix 1.1` for the newest 1.1.* tag) with the version set. Nothing deploys and `main` is untouched. Land each fix on `main` first, then `pick <commit>` it onto the patch branch (as often as needed), `rc patch/x.y.z` for TestFlight, and `cut x.y.z` to promote the latest rc to `release/x.y.z` (production deploy) and delete the patch branch. Submit, then `ship`, which also marks the GitHub release Latest only if it is the highest version.
 
 Every push to a release branch migrates production at once. GitHub only offers required reviewers on environments with a paid plan for private repos, so there is no approval gate: push to release branches through the script. Production migrates before Apple approves the build, while the App Store version still runs against it, so migrations must be backward compatible. Add columns, tables and functions in one release and remove the old ones in a later release.
 
