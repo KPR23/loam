@@ -16,7 +16,8 @@ set -euo pipefail
 
 DEVICE_TYPE="${1:-iPhone 16 Pro}"
 SCHEME="Loam"
-BUNDLE_ID="app.loam.Loam"
+# Debug builds use the staging bundle ID, so they install next to the App Store build.
+BUNDLE_ID="app.loam.Loam.rc"
 SIM_A="Loam - Julia"
 SIM_B="Loam - Philip"
 DERIVED_DATA="build/dual-sim"

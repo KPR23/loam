@@ -9,7 +9,8 @@ set -euo pipefail
 
 DEVICE_NAME="${1:-iPhone 18 Pro}"
 SCHEME="Loam"
-BUNDLE_ID="app.loam.Loam"
+# Debug builds use the staging bundle ID, so they install next to the App Store build.
+BUNDLE_ID="app.loam.Loam.rc"
 DERIVED_DATA="build/run-sim"
 
 # Prints the UDID of the available device named "$1" on the newest iOS runtime.
