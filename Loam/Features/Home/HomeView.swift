@@ -4,6 +4,7 @@ struct HomeView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
     @ObservedObject private var offlineSync = OfflineSync.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var arcReloadToken: Int = 0
     var onAddExpense: () -> Void = {}
@@ -149,7 +150,7 @@ struct HomeView: View {
     private func openSearch() {
         guard !isSearchPresented else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        withAnimation(.snappy) { isSearchPresented = true }
+        withAnimation(reduceMotion ? nil : .snappy) { isSearchPresented = true }
     }
 
     private func closeSearch() {
