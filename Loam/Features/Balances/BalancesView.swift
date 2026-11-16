@@ -23,7 +23,18 @@ struct BalancesView: View {
 
     /// True from the first frame until the first load ends, so neither the empty state nor a
     /// half-filled list shows before the balances arrive.
-    private var showsSkeleton: Bool { !balanceStore.hasLoaded && snapshot.balances.isEmpty }
+    private var showsSkeleton: Bool {
+        guard snapshot.balances.isEmpty else { return false }
+        return !balanceStore.hasLoaded || waitsForFriends
+    }
+
+    /// With no balances, the empty state depends on friends too, so wait for their first load.
+    /// A failed request or demo mode (no backend) stops the wait.
+    private var waitsForFriends: Bool {
+        !connectionStore.hasLoadedConnections
+            && connectionStore.lastError == nil
+            && SupabaseClientProvider.shared != nil
+    }
 
     var body: some View {
         NavigationStack {

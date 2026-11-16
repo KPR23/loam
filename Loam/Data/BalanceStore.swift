@@ -22,7 +22,8 @@ final class BalanceStore: ObservableObject {
         if userId != accountId { snapshot = .empty; hasLoaded = false; lastError = nil; accountId = userId }
         guard let userId else { return }
         isLoading = true
-        defer { isLoading = false; if accountId == userId { hasLoaded = true } }
+        // A load cancelled by leaving the tab hasn't finished, so the placeholder stays for the next one.
+        defer { isLoading = false; if accountId == userId, !Task.isCancelled { hasLoaded = true } }
         // Repayments made offline go first, so the balances below include them.
         await sync.flush(userId: userId)
         guard !sync.isEnabled() || sync.isOnline() else { return showSavedCopy(userId: userId) }
