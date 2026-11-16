@@ -28,7 +28,7 @@ Always go through the script. Never create rc/v tags, release branches or versio
 
 ## Rules
 
-- **Confirm with the user before `cut` or `ship`.** `cut` pushes a release branch and `ship` a tag and public release. `pick` and `hotfix` only touch a `patch/*` branch, which doesn't deploy, but `pick` on a `release/*` branch does. A release branch push migrates production immediately, and there is no approval gate.
+- **Confirm with the user before `cut`, `ship`, or `pick` onto a release branch.** `cut` pushes a release branch and `ship` a tag and public release. `hotfix` and `pick` onto a `patch/*` branch don't deploy, but `pick` onto a `release/*` branch migrates production, so confirm that too. A release branch push migrates production immediately, and there is no approval gate.
 - **Fixes land on `main` first**, through a PR, then go onto the release branch with `pick`. Never commit a fix only on a release branch, and never merge a release branch back into `main`.
 - **Migrations must be backward compatible.** Production migrates before Apple approves the build, while the current App Store version still runs against it. Add columns, tables and functions in one release; remove the old ones in a later release. Flag any migration that drops, renames or tightens something the shipped app uses.
 - `MARKETING_VERSION` (in `project.yml` and `Loam.xcodeproj/project.pbxproj`) must match the version in App Store Connect. The user creates that version in App Store Connect; remind them after `cut` and `hotfix`. Xcode Cloud sets the build number.
