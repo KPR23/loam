@@ -24,7 +24,7 @@ Always go through the script. Never create rc/v tags, release branches or versio
 - `scripts/release.sh cut`: pushes `release/x.y.z` from `origin/main` and opens a PR moving `main` to the next minor version.
 - `scripts/release.sh pick <commit>…`: cherry-picks commits that are already on `main` onto the open release branch and pushes.
 - `scripts/release.sh ship`: tags `vx.y.z` on the release branch, publishes the GitHub release, deletes the branch.
-- `scripts/release.sh hotfix`: branches `release/x.y.(z+1)` from the latest `vx.y.z` tag with the version set.
+- `scripts/release.sh hotfix [ref]`: branches `release/x.y.(z+1)` from `ref` (default: the latest `vx.y.z` tag) with the version set.
 
 ## Rules
 
