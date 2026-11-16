@@ -752,6 +752,9 @@ private struct SubscriptionView: View {
                     Button { showsPaywall = true } label: {
                         ProfileRow("Upgrade to Loam Pro", symbol: "arrow.up.circle", color: .blue)
                     }
+                    Button { subscriptions.presentCodeRedemption() } label: {
+                        ProfileRow("Redeem code", symbol: "giftcard", color: .green)
+                    }
                 }
             }
             .listRowBackground(HomeTheme.surface)

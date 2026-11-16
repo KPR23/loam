@@ -96,9 +96,21 @@ final class SubscriptionStore: ObservableObject {
         }
     }
 
+    /// Opens Apple's offer code sheet. Once the code is redeemed, RevenueCat reports the
+    /// new entitlement through `customerInfoStream`, which `apply` picks up.
+    func presentCodeRedemption() {
+        guard isAvailable else { return }
+        Purchases.shared.presentCodeRedemptionSheet()
+    }
+
     private func apply(_ info: CustomerInfo) {
+        let wasPro = isPro
         customerInfo = info
         isPro = info.entitlements.active[Self.entitlementId] != nil
+        // Pro that arrives while signed in (a redeemed code) reaches the backend right away.
+        if isPro, !wasPro, case .some(.some) = requestedUserId {
+            Task { await syncBackendEntitlement() }
+        }
     }
 
     private static var apiKey: String? {
