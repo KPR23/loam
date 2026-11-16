@@ -24,11 +24,11 @@ Always go through the script. Never create rc/v tags, release branches or versio
 - `scripts/release.sh cut [ref]`: pushes `release/x.y.z` from the latest `rc/x.y.z-N` tag (the tested commit; refuses without one) and opens a PR moving `main` to the next minor version.
 - `scripts/release.sh pick <commit>…`: cherry-picks commits that are already on `main` onto the open release branch and pushes.
 - `scripts/release.sh ship [x.y.z]`: tags `vx.y.z` on the release branch, publishes the GitHub release, deletes the branch.
-- `scripts/release.sh hotfix [ref]`: branches `release/x.y.(z+1)` from `ref` (default: the latest `vx.y.z` tag) with the version set.
+- `scripts/release.sh hotfix [ref|x.y]`: opens `patch/x.y.(z+1)` from `ref` (default: the latest `vx.y.z` tag) with the version set. Nothing deploys; `main` is untouched. `pick` fixes onto it, `rc patch/x.y.z` to test, `cut x.y.z` to promote it to `release/x.y.z`.
 
 ## Rules
 
-- **Confirm with the user before `cut`, `pick`, `ship` or `hotfix`.** Each one pushes a release branch or tag. A release branch push migrates production immediately, and there is no approval gate.
+- **Confirm with the user before `cut` or `ship`.** `cut` pushes a release branch and `ship` a tag and public release. `pick` and `hotfix` only touch a `patch/*` branch, which doesn't deploy, but `pick` on a `release/*` branch does. A release branch push migrates production immediately, and there is no approval gate.
 - **Fixes land on `main` first**, through a PR, then go onto the release branch with `pick`. Never commit a fix only on a release branch, and never merge a release branch back into `main`.
 - **Migrations must be backward compatible.** Production migrates before Apple approves the build, while the current App Store version still runs against it. Add columns, tables and functions in one release; remove the old ones in a later release. Flag any migration that drops, renames or tightens something the shipped app uses.
 - `MARKETING_VERSION` (in `project.yml` and `Loam.xcodeproj/project.pbxproj`) must match the version in App Store Connect. The user creates that version in App Store Connect; remind them after `cut` and `hotfix`. Xcode Cloud sets the build number.
@@ -40,7 +40,7 @@ Always go through the script. Never create rc/v tags, release branches or versio
 
 **Rejected by Apple:** fix via PR to `main` → merge → confirm → `pick <sha>` → the user submits the new build.
 
-**Hotfix:** confirm → `hotfix` → fix via PR to `main` → `pick <sha>` → submit → `ship`.
+**Patch:** `hotfix` (safe, no deploy) → fix via PR to `main` → `pick <sha>` → `rc patch/x.y.z` → confirm → `cut x.y.z` → submit → `ship`.
 
 ## Checking status
 

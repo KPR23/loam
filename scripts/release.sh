@@ -2,10 +2,10 @@
 # Drives the release flow described in README.md ("Releasing").
 #
 #   scripts/release.sh rc [ref]        Tag the next rc/x.y.z-N on ref (default origin/main; release/x.y.z works too) for TestFlight
-#   scripts/release.sh cut [ref]       Branch release/x.y.z from the tested rc tag (default: latest rc of main's version), then open a PR bumping main
+#   scripts/release.sh cut [x.y.z]     With x.y.z: promote patch/x.y.z to release/x.y.z. Without: branch release/x.y.z from the tested rc tag (default: latest rc of main's version), then open a PR bumping main
 #   scripts/release.sh pick <commit>…  Cherry-pick commits from main onto the open release branch
 #   scripts/release.sh ship [x.y.z]    Tag vx.y.z on the release branch, publish a GitHub release, delete the branch
-#   scripts/release.sh hotfix [ref]    Branch release/x.y.(z+1) from ref (default: the latest vx.y.z tag)
+#   scripts/release.sh hotfix [ref]    Open patch/x.y.(z+1) from ref (default: the latest vx.y.z tag; x.y means the newest x.y.* tag); nothing deploys until cut
 #
 # Version bumps happen in a temporary worktree, so your checkout is never switched.
 set -euo pipefail
@@ -38,9 +38,11 @@ release_branch() {
   local current branches
   current="$(git branch --show-current)"
   if [[ -n ${1:-} ]]; then echo "release/$1"; return; fi
-  if [[ $current == release/* ]]; then echo "$current"; return; fi
-  branches="$(git branch --remotes --list 'origin/release/*' --format='%(refname:lstrip=3)' | sort -V)"
-  [[ -n $branches ]] || die "no release branch on origin"
+  if [[ $current == release/* || $current == patch/* ]]; then echo "$current"; return; fi
+  # An open patch branch is where fixes collect, so it wins over a release branch awaiting approval.
+  branches="$(git branch --remotes --list 'origin/patch/*' --format='%(refname:lstrip=3)' | sort -V)"
+  [[ -n $branches ]] || branches="$(git branch --remotes --list 'origin/release/*' --format='%(refname:lstrip=3)' | sort -V)"
+  [[ -n $branches ]] || die "no patch or release branch on origin"
   if [[ $(wc -l <<< "$branches") -gt 1 ]]; then
     echo "release: several release branches ($(tr '\n' ' ' <<< "$branches")), using the newest" >&2
   fi
@@ -52,8 +54,8 @@ git fetch --quiet --prune --tags origin
 case "${1:-}" in
   rc)
     ref="${2:-origin/main}"
-    # A bare release/x.y.z names the branch on origin, so a patch can be built without touching main.
-    if [[ $ref == release/* ]] && ! git rev-parse --verify --quiet "$ref" > /dev/null; then ref="origin/$ref"; fi
+    # A bare release/x.y.z or patch/x.y.z names the branch on origin, so a patch can be built without touching main.
+    if [[ $ref == release/* || $ref == patch/* ]] && ! git rev-parse --verify --quiet "$ref" > /dev/null; then ref="origin/$ref"; fi
     version="$(version_at "$ref")"
     [[ -n $version ]] || die "no MARKETING_VERSION in project.yml at $ref"
     last="$(git tag --list "rc/$version-*" | sed "s|^rc/$version-||" | sort -n | tail -n 1)"
@@ -64,6 +66,20 @@ case "${1:-}" in
     ;;
 
   cut)
+    if [[ -n ${2:-} && $2 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && git rev-parse --verify --quiet "origin/patch/$2" > /dev/null; then
+      # Promote a patch branch: release exactly its latest tested rc. main is untouched.
+      version="$2"
+      patch="patch/$version"
+      branch="release/$version"
+      last="$(git tag --list "rc/$version-*" | sed "s|^rc/$version-||" | sort -n | tail -n 1)"
+      [[ -n $last ]] || die "no rc/$version-N tag; run release.sh rc $patch and test it on TestFlight first"
+      ref="rc/$version-$last"
+      git rev-parse --verify --quiet "origin/$branch" > /dev/null && die "$branch already exists"
+      git push --quiet origin "$(git rev-parse "$ref^{commit}"):refs/heads/$branch"
+      git push --quiet origin --delete "$patch"
+      echo "Pushed $branch from $ref and deleted $patch. $branch deploys production now. Once that run and Xcode Cloud's build finish, submit the build for review."
+      exit 0
+    fi
     version="$(version_at origin/main)"
     branch="release/$version"
     # Release exactly what was tested: the latest rc tag for this version, unless a ref is given.
@@ -98,7 +114,11 @@ case "${1:-}" in
     git cherry-pick -x "$@"
     git push --quiet origin "$branch"
     if [[ -n $previous ]]; then git switch --quiet "$previous"; else git switch --quiet --detach "$previous_commit"; fi
-    echo "Pushed the fix to $branch, which deploys production now. Once that run finishes, submit the new build."
+    if [[ $branch == patch/* ]]; then
+      echo "Pushed the fix to $branch (no deploy). Tag it for TestFlight with: release.sh rc $branch"
+    else
+      echo "Pushed the fix to $branch, which deploys production now. Once that run finishes, submit the new build."
+    fi
     ;;
 
   ship)
@@ -112,7 +132,11 @@ case "${1:-}" in
     fi
     git tag --annotate "$tag" --message "Loam $version" "origin/$branch"
     git push --quiet origin "$tag"
-    gh release create "$tag" --verify-tag --generate-notes --title "Loam $version"
+    # Only the highest version is marked Latest, so shipping a patch for an older line doesn't take it over.
+    highest="$(git tag --list 'v*' --sort=-version:refname | head -n 1)"
+    latest=true
+    [[ $highest == "$tag" ]] || latest=false
+    gh release create "$tag" --verify-tag --generate-notes --title "Loam $version" --latest="$latest"
     git push --quiet origin --delete "$branch"
     git branch --quiet --delete --force "$branch" 2> /dev/null || true
     echo "Tagged $tag and deleted $branch. Hotfixes start from the tag: release.sh hotfix"
@@ -120,16 +144,25 @@ case "${1:-}" in
 
   hotfix)
     base="${2:-$(git tag --list 'v*' --sort=-version:refname | head -n 1)}"
+    # "hotfix 1.1" starts from the newest vx.y.* tag, so the patch follows the line you name.
+    if [[ $base =~ ^[0-9]+\.[0-9]+$ ]]; then
+      base="$(git tag --list "v$base.*" --sort=-version:refname | head -n 1)"
+      [[ -n $base ]] || die "no v$2.* tag"
+    fi
     [[ -n $base ]] || die "no vx.y.z tag to hotfix; pass the ref that matches the live release, e.g. origin/release/1.1.0"
     current="$(version_at "$base")"
     [[ -n $current ]] || die "no MARKETING_VERSION in project.yml at $base"
     version="$(next_patch "$current")"
-    branch="release/$version"
-    git rev-parse --verify --quiet "origin/$branch" > /dev/null && die "$branch already exists"
+    branch="patch/$version"
+    for existing in "$branch" "release/$version"; do
+      git rev-parse --verify --quiet "origin/$existing" > /dev/null && die "$existing already exists"
+    done
     commit_version "$base" "$branch" "$version"
     git push --quiet --set-upstream origin "$branch"
-    echo "Pushed $branch from $base. Create version $version in App Store Connect, land the fix on main,"
-    echo "then: git switch $branch && scripts/release.sh pick <commit>"
+    echo "Opened $branch from $base (nothing deploys; main is untouched). Create version $version in App Store Connect."
+    echo "Land each fix on main, then: scripts/release.sh pick <commit>   (repeat as needed)"
+    echo "Test it:  scripts/release.sh rc $branch"
+    echo "Release:  scripts/release.sh cut $version"
     ;;
 
   *)
