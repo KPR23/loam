@@ -41,7 +41,7 @@ final class SubscriptionStore: ObservableObject {
         Task { [weak self] in
             for await info in Purchases.shared.customerInfoStream {
                 guard let self else { return }
-                if !self.isSwitchingAccount { self.apply(info) }
+                if !self.isSwitchingAccount { self.apply(info, syncOnGrant: true) }
             }
         }
     }
@@ -103,12 +103,14 @@ final class SubscriptionStore: ObservableObject {
         Purchases.shared.presentCodeRedemptionSheet()
     }
 
-    private func apply(_ info: CustomerInfo) {
+    /// `syncOnGrant` is only for stream updates: `identify` and `didUpdate` sync the backend
+    /// themselves, so they must not send a second request for the same change.
+    private func apply(_ info: CustomerInfo, syncOnGrant: Bool = false) {
         let wasPro = isPro
         customerInfo = info
         isPro = info.entitlements.active[Self.entitlementId] != nil
         // Pro that arrives while signed in (a redeemed code) reaches the backend right away.
-        if isPro, !wasPro, case .some(.some) = requestedUserId {
+        if syncOnGrant, isPro, !wasPro, case .some(.some) = requestedUserId {
             Task { await syncBackendEntitlement() }
         }
     }
