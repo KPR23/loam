@@ -5,7 +5,7 @@
 #   scripts/release.sh cut             Branch release/x.y.z from origin/main, then open a PR bumping main
 #   scripts/release.sh pick <commit>…  Cherry-pick commits from main onto the open release branch
 #   scripts/release.sh ship            Tag vx.y.z on the release branch, publish a GitHub release, delete the branch
-#   scripts/release.sh hotfix          Branch release/x.y.(z+1) from the latest vx.y.z tag
+#   scripts/release.sh hotfix [ref]    Branch release/x.y.(z+1) from ref (default: the latest vx.y.z tag)
 #
 # Version bumps happen in a temporary worktree, so your checkout is never switched.
 set -euo pipefail
@@ -103,14 +103,16 @@ case "${1:-}" in
     ;;
 
   hotfix)
-    latest="$(git tag --list 'v*' --sort=-version:refname | head -n 1)"
-    [[ -n $latest ]] || die "no vx.y.z tag to hotfix"
-    version="$(next_patch "${latest#v}")"
+    base="${2:-$(git tag --list 'v*' --sort=-version:refname | head -n 1)}"
+    [[ -n $base ]] || die "no vx.y.z tag to hotfix; pass the ref that matches the live release, e.g. origin/release/1.1.0"
+    current="$(version_at "$base")"
+    [[ -n $current ]] || die "no MARKETING_VERSION in project.yml at $base"
+    version="$(next_patch "$current")"
     branch="release/$version"
     git rev-parse --verify --quiet "origin/$branch" > /dev/null && die "$branch already exists"
-    commit_version "$latest" "$branch" "$version"
+    commit_version "$base" "$branch" "$version"
     git push --quiet --set-upstream origin "$branch"
-    echo "Pushed $branch from $latest. Create version $version in App Store Connect, land the fix on main,"
+    echo "Pushed $branch from $base. Create version $version in App Store Connect, land the fix on main,"
     echo "then: git switch $branch && scripts/release.sh pick <commit>"
     ;;
 
