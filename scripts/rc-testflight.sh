@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Builds the staging app ("Loam RC", app.loam.Loam.rc) on this Mac and uploads it to TestFlight.
+#
+#   scripts/rc-testflight.sh [ref]     ref defaults to origin/main
+#
+# Xcode Cloud can't build this app: its one product belongs to the App Store app and is tied to the
+# repository, so the RC app has no product of its own. Production builds still go through Xcode Cloud.
+#
+# The build comes from a clean worktree at ref, so uncommitted changes never end up in it. The
+# version is MARKETING_VERSION at ref; App Store Connect picks the next build number.
+#
+# Needs: the `asc` CLI with API authentication (ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY_PATH), and
+# Xcode signed in with the team's Apple ID for automatic signing. The upload goes to the internal
+# "Admin" group of the Loam RC app, so add yourself to that group in App Store Connect once.
+set -euo pipefail
+
+RC_APP_ID="6835553681" # App Store Connect app "Loam RC" (app.loam.Loam.rc)
+GROUP="Admin"
+
+die() { echo "rc-testflight: $*" >&2; exit 1; }
+
+command -v asc > /dev/null || die "asc is not installed (brew install asc)"
+
+cd "$(git rev-parse --show-toplevel)"
+git fetch --quiet --prune origin
+
+ref="${1:-origin/main}"
+git rev-parse --verify --quiet "$ref^{commit}" > /dev/null || die "unknown ref: $ref"
+
+version="$(git show "$ref:project.yml" | sed -n 's/^ *MARKETING_VERSION: *"\{0,1\}\([0-9.]*\)"\{0,1\}$/\1/p' | head -n 1)"
+[[ -n $version ]] || die "no MARKETING_VERSION in project.yml at $ref"
+
+# The build must carry the RC bundle ID, or App Store Connect rejects it for this app.
+git show "$ref:project.yml" | grep -q 'PRODUCT_BUNDLE_IDENTIFIER: app.loam.Loam.rc' ||
+  die "$ref has no app.loam.Loam.rc bundle ID; build a ref that includes the staging bundle ID change"
+
+dir="$(mktemp -d)"
+trap 'git worktree remove --force "$dir" 2> /dev/null || true' EXIT
+git worktree add --quiet --detach "$dir" "$ref"
+
+echo "Building Loam RC $version from $(git rev-parse --short "$ref") ..."
+cd "$dir"
+asc publish testflight \
+  --app "$RC_APP_ID" \
+  --project Loam.xcodeproj \
+  --scheme Loam-TestFlight \
+  --configuration TestFlight \
+  --version "$version" \
+  --group "$GROUP" \
+  --wait
+
+echo "Uploaded Loam RC $version. It shows up in TestFlight for the $GROUP group once processing finishes."
