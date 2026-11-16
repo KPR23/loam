@@ -4,6 +4,9 @@ import Foundation
 final class BalanceStore: ObservableObject {
     @Published private(set) var snapshot = BalanceSnapshot.empty
     @Published private(set) var isLoading = false
+    /// Whether the first load for this account has finished, so views show a placeholder rather
+    /// than an empty state in the gap before it starts and while it runs.
+    @Published private(set) var hasLoaded = false
     @Published var lastError: String? {
         // Every failure reaches the person as a toast, wherever they are in the app.
         didSet { if let lastError { ToastCenter.shared.showError(lastError) } }
@@ -16,9 +19,10 @@ final class BalanceStore: ObservableObject {
 
     func refresh(userId: UUID?) async {
         // Never show one account's balances to the next one on this device.
-        if userId != accountId { snapshot = .empty; lastError = nil; accountId = userId }
+        if userId != accountId { snapshot = .empty; hasLoaded = false; lastError = nil; accountId = userId }
         guard let userId else { return }
-        isLoading = true; defer { isLoading = false }
+        isLoading = true
+        defer { isLoading = false; if accountId == userId { hasLoaded = true } }
         // Repayments made offline go first, so the balances below include them.
         await sync.flush(userId: userId)
         guard !sync.isEnabled() || sync.isOnline() else { return showSavedCopy(userId: userId) }
