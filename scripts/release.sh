@@ -2,9 +2,9 @@
 # Drives the release flow described in README.md ("Releasing").
 #
 #   scripts/release.sh rc [ref]        Tag the next rc/x.y.z-N on ref (default origin/main) for TestFlight
-#   scripts/release.sh cut             Branch release/x.y.z from origin/main, then open a PR bumping main
+#   scripts/release.sh cut [ref]       Branch release/x.y.z from the tested rc tag (default: latest rc of main's version), then open a PR bumping main
 #   scripts/release.sh pick <commit>…  Cherry-pick commits from main onto the open release branch
-#   scripts/release.sh ship            Tag vx.y.z on the release branch, publish a GitHub release, delete the branch
+#   scripts/release.sh ship [x.y.z]    Tag vx.y.z on the release branch, publish a GitHub release, delete the branch
 #   scripts/release.sh hotfix [ref]    Branch release/x.y.(z+1) from ref (default: the latest vx.y.z tag)
 #
 # Version bumps happen in a temporary worktree, so your checkout is never switched.
@@ -32,15 +32,19 @@ commit_version() {
   git worktree remove "$dir"
 }
 
-# The release branch to act on: the current branch if it is one, otherwise the only one on origin.
+# The release branch to act on: the current branch if it is one, else an explicit version ($1),
+# else the newest one on origin (an older one left over from a shipped release never blocks a newer cut).
 release_branch() {
   local current branches
   current="$(git branch --show-current)"
+  if [[ -n ${1:-} ]]; then echo "release/$1"; return; fi
   if [[ $current == release/* ]]; then echo "$current"; return; fi
-  branches="$(git branch --remotes --list 'origin/release/*' --format='%(refname:lstrip=3)')"
+  branches="$(git branch --remotes --list 'origin/release/*' --format='%(refname:lstrip=3)' | sort -V)"
   [[ -n $branches ]] || die "no release branch on origin"
-  [[ $(wc -l <<< "$branches") -eq 1 ]] || die "several release branches; check one out first: $(tr '\n' ' ' <<< "$branches")"
-  echo "$branches"
+  if [[ $(wc -l <<< "$branches") -gt 1 ]]; then
+    echo "release: several release branches ($(tr '\n' ' ' <<< "$branches")), using the newest" >&2
+  fi
+  tail -n 1 <<< "$branches"
 }
 
 git fetch --quiet --prune --tags origin
@@ -60,10 +64,15 @@ case "${1:-}" in
   cut)
     version="$(version_at origin/main)"
     branch="release/$version"
+    # Release exactly what was tested: the latest rc tag for this version, unless a ref is given.
+    last="$(git tag --list "rc/$version-*" | sed "s|^rc/$version-||" | sort -n | tail -n 1)"
+    ref="${2:-${last:+rc/$version-$last}}"
+    [[ -n $ref ]] || die "no rc/$version-N tag; run release.sh rc and test it on TestFlight first (or pass a ref)"
+    [[ $(version_at "$ref") == "$version" ]] || die "$ref is not version $version"
     git rev-parse --verify --quiet "origin/$branch" > /dev/null && die "$branch already exists"
     git tag --list "v$version" | grep -q . && die "v$version is already tagged; bump MARKETING_VERSION on main first"
-    git push --quiet origin "origin/main:refs/heads/$branch"
-    echo "Pushed $branch, which deploys production now. Once that run and Xcode Cloud's build finish, submit the build for review."
+    git push --quiet origin "$(git rev-parse "$ref^{commit}"):refs/heads/$branch"
+    echo "Pushed $branch from $ref, which deploys production now. Once that run and Xcode Cloud's build finish, submit the build for review."
 
     next="$(next_minor "$version")"
     bump="chore/version-$next"
@@ -91,7 +100,7 @@ case "${1:-}" in
     ;;
 
   ship)
-    branch="$(release_branch)"
+    branch="$(release_branch "${2:-}")"
     version="${branch#release/}"
     tag="v$version"
     git tag --annotate "$tag" --message "Loam $version" "origin/$branch"
