@@ -35,12 +35,14 @@ commit_version() {
 # The release branch to act on: the current branch if it is one, else an explicit version ($1),
 # else the newest one on origin (an older one left over from a shipped release never blocks a newer cut).
 release_branch() {
-  local current branches
+  local only_release=${2:-} current branches
   current="$(git branch --show-current)"
   if [[ -n ${1:-} ]]; then echo "release/$1"; return; fi
-  if [[ $current == release/* || $current == patch/* ]]; then echo "$current"; return; fi
-  # An open patch branch is where fixes collect, so it wins over a release branch awaiting approval.
-  branches="$(git branch --remotes --list 'origin/patch/*' --format='%(refname:lstrip=3)' | sort -V)"
+  if [[ $current == release/* || ( -z $only_release && $current == patch/* ) ]]; then echo "$current"; return; fi
+  # For pick, an open patch branch is where fixes collect, so it wins over a release branch awaiting approval.
+  # ship never takes a patch branch: it only tags what was released.
+  branches=""
+  [[ -n $only_release ]] || branches="$(git branch --remotes --list 'origin/patch/*' --format='%(refname:lstrip=3)' | sort -V)"
   [[ -n $branches ]] || branches="$(git branch --remotes --list 'origin/release/*' --format='%(refname:lstrip=3)' | sort -V)"
   [[ -n $branches ]] || die "no patch or release branch on origin"
   if [[ $(wc -l <<< "$branches") -gt 1 ]]; then
@@ -75,6 +77,7 @@ case "${1:-}" in
       [[ -n $last ]] || die "no rc/$version-N tag; run release.sh rc $patch and test it on TestFlight first"
       ref="rc/$version-$last"
       git rev-parse --verify --quiet "origin/$branch" > /dev/null && die "$branch already exists"
+      [[ -z $(git rev-list "$ref^{commit}..origin/$patch") ]] || die "$patch has commits after $ref; run release.sh rc $patch and test them first"
       git push --quiet origin "$(git rev-parse "$ref^{commit}"):refs/heads/$branch"
       git push --quiet origin --delete "$patch"
       echo "Pushed $branch from $ref and deleted $patch. $branch deploys production now. Once that run and Xcode Cloud's build finish, submit the build for review."
@@ -109,6 +112,11 @@ case "${1:-}" in
     previous="$(git branch --show-current)"
     previous_commit="$(git rev-parse HEAD)"
     git diff --quiet && git diff --cached --quiet || die "commit or stash your changes first"
+    if [[ $branch == release/* && -t 0 ]]; then
+      echo "About to push to $branch, which migrates production and deploys functions now."
+      read -r -p "Continue? [y/N] " answer
+      [[ $answer == [yY]* ]] || die "aborted"
+    fi
     git switch --quiet "$branch" 2> /dev/null || git switch --quiet --track "origin/$branch"
     git pull --quiet --ff-only
     git cherry-pick -x "$@"
@@ -122,7 +130,7 @@ case "${1:-}" in
     ;;
 
   ship)
-    branch="$(release_branch "${2:-}")"
+    branch="$(release_branch "${2:-}" releases-only)"
     version="${branch#release/}"
     tag="v$version"
     echo "About to: tag $tag on origin/$branch ($(git rev-parse --short "origin/$branch")), publish a public GitHub release, delete origin/$branch."
