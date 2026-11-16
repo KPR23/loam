@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Drives the release flow described in README.md ("Releasing").
 #
-#   scripts/release.sh rc [ref]        Tag the next rc/x.y.z-N on ref (default origin/main) for TestFlight
+#   scripts/release.sh rc [ref]        Tag the next rc/x.y.z-N on ref (default origin/main; release/x.y.z works too) for TestFlight
 #   scripts/release.sh cut [ref]       Branch release/x.y.z from the tested rc tag (default: latest rc of main's version), then open a PR bumping main
 #   scripts/release.sh pick <commit>…  Cherry-pick commits from main onto the open release branch
 #   scripts/release.sh ship [x.y.z]    Tag vx.y.z on the release branch, publish a GitHub release, delete the branch
@@ -52,6 +52,8 @@ git fetch --quiet --prune --tags origin
 case "${1:-}" in
   rc)
     ref="${2:-origin/main}"
+    # A bare release/x.y.z names the branch on origin, so a patch can be built without touching main.
+    if [[ $ref == release/* ]] && ! git rev-parse --verify --quiet "$ref" > /dev/null; then ref="origin/$ref"; fi
     version="$(version_at "$ref")"
     [[ -n $version ]] || die "no MARKETING_VERSION in project.yml at $ref"
     last="$(git tag --list "rc/$version-*" | sed "s|^rc/$version-||" | sort -n | tail -n 1)"
@@ -103,6 +105,11 @@ case "${1:-}" in
     branch="$(release_branch "${2:-}")"
     version="${branch#release/}"
     tag="v$version"
+    echo "About to: tag $tag on origin/$branch ($(git rev-parse --short "origin/$branch")), publish a public GitHub release, delete origin/$branch."
+    if [[ -t 0 ]]; then
+      read -r -p "Continue? [y/N] " answer
+      [[ $answer == [yY]* ]] || die "aborted"
+    fi
     git tag --annotate "$tag" --message "Loam $version" "origin/$branch"
     git push --quiet origin "$tag"
     gh release create "$tag" --verify-tag --generate-notes --title "Loam $version"
