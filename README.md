@@ -126,9 +126,9 @@ After each archive, `ci_scripts/ci_post_xcodebuild.sh` uploads the dSYMs to Sent
 
 1. Create version `x.y.z` in App Store Connect. `main` already carries it in `MARKETING_VERSION`.
 2. `scripts/release.sh rc` tags the next `rc/x.y.z-N` on `origin/main`. Repeat until the TestFlight build is ready.
-3. `scripts/release.sh cut` pushes `release/x.y.z`, which deploys production, and opens a PR moving `main` to the next minor version. Wait for the deploy and the Xcode Cloud build, then submit that build for review.
+3. `scripts/release.sh cut` pushes `release/x.y.z` from the latest `rc/x.y.z-N` tag, so the App Store build is exactly the commit you tested (it refuses if no rc exists). That push deploys production, and opens a PR moving `main` to the next minor version. Wait for the deploy and the Xcode Cloud build, then submit that build for review.
 4. If Apple rejects it, merge the fix into `main` first, then `scripts/release.sh pick <commit>` cherry-picks it onto the release branch for a new build. Fixes never land on the release branch alone, so it never merges back.
-5. Once approved, `scripts/release.sh ship` tags `vx.y.z`, publishes the GitHub release and deletes the branch.
+5. Once approved, `scripts/release.sh ship [x.y.z]` (the newest release branch unless you name one) tags `vx.y.z`, publishes the GitHub release and deletes the branch.
 
 Hotfixes: `scripts/release.sh hotfix [ref]` branches `release/x.y.(z+1)` from `ref` (default: the latest `vx.y.z` tag) and sets its version. Merge the fix into `main`, `pick` it, submit, then `ship`.
 

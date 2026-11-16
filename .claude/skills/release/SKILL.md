@@ -21,9 +21,9 @@ README.md → "Releasing" is the source of truth; read it if anything here looks
 Always go through the script. Never create rc/v tags, release branches or version bumps by hand.
 
 - `scripts/release.sh rc [ref]`: tags the next `rc/x.y.z-N` on `origin/main` (or `ref`).
-- `scripts/release.sh cut`: pushes `release/x.y.z` from `origin/main` and opens a PR moving `main` to the next minor version.
+- `scripts/release.sh cut [ref]`: pushes `release/x.y.z` from the latest `rc/x.y.z-N` tag (the tested commit; refuses without one) and opens a PR moving `main` to the next minor version.
 - `scripts/release.sh pick <commit>…`: cherry-picks commits that are already on `main` onto the open release branch and pushes.
-- `scripts/release.sh ship`: tags `vx.y.z` on the release branch, publishes the GitHub release, deletes the branch.
+- `scripts/release.sh ship [x.y.z]`: tags `vx.y.z` on the release branch, publishes the GitHub release, deletes the branch.
 - `scripts/release.sh hotfix [ref]`: branches `release/x.y.(z+1)` from `ref` (default: the latest `vx.y.z` tag) with the version set.
 
 ## Rules
