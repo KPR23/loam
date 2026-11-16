@@ -77,7 +77,7 @@ private struct SkeletonPulse: ViewModifier {
     }
 }
 
-private extension View {
+extension View {
     func skeletonPulse() -> some View {
         modifier(SkeletonPulse())
     }

@@ -5,6 +5,7 @@ struct BalancesView: View {
     @EnvironmentObject private var balanceStore: BalanceStore
     @EnvironmentObject private var connectionStore: ConnectionStore
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showsRepayment = false
     @State private var showAddFriend = false
 
@@ -20,10 +21,20 @@ struct BalancesView: View {
 
     private var isEmpty: Bool { snapshot.balances.isEmpty && connectionStore.connections.isEmpty }
 
+    /// True from the first frame until the first load ends, so neither the empty state nor a
+    /// half-filled list shows before the balances arrive.
+    private var showsSkeleton: Bool { !balanceStore.hasLoaded && snapshot.balances.isEmpty }
+
     var body: some View {
         NavigationStack {
             List {
-                if balanceStore.isLoading && snapshot.balances.isEmpty {
+                if showsSkeleton {
+                    Section {
+                        BalancesHeroSkeleton()
+                            .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 18, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
                     Section {
                         SkeletonRows(count: 3, leading: .avatar(40))
                     }
@@ -79,6 +90,7 @@ struct BalancesView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: showsSkeleton)
             .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
@@ -88,7 +100,7 @@ struct BalancesView: View {
                 PersonBalanceView(person: person)
             }
             .toolbar {
-                if !isEmpty {
+                if !isEmpty && !showsSkeleton {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             LoamFeedback.tap()
@@ -223,6 +235,21 @@ struct BalancesView: View {
 }
 
 // MARK: - Hero
+
+/// Stands in for the hero while balances load, matching its caption and amount layout.
+private struct BalancesHeroSkeleton: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            Capsule().frame(width: 130, height: 13)
+            Capsule().frame(width: 190, height: 42)
+        }
+        .foregroundStyle(HomeTheme.tileEmpty)
+        .frame(maxWidth: .infinity)
+        .skeletonPulse()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading balances")
+    }
+}
 
 /// The net position across everyone.
 private struct BalancesHero: View {
