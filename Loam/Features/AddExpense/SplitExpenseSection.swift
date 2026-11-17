@@ -12,6 +12,9 @@ struct SplitExpenseSection: View {
     var requiresPartner: Bool = false
     var onFriendConnected: ((SplitPartnerOption) -> Void)?
 
+    /// Owned by the host, which presents the sheet from outside the list: a sheet attached to a
+    /// list row is torn down whenever the row reloads, for example when the keyboard appears.
+    @Binding var showsPlaceholderPrompt: Bool
     @Binding var selectedPartnerUserIds: Set<UUID>
     @Binding var splitMode: SplitExpenseMode
     @Binding var paidByUserId: UUID
@@ -19,7 +22,6 @@ struct SplitExpenseSection: View {
     @Binding var participantAmountTexts: [UUID: String]
 
     @State private var partnerSearchText = ""
-    @State private var showsPlaceholderPrompt = false
     /// Existing participants missing from `availablePartners` when the form
     /// opened: connections load asynchronously, and a co-participant may not
     /// be connected to the person editing. They stay listed, even after being
@@ -129,10 +131,6 @@ struct SplitExpenseSection: View {
             if retainedPartners.isEmpty {
                 retainedPartners = unlistedSelectedPartners
             }
-        }
-        .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { friend in
-            selectedPartnerUserIds.insert(friend.userId)
-            onFriendConnected?(friend)
         }
 
         if isSearching {

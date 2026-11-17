@@ -35,6 +35,7 @@ struct SplitExpenseSheet: View {
 
     @State private var formState: SplitFormState
     @State private var isSaving = false
+    @State private var showsPlaceholderPrompt = false
     @State private var errorMessage: String?
 
     private var splitPartners: [SplitPartnerOption] {
@@ -87,6 +88,7 @@ struct SplitExpenseSheet: View {
                     currencyCode: expense.currency,
                     recentPartners: recentSplitPartners,
                     requiresPartner: true,
+                    showsPlaceholderPrompt: $showsPlaceholderPrompt,
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
                     splitMode: $formState.splitMode,
                     paidByUserId: $formState.paidByUserId,
@@ -97,6 +99,9 @@ struct SplitExpenseSheet: View {
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .task { await connectionStore.refresh(userId: myUserId) }
+            .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { friend in
+                formState.selectedPartnerUserIds.insert(friend.userId)
+            }
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)
             .navigationTitle(expense.isShared ? "Edit split" : "Split expense")
