@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // Tests must never touch the system notification center.
         if !LaunchEnvironment.isAutomatedTest {
             UNUserNotificationCenter.current().delegate = self
+            UNUserNotificationCenter.current().setNotificationCategories(WalletPaymentNotifier.categories)
         }
         return true
     }
@@ -35,9 +36,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard response.actionIdentifier == UNNotificationDefaultActionIdentifier else { return }
-        let payload = response.notification.request.content.userInfo
-        let strings = payload.compactMapValues { $0 as? String }
+        let content = response.notification.request.content
+        let category = content.categoryIdentifier
+        let action = response.actionIdentifier
+        let walletInfo = content.userInfo.reduce(into: [String: String]()) { result, entry in
+            if let key = entry.key as? String, let value = entry.value as? String { result[key] = value }
+        }
+        // Wallet payment buttons run here in the background; everything else is a push tap.
+        let handled = await WalletPaymentNotifier.shared.handle(category: category, action: action, userInfo: walletInfo)
+        guard !handled, action == UNNotificationDefaultActionIdentifier else { return }
+        let strings = content.userInfo.compactMapValues { $0 as? String }
         await MainActor.run { PushNotificationStore.shared.open(userInfo: strings) }
     }
 }
