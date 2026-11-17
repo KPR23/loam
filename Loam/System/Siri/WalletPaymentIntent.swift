@@ -5,7 +5,8 @@ import Foundation
 enum WalletPaymentMode: String, AppEnum {
     /// Saves it straight away and posts a notification with Undo.
     case addNow
-    /// Posts a notification with Add; nothing is saved until it's tapped.
+    /// Posts a notification with Add; nothing is saved until it's tapped. With notifications
+    /// turned off it adds right away instead.
     case askFirst
 
     static var typeDisplayRepresentation: TypeDisplayRepresentation = "Mode"
@@ -54,6 +55,10 @@ struct LogWalletPaymentIntent: AppIntent {
         let userId = try await services.signedInUserId()
         let notifier = WalletPaymentNotifier.shared
 
+        // A refund arrives as a negative amount; it isn't an expense.
+        if let amount, amount < 0 {
+            return .result(dialog: "\(WalletPaymentText.refundSkipped)")
+        }
         let payment: WalletPayment
         do {
             payment = try WalletPayment.make(
@@ -63,28 +68,25 @@ struct LogWalletPaymentIntent: AppIntent {
                 category: category,
                 paidAt: Date()
             )
+        } catch let LoamIntentError.unsupportedCurrency(code) {
+            let text = WalletPaymentText.unsupportedCurrency(code)
+            await notifier.postProblem(title: merchant ?? "Apple Pay payment", body: text, userId: userId)
+            return .result(dialog: "\(text)")
         } catch {
             // Wallet sometimes sends an empty amount; don't lose the payment, ask for it.
             await notifier.postMissingAmount(merchant: merchant, userId: userId)
             return .result(dialog: "\(WalletPaymentText.missingAmount)")
         }
 
-        switch mode {
-        case .addNow:
-            let id = try await Self.save(payment, userId: userId)
-            await notifier.postAdded(payment, expenseId: id, userId: userId)
-            return .result(dialog: "\(WalletPaymentText.dialogAdded(payment))")
-        case .askFirst:
-            if await notifier.canNotify() {
-                await notifier.postAsk(payment, userId: userId)
-                return .result(dialog: "\(WalletPaymentText.askToAdd(payment))")
-            }
-            // Without notifications, ask in Shortcuts instead.
-            let prompt = "\(WalletPaymentText.title(payment)). \(WalletPaymentText.askToAdd(payment))"
-            try await requestConfirmation(result: .result(dialog: "\(prompt)"), confirmationActionName: .add)
-            _ = try await Self.save(payment, userId: userId)
-            return .result(dialog: "\(WalletPaymentText.dialogAdded(payment))")
+        // Without notifications there's nobody to ask: a Run Immediately automation can't
+        // show a prompt, so the payment is added rather than lost.
+        if mode == .askFirst, await notifier.canNotify() {
+            await notifier.postAsk(payment, userId: userId)
+            return .result(dialog: "\(WalletPaymentText.askToAdd(payment))")
         }
+        let id = try await Self.save(payment, userId: userId)
+        await notifier.postAdded(payment, expenseId: id, userId: userId)
+        return .result(dialog: "\(WalletPaymentText.dialogAdded(payment))")
     }
 
     @MainActor
@@ -96,7 +98,8 @@ struct LogWalletPaymentIntent: AppIntent {
             title: payment.merchant,
             note: nil,
             spentAt: payment.paidAt,
-            userId: userId
+            userId: userId,
+            reloads: false
         )
     }
 }

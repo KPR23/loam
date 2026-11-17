@@ -46,31 +46,55 @@ struct WalletPayment: Equatable, Codable, Sendable {
 /// Picks a category from the merchant's name. Wallet only gives the name, so this is a guess the
 /// user can change later; anything unknown is Other.
 enum MerchantCategory {
-    /// Lowercased, accent-free fragments of merchant names. The first match wins.
+    /// Lowercased, accent-free merchant words. A keyword matches whole words of the name, in order;
+    /// its last word may also start a longer one when it has five or more letters ("restaur"
+    /// matches "Restauracja", but "spar" doesn't match "Sparkasse"). The first match wins, so
+    /// specific names come before generic ones.
     static let keywords: [(ExpenseCategory, [String])] = [
+        (.dining, ["uber eats", "wolt", "glovo", "pyszne", "restaur", "bistro", "pizza", "kebab", "sushi",
+                   "burger", "mcdonald", "kfc", "starbucks", "costa coffee", "cafe", "kawiarnia", "coffee",
+                   "bar", "pub"]),
         (.groceries, ["zabka", "biedronka", "lidl", "auchan", "carrefour", "kaufland", "netto", "dino",
-                      "stokrotka", "lewiatan", "aldi", "spar", "frisco", "delikatesy", "market", "grocer"]),
-        (.dining, ["restaur", "bistro", "pizza", "kebab", "sushi", "burger", "mcdonald", "kfc", "starbucks",
-                   "costa", "cafe", "kawiarnia", "coffee", "bar ", "pub", "wolt", "glovo", "pyszne", "uber eats"]),
-        (.transport, ["uber", "bolt", "freenow", "free now", "taxi", "orlen", "shell", "bp ", "circle k",
+                      "stokrotka", "lewiatan", "aldi", "spar", "frisco", "delikatesy", "supermarket", "grocer"]),
+        (.transport, ["uber", "bolt", "freenow", "free now", "taxi", "orlen", "shell", "bp", "circle k",
                       "lotos", "moya", "pkp", "intercity", "koleje", "jakdojade", "ztm", "mpk", "parking", "skycash"]),
-        (.health, ["apteka", "pharmacy", "gemini", "rossmann", "hebe", "lux med", "medicover", "enel-med"]),
+        (.health, ["apteka", "pharmacy", "rossmann", "hebe", "lux med", "medicover", "enel med"]),
         (.entertainment, ["cinema", "kino", "multikino", "helios", "spotify", "netflix", "steam", "playstation", "xbox"]),
-        (.travel, ["hotel", "airbnb", "booking", "ryanair", "wizz", "lot polish", "airport", "lotnisko"]),
-        (.utilities, ["orange", "play ", "plus ", "t-mobile", "pge", "tauron", "enea", "pgnig", "veolia"]),
-        (.shopping, ["zara", "h&m", "reserved", "ikea", "media markt", "mediamarkt", "rtv euro", "empik",
+        (.travel, ["hotel", "airbnb", "booking", "ryanair", "wizz", "airport", "lotnisko"]),
+        (.utilities, ["orange", "t mobile", "pge", "tauron", "enea", "pgnig", "veolia"]),
+        (.shopping, ["zara", "reserved", "ikea", "media markt", "mediamarkt", "rtv euro", "empik",
                      "decathlon", "allegro", "amazon", "pepco", "castorama", "leroy merlin"]),
     ]
 
     static func guess(for merchant: String?) -> ExpenseCategory {
         guard let merchant else { return .other }
-        // Padded so short keywords such as "bp " match at the end of a name too.
-        let name = merchant.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
-            .replacingOccurrences(of: "ł", with: "l") + " "
-        for (category, fragments) in keywords where fragments.contains(where: { name.contains($0) }) {
+        let name = words(merchant)
+        for (category, phrases) in keywords where phrases.contains(where: { matches(words($0), in: name) }) {
             return category
         }
         return .other
+    }
+
+    /// Lowercased, accent-free words, split on anything that isn't a letter or digit.
+    static func words(_ text: String) -> [String] {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+            .replacingOccurrences(of: "ł", with: "l")
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .map(String.init)
+    }
+
+    private static func matches(_ keyword: [String], in name: [String]) -> Bool {
+        guard !keyword.isEmpty, keyword.count <= name.count else { return false }
+        for start in 0...(name.count - keyword.count) {
+            let found = keyword.indices.allSatisfy { index in
+                let word = name[start + index]
+                let wanted = keyword[index]
+                if word == wanted { return true }
+                return index == keyword.count - 1 && wanted.count >= 5 && word.hasPrefix(wanted)
+            }
+            if found { return true }
+        }
+        return false
     }
 }
 
@@ -93,6 +117,12 @@ enum WalletPaymentText {
     }
 
     static let missingAmount = "Wallet didn't send the amount. Tap to add the expense yourself."
+
+    static let refundSkipped = "That was a refund, so nothing was added."
+
+    static func unsupportedCurrency(_ code: String) -> String {
+        "Loam can't save payments in \(code) yet. Tap to add it in złoty, euros or dollars."
+    }
 }
 
 private extension String {
