@@ -30,6 +30,7 @@ struct AddExpenseView: View {
     @State private var repeatHasEndDate = false
     @State private var repeatEndDate = Date()
     @State private var selectedPartnerUserIds: Set<UUID> = []
+    @State private var showsPlaceholderPrompt = false
     @State private var splitMode: SplitExpenseMode = .equal
     @State private var paidByUserId: UUID?
     @State private var myPercentage = 50
@@ -529,6 +530,7 @@ struct AddExpenseView: View {
                     currencyCode: currencyCode,
                     recentPartners: recentSplitPartners,
                     requiresPartner: false,
+                    showsPlaceholderPrompt: $showsPlaceholderPrompt,
                     selectedPartnerUserIds: $selectedPartnerUserIds,
                     splitMode: $splitMode,
                     paidByUserId: Binding(
@@ -544,6 +546,9 @@ struct AddExpenseView: View {
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)
             .navigationTitle("Split expense")
+            .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { friend in
+                selectedPartnerUserIds.insert(friend.userId)
+            }
             .task { await connectionStore.refresh(userId: userId) }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
