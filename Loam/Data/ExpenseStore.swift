@@ -451,6 +451,8 @@ final class ExpenseStore: ObservableObject {
         await refresh(userId: userId)
     }
 
+    /// Returns the new expense's id, so a notification can offer to undo it.
+    @discardableResult
     func addPersonal(
         amountMinor: Int,
         currency: String = AppPreferences.defaultCurrencyCode,
@@ -462,7 +464,7 @@ final class ExpenseStore: ObservableObject {
         spentAt: Date,
         userId: UUID,
         recurring: RecurringRuleRecord? = nil
-    ) async throws {
+    ) async throws -> UUID {
         let trimmedTitle = title.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
         let activeRepository = primaryRepository
@@ -501,11 +503,12 @@ final class ExpenseStore: ObservableObject {
             }
         }
         Telemetry.capture(.expenseCreated(shared: false, recurring: recurringRule != nil, participantCount: 1))
-        guard outcome == .sent else { return }
+        guard outcome == .sent else { return expense.id }
         if recurringRule != nil {
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
         await refresh(userId: userId)
+        return expense.id
     }
 
     func update(

@@ -9,8 +9,11 @@
 /* Begin PBXBuildFile section */
 		ED77E6999E13B52DCE98CF54 /* AppServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A0133F77F604D7C864CA85 /* AppServices.swift */; };
 		8E556BBED2BA7EE50E7217F2 /* LoamIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D90D50ABA4E8D562F23AD2 /* LoamIntents.swift */; };
+		6BCEEC44E02864CB34C87C40 /* WalletPaymentIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E04DF842198DF92DAF5A5D4 /* WalletPaymentIntent.swift */; };
+		FF7C6DC666843B7DCCD25730 /* WalletPayment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80CB8D4AC87891A6C6C8014E /* WalletPayment.swift */; };
 		8982DC6A2238BAD8CD30CDB6 /* SiriTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE65E68A9DCFB00EEBBBD38D /* SiriTypes.swift */; };
 		6DDB19F41EFB317C5706C453 /* SiriIntentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22FDF86F131C7389810D4B08 /* SiriIntentTests.swift */; };
+		8EED655AB3E61C6111DBBEBC /* WalletPaymentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FECCFCE84BFD7BAF8DEB58AC /* WalletPaymentTests.swift */; };
 		02EDC0B8136EA46F95700486 /* CategoryCustomizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 452162D374274ADBC8769979 /* CategoryCustomizer.swift */; };
 		03D450B1F293CE7B1F650960 /* Money.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6CD835D39E131CEAA0B24E8 /* Money.swift */; };
 		03F95FD08C3EB115517F9DA2 /* CustomCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56D68BA9EE7A91D6D0BBDA2 /* CustomCategory.swift */; };
@@ -110,6 +113,7 @@
 		B15A5DE17E5C3637738DD0C8 /* AnalyticsConsentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52FC4772F62136A8CAD907F /* AnalyticsConsentSheet.swift */; };
 		B2F75633AB5044BB813FD2A1 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C58F5F50E4AB4680DA37F0 /* FeatureFlags.swift */; };
 		B33A3689396BC774061E3F84 /* PushNotificationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69044BCBD7D53253A1EE6FBB /* PushNotificationStore.swift */; };
+		C50CC48766614F1B1F99761C /* WalletPaymentNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C508899799962EDF5213A00 /* WalletPaymentNotifier.swift */; };
 		B5C583A33F2526F24215AC48 /* RepaymentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5614B3035CE6B96ADF47AE16 /* RepaymentSheet.swift */; };
 		B69CB7C679EF32139B0D1051 /* LegalPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CEBE465F07788ACD889DE61 /* LegalPages.swift */; };
 		BC595E14561F6D076C40E8C5 /* BalanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07214E88835854CA791C14E /* BalanceStore.swift */; };
@@ -180,8 +184,11 @@
 /* Begin PBXFileReference section */
 		68A0133F77F604D7C864CA85 /* AppServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppServices.swift; sourceTree = "<group>"; };
 		90D90D50ABA4E8D562F23AD2 /* LoamIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoamIntents.swift; sourceTree = "<group>"; };
+		5E04DF842198DF92DAF5A5D4 /* WalletPaymentIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletPaymentIntent.swift; sourceTree = "<group>"; };
+		80CB8D4AC87891A6C6C8014E /* WalletPayment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletPayment.swift; sourceTree = "<group>"; };
 		CE65E68A9DCFB00EEBBBD38D /* SiriTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriTypes.swift; sourceTree = "<group>"; };
 		22FDF86F131C7389810D4B08 /* SiriIntentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriIntentTests.swift; sourceTree = "<group>"; };
+		FECCFCE84BFD7BAF8DEB58AC /* WalletPaymentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletPaymentTests.swift; sourceTree = "<group>"; };
 		5C0A11E0000000000000B001 /* ScreenshotTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTestCase.swift; sourceTree = "<group>"; };
 		5C0A11E0000000000000B002 /* StandardScreenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardScreenshots.swift; sourceTree = "<group>"; };
 		5C0A11E0000000000000B003 /* RequestedScreenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestedScreenshots.swift; sourceTree = "<group>"; };
@@ -247,6 +254,7 @@
 		63C47899F6ED4E7E4BA92DE9 /* Production.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Production.xcconfig; sourceTree = "<group>"; };
 		65D3E31E114A53A479154B4A /* AutoAcceptExpensesToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoAcceptExpensesToggle.swift; sourceTree = "<group>"; };
 		69044BCBD7D53253A1EE6FBB /* PushNotificationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationStore.swift; sourceTree = "<group>"; };
+		6C508899799962EDF5213A00 /* WalletPaymentNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletPaymentNotifier.swift; sourceTree = "<group>"; };
 		6BD805CDE31A24AD630A9703 /* AddExpenseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseView.swift; sourceTree = "<group>"; };
 		6C0334CD52C6BA2DB298B560 /* SplitPartnerOptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitPartnerOptionTests.swift; sourceTree = "<group>"; };
 		6CA57745C8FB4E286749E44E /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
@@ -590,6 +598,7 @@
 				5833E6822337A36150F95276 /* AppDelegate.swift */,
 				EA99C2EA69EAA389AB15EE8F /* NotificationCenterClient.swift */,
 				69044BCBD7D53253A1EE6FBB /* PushNotificationStore.swift */,
+				6C508899799962EDF5213A00 /* WalletPaymentNotifier.swift */,
 			);
 			path = Notifications;
 			sourceTree = "<group>";
@@ -599,6 +608,8 @@
 			children = (
 				68A0133F77F604D7C864CA85 /* AppServices.swift */,
 				90D90D50ABA4E8D562F23AD2 /* LoamIntents.swift */,
+				5E04DF842198DF92DAF5A5D4 /* WalletPaymentIntent.swift */,
+				80CB8D4AC87891A6C6C8014E /* WalletPayment.swift */,
 				CE65E68A9DCFB00EEBBBD38D /* SiriTypes.swift */,
 			);
 			path = Siri;
@@ -635,6 +646,7 @@
 				BB43591E8F047EE99CE88B12 /* CalendarDateCodecTests.swift */,
 				F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */,
 				22FDF86F131C7389810D4B08 /* SiriIntentTests.swift */,
+				FECCFCE84BFD7BAF8DEB58AC /* WalletPaymentTests.swift */,
 				99A7E2ACFDFFA08B0048B9C9 /* ExpenseSummaryTests.swift */,
 				2F0DE1D0BCC3A80DCC995B92 /* LocalExpenseRepositoryTests.swift */,
 				FE0704D45C9ECCF37BB8E48B /* MoneyTests.swift */,
@@ -933,6 +945,7 @@
 				269663C225006F0D994C1708 /* CalendarDateCodecTests.swift in Sources */,
 				699C700B7D9C668D32D611EB /* ExpenseStoreTests.swift in Sources */,
 				6DDB19F41EFB317C5706C453 /* SiriIntentTests.swift in Sources */,
+				8EED655AB3E61C6111DBBEBC /* WalletPaymentTests.swift in Sources */,
 				4D355CDF8A3D632F730E20FB /* ExpenseSummaryTests.swift in Sources */,
 				2D442E3D2E9D1E5EB68049B5 /* LocalExpenseRepositoryTests.swift in Sources */,
 				1423F9D1B80E8BA997D419E8 /* MoneyTests.swift in Sources */,
@@ -998,6 +1011,8 @@
 				F9F54ECD81A5F27472D67E3E /* DeepLinkHandler.swift in Sources */,
 				ED77E6999E13B52DCE98CF54 /* AppServices.swift in Sources */,
 				8E556BBED2BA7EE50E7217F2 /* LoamIntents.swift in Sources */,
+				6BCEEC44E02864CB34C87C40 /* WalletPaymentIntent.swift in Sources */,
+				FF7C6DC666843B7DCCD25730 /* WalletPayment.swift in Sources */,
 				8982DC6A2238BAD8CD30CDB6 /* SiriTypes.swift in Sources */,
 				450CF8D24E4AAD123A859E79 /* EditProposalReviewCard.swift in Sources */,
 				126EF1AD57B79B77088CF0D9 /* ExchangeRates.swift in Sources */,
@@ -1057,6 +1072,7 @@
 				094C1BE9805A819C5B7384FE /* ProfileView.swift in Sources */,
 				492940B3AEF2AA1E876FFC40 /* ProposeEditSheet.swift in Sources */,
 				B33A3689396BC774061E3F84 /* PushNotificationStore.swift in Sources */,
+				C50CC48766614F1B1F99761C /* WalletPaymentNotifier.swift in Sources */,
 				DD08DEF35DF7DA66E8A7F4AE /* Recurring.swift in Sources */,
 				B5C583A33F2526F24215AC48 /* RepaymentSheet.swift in Sources */,
 				33C83051AA7FF1FDA79F0241 /* RootView.swift in Sources */,
