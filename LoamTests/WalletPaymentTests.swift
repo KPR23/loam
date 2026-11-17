@@ -7,6 +7,7 @@ final class WalletPaymentTests: LocalStorageTestCase {
     private var services: AppServices { AppServices.shared }
 
     private func signIn() -> UUID {
+        services.navigator.pendingScreen = nil
         services.authSession.signInDemo()
         return services.authSession.userId!
     }
@@ -51,6 +52,19 @@ final class WalletPaymentTests: LocalStorageTestCase {
         XCTAssertEqual(MerchantCategory.guess(for: "Orlen Stacja 123"), .transport)
         XCTAssertEqual(MerchantCategory.guess(for: "Some Unknown Shop Ltd"), .other)
         XCTAssertEqual(MerchantCategory.guess(for: nil), .other)
+        XCTAssertEqual(MerchantCategory.guess(for: "Restauracja Pod Lipą"), .dining)
+        XCTAssertEqual(MerchantCategory.guess(for: "McDonald's 0412"), .dining)
+    }
+
+    func testSimilarNamesDontMatchByAccident() {
+        XCTAssertEqual(MerchantCategory.guess(for: "UBER *EATS"), .dining)
+        XCTAssertEqual(MerchantCategory.guess(for: "Uber *Trip"), .transport)
+        XCTAssertEqual(MerchantCategory.guess(for: "Benetton"), .other)
+        XCTAssertEqual(MerchantCategory.guess(for: "Sparkasse"), .other)
+        XCTAssertEqual(MerchantCategory.guess(for: "Facebook Marketplace"), .other)
+        XCTAssertEqual(MerchantCategory.guess(for: "Republic Records"), .other)
+        XCTAssertEqual(MerchantCategory.guess(for: "Kinokuniya"), .other)
+        XCTAssertEqual(MerchantCategory.guess(for: "Google Play"), .other)
     }
 
     func testAChosenCategoryWinsOverTheGuess() throws {
@@ -89,6 +103,45 @@ final class WalletPaymentTests: LocalStorageTestCase {
 
         let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
         XCTAssertTrue(saved.isEmpty)
+    }
+
+    func testAnUnsupportedCurrencySavesNothing() async throws {
+        let me = signIn()
+        let intent = LogWalletPaymentIntent()
+        intent.amount = 15
+        intent.currencyCode = "GBP"
+        intent.merchant = "Pret"
+        intent.mode = .addNow
+        _ = try await intent.perform()
+
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertTrue(saved.isEmpty)
+    }
+
+    func testARefundSavesNothing() async throws {
+        let me = signIn()
+        let intent = LogWalletPaymentIntent()
+        intent.amount = -20
+        intent.currencyCode = "PLN"
+        intent.merchant = "Zara"
+        intent.mode = .addNow
+        _ = try await intent.perform()
+
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertTrue(saved.isEmpty)
+    }
+
+    func testAskFirstWithoutNotificationsAddsRightAway() async throws {
+        let me = signIn()
+        let intent = LogWalletPaymentIntent()
+        intent.amount = 7
+        intent.currencyCode = "PLN"
+        intent.merchant = "Żabka"
+        intent.mode = .askFirst
+        _ = try await intent.perform()
+
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertEqual(saved.first?.amountMinor, 700)
     }
 
     func testUndoFromTheNotificationDeletesTheExpense() async throws {

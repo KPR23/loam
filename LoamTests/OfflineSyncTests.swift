@@ -70,6 +70,36 @@ final class OfflineSyncTests: LocalStorageTestCase {
         XCTAssertEqual(store.expenses.map(\.title), ["Bread"])
     }
 
+    func testUndoingAnExpenseSavedOfflineInTheBackgroundDropsItFromTheQueue() async throws {
+        // A Wallet automation saves without loading the list; Undo comes from a fresh launch.
+        let store = makeStore()
+        online = false
+        let id = try await store.addPersonal(amountMinor: 900, category: .groceries, title: "Lidl", note: nil, spentAt: Date(), userId: me, reloads: false)
+        XCTAssertEqual(sync.changes.count, 1)
+
+        let relaunched = makeStore()
+        let undone = await relaunched.deleteSaved(id: id, userId: me)
+
+        XCTAssertTrue(undone)
+        XCTAssertTrue(sync.changes.isEmpty, "The create never reaches the server")
+        online = true
+        await relaunched.refresh(userId: me)
+        let stored = try await repository.fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertTrue(stored.isEmpty)
+    }
+
+    func testUndoingAnExpenseThatAlreadySyncedDeletesIt() async throws {
+        let store = makeStore()
+        let id = try await store.addPersonal(amountMinor: 900, category: .groceries, title: "Lidl", note: nil, spentAt: Date(), userId: me, reloads: false)
+
+        let relaunched = makeStore()
+        let undone = await relaunched.deleteSaved(id: id, userId: me)
+
+        XCTAssertTrue(undone)
+        let stored = try await repository.fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertTrue(stored.isEmpty)
+    }
+
     func testOfflineChangesSurviveAnAppRestart() async throws {
         let store = makeStore()
         await store.refresh(userId: me)

@@ -451,7 +451,8 @@ final class ExpenseStore: ObservableObject {
         await refresh(userId: userId)
     }
 
-    /// Returns the new expense's id, so a notification can offer to undo it.
+    /// Returns the new expense's id, so a notification can offer to undo it. `reloads: false`
+    /// skips reloading the list, for background work that has only a few seconds to run.
     @discardableResult
     func addPersonal(
         amountMinor: Int,
@@ -463,7 +464,8 @@ final class ExpenseStore: ObservableObject {
         location: ExpenseLocation? = nil,
         spentAt: Date,
         userId: UUID,
-        recurring: RecurringRuleRecord? = nil
+        recurring: RecurringRuleRecord? = nil,
+        reloads: Bool = true
     ) async throws -> UUID {
         let trimmedTitle = title.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         let trimmedNote = note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
@@ -503,7 +505,7 @@ final class ExpenseStore: ObservableObject {
             }
         }
         Telemetry.capture(.expenseCreated(shared: false, recurring: recurringRule != nil, participantCount: 1))
-        guard outcome == .sent else { return expense.id }
+        guard outcome == .sent, reloads else { return expense.id }
         if recurringRule != nil {
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
         }
@@ -631,6 +633,35 @@ final class ExpenseStore: ObservableObject {
     }
 
     /// Hides the expense at once and deletes it when its Undo toast goes away.
+    /// Deletes an expense this screen may never have loaded, such as one a Wallet automation saved
+    /// in the background. One still waiting on the device is dropped from the queue, so it never
+    /// reaches the server. Skips the reload, which a background notification action has no time
+    /// for; the caller refreshes when the app is on screen. Returns false when it couldn't be deleted.
+    @discardableResult
+    func deleteSaved(id: UUID, userId: UUID) async -> Bool {
+        await settleStagedChange(for: id)
+        if sync.isEnabled() {
+            let waiting = sync.pendingChanges(for: userId).last { change in
+                if case let .saveExpense(expense, _, _) = change { return expense.id == id }
+                return false
+            }
+            if case let .saveExpense(expense, _, _)? = waiting {
+                sync.enqueue(.deleteExpense(expense, recurringMode: nil), userId: userId, announce: false)
+                return true
+            }
+        }
+        guard let expense = await fetchExpense(id: id, userId: userId) else { return false }
+        do {
+            try await performDelete(expense: expense, id: id, userId: userId, recurringMode: nil)
+            detachedExpenses.removeAll { $0.id == id }
+            return true
+        } catch {
+            LoamErrorCapture.capture("expense.delete_failed")
+            lastError = UserFacingError.message(for: error)
+            return false
+        }
+    }
+
     func deleteWithUndo(id: UUID, userId: UUID, recurringMode: RecurringDeletionMode? = nil) async {
         await settleStagedChange(for: id)
         guard let expense = knownExpense(id: id) else {

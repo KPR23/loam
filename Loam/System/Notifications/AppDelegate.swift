@@ -43,7 +43,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             if let key = entry.key as? String, let value = entry.value as? String { result[key] = value }
         }
         // Wallet payment buttons run here in the background; everything else is a push tap.
+        // A button answered in the background has only a few seconds; ask for a little more.
+        let task = await MainActor.run { UIApplication.shared.beginBackgroundTask(withName: "wallet-payment") }
         let handled = await WalletPaymentNotifier.shared.handle(category: category, action: action, userInfo: walletInfo)
+        await MainActor.run { UIApplication.shared.endBackgroundTask(task) }
         guard !handled, action == UNNotificationDefaultActionIdentifier else { return }
         let strings = content.userInfo.compactMapValues { $0 as? String }
         await MainActor.run { PushNotificationStore.shared.open(userInfo: strings) }
