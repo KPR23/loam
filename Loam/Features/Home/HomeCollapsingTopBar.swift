@@ -235,17 +235,10 @@ private struct HomeHeroScrollOffsetKey: PreferenceKey {
 
 struct HomeScrollCollapseModifier: ViewModifier {
     @Binding var collapseProgress: CGFloat
-    var onPullDown: () -> Void = {}
-    var onScrollAway: () -> Void = {}
-    /// Space added above the content after the first pull (the revealed search field). The list
-    /// shifts down by this much, so the rest position moves with it.
-    var extraTopInset: CGFloat = 0
 
     @State private var baselineOffset: CGFloat?
-    @State private var pullArmed = true
 
     private let collapseDistance: CGFloat = 150
-    private let pullDistance: CGFloat = 48
 
     func body(content: Content) -> some View {
         content
@@ -258,35 +251,17 @@ struct HomeScrollCollapseModifier: ViewModifier {
 
                 guard let baselineOffset else { return }
 
-                let scrolled = baselineOffset + extraTopInset - minY
+                let scrolled = baselineOffset - minY
                 collapseProgress = min(max(scrolled / collapseDistance, 0), 1)
-
-                // A short pull reveals the search field; pulling on past it is the normal refresh. Re-arms once the list settles.
-                if scrolled < -pullDistance, pullArmed {
-                    pullArmed = false
-                    onPullDown()
-                } else if scrolled > -4 {
-                    pullArmed = true
-                }
-
-                if scrolled > 40 { onScrollAway() }
             }
     }
 }
 
 extension View {
     func trackHomeScrollCollapse(
-        _ collapseProgress: Binding<CGFloat>,
-        extraTopInset: CGFloat = 0,
-        onPullDown: @escaping () -> Void = {},
-        onScrollAway: @escaping () -> Void = {}
+        _ collapseProgress: Binding<CGFloat>
     ) -> some View {
-        modifier(HomeScrollCollapseModifier(
-            collapseProgress: collapseProgress,
-            onPullDown: onPullDown,
-            onScrollAway: onScrollAway,
-            extraTopInset: extraTopInset
-        ))
+        modifier(HomeScrollCollapseModifier(collapseProgress: collapseProgress))
     }
 
     func reportHomeHeroScrollOffset() -> some View {
