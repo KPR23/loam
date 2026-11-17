@@ -30,6 +30,9 @@ struct FriendsView: View {
                 Button { showsPlaceholderPrompt = true } label: {
                     Label("Add someone without an account", systemImage: "person.badge.plus")
                 }
+                NavigationLink { SplitwiseImportView() } label: {
+                    Label("Import from Splitwise", systemImage: "square.and.arrow.down")
+                }
             } header: {
                 Text("Add a friend")
             } footer: {
