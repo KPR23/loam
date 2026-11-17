@@ -1,7 +1,8 @@
 #!/bin/bash
 # Xcode Cloud runs this after each xcodebuild action. After an archive it uploads the dSYMs to
 # Sentry, so crashes from TestFlight and App Store builds are symbolicated. Both workflows need
-# SENTRY_AUTH_TOKEN, a Sentry organization token, as a secret environment variable.
+# SENTRY_AUTH_TOKEN, a Sentry organization token, as a secret environment variable. Archives of the
+# staging app are also uploaded to App Store Connect by upload-rc-archive.sh.
 set -euo pipefail
 
 [[ ${CI_XCODEBUILD_ACTION:-} == archive ]] || exit 0
@@ -21,3 +22,6 @@ echo "$sha256  $cli" | shasum -a 256 -c -
 chmod +x "$cli"
 
 "$cli" debug-files upload --org kprs-lab --project apple-ios --include-sources "$CI_ARCHIVE_PATH/dSYMs"
+
+# The staging app has no Xcode Cloud product of its own, so its archives are uploaded from here.
+"$(dirname "$0")/upload-rc-archive.sh"

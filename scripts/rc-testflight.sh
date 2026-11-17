@@ -3,8 +3,9 @@
 #
 #   scripts/rc-testflight.sh [ref]     ref defaults to origin/main
 #
-# Xcode Cloud can't build this app: its one product belongs to the App Store app and is tied to the
-# repository, so the RC app has no product of its own. Production builds still go through Xcode Cloud.
+# Fallback for when Xcode Cloud can't do it: the workflow "Release candidate - TestFlight publish" builds
+# the RC app on rc/* tags and uploads it from ci_scripts/upload-rc-archive.sh. Xcode Cloud has only one
+# product for this repository (the App Store app), so the RC app has no product of its own.
 #
 # The build comes from a clean worktree at ref, so uncommitted changes never end up in it. The
 # version is MARKETING_VERSION at ref; App Store Connect picks the next build number.
