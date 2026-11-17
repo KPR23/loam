@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var showAllPendingExpenses = false
     @State private var searchText = ""
     @State private var isSearchPresented = false
+    @State private var isSearchFieldRevealed = false
     @State private var searchResults: [ExpenseRecord] = []
     @State private var isSearching = false
     @State private var lastSearchedQuery = ""
@@ -56,8 +57,13 @@ struct HomeView: View {
             }
             .listStyle(.insetGrouped)
             .coordinateSpace(name: "homeScroll")
-            .trackHomeScrollCollapse($collapseProgress, onPullDown: openSearch)
-            .contentMargins(.top, 2, for: .scrollContent)
+            .trackHomeScrollCollapse(
+                $collapseProgress,
+                extraTopInset: revealedFieldInset,
+                onPullDown: revealSearchField,
+                onScrollAway: hideSearchField
+            )
+            .contentMargins(.top, 2 + revealedFieldInset, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
@@ -80,7 +86,10 @@ struct HomeView: View {
                     }
                 }
             }
-            // The search field stays hidden until the list is pulled down past its top.
+            // A short pull pops the field out above the list; tapping it opens full-screen search.
+            .overlay(alignment: .top) {
+                if isSearchFieldRevealed && !isSearchPresented { revealedSearchField }
+            }
             .overlay {
                 if isSearchPresented { searchOverlay }
             }
@@ -146,15 +155,48 @@ struct HomeView: View {
             .sorted { $0.date > $1.date }
     }
 
+    /// Room the revealed field takes above the list: 6pt above, 40pt field, 6pt below.
+    private var revealedFieldInset: CGFloat { isSearchFieldRevealed ? 52 : 0 }
+
+    private func revealSearchField() {
+        guard !isSearchFieldRevealed, !isSearchPresented else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.snappy) { isSearchFieldRevealed = true }
+    }
+
+    private func hideSearchField() {
+        guard isSearchFieldRevealed, !isSearchPresented else { return }
+        withAnimation(.snappy) { isSearchFieldRevealed = false }
+    }
+
     private func openSearch() {
         guard !isSearchPresented else { return }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.snappy) { isSearchPresented = true }
+        isSearchFieldFocused = true
+    }
+
+    private var revealedSearchField: some View {
+        Button(action: openSearch) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                Text("Search expenses")
+                Spacer()
+            }
+            .foregroundStyle(HomeTheme.secondary)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 40)
+            .background(HomeTheme.surface, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     private func closeSearch() {
         isSearchFieldFocused = false
         isSearchPresented = false
+        isSearchFieldRevealed = false
         searchText = ""
         searchResults = []
     }
