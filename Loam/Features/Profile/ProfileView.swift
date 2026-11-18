@@ -783,7 +783,9 @@ private struct SubscriptionView: View {
     }
 }
 
-private struct ProfileRow: View {
+/// Icon-and-title row used across Profile. Internal so rows in other files, such as
+/// `AutoAcceptExpensesToggle`, match its icon size and spacing.
+struct ProfileRow: View {
     let title: String
     let symbol: String
     let color: Color

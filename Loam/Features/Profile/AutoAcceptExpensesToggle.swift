@@ -13,16 +13,7 @@ struct AutoAcceptExpensesToggle: View {
 
     var body: some View {
         Toggle(isOn: binding) {
-            Label {
-                Text("Auto-accept expenses")
-                    .font(.body)
-                    .foregroundStyle(HomeTheme.text)
-            } icon: {
-                Image(systemName: "checkmark.circle")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.green)
-                    .frame(width: 24, height: 24)
-            }
+            ProfileRow("Auto-accept expenses", symbol: "checkmark.circle", color: .blue)
         }
         .tint(HomeTheme.accentFill)
         .disabled(!hasLoaded || isSaving)
