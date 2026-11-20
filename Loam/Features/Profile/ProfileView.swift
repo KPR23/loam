@@ -1144,7 +1144,6 @@ private struct PersonalDetailsView: View {
         Task {
             do {
                 try await authSession.updateDisplayName(trimmedName)
-                ToastCenter.shared.showSuccess("Name updated")
                 dismiss()
             } catch { self.error = UserFacingError.message(for: error) }
             isSaving = false

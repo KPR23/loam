@@ -109,7 +109,6 @@ struct CategorySettingsView: View {
                 Task {
                     do {
                         try await store.delete(category)
-                        ToastCenter.shared.showSuccess("Category deleted")
                         // Loaded expenses still hold the deleted category; reload them under Other.
                         await expenseStore.refresh(userId: authSession.userId)
                     } catch { self.error = UserFacingError.message(for: error) }
@@ -251,7 +250,6 @@ private struct CustomCategoryEditorView: View {
             try await CustomCategoryStore.shared.save(saved)
             // Loaded expenses hold a copy of the category; reload them to show the new name, icon and color.
             if category != nil { await expenseStore.refresh(userId: authSession.userId) }
-            ToastCenter.shared.showSuccess(category == nil ? "Category added" : "Category saved")
             LoamFeedback.success()
             dismiss()
         } catch {

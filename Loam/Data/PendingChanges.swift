@@ -254,8 +254,6 @@ final class OfflineSync: ObservableObject {
     private var flushTask: Task<Int, Never>?
     /// Accounts signed out in this launch; their late saves must not make them current again.
     private var signedOutIds: Set<UUID> = []
-    /// How many changes have been saved on the device with a toast, so a screen can tell its action was one.
-    private(set) var savedOfflineCount = 0
     /// The version the server gave each expense this device saved, so a queued edit
     /// that follows another one expects the version the first edit produced.
     private var savedVersions: [UUID: Int] = [:]
@@ -325,7 +323,6 @@ final class OfflineSync: ObservableObject {
             persistInFlight(userId)
         }
         if announce {
-            savedOfflineCount += 1
             if isOnline() {
                 // Online, so the server had a hiccup: try again soon rather than waiting for a reconnect.
                 notice = .willRetry
@@ -359,13 +356,6 @@ final class OfflineSync: ObservableObject {
         let synced = await task.value
         flushTask = nil
         return synced
-    }
-
-    /// Confirms an action, unless it was saved on the device since `count`: that toast already
-    /// says so, and a success toast would replace it.
-    func showSuccess(_ message: String, unlessSavedOfflineSince count: Int) {
-        guard savedOfflineCount == count else { return }
-        ToastCenter.shared.showSuccess(message)
     }
 
     /// An account switch or sign-out stops using the previous account's queue.
