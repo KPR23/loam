@@ -327,7 +327,7 @@ struct ExpenseDetailSheet: View {
 
                 ForEach(statusRows(for: proposal)) { row in
                     HStack(spacing: 10) {
-                        AvatarView(userId: row.id, size: 26)
+                        AvatarView(userId: row.id, size: 26, name: SplitPartnerOption.displayName(for: row.id))
                         Text(shareLabel(for: row.id))
                             .font(.system(.body, design: .rounded))
                         Spacer(minLength: 8)
