@@ -65,4 +65,27 @@ final class SplitwiseImportTests: XCTestCase {
         XCTAssertEqual(SplitwiseImport.parseMinor("7"), 700)
         XCTAssertNil(SplitwiseImport.parseMinor("abc"))
     }
+
+    func testSuggestsFriendsByName() {
+        let julia = UUID(), jan = UUID(), janina = UUID()
+        let candidates = [
+            SplitwiseImport.Candidate(id: julia, name: "Julia Dębiec"),
+            SplitwiseImport.Candidate(id: jan, name: "Jan Kowalski"),
+            SplitwiseImport.Candidate(id: janina, name: "Janina Nowak")
+        ]
+        XCTAssertEqual(SplitwiseImport.suggestMatch(for: "julia debiec", in: candidates), julia)
+        XCTAssertEqual(SplitwiseImport.suggestMatch(for: "Julia D.", in: candidates), julia)
+        XCTAssertEqual(SplitwiseImport.suggestMatch(for: "Julia", in: candidates), julia)
+        XCTAssertEqual(SplitwiseImport.suggestMatch(for: "Jan K.", in: candidates), jan)
+        XCTAssertNil(SplitwiseImport.suggestMatch(for: "Marek", in: candidates))
+        XCTAssertNil(SplitwiseImport.suggestMatch(for: "Jan", in: candidates + [.init(id: UUID(), name: "Jan Zieliński")]))
+    }
+
+    func testFriendsWithAnAccountGetPendingShares() throws {
+        let export = try SplitwiseImport.parse(sample)
+        let plan = SplitwiseImport.plan(export, meIndex: 0, me: me, mapping: [1: julia], pendingUsers: [julia])
+        let fuel = plan.expenses[0].expense
+        XCTAssertEqual(fuel.shareRecord(for: julia)?.status, .pending)
+        XCTAssertEqual(fuel.shareRecord(for: me)?.status, .accepted)
+    }
 }
