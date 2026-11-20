@@ -22,15 +22,26 @@ enum RequestedScreens {
         "notification-settings": { test in
             test.tab("Profile").tap()
             test.settle(1.5)
-            let row = test.app.buttons["Notifications"].firstMatch
-            XCTAssertTrue(row.waitForExistence(timeout: 5), "Notifications row is missing in Profile")
-            row.tap()
-            test.settle(1.5)
+            test.openProfileRow("Settings")
+            test.openProfileRow("Notifications")
             try test.capture("notification-settings")
-            // Edge swipe back: the navigation bar's back button isn't reliably exposed to queries.
-            let edge = test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.5))
-            edge.press(forDuration: 0.1, thenDragTo: test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)))
-            test.settle(1)
+            test.swipeBack()
+            test.swipeBack()
+        },
+        "profile-settings": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            test.openProfileRow("Settings")
+            try test.capture("profile-settings")
+            test.swipeBack()
+        },
+        "profile-about": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            for _ in 0..<2 { test.app.swipeUp() }
+            test.openProfileRow("About & legal")
+            try test.capture("profile-about")
+            test.swipeBack()
         },
         "expense-menu": { test in
             let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Weekly shop'")).firstMatch
@@ -58,5 +69,22 @@ final class RequestedScreenshots: ScreenshotTestCase {
             settle(1)
             try RequestedScreens.steps[name]?(self)
         }
+    }
+}
+
+private extension ScreenshotTestCase {
+    /// Taps a Profile row by its title and waits for the screen it opens.
+    func openProfileRow(_ title: String) {
+        let row = app.buttons[title].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "\(title) row is missing")
+        row.tap()
+        settle(1.5)
+    }
+
+    /// Edge swipe back: the navigation bar's back button isn't reliably exposed to queries.
+    func swipeBack() {
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.5))
+        edge.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)))
+        settle(1)
     }
 }
