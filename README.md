@@ -106,7 +106,7 @@ Each build type is its own app, so all three install side by side on one iPhone 
 | TestFlight | `TestFlight` | `app.loam.Loam.rc` | Loam RC | `AppIcon-RC` (orange) |
 | Xcode | `Debug` | `app.loam.Loam.dev` | Loam Dev | `AppIcon-Dev` (blue) |
 
-Each needs its own App ID with Sign in with Apple (grouped with `app.loam.Loam`) and Push Notifications, and TestFlight needs its own App Store Connect app, which the `Loam-TestFlight` workflow uploads to. The staging Supabase project's Apple provider must list `app.loam.Loam.rc` and `app.loam.Loam.dev` as client IDs. Shortcuts and Siri actions belong to one app, so a shortcut made with one build doesn't run another. `.claude/skills/build-variants/SKILL.md` has the full setup (App IDs, the Loam RC record, Xcode Cloud, staging secrets and variables) and a checklist to verify it.
+Each needs its own App ID with Sign in with Apple (grouped with `app.loam.Loam`) and Push Notifications, and TestFlight needs its own App Store Connect app, Loam RC, which the Release candidate workflow uploads to. The staging Supabase project's Apple provider must list `app.loam.Loam.rc` and `app.loam.Loam.dev` as client IDs. Shortcuts and Siri actions belong to one app, so a shortcut made with one build doesn't run another. `.claude/skills/build-variants/SKILL.md` has the full setup (App IDs, the Loam RC record, Xcode Cloud, staging secrets and variables) and a checklist to verify it.
 
 Database migrations and edge functions are deployed by `.github/workflows/supabase.yml`: pushes to `main` deploy staging, and pushes to a `release/**` branch deploy production. Each GitHub environment (`staging`, `production`) needs:
 
@@ -119,9 +119,21 @@ Every function under `supabase/functions` deploys automatically, so a new functi
 
 Xcode Cloud sets the build number, so `CURRENT_PROJECT_VERSION` in `project.yml` only applies to local builds. `MARKETING_VERSION` must match the version in App Store Connect.
 
-Xcode Cloud workflows are configured in App Store Connect, not in this repo. Keep them matching the table below: `Loam-TestFlight` starts on tags matching `rc/*`, and `Loam` starts on branches matching `release/*`.
+Xcode Cloud workflows are configured in App Store Connect, not in this repo. Both live under the **Loam** product (the App Store app, `app.loam.Loam`); Xcode Cloud allows one product per repository, so Loam RC has none. Keep them matching the table below:
 
-After each archive, `ci_scripts/ci_post_xcodebuild.sh` uploads the dSYMs to Sentry, so both workflows need a secret `SENTRY_AUTH_TOKEN` environment variable holding a Sentry organization token. Without it the archive fails rather than shipping a build Sentry can't symbolicate. Debug builds don't report to Sentry.
+- **Release candidate**: starts on tags matching `rc/*`, archives the `Loam-TestFlight` scheme, Deployment Preparation **None** and no TestFlight post-action. Xcode Cloud can only publish to the Loam app, so `ci_scripts/upload-rc-archive.sh` exports the `app.loam.Loam.rc` archive and uploads it to Loam RC's TestFlight (internal testing only) itself.
+- **Production**: starts on branches matching `release/*`, archives the `Loam` scheme and publishes it as usual.
+
+After each archive, `ci_scripts/ci_post_xcodebuild.sh` first uploads the dSYMs to Sentry, then calls `upload-rc-archive.sh`, which does nothing unless the archive's bundle ID is exactly `app.loam.Loam.rc`, so production archives are never uploaded from there. Secret environment variables:
+
+| Variable | Workflows | Value |
+| --- | --- | --- |
+| `SENTRY_AUTH_TOKEN` | both | Sentry organization token. Without it the archive fails rather than shipping a build Sentry can't symbolicate. |
+| `ASC_KEY_ID` | Release candidate | Key ID of an App Store Connect team API key with the **Admin** role (needed to create distribution signing assets). |
+| `ASC_ISSUER_ID` | Release candidate | The team's API issuer ID. |
+| `ASC_PRIVATE_KEY_B64` | Release candidate | `base64 -i AuthKey_<id>.p8 \| tr -d '\n'` of that key. |
+
+Without the three `ASC_*` variables the Release candidate archive fails instead of silently not uploading. If Xcode Cloud is down, `scripts/rc-testflight.sh [ref]` builds Loam RC on a Mac and uploads it with the `asc` CLI. Debug builds don't report to Sentry.
 
 ### 6. Releasing
 
