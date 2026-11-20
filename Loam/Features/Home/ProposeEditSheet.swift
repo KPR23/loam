@@ -218,7 +218,6 @@ struct ProposeEditSheet: View {
                 // Built-in Other on an expense in a custom category moves it out; `.other` alone keeps it.
                 clearsCustomCategory: expense.customCategory != nil && formState.category == .builtIn(.other)
             )
-            ToastCenter.shared.showSuccess("Suggestion sent")
             LoamFeedback.success()
             dismiss()
         } catch {
