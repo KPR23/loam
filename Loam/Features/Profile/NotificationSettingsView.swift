@@ -94,16 +94,12 @@ struct NotificationSettingsView: View {
     }
 }
 
-/// A plain tinted glyph, the way the rows in Profile mark themselves.
+/// A glyph on a tinted tile, the way the rows in Profile mark themselves.
 private struct NotificationCategoryIcon: View {
     let symbolName: String
     let tint: Color
 
     var body: some View {
-        Image(systemName: symbolName)
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(tint)
-            .frame(width: 24, height: 24)
-            .accessibilityHidden(true)
+        CategoryIconTile(systemImage: symbolName, color: tint, size: 30)
     }
 }

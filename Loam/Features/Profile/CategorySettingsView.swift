@@ -162,11 +162,7 @@ private struct CategoryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 26, height: 26)
-                .accessibilityHidden(true)
+            CategoryIconTile(systemImage: symbol, color: color, size: 30)
             Text(name)
                 .foregroundStyle(HomeTheme.text)
             Spacer(minLength: 0)
