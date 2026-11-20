@@ -353,41 +353,43 @@ private struct BalancePersonRow<Trailing: View>: View {
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
-        HStack(spacing: 12) {
-            AvatarView(userId: personId, size: 40, name: name)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                AvatarView(userId: personId, size: 40, name: name)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .font(.system(.body, design: .rounded).weight(.medium))
-                    .foregroundStyle(HomeTheme.text)
-                    .lineLimit(1)
-                Text(caption)
-                    .font(.system(.caption, design: .rounded).weight(.medium))
-                    .foregroundStyle(captionColor)
-                if let awaitingNote {
-                    Label(awaitingNote, systemImage: "hourglass")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(.system(.body, design: .rounded).weight(.medium))
+                        .foregroundStyle(HomeTheme.text)
+                        .lineLimit(2)
+                    Text(caption)
                         .font(.system(.caption, design: .rounded).weight(.medium))
-                        .foregroundStyle(.orange)
-                        .labelStyle(AwaitingLabelStyle())
+                        .foregroundStyle(captionColor)
                 }
+
+                Spacer(minLength: 8)
+
+                // The amount never wraps; the name takes a second line instead.
+                trailing
+                    .fixedSize(horizontal: true, vertical: false)
             }
 
-            Spacer(minLength: 8)
-
-            trailing
+            // Full width under the name, so the note isn't squeezed beside the amount.
+            if let awaitingNote {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Image(systemName: "hourglass")
+                        .imageScale(.small)
+                    Text(awaitingNote)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.system(.caption, design: .rounded).weight(.medium))
+                .foregroundStyle(.orange)
+                .padding(.leading, 52)
+            }
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
         .accessibilityHint("Shows your history with \(name)")
-    }
-}
-
-private struct AwaitingLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 4) {
-            configuration.icon
-            configuration.title
-        }
     }
 }
 
