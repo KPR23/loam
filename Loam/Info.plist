@@ -24,15 +24,15 @@
 	<array>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>Loam</string>
+			<string>$(LOAM_SIRI_NAME)</string>
 			<key>INAlternativeAppNamePronunciationHint</key>
-			<string>lohm</string>
+			<string>$(LOAM_SIRI_PRONUNCIATION)</string>
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>Loam app</string>
+			<string>$(LOAM_SIRI_NAME) app</string>
 			<key>INAlternativeAppNamePronunciationHint</key>
-			<string>lohm app</string>
+			<string>$(LOAM_SIRI_PRONUNCIATION) app</string>
 		</dict>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>

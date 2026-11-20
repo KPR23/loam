@@ -32,10 +32,12 @@ Set a five-minute first-check grace period after deployment, then page the opera
 The key is `~/.appstoreconnect/private_keys/AuthKey_GXS83A2F8N.p8` on the maintainer's Mac. Apple doesn't allow downloading it again, so keep that file backed up. To renew, sign a new 180-day secret and store it in both environments:
 
 ```bash
-for env in staging production; do
-  node scripts/apple-client-secret.mjs ~/.appstoreconnect/private_keys/AuthKey_GXS83A2F8N.p8 | gh secret set APPLE_CLIENT_SECRET --env "$env"
-done
+key=~/.appstoreconnect/private_keys/AuthKey_GXS83A2F8N.p8
+node scripts/apple-client-secret.mjs "$key" app.loam.Loam | gh secret set APPLE_CLIENT_SECRET --env production
+node scripts/apple-client-secret.mjs "$key" app.loam.Loam.rc | gh secret set APPLE_CLIENT_SECRET --env staging
 ```
+
+Each secret is signed for one client ID, which must equal that environment's `APPLE_CLIENT_ID` secret: `app.loam.Loam` in production and `app.loam.Loam.rc` (the TestFlight app) in staging. Apple only accepts a sign-in from the app it was issued to, so on staging, deleting an Apple account from a Loam Dev (Xcode) build is refused at the confirmation step, before anything is deleted. Test account deletion on TestFlight.
 
 The next deploy installs it. To install it in a project before then, run `supabase secrets set --project-ref <project-ref> APPLE_CLIENT_SECRET="$(node scripts/apple-client-secret.mjs <key>)"`.
 

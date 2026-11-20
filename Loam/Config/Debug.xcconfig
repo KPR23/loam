@@ -1,5 +1,12 @@
 #include "Staging.xcconfig"
 
+// Xcode builds are a third app beside TestFlight and the App Store, with their own sign-in.
+LOAM_BUNDLE_ID = app.loam.Loam.dev
+LOAM_APP_ICON = AppIcon-Dev
+APP_DISPLAY_NAME = Loam Dev
+LOAM_SIRI_NAME = Loam Dev
+LOAM_SIRI_PRONUNCIATION = lohm dev
+
 // Account switching is available only when all three guards agree:
 // a DEBUG build, testing environment, and this exact allowlisted project URL.
 LOAM_ENVIRONMENT = testing

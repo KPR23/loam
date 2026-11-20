@@ -16,7 +16,7 @@ set -euo pipefail
 
 DEVICE_TYPE="${1:-iPhone 16 Pro}"
 SCHEME="Loam"
-BUNDLE_ID="app.loam.Loam"
+BUNDLE_ID="app.loam.Loam.dev"
 SIM_A="Loam - Julia"
 SIM_B="Loam - Philip"
 DERIVED_DATA="build/dual-sim"

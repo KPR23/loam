@@ -9,7 +9,7 @@ set -euo pipefail
 
 DEVICE_NAME="${1:-iPhone 18 Pro}"
 SCHEME="Loam"
-BUNDLE_ID="app.loam.Loam"
+BUNDLE_ID="app.loam.Loam.dev"
 DERIVED_DATA="build/run-sim"
 
 # Prints the UDID of the available device named "$1" on the newest iOS runtime.

@@ -138,6 +138,8 @@ jobs:
       APNS_KEY_ID: ${{ secrets.APNS_KEY_ID }}
       APNS_TEAM_ID: ${{ secrets.APNS_TEAM_ID }}
       APNS_BUNDLE_ID: ${{ vars.APNS_BUNDLE_ID || 'app.loam.Loam' }}
+      # Debug builds (sandbox tokens) have their own bundle ID; staging sets app.loam.Loam.dev.
+      APNS_SANDBOX_BUNDLE_ID: ${{ vars.APNS_SANDBOX_BUNDLE_ID || vars.APNS_BUNDLE_ID || 'app.loam.Loam' }}
       # Only App Store builds send analytics, so staging sets this variable to false and keeps no
       # credential that can delete PostHog data.
       ANALYTICS_ENABLED: ${{ vars.ANALYTICS_ENABLED || 'true' }}
@@ -194,8 +196,8 @@ jobs:
           fi
           if [[ -n $PUSH_NOTIFICATION_KEY ]]; then
             # The .p8 is multi-line; env files take it as one escaped line.
-            printf 'PUSH_NOTIFICATION_KEY=%s\nAPNS_KEY_ID=%s\nAPNS_TEAM_ID=%s\nAPNS_BUNDLE_ID=%s\nAPNS_KEY_P8=%s\n' \
-              "$PUSH_NOTIFICATION_KEY" "$APNS_KEY_ID" "$APNS_TEAM_ID" "$APNS_BUNDLE_ID" "${APNS_KEY_P8//$'\n'/\\n}" >> "$secret_file"
+            printf 'PUSH_NOTIFICATION_KEY=%s\nAPNS_KEY_ID=%s\nAPNS_TEAM_ID=%s\nAPNS_BUNDLE_ID=%s\nAPNS_SANDBOX_BUNDLE_ID=%s\nAPNS_KEY_P8=%s\n' \
+              "$PUSH_NOTIFICATION_KEY" "$APNS_KEY_ID" "$APNS_TEAM_ID" "$APNS_BUNDLE_ID" "$APNS_SANDBOX_BUNDLE_ID" "${APNS_KEY_P8//$'\n'/\\n}" >> "$secret_file"
           fi
           supabase secrets set --project-ref "$PROJECT_REF" --env-file "$secret_file"
       # Secrets are checked first so a missing one stops the deploy before any migration runs.
