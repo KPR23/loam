@@ -15,6 +15,10 @@ struct AddExpenseView: View {
 
     /// When set, the form edits this expense instead of creating a new one.
     private let existingExpense: ExpenseRecord?
+    /// Set when the form is a tab rather than a sheet: Cancel and Save call it with whether the expense was saved,
+    /// instead of dismissing.
+    private let onClose: ((_ saved: Bool) -> Void)?
+    private var isTab: Bool { onClose != nil }
 
     @State private var step: AddExpenseStep = .amount
     @State private var amountText = ""
@@ -41,6 +45,8 @@ struct AddExpenseView: View {
     @State private var errorMessage: String?
     @State private var isSplitSheetPresented = false
     @State private var showsPaywall = false
+    /// Drives the amount's entrance each time the Add tab is shown. A sheet brings its own motion, so it starts shown.
+    @State private var isShown: Bool
     @FocusState private var amountFocused: Bool
     @FocusState private var titleFocused: Bool
     @FocusState private var noteFocused: Bool
@@ -49,8 +55,10 @@ struct AddExpenseView: View {
     private var isSplit: Bool { !selectedPartnerUserIds.isEmpty }
     private var currencyCode: String { existingExpense?.currency ?? AppPreferences.defaultCurrencyCode }
 
-    init(existingExpense: ExpenseRecord? = nil) {
+    init(existingExpense: ExpenseRecord? = nil, onClose: ((_ saved: Bool) -> Void)? = nil) {
         self.existingExpense = existingExpense
+        self.onClose = onClose
+        _isShown = State(initialValue: onClose == nil)
         guard let expense = existingExpense else {
             // New expenses start on a category the member can see; only edits keep a removed one.
             let options = CustomCategoryStore.shared.pickerOptions(isPro: CategoryCustomizer.shared.isActive)
@@ -99,11 +107,24 @@ struct AddExpenseView: View {
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
+            // As a tab, the form takes the whole screen like a sheet would: the tab bar would otherwise sit under
+            // the buttons and show through the keyboard. The close button leads back.
+            .toolbar(isTab ? .hidden : .automatic, for: .tabBar)
             .task(id: step) {
                 guard step == .amount else { return }
                 await focusAmountField()
             }
             .errorToast($errorMessage)
+        }
+        .onAppear {
+            guard isTab else { return }
+            isShown = true
+            if step == .amount { amountFocused = true }
+        }
+        .onDisappear {
+            guard isTab else { return }
+            isShown = false
+            amountFocused = false
         }
         .hidesFloatingKeyboardButton()
         .sheet(isPresented: $isSplitSheetPresented) {
@@ -185,11 +206,15 @@ struct AddExpenseView: View {
             .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(HomeTheme.background)
+        // Reaching under the keyboard keeps its rounded top corners on this color instead of the window's.
+        .background(HomeTheme.background.ignoresSafeArea())
     }
 
     private var amountDisplay: some View {
         AmountEntryField(text: $amountText, currencyCode: currencyCode, focus: $amountFocused)
+            .scaleEffect(isShown ? 1 : 0.9)
+            .opacity(isShown ? 1 : 0)
+            .animation(reduceMotion ? nil : .spring(duration: 0.45, bounce: 0.3), value: isShown)
     }
 
     // MARK: - Details step
@@ -364,20 +389,14 @@ struct AddExpenseView: View {
         switch step {
         case .amount:
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    LoamFeedback.tap()
-                    dismiss()
-                }
+                cancelButton
             }
 
         case .details:
             ToolbarItem(placement: .topBarLeading) {
                 if isEditing {
-                    Button("Cancel") {
-                        LoamFeedback.tap()
-                        dismiss()
-                    }
-                    .disabled(isSaving)
+                    cancelButton
+                        .disabled(isSaving)
                 } else {
                     Button {
                         LoamFeedback.tap()
@@ -402,6 +421,30 @@ struct AddExpenseView: View {
     }
 
     // MARK: - Helpers
+
+    /// iOS 26 draws the system close button (a glass ×) for the close role; earlier systems keep the text.
+    @ViewBuilder
+    private var cancelButton: some View {
+        if #available(iOS 26.0, *) {
+            Button(role: .close) {
+                LoamFeedback.tap()
+                close(saved: false)
+            }
+        } else {
+            Button("Cancel") {
+                LoamFeedback.tap()
+                close(saved: false)
+            }
+        }
+    }
+
+    private func close(saved: Bool) {
+        if let onClose {
+            onClose(saved)
+        } else {
+            dismiss()
+        }
+    }
 
     private var sanitizedAmountBinding: Binding<String> {
         Binding(
@@ -507,7 +550,8 @@ struct AddExpenseView: View {
     }
 
     private func focusAmountField() async {
-        try? await Task.sleep(for: .milliseconds(400))
+        // A sheet waits for its presentation to settle; a tab is already in place.
+        if !isTab { try? await Task.sleep(for: .milliseconds(400)) }
         guard !Task.isCancelled else { return }
         amountFocused = true
     }
@@ -612,7 +656,7 @@ struct AddExpenseView: View {
                 OfflineSync.shared.showSuccess(isSplit ? "Expense added and shared" : "Expense added", unlessSavedOfflineSince: savedOffline)
             }
             LoamFeedback.success()
-            dismiss()
+            close(saved: true)
         } catch {
             errorMessage = UserFacingError.message(for: error)
         }

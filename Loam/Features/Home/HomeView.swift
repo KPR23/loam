@@ -7,6 +7,8 @@ struct HomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var arcReloadToken: Int = 0
+    /// Off on iOS 26 and later, where Add expense has its own button at the end of the tab bar.
+    var showsAddExpenseButton = true
     var onAddExpense: () -> Void = {}
 
     @State private var showMonthPicker = false
@@ -43,7 +45,7 @@ struct HomeView: View {
 
                     // The hero's top inset (-2) cancels the 2pt content margin, leaving no gap above the graph;
                     // the button adds 14pt below so it doesn't crowd the graph.
-                    if !showsCurrentMonthEmptyState {
+                    if showsAddExpenseButton && !showsCurrentMonthEmptyState {
                         addExpenseButton
                             .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 0, trailing: 0))
                             .listRowSeparator(.hidden)

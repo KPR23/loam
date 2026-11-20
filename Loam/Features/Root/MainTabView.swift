@@ -6,6 +6,8 @@ struct MainTabView: View {
         case balances
         case activity
         case profile
+        /// The Add expense form, set apart at the end of the tab bar on iOS 26 and later.
+        case addExpense
 
         var screenName: String {
             switch self {
@@ -13,6 +15,7 @@ struct MainTabView: View {
             case .balances: "Balances"
             case .activity: "Activity"
             case .profile: "Profile"
+            case .addExpense: "Add expense"
             }
         }
     }
@@ -24,6 +27,12 @@ struct MainTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .expenses
     @State private var showAddExpense = false
+    /// The tab to return to when the Add expense tab is cancelled.
+    @State private var lastContentTab: AppTab = .expenses
+    /// A new value gives the Add expense tab a fresh, empty form.
+    @State private var addExpenseFormID = UUID()
+    /// Set when code, not a tab bar tap, opens the Add expense tab, so the open isn't counted twice.
+    @State private var addExpenseOpenedInCode = false
     @State private var expensesReloadToken = 0
     @State private var showsAnalyticsPrompt = false
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
@@ -36,7 +45,24 @@ struct MainTabView: View {
                 legacyTabView
             }
         }
-        .sensoryFeedback(.selection, trigger: selection)
+        .tint(accentColor.color)
+        .onChange(of: selection) { _, newValue in
+            if newValue == .expenses {
+                expensesReloadToken += 1
+            }
+            if newValue == .addExpense {
+                if !addExpenseOpenedInCode {
+                    Telemetry.capture(.addExpenseOpened(source: .tabBar))
+                }
+                addExpenseOpenedInCode = false
+            } else {
+                lastContentTab = newValue
+            }
+        }
+        // Opening Add expense gets a firmer tap than moving between tabs.
+        .sensoryFeedback(trigger: selection) { _, newValue in
+            newValue == .addExpense ? .impact(weight: .medium) : .selection
+        }
         .overlay(alignment: .top) { SplitwiseImportOverlay() }
         .onChange(of: selection, initial: true) { _, tab in
             Telemetry.screen(tab.screenName)
@@ -83,7 +109,20 @@ struct MainTabView: View {
     }
 
     private func openAddExpense() {
-        showAddExpense = true
+        if Self.usesAddExpenseTab {
+            guard selection != .addExpense else { return }
+            addExpenseOpenedInCode = true
+            selection = .addExpense
+        } else {
+            showAddExpense = true
+        }
+    }
+
+    /// Cancel goes back to the tab the form was opened from; Save goes to Expenses to show the new expense.
+    /// Either way the next visit starts with an empty form.
+    private func closeAddExpenseTab(saved: Bool) {
+        selection = saved ? .expenses : lastContentTab
+        addExpenseFormID = UUID()
     }
 
     /// A screen Siri was asked to open.
@@ -94,45 +133,78 @@ struct MainTabView: View {
         case .activity: selection = .activity
         case .profile: selection = .profile
         case .newExpense:
-            selection = .expenses
+            if !Self.usesAddExpenseTab { selection = .expenses }
             Telemetry.capture(.addExpenseOpened(source: .siri))
-            showAddExpense = true
+            openAddExpense()
+        }
+    }
+
+    /// From iOS 26 the tab bar sets one tab apart at its trailing end, and Loam gives that slot to Add expense.
+    /// Earlier systems draw a role tab inline with the others, so they keep the button in Home's list.
+    static var usesAddExpenseTab: Bool {
+        if #available(iOS 26.0, *) { return true }
+        return false
+    }
+
+    /// iOS 27 has a `.prominent` role for the separated slot. On iOS 26 only the search role gets it, so the Add
+    /// tab borrows that role, which means Loam can't also have a real search tab there. Xcode 26 can't build
+    /// against the iOS 27 SDK, so the compiler check keeps it building there.
+    @available(iOS 26.0, *)
+    private var addExpenseTabRole: TabRole {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) { return .prominent }
+        #endif
+        return .search
+    }
+
+    @available(iOS 18.0, *)
+    @ViewBuilder
+    private var modernTabView: some View {
+        if #available(iOS 26.0, *) {
+            TabView(selection: $selection) {
+                mainTabs
+                Tab(value: AppTab.addExpense, role: addExpenseTabRole) {
+                    AddExpenseView(onClose: closeAddExpenseTab)
+                        .id(addExpenseFormID)
+                } label: {
+                    tabLabel("Add expense", systemImage: "plus")
+                }
+            }
+        } else {
+            TabView(selection: $selection) { mainTabs }
         }
     }
 
     @available(iOS 18.0, *)
-    private var modernTabView: some View {
-        TabView(selection: $selection) {
-            Tab(value: AppTab.expenses) {
-                HomeView(arcReloadToken: expensesReloadToken, onAddExpense: openAddExpense)
-            } label: {
-                tabLabel("Expenses", systemImage: "creditcard")
-            }
-
-            Tab(value: AppTab.balances) {
-                BalancesView()
-            } label: {
-                tabLabel("Balances", systemImage: "person.2")
-            }
-
-            Tab(value: AppTab.activity) {
-                ActivityView()
-            } label: {
-                tabLabel("Activity", systemImage: "bell")
-            }
-            .badge(activityStore.badgeCount)
-
-            Tab(value: AppTab.profile) {
-                ProfileView()
-            } label: {
-                tabLabel("Profile", systemImage: "person")
-            }
+    @TabContentBuilder<AppTab>
+    private var mainTabs: some TabContent<AppTab> {
+        Tab(value: AppTab.expenses) {
+            HomeView(
+                arcReloadToken: expensesReloadToken,
+                showsAddExpenseButton: !Self.usesAddExpenseTab,
+                onAddExpense: openAddExpense
+            )
+        } label: {
+            tabLabel("Expenses", systemImage: "creditcard")
         }
-        .tint(accentColor.color)
-        .onChange(of: selection) { _, newValue in
-            if newValue == .expenses {
-                expensesReloadToken += 1
-            }
+
+        Tab(value: AppTab.balances) {
+            BalancesView()
+        } label: {
+            tabLabel("Balances", systemImage: "person.2")
+        }
+
+        Tab(value: AppTab.activity) {
+            ActivityView()
+        } label: {
+            tabLabel("Activity", systemImage: "bell")
+        }
+        .badge(activityStore.badgeCount)
+
+        Tab(value: AppTab.profile) {
+            ProfileView()
+        } label: {
+            tabLabel("Profile", systemImage: "person")
         }
     }
 
@@ -175,12 +247,6 @@ struct MainTabView: View {
                     Label("Profile", systemImage: "person")
                 }
                 .tag(AppTab.profile)
-        }
-        .tint(accentColor.color)
-        .onChange(of: selection) { _, newValue in
-            if newValue == .expenses {
-                expensesReloadToken += 1
-            }
         }
     }
 }

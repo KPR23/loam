@@ -182,6 +182,7 @@ enum ProductEvent {
         case homeButton = "home_button"
         case emptyState = "empty_state"
         case siri
+        case tabBar = "tab_bar"
     }
 
     var name: String {
