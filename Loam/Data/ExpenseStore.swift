@@ -921,10 +921,6 @@ final class ExpenseStore: ObservableObject {
         }
         if currentUserId == userId { summary = makeSummary(expenses, userId: userId) }
         LoamFeedback.tap()
-        switch change.kind {
-        case .delete: ToastCenter.shared.show(.undone("Expense restored"))
-        case .save: ToastCenter.shared.show(.undone("Change undone"))
-        }
     }
 
     /// Saves the change. It stays on screen while saving, then the refresh shows the saved copy.
@@ -1049,7 +1045,6 @@ final class ExpenseStore: ObservableObject {
         summary = makeSummary(expenses, userId: userId)
 
         do {
-            let savedOfflineBefore = sync.savedOfflineCount
             var trustedScopes: Set<String> = []
             for target in targets {
                 // Trust once per creator when bulk-accepting with trust.
@@ -1076,7 +1071,6 @@ final class ExpenseStore: ObservableObject {
                 guard outcome == .sent else { continue }
                 await recordActivity(kind: itemAction == .reject ? .rejected : .accepted, actorId: userId, expense: target.expense, recipients: [target.expense.createdBy])
             }
-            sync.showSuccess(Self.shareResponseMessage(action: action, count: targets.count), unlessSavedOfflineSince: savedOfflineBefore)
             await refresh(userId: userId)
         } catch {
             LoamErrorCapture.capture("expense.share_response_failed")
@@ -1084,14 +1078,6 @@ final class ExpenseStore: ObservableObject {
             await refresh(userId: userId)
         }
         if let lookupWarning, lastError == nil { lastError = lookupWarning }
-    }
-
-    nonisolated static func shareResponseMessage(action: ExpenseShareResponseAction, count: Int) -> String {
-        let noun = count == 1 ? "Expense" : "\(count) expenses"
-        switch action {
-        case .reject: return "\(noun) declined"
-        case .accept, .acceptWithTrust: return "\(noun) accepted"
-        }
     }
 
     private func applyOptimisticShareResponse(
@@ -1176,7 +1162,6 @@ final class ExpenseStore: ObservableObject {
                 let proposer = pendingProposals.first(where: { $0.id == proposalId })?.proposedBy
                 await recordActivity(kind: accept ? .proposalAccepted : .proposalRejected, actorId: userId, expense: expense, recipients: proposer.map { [$0] } ?? [])
             }
-            ToastCenter.shared.showSuccess(accept ? "Suggestion accepted" : "Suggestion declined")
             await refresh(userId: userId)
         } catch {
             lastError = UserFacingError.message(for: error)
