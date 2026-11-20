@@ -97,15 +97,11 @@ struct ExpenseDetailSheet: View {
             List {
                 Section {
                     VStack(spacing: 0) {
-                        ZStack {
-                            Circle()
-                                .fill(expense.spendCategory.color.opacity(0.12))
-                            Image(systemName: expense.spendCategory.systemImage)
-                                .font(.system(size: 28, weight: .medium))
-                                .symbolRenderingMode(.monochrome)
-                                .foregroundStyle(expense.spendCategory.color)
-                        }
-                        .frame(width: 64, height: 64)
+                        CategoryIconTile(
+                            systemImage: expense.spendCategory.systemImage,
+                            color: expense.spendCategory.color,
+                            size: 64
+                        )
 
                         Text(MoneyFormatter.string(from: expense.isShared ? myShare : expense.money))
                             .font(.system(size: 34, weight: .semibold, design: .rounded))
