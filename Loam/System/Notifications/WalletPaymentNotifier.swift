@@ -115,8 +115,21 @@ final class WalletPaymentNotifier {
             }
         case (Category.ask, Action.add), (Category.ask, UNNotificationDefaultActionIdentifier):
             guard let json = userInfo[Key.payment],
-                  let payment = try? JSONDecoder().decode(WalletPayment.self, from: Data(json.utf8)),
-                  let id = try? await LogWalletPaymentIntent.save(payment, userId: userId) else { return true }
+                  let payment = try? JSONDecoder().decode(WalletPayment.self, from: Data(json.utf8)) else { return true }
+            let id: UUID
+            do {
+                id = try await LogWalletPaymentIntent.save(payment, userId: userId)
+            } catch {
+                LoamErrorCapture.capture("wallet_payment.add_failed")
+                if action == Action.add {
+                    // Tapping this one opens a new expense to add by hand.
+                    await postProblem(title: WalletPaymentText.title(payment), body: "Couldn't add this payment. Tap to add it yourself.", userId: userId)
+                } else {
+                    services.expenseStore.lastError = UserFacingError.message(for: error)
+                    services.navigator.pendingScreen = .newExpense
+                }
+                return true
+            }
             if action == Action.add {
                 await postAdded(payment, expenseId: id, userId: userId)
             } else {

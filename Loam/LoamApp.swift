@@ -144,6 +144,8 @@ struct LoamApp: App {
                 if phase == .active {
                     appLock.refreshMethod()
                     Task {
+                        // A Wallet payment may have been added or undone while Loam was in the background.
+                        await expenseStore.refreshIfChangedInBackground(userId: authSession.userId)
                         await authSession.refreshDeletionStatus()
                         await connectionStore.refresh(userId: authSession.userId)
                         await subscriptionStore.identify(userId: accountId)

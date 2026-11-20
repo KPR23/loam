@@ -29,6 +29,8 @@ final class ExpenseStore: ObservableObject {
 
     /// `recurringId` → rule `startDate` for expenses in the active period (drives first-occurrence highlight).
     private var recurringStartDatesById: [UUID: Date] = [:]
+    /// Set by background writes that skipped the reload, so the list catches up once Loam is open.
+    private var changedInBackground = false
 
     var pendingAcceptanceExpenses: [ExpenseRecord] {
         expenses.filter { expense in
@@ -100,7 +102,14 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
+    /// Reloads only when a background write skipped its reload since the last refresh.
+    func refreshIfChangedInBackground(userId: UUID?) async {
+        guard changedInBackground else { return }
+        await refresh(userId: userId)
+    }
+
     func refresh(userId: UUID?) async {
+        changedInBackground = false
         let sameAccount = currentUserId == userId
         // Changes waiting on Undo belong to the account that made them.
         if userId != currentUserId { stagedChanges = [:] }
@@ -505,6 +514,7 @@ final class ExpenseStore: ObservableObject {
             }
         }
         Telemetry.capture(.expenseCreated(shared: false, recurring: recurringRule != nil, participantCount: 1))
+        if !reloads { changedInBackground = true }
         guard outcome == .sent, reloads else { return expense.id }
         if recurringRule != nil {
             try await materializeDueRecurring(userId: userId, repository: activeRepository)
@@ -632,7 +642,6 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
-    /// Hides the expense at once and deletes it when its Undo toast goes away.
     /// Deletes an expense this screen may never have loaded, such as one a Wallet automation saved
     /// in the background. One still waiting on the device is dropped from the queue, so it never
     /// reaches the server. Skips the reload, which a background notification action has no time
@@ -647,13 +656,14 @@ final class ExpenseStore: ObservableObject {
             }
             if case let .saveExpense(expense, _, _)? = waiting {
                 sync.enqueue(.deleteExpense(expense, recurringMode: nil), userId: userId, announce: false)
+                forget(expense, userId: userId)
                 return true
             }
         }
         guard let expense = await fetchExpense(id: id, userId: userId) else { return false }
         do {
             try await performDelete(expense: expense, id: id, userId: userId, recurringMode: nil)
-            detachedExpenses.removeAll { $0.id == id }
+            forget(expense, userId: userId)
             return true
         } catch {
             LoamErrorCapture.capture("expense.delete_failed")
@@ -662,6 +672,26 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
+    /// Drops a deleted expense from the loaded lists and from the saved copy of its month, which
+    /// may not be the month loaded. Otherwise an offline refresh would show it again.
+    private func forget(_ expense: ExpenseRecord, userId: UUID) {
+        changedInBackground = true
+        if currentUserId == userId {
+            expenses.removeAll { $0.id == expense.id }
+            proposalExpenses.removeAll { $0.id == expense.id }
+            detachedExpenses.removeAll { $0.id == expense.id }
+            summary = makeSummary(expenses, userId: userId)
+            saveCopy(userId: userId)
+        }
+        guard sync.isEnabled() else { return }
+        let key = DatePeriod(from: expense.spentAt).offlineCacheKey
+        guard var saved = OfflineCache.load(OfflineSnapshot.self, key: key, userId: userId),
+              saved.expenses.contains(where: { $0.id == expense.id }) else { return }
+        saved.expenses.removeAll { $0.id == expense.id }
+        OfflineCache.save(saved, key: key, userId: userId)
+    }
+
+    /// Hides the expense at once and deletes it when its Undo toast goes away.
     func deleteWithUndo(id: UUID, userId: UUID, recurringMode: RecurringDeletionMode? = nil) async {
         await settleStagedChange(for: id)
         guard let expense = knownExpense(id: id) else {
