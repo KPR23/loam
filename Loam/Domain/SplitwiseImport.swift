@@ -48,13 +48,18 @@ enum SplitwiseImport {
         case notInvolvingYou
         case multiplePayers
         case invalid
+        /// Loam stores amounts in the currencies it supports only.
+        case unsupportedCurrency
     }
 
     struct PlannedExpense: Equatable, Sendable {
         var expense: ExpenseRecord
+        /// Position in the file, which keeps same-day rows in the order they happened.
+        var order: Int
     }
 
     struct PlannedPayment: Equatable, Sendable {
+        var order: Int
         var operationId: UUID
         var personId: UUID
         /// True when the other person paid you.
@@ -171,7 +176,8 @@ enum SplitwiseImport {
         let fractionMinor = fraction.count == 1 ? fractionDigits * 10 : fractionDigits
         let (scaled, overflow) = major.multipliedReportingOverflow(by: 100)
         guard !overflow else { return nil }
-        let value = scaled + fractionMinor
+        let (value, addOverflow) = scaled.addingReportingOverflow(fractionMinor)
+        guard !addOverflow else { return nil }
         return negative ? -value : value
     }
 
@@ -232,6 +238,9 @@ enum SplitwiseImport {
         var plan = Plan()
         for row in export.rows {
             guard row.nets[meIndex] != 0 else { plan.skipped.append((row.index, .notInvolvingYou)); continue }
+            guard row.currency.isEmpty || AppPreferences.supportedCurrencies.contains(row.currency) else {
+                plan.skipped.append((row.index, .unsupportedCurrency)); continue
+            }
             let payers = row.nets.indices.filter { row.nets[$0] > 0 }
             guard payers.count == 1, let payerColumn = payers.first else { plan.skipped.append((row.index, .multiplePayers)); continue }
             func user(_ column: Int) -> UUID? { column == meIndex ? me : mapping[column] }
@@ -245,7 +254,8 @@ enum SplitwiseImport {
                 else { plan.skipped.append((row.index, .invalid)); continue }
                 let other = payerColumn == meIndex ? recipientId : payerId
                 plan.payments.append(PlannedPayment(
-                    operationId: stableId("payment", me, row),
+                    order: row.index,
+                    operationId: stableId("payment", me, row, people: export.people),
                     personId: other,
                     isReceived: recipientColumn == meIndex,
                     amountMinor: row.costMinor,
@@ -271,7 +281,7 @@ enum SplitwiseImport {
                     : ExpenseShareRecord(userId: id, amountMinor: amount, status: .accepted, respondedAt: now)
             }
             plan.expenses.append(PlannedExpense(expense: ExpenseRecord(
-                id: stableId("expense", me, row),
+                id: stableId("expense", me, row, people: export.people),
                 amountMinor: row.costMinor,
                 currency: row.currency.isEmpty ? AppPreferences.defaultCurrencyCode : row.currency,
                 category: mapCategory(row.category),
@@ -283,7 +293,7 @@ enum SplitwiseImport {
                 shares: shares,
                 createdAt: now,
                 updatedAt: now
-            )))
+            ), order: row.index))
         }
         return plan
     }
@@ -341,8 +351,9 @@ enum SplitwiseImport {
     }
 
     /// The same file produces the same ids, so importing it twice doesn't duplicate anything.
-    static func stableId(_ kind: String, _ me: UUID, _ row: Row) -> UUID {
-        let key = "splitwise|\(kind)|\(me.uuidString)|\(row.identity)|\(row.occurrence)"
+    static func stableId(_ kind: String, _ me: UUID, _ row: Row, people: [String]) -> UUID {
+        let involved = row.nets.indices.filter { row.nets[$0] != 0 }.map { people[$0] }
+        let key = "splitwise|\(kind)|\(me.uuidString)|\(row.identity)|\(involved)|\(row.occurrence)"
         var bytes = Array(SHA256.hash(data: Data(key.utf8)).prefix(16))
         bytes[6] = (bytes[6] & 0x0F) | 0x50
         bytes[8] = (bytes[8] & 0x3F) | 0x80

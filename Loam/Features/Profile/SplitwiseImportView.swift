@@ -85,7 +85,7 @@ struct SplitwiseImportView: View {
                     } header: {
                         Text("Summary")
                     } footer: {
-                        Text("Importing the same file again won’t create duplicates. Expenses paid by more than one person and expenses that don’t involve you are skipped.")
+                        Text("Importing the same file again won’t create duplicates. Skipped: expenses paid by more than one person, expenses that don’t involve you and currencies Loam doesn’t support.")
                     }
                     .listRowBackground(HomeTheme.surface)
                 }
@@ -154,18 +154,22 @@ struct SplitwiseImportView: View {
             for column in involved {
                 switch binding(for: column, export: export).wrappedValue {
                 case .existing(let id): mapping[column] = id
-                case .new: mapping[column] = try await connectionStore.createPlaceholder(name: export.people[column]).userId
+                case .new:
+                    let created = try await connectionStore.createPlaceholder(name: export.people[column]).userId
+                    mapping[column] = created
+                    // A retry after a partial import must reuse this person, not add another.
+                    targets[column] = .existing(created)
                 }
             }
             let accountIds = Set(friends.filter { !$0.isPlaceholder }.map(\.userId))
             let plan = SplitwiseImport.plan(export, meIndex: meIndex, me: me, mapping: mapping, pendingUsers: accountIds)
             let expenses = ExpenseRepositoryFactory.make()
             let existing = Set(try await expenses.fetchExpenses(ids: plan.expenses.map(\.expense.id)).map(\.id))
-            // Replay in date order, expenses before repayments on the same day: the server only
+            // Replay in file order within each day: the server only
             // accepts a repayment while the balance at that point owes it.
             enum Step { case expense(ExpenseRecord), payment(SplitwiseImport.PlannedPayment) }
-            var steps: [(Date, Int, Step)] = plan.expenses.filter { !existing.contains($0.expense.id) }.map { ($0.expense.spentAt, 0, Step.expense($0.expense)) }
-            steps += plan.payments.map { ($0.date, 1, Step.payment($0)) }
+            var steps: [(Date, Int, Step)] = plan.expenses.filter { !existing.contains($0.expense.id) }.map { ($0.expense.spentAt, $0.order, Step.expense($0.expense)) }
+            steps += plan.payments.map { ($0.date, $0.order, Step.payment($0)) }
             steps.sort { $0.0 != $1.0 ? $0.0 < $1.0 : $0.1 < $1.1 }
             let balances = BalanceRepositoryFactory.make()
             var created = 0
