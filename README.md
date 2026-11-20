@@ -106,7 +106,7 @@ Each build type is its own app, so all three install side by side on one iPhone 
 | TestFlight | `TestFlight` | `app.loam.Loam.rc` | Loam RC | `AppIcon-RC` (orange) |
 | Xcode | `Debug` | `app.loam.Loam.dev` | Loam Dev | `AppIcon-Dev` (blue) |
 
-Each needs its own App ID with Sign in with Apple (grouped with `app.loam.Loam`) and Push Notifications, and TestFlight needs its own App Store Connect app, which the `Loam-TestFlight` workflow uploads to. The staging Supabase project's Apple provider must list `app.loam.Loam.rc` and `app.loam.Loam.dev` as client IDs. Shortcuts and Siri actions belong to one app, so a shortcut made with one build doesn't run another.
+Each needs its own App ID with Sign in with Apple (grouped with `app.loam.Loam`) and Push Notifications, and TestFlight needs its own App Store Connect app, which the `Loam-TestFlight` workflow uploads to. The staging Supabase project's Apple provider must list `app.loam.Loam.rc` and `app.loam.Loam.dev` as client IDs. Shortcuts and Siri actions belong to one app, so a shortcut made with one build doesn't run another. `.claude/skills/build-variants/SKILL.md` has the full setup (App IDs, the Loam RC record, Xcode Cloud, staging secrets and variables) and a checklist to verify it.
 
 Database migrations and edge functions are deployed by `.github/workflows/supabase.yml`: pushes to `main` deploy staging, and pushes to a `release/**` branch deploy production. Each GitHub environment (`staging`, `production`) needs:
 
