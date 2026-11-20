@@ -22,7 +22,21 @@ struct SplitwiseImportView: View {
     @State private var result: String?
     @State private var error: String?
 
-    private var placeholders: [SplitPartnerOption] { connectionStore.connections.filter(\.isPlaceholder) }
+    private var friends: [SplitPartnerOption] { connectionStore.connections }
+
+    private func suggestion(for column: Int, export: SplitwiseImport.Export) -> Target {
+        let candidates = friends.map { SplitwiseImport.Candidate(id: $0.userId, name: $0.displayName) }
+        return SplitwiseImport.suggestMatch(for: export.people[column], in: candidates).map(Target.existing) ?? .new
+    }
+
+    /// Two Splitwise people can't be the same Loam person.
+    private func hasDuplicateTargets(export: SplitwiseImport.Export, involved: [Int]) -> Bool {
+        let ids = involved.compactMap { column -> UUID? in
+            if case .existing(let id) = binding(for: column, export: export).wrappedValue { return id }
+            return nil
+        }
+        return Set(ids).count != ids.count
+    }
 
     var body: some View {
         List {
@@ -46,13 +60,19 @@ struct SplitwiseImportView: View {
 
                 if let meIndex {
                     let involved = SplitwiseImport.involvedPeople(in: export, meIndex: meIndex)
-                    Section("People") {
+                    Section {
                         ForEach(involved, id: \.self) { column in
                             Picker(export.people[column], selection: binding(for: column, export: export)) {
                                 Text("Add as new person").tag(Target.new)
-                                ForEach(placeholders) { Text($0.displayName).tag(Target.existing($0.userId)) }
+                                ForEach(friends) { Text($0.isPlaceholder ? $0.displayName : "\($0.displayName) (friend)").tag(Target.existing($0.userId)) }
                             }
                         }
+                    } header: {
+                        Text("People")
+                    } footer: {
+                        Text(hasDuplicateTargets(export: export, involved: involved)
+                             ? "Two people are matched to the same person. Pick a different one."
+                             : "We matched names to your friends where we could. Friends with an account get the expenses to accept, so they receive a notification; people without an account get them right away.")
                     }
                     .listRowBackground(HomeTheme.surface)
 
@@ -61,7 +81,7 @@ struct SplitwiseImportView: View {
                         Button { Task { await runImport(export: export, meIndex: meIndex, involved: involved) } } label: {
                             if isImporting { ProgressView() } else { Text("Import") }
                         }
-                        .disabled(isImporting)
+                        .disabled(isImporting || hasDuplicateTargets(export: export, involved: involved))
                     } header: {
                         Text("Summary")
                     } footer: {
@@ -101,9 +121,7 @@ struct SplitwiseImportView: View {
     private func binding(for column: Int, export: SplitwiseImport.Export) -> Binding<Target> {
         Binding(
             get: {
-                if let chosen = targets[column] { return chosen }
-                let match = placeholders.first { $0.displayName.caseInsensitiveCompare(export.people[column]) == .orderedSame }
-                return match.map { .existing($0.userId) } ?? .new
+                targets[column] ?? suggestion(for: column, export: export)
             },
             set: { targets[column] = $0 }
         )
@@ -118,7 +136,8 @@ struct SplitwiseImportView: View {
             let data = try Data(contentsOf: url)
             guard let text = String(data: data, encoding: .utf8) else { throw SplitwiseImport.ParseError.notSplitwise }
             export = try SplitwiseImport.parse(text)
-            meIndex = nil
+            let myName = authSession.displayName ?? ""
+            meIndex = export?.people.indices.first { SplitwiseImport.suggestMatch(for: export!.people[$0], in: [.init(id: UUID(), name: myName)]) != nil }
             targets = [:]
         } catch {
             export = nil
@@ -138,7 +157,8 @@ struct SplitwiseImportView: View {
                 case .new: mapping[column] = try await connectionStore.createPlaceholder(name: export.people[column]).userId
                 }
             }
-            let plan = SplitwiseImport.plan(export, meIndex: meIndex, me: me, mapping: mapping)
+            let accountIds = Set(friends.filter { !$0.isPlaceholder }.map(\.userId))
+            let plan = SplitwiseImport.plan(export, meIndex: meIndex, me: me, mapping: mapping, pendingUsers: accountIds)
             let expenses = ExpenseRepositoryFactory.make()
             let existing = Set(try await expenses.fetchExpenses(ids: plan.expenses.map(\.expense.id)).map(\.id))
             var created = 0

@@ -207,7 +207,8 @@ enum SplitwiseImport {
     /// - Parameters:
     ///   - meIndex: the column that is the signed-in person.
     ///   - mapping: Loam user id per other column (placeholders).
-    static func plan(_ export: Export, meIndex: Int, me: UUID, mapping: [Int: UUID], now: Date = Date()) -> Plan {
+    ///   - pendingUsers: mapped people with an account, who still have to accept their shares.
+    static func plan(_ export: Export, meIndex: Int, me: UUID, mapping: [Int: UUID], pendingUsers: Set<UUID> = [], now: Date = Date()) -> Plan {
         var plan = Plan()
         for row in export.rows {
             guard row.nets[meIndex] != 0 else { plan.skipped.append((row.index, .notInvolvingYou)); continue }
@@ -245,7 +246,9 @@ enum SplitwiseImport {
             let payerOwed = row.costMinor - othersOwed
             guard valid, payerOwed >= 0 else { plan.skipped.append((row.index, .invalid)); continue }
             let shares = ([(payerId, payerOwed)] + owed).map { id, amount in
-                ExpenseShareRecord(userId: id, amountMinor: amount, status: .accepted, respondedAt: now)
+                pendingUsers.contains(id)
+                    ? ExpenseShareRecord(userId: id, amountMinor: amount, status: .pending)
+                    : ExpenseShareRecord(userId: id, amountMinor: amount, status: .accepted, respondedAt: now)
             }
             plan.expenses.append(PlannedExpense(expense: ExpenseRecord(
                 id: stableId("expense", me, row),
@@ -263,6 +266,37 @@ enum SplitwiseImport {
             )))
         }
         return plan
+    }
+
+    struct Candidate: Equatable, Sendable {
+        var id: UUID
+        var name: String
+    }
+
+    /// The Loam person a Splitwise name most likely is. Exact names win, then "Julia D." against
+    /// "Julia Dębiec" (same first name, matching last initial or prefix), then a first name that
+    /// only one candidate has. Nil when it would be a guess between several people.
+    static func suggestMatch(for name: String, in candidates: [Candidate]) -> UUID? {
+        let target = tokens(name)
+        guard let first = target.first else { return nil }
+        let exact = candidates.filter { tokens($0.name) == target }
+        if exact.count == 1 { return exact[0].id }
+        let close = candidates.filter { candidate in
+            let other = tokens(candidate.name)
+            guard other.first == first else { return false }
+            guard target.count > 1, other.count > 1 else { return false }
+            let (a, b) = (target.last!, other.last!)
+            return a.hasPrefix(b) || b.hasPrefix(a)
+        }
+        if close.count == 1 { return close[0].id }
+        let sameFirst = candidates.filter { tokens($0.name).first == first }
+        return sameFirst.count == 1 && exact.isEmpty && close.isEmpty ? sameFirst[0].id : nil
+    }
+
+    private static func tokens(_ name: String) -> [String] {
+        name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .split { !$0.isLetter && !$0.isNumber }
+            .map(String.init)
     }
 
     static func mapCategory(_ splitwise: String) -> ExpenseCategory {
