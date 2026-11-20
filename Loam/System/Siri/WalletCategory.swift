@@ -6,7 +6,7 @@ import FoundationModels
 /// Picks the category for a Wallet payment that came without one. Each step only runs when the
 /// one before it had no answer:
 /// 1. the category the member last chose for this merchant,
-/// 2. the merchant keyword list,
+/// 2. the bundled list of chains (`MerchantBrand`), then generic merchant words,
 /// 3. Apple's on-device model, where the iPhone has Apple Intelligence,
 /// 4. Other.
 /// Every answer is one of the categories the member's picker offers, so a hidden or deleted

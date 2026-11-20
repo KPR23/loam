@@ -32,6 +32,15 @@ enum RequestedScreens {
             edge.press(forDuration: 0.1, thenDragTo: test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)))
             test.settle(1)
         },
+        "brand-detail": { test in
+            let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Żabka'")).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded expense 'Żabka' is missing")
+            row.tap()
+            test.settle(1.5)
+            try test.capture("brand-detail")
+            test.app.buttons["Close"].firstMatch.tap()
+            test.settle(1)
+        },
         "expense-menu": { test in
             let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Weekly shop'")).firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded expense 'Weekly shop' is missing")

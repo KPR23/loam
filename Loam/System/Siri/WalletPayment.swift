@@ -32,7 +32,9 @@ struct WalletPayment: Equatable, Codable, Sendable {
         // Through the string, so 12.3 stays 12.30 and never becomes 12.29999.
         let decimal = Decimal(string: String(amount), locale: Locale(identifier: "en_US_POSIX")) ?? Decimal(amount)
         let money = try SiriAmount.money(amount: decimal, currencyCode: code)
-        let merchant = merchant?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let raw = merchant?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        // A known chain gets its clean name, so "LIDL SP. Z O.O. 123" is saved as "Lidl".
+        let merchant = MerchantBrand.match(raw)?.name ?? raw
         return WalletPayment(
             money: money,
             merchant: merchant,
@@ -55,29 +57,25 @@ struct WalletPayment: Equatable, Codable, Sendable {
 }
 
 /// Picks a category from the merchant's name. Wallet only gives the name, so this is a guess the
-/// user can change later; anything unknown is Other.
+/// user can change later: a known chain's category first (`MerchantBrand`), then generic words
+/// like "restauracja" or "apteka"; anything unknown is Other.
 enum MerchantCategory {
-    /// Lowercased, accent-free merchant words. A keyword matches whole words of the name, in order;
-    /// its last word may also start a longer one when it has five or more letters ("restaur"
-    /// matches "Restauracja", but "spar" doesn't match "Sparkasse"). The first match wins, so
-    /// specific names come before generic ones.
+    /// Lowercased, accent-free words for places that aren't one chain. A keyword matches whole
+    /// words of the name, in order; its last word may also start a longer one when it has five or
+    /// more letters ("restaur" matches "Restauracja", but "spar" doesn't match "Sparkasse"). The
+    /// first match wins, so specific words come before generic ones.
     static let keywords: [(ExpenseCategory, [String])] = [
-        (.dining, ["uber eats", "wolt", "glovo", "pyszne", "restaur", "bistro", "pizza", "kebab", "sushi",
-                   "burger", "mcdonald", "kfc", "starbucks", "costa coffee", "cafe", "kawiarnia", "coffee",
-                   "bar", "pub"]),
-        (.groceries, ["zabka", "biedronka", "lidl", "auchan", "carrefour", "kaufland", "netto", "dino",
-                      "stokrotka", "lewiatan", "aldi", "spar", "frisco", "delikatesy", "supermarket", "grocer"]),
-        (.transport, ["uber", "bolt", "freenow", "free now", "taxi", "orlen", "shell", "bp", "circle k",
-                      "lotos", "moya", "pkp", "intercity", "koleje", "jakdojade", "ztm", "mpk", "parking", "skycash"]),
-        (.health, ["apteka", "pharmacy", "rossmann", "hebe", "lux med", "medicover", "enel med"]),
-        (.entertainment, ["cinema", "kino", "multikino", "helios", "spotify", "netflix", "steam", "playstation", "xbox"]),
-        (.travel, ["hotel", "airbnb", "booking", "ryanair", "wizz", "airport", "lotnisko"]),
-        (.utilities, ["orange", "t mobile", "pge", "tauron", "enea", "pgnig", "veolia"]),
-        (.shopping, ["zara", "reserved", "ikea", "media markt", "mediamarkt", "rtv euro", "empik",
-                     "decathlon", "allegro", "amazon", "pepco", "castorama", "leroy merlin"]),
+        (.dining, ["restaur", "bistro", "pizza", "pizzeria", "kebab", "sushi", "burger", "cafe", "kawiarnia",
+                   "coffee", "piekarnia", "cukiernia", "bar", "pub"]),
+        (.groceries, ["delikatesy", "supermarket", "grocer", "warzywniak"]),
+        (.transport, ["taxi", "koleje", "pkp", "ztm", "mpk", "parking", "stacja paliw"]),
+        (.health, ["apteka", "pharmacy", "przychodnia", "dentyst"]),
+        (.entertainment, ["cinema", "kino"]),
+        (.travel, ["hotel", "hostel", "airport", "lotnisko"]),
     ]
 
     static func guess(for merchant: String?) -> ExpenseCategory {
+        if let brand = MerchantBrand.match(merchant) { return brand.category }
         guard let merchant else { return .other }
         let name = words(merchant)
         for (category, phrases) in keywords where phrases.contains(where: { matches(words($0), in: name) }) {

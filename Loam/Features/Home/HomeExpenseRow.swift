@@ -135,13 +135,19 @@ struct HomeExpenseRow: View {
         }
     }
 
+    /// A known chain's tile, else the category's icon.
+    @ViewBuilder
     private var categoryIcon: some View {
-        Image(systemName: expense.spendCategory.systemImage)
-            .font(.system(size: 18, weight: .semibold))
-            .symbolRenderingMode(.monochrome)
-            .foregroundStyle(expense.spendCategory.color)
-            .frame(width: 26, height: 26)
-            .accessibilityHidden(true)
+        if let brand = expense.merchantBrand {
+            MerchantBrandTile(brand: brand, size: 26)
+        } else {
+            Image(systemName: expense.spendCategory.systemImage)
+                .font(.system(size: 18, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(expense.spendCategory.color)
+                .frame(width: 26, height: 26)
+                .accessibilityHidden(true)
+        }
     }
 
     /// Shared size/weight/spacing chrome for every glyph beside the amount.

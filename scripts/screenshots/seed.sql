@@ -35,12 +35,13 @@ select set_config('request.jwt.claim.sub', current_setting('seed.julia'), true);
 
 select pg_temp.add_expense(0, 4850,  'groceries',     'Weekly shop',        2425),
        pg_temp.add_expense(0, 1890,  'dining',        'Lunch with Philip',  945),
-       pg_temp.add_expense(1, 3200,  'transport',     'Train tickets',      0),
+       pg_temp.add_expense(0, 690,   'groceries',     'Żabka',              0),
+       pg_temp.add_expense(1, 3200,  'transport',     'PKP Intercity',      0),
        pg_temp.add_expense(1, 2400,  'entertainment', 'Cinema',             1200),
-       pg_temp.add_expense(2, 12900, 'shopping',      'Running shoes',      0),
+       pg_temp.add_expense(2, 12900, 'shopping',      'Decathlon',          0),
        pg_temp.add_expense(3, 8700,  'utilities',     'Internet',           4350),
-       pg_temp.add_expense(3, 1550,  'dining',        'Coffee and cake',    0),
-       pg_temp.add_expense(4, 5600,  'health',        'Pharmacy',           0),
+       pg_temp.add_expense(3, 1550,  'dining',        'Starbucks',          0),
+       pg_temp.add_expense(4, 5600,  'health',        'Rossmann',           0),
        pg_temp.add_expense(5, 21000, 'travel',        'Weekend trip',       10500),
        pg_temp.add_expense(6, 6400,  'groceries',     'Farmers market',     3200);
 
