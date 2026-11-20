@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
-import { type ApnsConfig, sendApns } from "../_shared/apns.ts";
+import { type ApnsConfig, configForDevice, sendApns } from "../_shared/apns.ts";
 import { type PushEvent, pushContent } from "../_shared/push_content.ts";
 
 function constantTimeEqual(left: string, right: string): boolean {
@@ -30,9 +30,7 @@ Deno.serve(async (request) => {
   const teamId = Deno.env.get("APNS_TEAM_ID"), topic = Deno.env.get("APNS_BUNDLE_ID");
   if (!url || !serviceKey || !keyP8 || !keyId || !teamId || !topic) return Response.json({ error: "push_not_configured" }, { status: 503 });
   const config: ApnsConfig = { keyP8: keyP8.replace(/\\n/g, "\n"), keyId, teamId, topic };
-  // Xcode (Debug) builds register sandbox tokens and are a separate app, so on staging their
-  // pushes go to another bundle ID than TestFlight's.
-  const sandboxConfig: ApnsConfig = { ...config, topic: Deno.env.get("APNS_SANDBOX_BUNDLE_ID") || topic };
+  const sandboxTopic = Deno.env.get("APNS_SANDBOX_BUNDLE_ID");
 
   const { event_id: eventId } = await request.json().catch(() => ({}));
   if (typeof eventId !== "string" || !UUID.test(eventId)) return Response.json({ error: "invalid_event" }, { status: 400 });
@@ -59,7 +57,7 @@ Deno.serve(async (request) => {
     ...(context.expense_id ? { expense_id: context.expense_id } : {}),
   };
   const outcomes = await Promise.all(
-    context.devices.map((device) => sendApns(device.environment === "sandbox" ? sandboxConfig : config, device, payload, { collapseId: eventId }).then((outcome) => ({ device, outcome }))),
+    context.devices.map((device) => sendApns(configForDevice(config, device, sandboxTopic), device, payload, { collapseId: eventId }).then((outcome) => ({ device, outcome }))),
   );
   const dead = outcomes.filter((o) => o.outcome === "dead").map((o) => o.device.token);
   if (dead.length) await admin.rpc("remove_push_devices", { p_tokens: dead });

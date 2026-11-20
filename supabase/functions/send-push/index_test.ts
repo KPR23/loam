@@ -1,4 +1,4 @@
-import { classifyApnsResponse, providerToken, resetProviderToken } from "../_shared/apns.ts";
+import { classifyApnsResponse, configForDevice, providerToken, resetProviderToken } from "../_shared/apns.ts";
 import { notificationCategory, pushContent, type PushEvent } from "../_shared/push_content.ts";
 
 function assertEquals(actual: unknown, expected: unknown): void {
@@ -74,4 +74,15 @@ Deno.test("the provider token is a reusable ES256 JWT", async () => {
   assertEquals(claims, { iss: "TEAM123456", iat: Math.floor(now / 1000) });
   assertEquals(await providerToken(config, now + 10 * 60_000), token);
   if (await providerToken(config, now + 55 * 60_000) === token) throw new Error("Stale provider token reused");
+});
+
+Deno.test("sandbox tokens go to the Debug app's topic and production tokens to the main one", () => {
+  const config = { keyP8: "key", keyId: "ABC123DEFG", teamId: "TEAM123456", topic: "app.loam.Loam.rc" };
+  const sandbox = { environment: "sandbox" as const }, production = { environment: "production" as const };
+  assertEquals(configForDevice(config, sandbox, "app.loam.Loam.dev").topic, "app.loam.Loam.dev");
+  assertEquals(configForDevice(config, production, "app.loam.Loam.dev").topic, "app.loam.Loam.rc");
+  // Unset or empty, sandbox tokens keep the main topic, as before.
+  assertEquals(configForDevice(config, sandbox, undefined).topic, "app.loam.Loam.rc");
+  assertEquals(configForDevice(config, sandbox, "").topic, "app.loam.Loam.rc");
+  assertEquals(config.topic, "app.loam.Loam.rc");
 });

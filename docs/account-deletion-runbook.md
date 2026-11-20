@@ -39,7 +39,7 @@ node scripts/apple-client-secret.mjs "$key" app.loam.Loam.rc | gh secret set APP
 
 Each secret is signed for one client ID, which must equal that environment's `APPLE_CLIENT_ID` secret: `app.loam.Loam` in production and `app.loam.Loam.rc` (the TestFlight app) in staging. Apple only accepts a sign-in from the app it was issued to, so on staging, deleting an Apple account from a Loam Dev (Xcode) build is refused at the confirmation step, before anything is deleted. Test account deletion on TestFlight.
 
-The next deploy installs it. To install it in a project before then, run `supabase secrets set --project-ref <project-ref> APPLE_CLIENT_SECRET="$(node scripts/apple-client-secret.mjs <key>)"`.
+The next deploy installs it. To install it in a project before then, run `supabase secrets set --project-ref <project-ref> APPLE_CLIENT_SECRET="$(node scripts/apple-client-secret.mjs <key> <client ID>)"` with that environment's client ID.
 
 ## Recovery
 
