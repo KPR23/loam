@@ -133,3 +133,27 @@ enum DatePeriod: Equatable {
         }
     }
 }
+
+/// Day section titles: "Today, 16 Nov", "Monday, 9 Nov". Lists that can span years add the year
+/// to days outside the current one.
+enum DaySectionTitle {
+    static func string(for date: Date, showsYearOutsideCurrent: Bool = false) -> String {
+        let calendar = AppPreferences.calendar
+        let style = Date.FormatStyle(timeZone: calendar.timeZone)
+        var dayMonthStyle = style.day().month(.abbreviated)
+        if showsYearOutsideCurrent, !calendar.isDate(date, equalTo: Date(), toGranularity: .year) {
+            dayMonthStyle = dayMonthStyle.year()
+        }
+        let dayMonth = date.formatted(dayMonthStyle)
+
+        let prefix: String
+        if calendar.isDateInToday(date) {
+            prefix = "Today"
+        } else if calendar.isDateInYesterday(date) {
+            prefix = "Yesterday"
+        } else {
+            prefix = date.formatted(style.weekday(.wide))
+        }
+        return "\(prefix), \(dayMonth)"
+    }
+}
