@@ -90,13 +90,23 @@ Only publishable keys belong in the app. Use a secret/service-role key only in a
 
 Apple processes payments; RevenueCat validates receipts and owns the `loam_pro` entitlement. Loam Free covers personal tracking and one connection. Pro unlocks inviting more connections, recurring expenses and notes. Only the person creating an invite needs Pro: redeeming a code is always free.
 
-- `REVENUECAT_API_KEY`: Debug uses the RevenueCat Test Store key. `Staging.xcconfig` (TestFlight) and `Production.xcconfig` need the public Apple key (`appl_…`). The SDK crashes Release builds that use a `test_` key. With no key, purchases are off and everyone stays on Free.
+- `REVENUECAT_API_KEY`: Debug uses the RevenueCat Test Store key. `Production.xcconfig` needs the public Apple key (`appl_…`). `Staging.xcconfig` (TestFlight) leaves it empty: TestFlight is its own app (`app.loam.Loam.rc`), so it needs its own RevenueCat app and products before it can sell anything. The SDK crashes Release builds that use a `test_` key. With no key, purchases are off and everyone stays on Free.
 - Dashboard: products `monthly`, `yearly` (two-week trial) and `lifetime`, all attached to `loam_pro`, in the current offering as the monthly, annual and lifetime packages. Customer Center is designed there too; the paywall is built in `ProPaywall.swift` and reads prices and trials from the offering. It hides the lifetime package for now.
 - Backend: the app logs customers in with the lowercase Supabase user ID. `create_connection_invitation` checks `private.pro_entitlement`, which the `revenuecat-webhook` and `sync-pro-entitlement` functions fill from RevenueCat's REST API. Set the GitHub secrets `REVENUECAT_SECRET_API_KEY` (a v1 secret key) and `REVENUECAT_WEBHOOK_AUTH`. Point the RevenueCat webhook at `<project>/functions/v1/revenuecat-webhook` and set its Authorization header to the exact `REVENUECAT_WEBHOOK_AUTH` value.
 
 ### 5. Xcode Cloud / TestFlight
 
 The shared `Loam` scheme archives with the `Production` configuration. The `Loam-TestFlight` scheme archives with the `TestFlight` configuration, so TestFlight builds use staging while App Store distribution builds use production.
+
+Each build type is its own app, so all three install side by side on one iPhone and keep their own sign-in. The xcconfig files set the bundle ID, name and icon:
+
+| Build | Configuration | Bundle ID | Name | Icon |
+| --- | --- | --- | --- | --- |
+| App Store | `Production`, `Release` | `app.loam.Loam` | Loam | `AppIcon` |
+| TestFlight | `TestFlight` | `app.loam.Loam.rc` | Loam RC | `AppIcon-RC` (orange) |
+| Xcode | `Debug` | `app.loam.Loam.dev` | Loam Dev | `AppIcon-Dev` (blue) |
+
+Each needs its own App ID with Sign in with Apple (grouped with `app.loam.Loam`) and Push Notifications, and TestFlight needs its own App Store Connect app, which the `Loam-TestFlight` workflow uploads to. The staging Supabase project's Apple provider must list `app.loam.Loam.rc` and `app.loam.Loam.dev` as client IDs. Shortcuts and Siri actions belong to one app, so a shortcut made with one build doesn't run another.
 
 Database migrations and edge functions are deployed by `.github/workflows/supabase.yml`: pushes to `main` deploy staging, and pushes to a `release/**` branch deploy production. Each GitHub environment (`staging`, `production`) needs:
 
@@ -154,7 +164,7 @@ Only `Production.xcconfig` sets the PostHog keys, so Debug and TestFlight builds
 
 ### Push notifications
 
-Every unread Activity event is pushed to the recipient's devices by the `send-push` edge function. A trigger on `activity_event` calls it through `pg_net`; it applies the recipient's per-category switches, sends through APNs and removes tokens APNs reports dead. Pushes stay off until the environment has these (GitHub secrets, plus the optional `APNS_BUNDLE_ID` variable, default `app.loam.Loam`):
+Every unread Activity event is pushed to the recipient's devices by the `send-push` edge function. A trigger on `activity_event` calls it through `pg_net`; it applies the recipient's per-category switches, sends through APNs and removes tokens APNs reports dead. Pushes stay off until the environment has these (GitHub secrets, plus the optional `APNS_BUNDLE_ID` and `APNS_SANDBOX_BUNDLE_ID` variables, default `app.loam.Loam`; staging sets them to `app.loam.Loam.rc` and `app.loam.Loam.dev`):
 
 | Secret | Value |
 | --- | --- |
@@ -162,7 +172,7 @@ Every unread Activity event is pushed to the recipient's devices by the `send-pu
 | `APNS_KEY_P8` | Contents of the APNs auth key (`.p8`) from the Apple developer account |
 | `APNS_KEY_ID` / `APNS_TEAM_ID` | That key's ID and the team ID |
 
-The deploy installs them as function secrets and stores the key in Vault with `configure_push_notifications`. The App ID needs the Push Notifications capability; Debug builds register sandbox tokens and TestFlight/App Store builds production ones.
+The deploy installs them as function secrets and stores the key in Vault with `configure_push_notifications`. The App ID needs the Push Notifications capability; Debug builds register sandbox tokens and TestFlight/App Store builds production ones, so sandbox tokens are sent to `APNS_SANDBOX_BUNDLE_ID` (the Debug app) and production tokens to `APNS_BUNDLE_ID`.
 
 ## Architecture
 

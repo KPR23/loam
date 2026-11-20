@@ -2,19 +2,22 @@
 // Prints a new Sign in with Apple client secret for APPLE_CLIENT_SECRET, valid for 180 days
 // (Apple's limit is six months). docs/account-deletion-runbook.md says where it goes.
 //
-//   node scripts/apple-client-secret.mjs ~/.appstoreconnect/private_keys/AuthKey_GXS83A2F8N.p8
+//   node scripts/apple-client-secret.mjs ~/.appstoreconnect/private_keys/AuthKey_GXS83A2F8N.p8 [client ID]
+//
+// The client ID is the bundle ID of the app whose Apple sign-ins the environment revokes:
+// app.loam.Loam (the default) for production, app.loam.Loam.rc for staging.
 import { createPrivateKey, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 
 const TEAM_ID = "XXJA67J9AN";
-const CLIENT_ID = "app.loam.Loam";
+const CLIENT_ID = process.argv[3] || "app.loam.Loam";
 
 const keyPath = process.argv[2];
 // Apple names each downloaded key AuthKey_<key ID>.p8.
 const keyId = keyPath && basename(keyPath).match(/^AuthKey_([A-Z0-9]{10})\.p8$/)?.[1];
 if (!keyId) {
-  console.error("usage: node scripts/apple-client-secret.mjs <path to AuthKey_KEYID.p8>");
+  console.error("usage: node scripts/apple-client-secret.mjs <path to AuthKey_KEYID.p8> [client ID]");
   process.exit(1);
 }
 
