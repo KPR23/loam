@@ -505,20 +505,7 @@ struct HomeView: View {
     }
 
     private func daySectionTitle(for date: Date) -> String {
-        let calendar = AppPreferences.calendar
-        let style = Date.FormatStyle(timeZone: calendar.timeZone)
-        let dayMonth = date.formatted(style.day().month(.abbreviated))
-
-        let prefix: String
-        if calendar.isDateInToday(date) {
-            prefix = "Today"
-        } else if calendar.isDateInYesterday(date) {
-            prefix = "Yesterday"
-        } else {
-            prefix = date.formatted(style.weekday(.wide))
-        }
-
-        return "\(prefix), \(dayMonth)"
+        DaySectionTitle.string(for: date)
     }
 
     /// In the default currency, like the month total, so a day mixing currencies adds up.

@@ -327,11 +327,9 @@ struct ActivityView: View {
     }
 
     private func groupedEvents(_ events: [ActivityEvent]) -> [ActivityDayGroup] {
-        let calendar = Calendar.current
-        let groups = Dictionary(grouping: events) { event -> String in
-            if calendar.isDateInToday(event.occurredAt) { return "Today" }
-            if calendar.isDateInYesterday(event.occurredAt) { return "Yesterday" }
-            return event.occurredAt.formatted(date: .complete, time: .omitted)
+        // Same day titles as Home; the feed spans years, so older days carry theirs.
+        let groups = Dictionary(grouping: events) { event in
+            DaySectionTitle.string(for: event.occurredAt, showsYearOutsideCurrent: true)
         }
         return groups.map { ActivityDayGroup(title: $0.key, events: $0.value) }.sorted { lhs, rhs in
             (lhs.events.first?.occurredAt ?? .distantPast) > (rhs.events.first?.occurredAt ?? .distantPast)
