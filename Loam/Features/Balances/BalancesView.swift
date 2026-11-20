@@ -6,7 +6,6 @@ struct BalancesView: View {
     @EnvironmentObject private var connectionStore: ConnectionStore
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var showsRepayment = false
     @State private var showAddFriend = false
 
     private var snapshot: BalanceSnapshot { balanceStore.snapshot }
@@ -66,13 +65,6 @@ struct BalancesView: View {
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
                         }
-
-                        if !snapshot.balances.isEmpty {
-                            repaymentButton
-                                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
-                        }
                     }
 
                     peopleSection("Owed to you", balances: credits)
@@ -127,9 +119,6 @@ struct BalancesView: View {
             // Others accept shares and record repayments while the app is in the background.
             .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await balanceStore.refresh(userId: authSession.userId) } } }
         }
-        .sheet(isPresented: $showsRepayment) {
-            RepaymentSheet(balances: snapshot.balances)
-        }
         .sheet(isPresented: $showAddFriend) {
             NavigationStack {
                 AddFriendView { _ in }
@@ -140,22 +129,6 @@ struct BalancesView: View {
                     }
             }
         }
-    }
-
-    private var repaymentButton: some View {
-        Button {
-            LoamFeedback.tap()
-            showsRepayment = true
-        } label: {
-            Text("Record repayment")
-                .font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 44)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(HomeTheme.accentFill)
-        .buttonBorderShape(.capsule)
-        .padding(.horizontal, 20)
-        .accessibilityHint("Records money you paid or received outside Loam")
     }
 
     @ViewBuilder
