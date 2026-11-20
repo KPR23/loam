@@ -6,7 +6,18 @@ struct WalletPayment: Equatable, Codable, Sendable {
     let money: Money
     let merchant: String?
     let category: ExpenseCategory
+    /// Set when the payment is filed under one of the member's own categories; `category` is `.other` then.
+    var customCategory: CustomCategory? = nil
     let paidAt: Date
+
+    var spendCategory: SpendCategory {
+        customCategory.map(SpendCategory.custom) ?? .builtIn(category)
+    }
+
+    /// The same payment filed under `category`.
+    func filed(under category: SpendCategory) -> WalletPayment {
+        WalletPayment(money: money, merchant: merchant, category: category.builtInCategory, customCategory: category.customCategory, paidAt: paidAt)
+    }
 
     /// Nil when Wallet sent no usable amount, so the caller asks the user instead of guessing.
     static func make(
@@ -101,19 +112,19 @@ enum MerchantCategory {
 /// What the notifications and Shortcuts say about a Wallet payment.
 enum WalletPaymentText {
     static func title(_ payment: WalletPayment) -> String {
-        "\(MoneyFormatter.string(from: payment.money)) · \(payment.merchant ?? payment.category.displayName)"
+        "\(MoneyFormatter.string(from: payment.money)) · \(payment.merchant ?? payment.spendCategory.displayName)"
     }
 
     static func added(_ payment: WalletPayment) -> String {
-        "Added to \(payment.category.displayName). Tap Undo if it wasn't yours."
+        "Added to \(payment.spendCategory.displayName). Tap Undo if it wasn't yours."
     }
 
     static func askToAdd(_ payment: WalletPayment) -> String {
-        "Add it to Loam as \(payment.category.displayName)?"
+        "Add it to Loam as \(payment.spendCategory.displayName)?"
     }
 
     static func dialogAdded(_ payment: WalletPayment) -> String {
-        "Added \(MoneyFormatter.string(from: payment.money)) for \(payment.merchant ?? payment.category.displayName)."
+        "Added \(MoneyFormatter.string(from: payment.money)) for \(payment.merchant ?? payment.spendCategory.displayName)."
     }
 
     static let missingAmount = "Wallet didn't send the amount. Tap to add the expense yourself."

@@ -129,6 +129,18 @@ final class CustomCategoryStore {
         order = loaded.order
     }
 
+    /// Fills in the copy saved at the last load, without reaching the server, when this account's
+    /// categories aren't loaded yet. A Wallet payment can arrive before any screen has loaded them.
+    func loadSavedCopyIfNeeded(userId: UUID) {
+        guard self.userId != userId || categories.isEmpty && hidden.isEmpty,
+              !ExpenseRepositoryFactory.usesLocalStorage,
+              let saved = OfflineCache.load(SavedCategories.self, key: "categories", userId: userId) else { return }
+        self.userId = userId
+        categories = saved.categories.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        hidden = saved.hidden
+        order = saved.order ?? []
+    }
+
     private struct SavedCategories: Codable {
         var categories: [CustomCategory]
         var hidden: Set<ExpenseCategory>

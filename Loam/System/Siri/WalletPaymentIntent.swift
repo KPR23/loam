@@ -36,7 +36,7 @@ struct LogWalletPaymentIntent: AppIntent {
     @Parameter(title: "Merchant")
     var merchant: String?
 
-    @Parameter(title: "Category", description: "Leave empty to guess from the merchant.")
+    @Parameter(title: "Category", description: "Leave empty to pick one from the merchant.")
     var category: ExpenseCategory?
 
     @Parameter(title: "Mode", default: .addNow)
@@ -59,7 +59,7 @@ struct LogWalletPaymentIntent: AppIntent {
         if let amount, amount < 0 {
             return .result(dialog: "\(WalletPaymentText.refundSkipped)")
         }
-        let payment: WalletPayment
+        var payment: WalletPayment
         do {
             payment = try WalletPayment.make(
                 amount: amount,
@@ -76,6 +76,12 @@ struct LogWalletPaymentIntent: AppIntent {
             // Wallet sometimes sends an empty amount; don't lose the payment, ask for it.
             await notifier.postMissingAmount(merchant: merchant, userId: userId)
             return .result(dialog: "\(WalletPaymentText.missingAmount)")
+        }
+
+        // No category in the automation: remembered, then keywords, then the on-device model.
+        if category == nil, let merchant = payment.merchant {
+            let picked = await WalletCategoryChain.current.pick(merchant: merchant, money: payment.money, userId: userId)
+            payment = payment.filed(under: picked)
         }
 
         // Without notifications there's nobody to ask: a Run Immediately automation can't
@@ -95,6 +101,7 @@ struct LogWalletPaymentIntent: AppIntent {
             amountMinor: payment.money.amountMinor,
             currency: payment.money.currencyCode,
             category: payment.category,
+            customCategory: payment.customCategory,
             title: payment.merchant,
             note: nil,
             spentAt: payment.paidAt,

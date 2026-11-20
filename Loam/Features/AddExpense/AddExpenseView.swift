@@ -606,6 +606,8 @@ struct AddExpenseView: View {
                 try await saveCreate(money: money, userId: userId)
                 OfflineSync.shared.showSuccess(isSplit ? "Expense added and shared" : "Expense added", unlessSavedOfflineSince: savedOffline)
             }
+            // The next Apple Pay payment at this merchant goes to the same category.
+            MerchantCategoryMemory.standard.remember(category, for: title.nilIfBlank, userId: userId)
             LoamFeedback.success()
             dismiss()
         } catch {
