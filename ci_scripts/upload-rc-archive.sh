@@ -35,8 +35,36 @@ done
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 key="$work/AuthKey_$ASC_KEY_ID.p8"
-printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$key"
-chmod 600 "$key"
+umask 077
+
+key_error() {
+  echo "error: ASC_PRIVATE_KEY_B64 $1. Set it to the output of: base64 -i AuthKey_$ASC_KEY_ID.p8 | tr -d '\\n'" >&2
+  exit 1
+}
+
+# Pasted values pick up line breaks, spaces, quotes or literal "\n"; none of them is valid base64.
+# A raw .p8 (PEM) is accepted too, even with its line breaks flattened.
+value="$ASC_PRIVATE_KEY_B64"
+pem_begin='-----BEGIN PRIVATE KEY-----'
+pem_end='-----END PRIVATE KEY-----'
+if [[ $value == *"$pem_begin"* ]]; then
+  [[ $value == *"$pem_end"* ]] || key_error "starts a PEM key but has no '$pem_end' line"
+  body="${value#*"$pem_begin"}"
+  body="${body%%"$pem_end"*}"
+else
+  body="$value"
+fi
+body="$(printf '%s' "$body" | sed 's/\\[nr]//g' | tr -d " \t\r\n\"'")"
+[[ -n $body ]] || key_error "is empty after removing whitespace and quotes"
+printf '%s' "$body" | base64 --decode > "$work/decoded" 2> /dev/null || key_error "isn't valid base64"
+
+if [[ $value == *"$pem_begin"* ]]; then
+  { echo "$pem_begin"; printf '%s' "$body" | fold -w 64; echo; echo "$pem_end"; } > "$key"
+elif grep -q -- "$pem_begin" "$work/decoded"; then
+  mv "$work/decoded" "$key"
+else
+  key_error "decodes, but not to a .p8 private key"
+fi
 
 # destination "upload" sends the build to App Store Connect instead of writing an .ipa.
 cat > "$work/export-options.plist" << 'PLIST'
