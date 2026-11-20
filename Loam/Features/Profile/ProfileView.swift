@@ -547,10 +547,7 @@ struct ProfileView: View {
                 .font(.body)
                 .foregroundStyle(HomeTheme.text)
         } icon: {
-            Image(systemName: symbol)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 24, height: 24)
+            CategoryIconTile(systemImage: symbol, color: color, size: 30)
         }
         .labelStyle(CompactProfileLabelStyle())
     }
@@ -601,7 +598,7 @@ private struct SafariView: UIViewControllerRepresentable {
 
 private struct CompactProfileLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             configuration.icon
             configuration.title
         }
@@ -807,10 +804,7 @@ struct ProfileRow: View {
                     .font(.body)
                     .foregroundStyle(destructive ? Color.red : HomeTheme.text)
             } icon: {
-                Image(systemName: symbol)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(color)
-                    .frame(width: 24, height: 24)
+                CategoryIconTile(systemImage: symbol, color: destructive ? .red : color, size: 30)
             }
             .labelStyle(CompactProfileLabelStyle())
             if let detail {
