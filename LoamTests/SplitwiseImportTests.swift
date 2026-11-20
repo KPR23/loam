@@ -88,4 +88,27 @@ final class SplitwiseImportTests: XCTestCase {
         XCTAssertEqual(fuel.shareRecord(for: julia)?.status, .pending)
         XCTAssertEqual(fuel.shareRecord(for: me)?.status, .accepted)
     }
+
+    func testIdsSurviveANewRowEarlierInTheFile() throws {
+        let older = try SplitwiseImport.parse(sample)
+        let newer = try SplitwiseImport.parse(sample.replacingOccurrences(
+            of: "2024-08-07,Paliwko",
+            with: "2024-08-01,Nowy,General,10.00,PLN,5.00,-5.00\n    2024-08-07,Paliwko"))
+        let a = SplitwiseImport.plan(older, meIndex: 0, me: me, mapping: [1: julia])
+        let b = SplitwiseImport.plan(newer, meIndex: 0, me: me, mapping: [1: julia])
+        XCTAssertTrue(Set(a.expenses.map(\.expense.id)).isSubset(of: Set(b.expenses.map(\.expense.id))))
+        XCTAssertEqual(b.expenses.count, a.expenses.count + 1)
+    }
+
+    func testFirstNameDoesNotOverrideADifferentLastName() {
+        let kowalska = SplitwiseImport.Candidate(id: UUID(), name: "Julia Kowalska")
+        XCTAssertNil(SplitwiseImport.suggestMatch(for: "Julia Dębiec", in: [kowalska]))
+        XCTAssertNil(SplitwiseImport.suggestMatch(for: "Julia D.", in: [kowalska]))
+    }
+
+    func testCategoriesMatchWholeWords() {
+        XCTAssertEqual(SplitwiseImport.mapCategory("Childcare"), .other)
+        XCTAssertEqual(SplitwiseImport.mapCategory("Heat/gas"), .utilities)
+        XCTAssertEqual(SplitwiseImport.mapCategory("Gas/fuel"), .transport)
+    }
 }
