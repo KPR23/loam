@@ -165,7 +165,7 @@ enum SplitwiseImport {
             }
         }
         whole = whole.filter { $0.isASCII && $0.isNumber }
-        guard fraction.count <= 2, fraction.allSatisfy { $0.isASCII && $0.isNumber } else { return nil }
+        guard fraction.count <= 2, fraction.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
         guard let major = Int(whole.isEmpty ? "0" : whole) else { return nil }
         guard let fractionDigits = fraction.isEmpty ? 0 : Int(fraction) else { return nil }
         let fractionMinor = fraction.count == 1 ? fractionDigits * 10 : fractionDigits
