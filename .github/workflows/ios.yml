@@ -1,28 +1,15 @@
 name: iOS
 
 on:
+  # No path filter: main requires Build & Test, so it must report on every PR. The changes job decides
+  # whether it builds, and its steps are skipped instead, so the job itself still succeeds.
   pull_request:
     branches: [main, "release/**"]
-    # Only these paths feed the app build, so other changes skip the macOS job.
-    paths:
-      - Loam/**
-      - LoamTests/**
-      - LoamUITests/**
-      - Loam.xcodeproj/**
-      - project.yml
-      - .github/workflows/ios.yml
   # Release branches test again, since a cherry-picked fix lands there without a PR.
   # main does too: a pull request can only restore caches saved on the base branch, so these
   # runs are what give every PR a warm Swift package cache.
   push:
     branches: [main, "release/**"]
-    paths:
-      - Loam/**
-      - LoamTests/**
-      - LoamUITests/**
-      - Loam.xcodeproj/**
-      - project.yml
-      - .github/workflows/ios.yml
 
 permissions:
   contents: read
@@ -34,23 +21,57 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Only these paths feed the app build, so other changes skip the macOS work.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      app: ${{ steps.diff.outputs.app }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: |
+          # A new branch or a force push has no usable base, so it builds.
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null \
+            || git diff --name-only "$BASE"...HEAD \
+              | grep -qE '^(Loam/|LoamTests/|LoamUITests/|Loam\.xcodeproj/|project\.yml$|\.github/workflows/ios\.yml$)'; then
+            echo app=true >> "$GITHUB_OUTPUT"
+          else
+            echo app=false >> "$GITHUB_OUTPUT"
+          fi
+
   # Every PR touching the app builds and tests it, so a broken build or test never reaches an rc tag.
   build-and-test:
     name: Build & Test
-    runs-on: macos-26
+    needs: changes
+    # Skipping needs no Mac, so it doesn't wait for or pay for one.
+    runs-on: ${{ needs.changes.outputs.app == 'true' && 'macos-26' || 'ubuntu-latest' }}
     # GitHub-hosted runners need about 9 minutes to build and 6 to test, so 15 cut runs off mid-test.
     timeout-minutes: 40
+    env:
+      APP_CHANGED: ${{ needs.changes.outputs.app }}
 
     steps:
+      - name: Skip, no app changes
+        if: env.APP_CHANGED != 'true'
+        run: echo "No changes to the app, its tests or its project, so there is nothing to build."
+
       - name: Checkout
+        if: env.APP_CHANGED == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Show Xcode version
+        if: env.APP_CHANGED == 'true'
         run: xcodebuild -version
 
       # Package checkouts are the slow, network-bound part of a cold run. Package.resolved pins
       # them, so the cache only changes when a dependency does.
       - name: Cache Swift packages
+        if: env.APP_CHANGED == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .spm
@@ -58,10 +79,12 @@ jobs:
           restore-keys: spm-${{ runner.os }}-
 
       - name: Resolve Swift packages
+        if: env.APP_CHANGED == 'true'
         run: xcodebuild -resolvePackageDependencies -scheme Loam -project Loam.xcodeproj -clonedSourcePackagesDirPath .spm
 
       # A fresh simulator per run keeps the test from reusing one that another process booted.
       - name: Create iOS simulator
+        if: env.APP_CHANGED == 'true'
         id: simulator
         run: |
           read -r DEVICE_TYPE RUNTIME <<< "$(
@@ -114,6 +137,7 @@ jobs:
 
       # Nothing reads the index on CI, so writing it only slows the compile.
       - name: Build
+        if: env.APP_CHANGED == 'true'
         run: |
           set -o pipefail
           xcodebuild build-for-testing \
@@ -128,12 +152,14 @@ jobs:
             COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Wait for the simulator
+        if: env.APP_CHANGED == 'true'
         # Launching tests into a half-booted simulator fails with "server died".
         run: |
           xcrun simctl bootstatus "${{ steps.simulator.outputs.device_id }}" -b
           xcrun simctl list devices | grep "${{ steps.simulator.outputs.device_id }}"
 
       - name: Test
+        if: env.APP_CHANGED == 'true'
         # A failed test launch otherwise waits 10 minutes for simulator diagnostics.
         # Without the package directory the test command resolves every package again from
         # GitHub into a fresh location, which took about 4 minutes before any test ran.
