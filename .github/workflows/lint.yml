@@ -1,18 +1,12 @@
 name: Lint
 
 on:
+  # No path filter: main requires swiftlint, so it must report on every PR. The changes job decides
+  # whether it lints, and its steps are skipped instead, so the job itself still succeeds.
   pull_request:
     branches: [main, "release/**"]
-    paths:
-      - "**/*.swift"
-      - .swiftlint.yml
-      - .github/workflows/lint.yml
   push:
     branches: [main]
-    paths:
-      - "**/*.swift"
-      - .swiftlint.yml
-      - .github/workflows/lint.yml
 
 permissions:
   contents: read
@@ -22,15 +16,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      swift: ${{ steps.diff.outputs.swift }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: |
+          # A new branch or a force push has no usable base, so it lints.
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null \
+            || git diff --name-only "$BASE"...HEAD \
+              | grep -qE '(\.swift$|^\.swiftlint\.yml$|^\.github/workflows/lint\.yml$)'; then
+            echo swift=true >> "$GITHUB_OUTPUT"
+          else
+            echo swift=false >> "$GITHUB_OUTPUT"
+          fi
+
   swiftlint:
+    needs: changes
     # SwiftLint 0.65.1 links libxml2.so.2, which ubuntu-latest (26.04) no longer ships.
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      SWIFT_CHANGED: ${{ needs.changes.outputs.swift }}
     steps:
+      - name: Skip, no Swift changes
+        if: env.SWIFT_CHANGED != 'true'
+        run: echo "No Swift or SwiftLint config changes, so there is nothing to lint."
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.SWIFT_CHANGED == 'true'
       # Linting is syntactic, so a Linux runner is enough and keeps it off the macOS minutes.
       # Pinned and checksum-verified, like the Supabase CLI.
       - name: Install SwiftLint
+        if: env.SWIFT_CHANGED == 'true'
         run: |
           version=0.65.1
           sha256=caeed6f4a679c35539ffaf124f6c4ab4a8416917f7d8796279dc52b74026059d
@@ -42,4 +66,5 @@ jobs:
           chmod +x "$RUNNER_TEMP/swiftlint/swiftlint"
           echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
       - name: Lint
+        if: env.SWIFT_CHANGED == 'true'
         run: swiftlint lint --strict --reporter github-actions-logging
