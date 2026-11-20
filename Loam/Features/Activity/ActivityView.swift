@@ -407,7 +407,7 @@ private struct ActivityAvatar: View {
     let event: ActivityEvent
 
     var body: some View {
-        AvatarView(userId: event.actorId, size: 40)
+        AvatarView(userId: event.actorId, size: 40, name: event.actorName)
             .overlay(alignment: .bottomTrailing) {
                 Image(systemName: event.kind.badgeSymbol)
                     .font(.system(size: 9, weight: .bold))
