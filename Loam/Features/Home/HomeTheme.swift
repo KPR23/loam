@@ -186,12 +186,7 @@ struct LoamEmptyState<Action: View>: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: systemImage)
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(HomeTheme.accent)
-                .frame(width: 64, height: 64)
-                .background(HomeTheme.accent.opacity(0.14), in: Circle())
-                .accessibilityHidden(true)
+            CategoryIconTile(systemImage: systemImage, color: HomeTheme.accent, size: 64)
             VStack(spacing: 6) {
                 Text(title)
                     .font(.system(.title3, design: .rounded).weight(.semibold))
