@@ -248,3 +248,33 @@ extension UIColor {
         )
     }
 }
+
+/// A category glyph on a soft tile of the category's color, so rows read as one family.
+struct CategoryIconTile: View {
+    let systemImage: String
+    let color: Color
+    var size: CGFloat = 36
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// Circled glyph variants doubled up with the tile's own shape; the tile uses the bare glyph.
+    private var glyph: String {
+        let suffix = ".circle.fill"
+        guard systemImage.hasSuffix(suffix) else { return systemImage }
+        let bare = String(systemImage.dropLast(suffix.count))
+        return UIImage(systemName: bare) == nil ? systemImage : bare
+    }
+
+    var body: some View {
+        Image(systemName: glyph)
+            .font(.system(size: size * 0.44, weight: .semibold))
+            .symbolRenderingMode(.monochrome)
+            .foregroundStyle(color)
+            .frame(width: size, height: size)
+            .background(
+                color.opacity(colorScheme == .dark ? 0.22 : 0.14),
+                in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+            )
+            .accessibilityHidden(true)
+    }
+}
