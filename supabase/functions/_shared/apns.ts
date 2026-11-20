@@ -9,6 +9,17 @@ export interface ApnsConfig {
 
 export type ApnsOutcome = "sent" | "dead" | "retry" | "failed";
 
+// Only Xcode (Debug) builds register sandbox tokens, and they are a separate app from the
+// TestFlight and App Store ones, so sandbox tokens can need another topic. A wrong topic makes
+// APNs answer DeviceTokenNotForTopic, which removes a valid token.
+export function configForDevice(
+  config: ApnsConfig,
+  device: { environment: "sandbox" | "production" },
+  sandboxTopic?: string,
+): ApnsConfig {
+  return device.environment === "sandbox" && sandboxTopic ? { ...config, topic: sandboxTopic } : config;
+}
+
 const HOSTS = { sandbox: "https://api.sandbox.push.apple.com", production: "https://api.push.apple.com" } as const;
 // Apple rejects provider tokens older than an hour and newer than 20 minutes is the minimum reuse rule.
 const TOKEN_TTL_MS = 50 * 60_000;
