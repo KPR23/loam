@@ -1,6 +1,6 @@
 ---
 name: build-variants
-description: Use when adding or changing a build variant, bundle ID, app icon or display name, setting up TestFlight/Loam RC (App IDs, App Store Connect, Xcode Cloud), configuring staging Apple sign-in or push, or debugging why the Dev, RC and App Store apps collide or fail to sign in, push or delete accounts. Covers Loam's three side-by-side iOS apps and how to verify them.
+description: Use when adding or changing a build variant, bundle ID, app icon or display name, setting up TestFlight/Loam RC (App IDs, App Store Connect, Xcode Cloud), configuring staging Apple sign-in or push, debugging why an rc/* build never reaches Loam RC's TestFlight, or debugging why the Dev, RC and App Store apps collide or fail to sign in, push or delete accounts. Covers Loam's three side-by-side iOS apps and how to verify them.
 ---
 
 # Build variants
@@ -40,7 +40,11 @@ Debug builds register **sandbox** APNs tokens (`PushEnvironment.current` in `Loa
 
 **App Store Connect.** A separate app record, **Loam RC**, for `app.loam.Loam.rc`. TestFlight builds upload there, not to the Loam record.
 
-**Xcode Cloud** (configured in App Store Connect). Workflow `Loam-TestFlight`: start condition tags `rc/*`, scheme `Loam-TestFlight`, archive with the `TestFlight` configuration, distribute to TestFlight (internal) for Loam RC. Workflow `Loam`: branches `release/*`, scheme `Loam`, archive `Production`. Both need the `SENTRY_AUTH_TOKEN` secret env var for `ci_scripts/ci_post_xcodebuild.sh`.
+**Xcode Cloud** (configured in App Store Connect). Xcode Cloud allows one product per repository, so both workflows live under the **Loam** product (`app.loam.Loam`, ASC app 6809904711) and Loam RC (ASC app 6835553681) has no product.
+- **Release candidate**: start condition tags `rc/*`, scheme `Loam-TestFlight` (archives `TestFlight`), Deployment Preparation **None**, no TestFlight post-action. Xcode Cloud can't publish to Loam RC, so `ci_scripts/upload-rc-archive.sh` (run from `ci_post_xcodebuild.sh` after the Sentry upload) exports the archive and uploads it to Loam RC's internal TestFlight with an App Store Connect API key. It skips any archive whose bundle ID isn't exactly `app.loam.Loam.rc`, so production is never uploaded from there.
+- **Production**: branches `release/*`, scheme `Loam`, archive `Production`, published by Xcode Cloud.
+- Secret env vars: `SENTRY_AUTH_TOKEN` on both. On Release candidate also `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_PRIVATE_KEY_B64` (`base64 -i AuthKey_<id>.p8 | tr -d '\n'`) of a team API key with the **Admin** role; lower roles can't create the distribution signing assets. Missing ones fail the archive.
+- Fallback without Xcode Cloud: `scripts/rc-testflight.sh [ref]` builds Loam RC locally and uploads it with the `asc` CLI. It refuses a ref whose `Staging.xcconfig` doesn't set `LOAM_BUNDLE_ID = app.loam.Loam.rc`.
 
 **RevenueCat.** `Staging.xcconfig` leaves `REVENUECAT_API_KEY` empty, so TestFlight has no purchases. The App Store app's key can't sell from `.rc`; to test purchases on TestFlight, add an `app.loam.Loam.rc` app in RevenueCat and put its `appl_…` key there.
 
