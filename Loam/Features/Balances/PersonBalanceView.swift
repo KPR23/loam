@@ -279,17 +279,12 @@ private struct BalanceHistoryRow: View {
     private var icon: some View {
         if entry.kind == .purchase {
             let category = entry.category ?? .other
-            Image(systemName: category.systemImage)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(category.color)
-                .frame(width: 26, height: 26)
-                .accessibilityHidden(true)
+            CategoryIconTile(systemImage: category.systemImage, color: category.color)
         } else {
-            Image(systemName: entry.kind == .reversal ? "arrow.uturn.backward.circle.fill" : "\(RepaymentRecord.symbolName).circle.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(entry.kind == .reversal ? HomeTheme.tertiary : BalanceTone.color(for: -entry.amountMinor))
-                .frame(width: 26, height: 26)
-                .accessibilityHidden(true)
+            CategoryIconTile(
+                systemImage: entry.kind == .reversal ? "arrow.uturn.backward.circle.fill" : "\(RepaymentRecord.symbolName).circle.fill",
+                color: entry.kind == .reversal ? HomeTheme.tertiary : BalanceTone.color(for: -entry.amountMinor)
+            )
         }
     }
 

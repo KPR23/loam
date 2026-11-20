@@ -136,12 +136,7 @@ struct HomeExpenseRow: View {
     }
 
     private var categoryIcon: some View {
-        Image(systemName: expense.spendCategory.systemImage)
-            .font(.system(size: 18, weight: .semibold))
-            .symbolRenderingMode(.monochrome)
-            .foregroundStyle(expense.spendCategory.color)
-            .frame(width: 26, height: 26)
-            .accessibilityHidden(true)
+        CategoryIconTile(systemImage: expense.spendCategory.systemImage, color: expense.spendCategory.color)
     }
 
     /// Shared size/weight/spacing chrome for every glyph beside the amount.
