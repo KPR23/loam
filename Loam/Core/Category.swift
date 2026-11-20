@@ -65,16 +65,16 @@ enum ExpenseCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     /// Built-in colors as hex; `CategoryStyleOptions.colors` offers the same set in the editor.
     var defaultColorHex: String {
         switch self {
-        case .groceries: return "33C571"
-        case .dining: return "FF7303"
-        case .transport: return "219FFB"
-        case .housing: return "5D6BFF"
-        case .utilities: return "FFB300"
-        case .health: return "FF4D5E"
-        case .entertainment: return "9768FE"
-        case .shopping: return "FF5CAD"
-        case .travel: return "14C4C4"
-        case .other: return "98A2B3"
+        case .groceries: return "2DCB5A"
+        case .dining: return "FF7A00"
+        case .transport: return "1A8CFF"
+        case .housing: return "3D47E0"
+        case .utilities: return "FFC300"
+        case .health: return "FF3355"
+        case .entertainment: return "C644FC"
+        case .shopping: return "FF4FC4"
+        case .travel: return "10C9A6"
+        case .other: return "8A8F9C"
         }
     }
 }
