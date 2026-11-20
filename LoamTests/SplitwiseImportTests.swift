@@ -64,6 +64,25 @@ final class SplitwiseImportTests: XCTestCase {
         XCTAssertEqual(SplitwiseImport.parseMinor("3008.5"), 300850)
         XCTAssertEqual(SplitwiseImport.parseMinor("7"), 700)
         XCTAssertNil(SplitwiseImport.parseMinor("abc"))
+        XCTAssertNil(SplitwiseImport.parseMinor("92233720368547758.08"))
+        XCTAssertNil(SplitwiseImport.parseMinor("21474836.48"))
+        XCTAssertEqual(SplitwiseImport.parseMinor("21474836.47"), 2_147_483_647)
+    }
+
+    func testSameRowWithDifferentPeopleGetsDifferentIds() throws {
+        let withJulia = try SplitwiseImport.parse(sample)
+        let withMarek = try SplitwiseImport.parse(sample.replacingOccurrences(of: "Julia Dębiec", with: "Marek Nowak"))
+        let a = SplitwiseImport.plan(withJulia, meIndex: 0, me: me, mapping: [1: julia])
+        let b = SplitwiseImport.plan(withMarek, meIndex: 0, me: me, mapping: [1: UUID()])
+        XCTAssertTrue(Set(a.expenses.map(\.expense.id)).isDisjoint(with: b.expenses.map(\.expense.id)))
+        XCTAssertTrue(Set(a.payments.map(\.operationId)).isDisjoint(with: b.payments.map(\.operationId)))
+    }
+
+    func testUnsupportedCurrencyIsSkipped() throws {
+        let export = try SplitwiseImport.parse(sample.replacingOccurrences(of: "215.00,PLN", with: "215.00,GBP"))
+        let plan = SplitwiseImport.plan(export, meIndex: 0, me: me, mapping: [1: julia])
+        XCTAssertEqual(plan.expenses.count, 1)
+        XCTAssertTrue(plan.skipped.contains { $0.row == 0 && $0.reason == .unsupportedCurrency })
     }
 
     func testSuggestsFriendsByName() {

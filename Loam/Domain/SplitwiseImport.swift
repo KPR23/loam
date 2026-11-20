@@ -150,7 +150,8 @@ enum SplitwiseImport {
         return formatter.date(from: String(trimmed.prefix(10)))
     }
 
-    /// "12.34", "12,34", "1,234.56", "-5" → minor units. Nil when it isn't a number.
+    /// "12.34", "12,34", "1,234.56", "-5" → minor units. Nil when it isn't a number, or is
+    /// larger than the server's 32-bit amounts, which also keeps a row's sums from overflowing.
     static func parseMinor(_ raw: String) -> Int? {
         var text = raw.filter { !$0.isWhitespace && $0 != "\u{00A0}" }
         guard !text.isEmpty else { return nil }
@@ -177,7 +178,7 @@ enum SplitwiseImport {
         let (scaled, overflow) = major.multipliedReportingOverflow(by: 100)
         guard !overflow else { return nil }
         let (value, addOverflow) = scaled.addingReportingOverflow(fractionMinor)
-        guard !addOverflow else { return nil }
+        guard !addOverflow, value <= Int(Int32.max) else { return nil }
         return negative ? -value : value
     }
 
