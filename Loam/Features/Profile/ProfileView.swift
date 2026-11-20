@@ -219,204 +219,49 @@ enum AppAppearance: String, CaseIterable, Identifiable {
     }
 }
 
-struct ProfileView: View {
-    /// Pages Profile opens in an in-app browser.
-    private enum WebDestination: String, Identifiable {
-        case feedback
-        case privacyPolicy
-        case termsOfUse
+/// Pages Profile opens in an in-app browser.
+private enum WebDestination: String, Identifiable {
+    case feedback
+    case privacyPolicy
+    case termsOfUse
 
-        var id: String { rawValue }
+    var id: String { rawValue }
 
-        var url: URL {
-            switch self {
-            case .feedback:
-                URL(string: "https://kprslab.featurebase.app")!
-            case .privacyPolicy:
-                LegalPages.privacyPolicy
-            case .termsOfUse:
-                LegalPages.termsOfUse
-            }
+    var url: URL {
+        switch self {
+        case .feedback:
+            URL(string: "https://kprslab.featurebase.app")!
+        case .privacyPolicy:
+            LegalPages.privacyPolicy
+        case .termsOfUse:
+            LegalPages.termsOfUse
         }
     }
+}
 
-    static let avatarSize: CGFloat = 96
-
+/// The photo, name and e-mail at the top of Profile.
+private struct ProfileHeader: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var subscriptions: SubscriptionStore
-    @EnvironmentObject private var pushStore: PushNotificationStore
-    @EnvironmentObject private var appLock: AppLock
-    @AppStorage("loam.appearance") private var appearance: AppAppearance = .system
-    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
-    @AppStorage(AppPreferences.defaultCurrencyKey) private var defaultCurrency = "PLN"
-    @AppStorage(AppPreferences.timeZoneKey) private var timeZoneIdentifier = ""
-    @State private var analyticsConsent = false
-    @State private var showsSignOut = false
-    @State private var isSigningOut = false
-    @State private var webDestination: WebDestination?
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    VStack(spacing: 12) {
-                        if showsProHeader {
-                            ProProfileAvatar(userId: authSession.userId, name: authSession.displayName)
-                        } else {
-                            AvatarView(userId: authSession.userId, size: Self.avatarSize, name: authSession.displayName)
-                        }
-                        VStack(spacing: 4) {
-                            Text(authSession.displayName ?? "You")
-                                .font(.system(.title, design: .rounded).weight(.semibold))
-                            Text(authSession.email ?? "Your own little corner of Loam.")
-                                .font(.subheadline)
-                                .foregroundStyle(HomeTheme.secondary)
-                                .textSelection(.enabled)
-                        }
-                    }
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-                // A little more room than between the rows below, so the header stands on its own.
-                .listSectionSpacing(28)
-
-                ProUpgradeSection()
-
-                Section("Account") {
-                    NavigationLink {
-                        PersonalDetailsView()
-                    } label: {
-                        ProfileRow("Personal details", symbol: "person.text.rectangle", color: .blue)
-                    }
-                    NavigationLink { FriendsView() } label: {
-                        ProfileRow("Friends", symbol: "person.2", color: .teal)
-                    }
-                    SubscriptionRow()
-                }
-                .listRowBackground(HomeTheme.surface)
-
-                if authSession.deletionPending {
-                    Section("Account deletion") {
-                        Label(deletionStatusTitle, systemImage: deletionStatusSymbol)
-                        Text(deletionStatusDetail)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        if authSession.deletionStatus == .complete {
-                            Button("Dismiss confirmation") { authSession.dismissDeletionConfirmation() }
-                        } else {
-                            Button {
-                                Task { await authSession.refreshDeletionStatus() }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Text(authSession.isCheckingDeletionStatus ? "Checking…" : "Check deletion status")
-                                    if authSession.isCheckingDeletionStatus { ProgressView() }
-                                }
-                            }
-                            .disabled(authSession.isCheckingDeletionStatus)
-                            if let checkedAt = authSession.deletionCheckedAt {
-                                Text("Last checked \(checkedAt.formatted(date: .omitted, time: .standard))")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                    .listRowBackground(HomeTheme.surface)
-                    .task { await authSession.watchDeletionStatus() }
-                }
-
-                themeSection
-                preferencesSection
-                securitySection
-                if let userId = authSession.userId, !authSession.usesDemoMode, Telemetry.isAnalyticsAvailable {
-                    privacySection(userId: userId)
-                }
-
-                Section {
-                    Button {
-                        webDestination = .feedback
-                    } label: {
-                        ProfileRow("Give feedback", symbol: "star", color: .orange)
-                    }
-                    .accessibilityHint("Opens Loam's feedback board")
-                    Link(destination: URL(string: "mailto:kprcode@icloud.com")!) {
-                        ProfileRow("Contact support", symbol: "envelope", color: .blue)
-                    }
-                    .accessibilityHint("Opens an email addressed to Loam support")
-                    NavigationLink {
-                        ProfileInfoView(title: "About the app", symbol: "app.badge", message: "A little clarity. Every day.", detail: "A calmer place for your expenses, shared moments, and everything in between.\n\n\(Self.version)")
-                    } label: {
-                        ProfileRow("About the app", symbol: "app.badge", color: .purple)
-                    }
-                    Button {
-                        webDestination = .privacyPolicy
-                    } label: {
-                        ProfileRow("Privacy Policy", symbol: "hand.raised", color: .blue)
-                    }
-                    .accessibilityHint("Opens Loam's privacy policy")
-                    Button {
-                        webDestination = .termsOfUse
-                    } label: {
-                        ProfileRow("Terms of Use", symbol: "doc.text", color: .gray)
-                    }
-                    .accessibilityHint("Opens Loam's terms of use")
-                }
-                .listRowBackground(HomeTheme.surface)
-
-                Section {
-                    Button { showsSignOut = true } label: {
-                        HStack {
-                            ProfileRow("Sign out", symbol: "rectangle.portrait.and.arrow.right", color: .red, destructive: true)
-                            if isSigningOut { ProgressView() }
-                        }
-                    }
-                    .disabled(isSigningOut)
-                }
-                .listRowBackground(HomeTheme.surface)
-
-                #if DEBUG
-                Section {
-                    NavigationLink {
-                        ProfileDeveloperView()
-                    } label: {
-                        ProfileRow("Developer", symbol: "hammer", color: .gray)
-                    }
-                }
-                .listRowBackground(HomeTheme.surface)
-                #endif
+        VStack(spacing: 12) {
+            if showsProHeader {
+                ProProfileAvatar(userId: authSession.userId, name: authSession.displayName)
+            } else {
+                AvatarView(userId: authSession.userId, size: ProfileView.avatarSize, name: authSession.displayName)
             }
-            .listStyle(.insetGrouped)
-            .contentMargins(.top, 2, for: .scrollContent)
-            .scrollContentBackground(.hidden)
-            .background(HomeTheme.background)
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .confirmationDialog("Sign out of Loam?", isPresented: $showsSignOut, titleVisibility: .visible) {
-                Button("Sign out", role: .destructive) {
-                    isSigningOut = true
-                    Task {
-                        await authSession.signOut()
-                        // The next person to sign in here starts without the lock.
-                        if authSession.state == .signedOut { appLock.reset() }
-                        isSigningOut = false
-                    }
-                }
-            } message: {
-                Text("You can sign back in whenever you’re ready.")
-            }
-            .sheet(item: $webDestination) { destination in
-                SafariView(url: destination.url)
-                    .ignoresSafeArea()
+            VStack(spacing: 4) {
+                Text(authSession.displayName ?? "You")
+                    .font(.system(.title, design: .rounded).weight(.semibold))
+                Text(authSession.email ?? "Your own little corner of Loam.")
+                    .font(.subheadline)
+                    .foregroundStyle(HomeTheme.secondary)
+                    .textSelection(.enabled)
             }
         }
-    }
-
-    static var version: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "Version \(version) (\(build))"
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
     }
 
     /// Debug builds can show the Pro header on a free account (launch with
@@ -427,129 +272,39 @@ struct ProfileView: View {
         #endif
         return subscriptions.isPro
     }
+}
 
-    private var themeSection: some View {
-        Section("Theme") {
-            Picker(selection: $appearance) {
-                ForEach(AppAppearance.allCases) { mode in
-                    Text(mode.title).tag(mode)
-                }
-            } label: {
-                preferenceLabel("Appearance", symbol: appearance.symbol, color: .indigo)
-            }
-            .pickerStyle(.menu)
-            .tint(HomeTheme.secondary)
+/// Shown while an account deletion request is being processed.
+private struct AccountDeletionSection: View {
+    @EnvironmentObject private var authSession: AuthSession
 
-            Picker(selection: $accentColor) {
-                ForEach(AppAccentColor.allCases) { option in
-                    HStack(spacing: 8) {
-                        Image(uiImage: option.menuDot).renderingMode(.original)
-                        Text(option.title).foregroundStyle(HomeTheme.text)
-                    }
-                    .tag(option)
-                }
-            } label: {
-                preferenceLabel("Accent color", symbol: "paintbrush.pointed", color: .blue)
-            }
-            .pickerStyle(.menu)
-            .tint(HomeTheme.secondary)
-        }
-        .listRowBackground(HomeTheme.surface)
-    }
-
-    private var preferencesSection: some View {
-        Section {
-            NavigationLink {
-                DefaultCurrencySettingsView()
-            } label: {
-                ProfileRow("Default currency", symbol: "dollarsign.arrow.circlepath", color: .green, detail: AppPreferences.defaultCurrencyCode)
-            }
-            if !authSession.usesDemoMode {
-                NavigationLink {
-                    NotificationSettingsView()
-                } label: {
-                    ProfileRow("Notifications", symbol: "bell.badge", color: .red, detail: notificationsDetail)
-                }
-            }
-            NavigationLink {
-                TimeZoneSettingsView()
-            } label: {
-                ProfileRow("Time zone", symbol: "globe", color: .teal, detail: AppPreferences.timeZoneName(timeZoneIdentifier))
-            }
-            CategoriesRow()
-            if !authSession.usesDemoMode {
-                AutoAcceptExpensesToggle()
-            }
-        } header: {
-            Text("Preferences")
-        } footer: {
-            if !authSession.usesDemoMode {
-                Text("Accept every expense a friend shares with you automatically, without reviewing it first.")
-            }
-        }
-        .listRowBackground(HomeTheme.surface)
-    }
-
-    private var securitySection: some View {
-        Section {
-            Toggle(isOn: Binding(
-                get: { appLock.isEnabled },
-                set: { enabled in Task { await appLock.setEnabled(enabled) } }
-            )) {
-                ProfileRow("\(appLock.method.title) lock", symbol: appLock.method.symbolName, color: .green)
-            }
-            .tint(HomeTheme.accentFill)
-            .disabled(appLock.isAuthenticating || (appLock.method == .unavailable && !appLock.isEnabled))
-        } header: {
-            Text("Security")
-        } footer: {
-            if appLock.method == .unavailable {
-                Text("Set a passcode in iOS Settings to lock Loam.")
-            } else if appLock.method == .passcode {
-                Text("Ask for your iPhone passcode whenever you open Loam.")
+    var body: some View {
+        Section("Account deletion") {
+            Label(deletionStatusTitle, systemImage: deletionStatusSymbol)
+            Text(deletionStatusDetail)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            if authSession.deletionStatus == .complete {
+                Button("Dismiss confirmation") { authSession.dismissDeletionConfirmation() }
             } else {
-                Text("Ask for \(appLock.method.title) whenever you open Loam. Your iPhone passcode works too.")
+                Button {
+                    Task { await authSession.refreshDeletionStatus() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(authSession.isCheckingDeletionStatus ? "Checking…" : "Check deletion status")
+                        if authSession.isCheckingDeletionStatus { ProgressView() }
+                    }
+                }
+                .disabled(authSession.isCheckingDeletionStatus)
+                if let checkedAt = authSession.deletionCheckedAt {
+                    Text("Last checked \(checkedAt.formatted(date: .omitted, time: .standard))")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
-        }
-    }
-
-    private var notificationsDetail: String? {
-        switch pushStore.permission {
-        case .allowed: "On"
-        case .denied: "Off"
-        case .unknown, .notDetermined: nil
-        }
-    }
-
-    private func privacySection(userId: UUID) -> some View {
-        Section {
-            Toggle(isOn: $analyticsConsent) {
-                ProfileRow("Share usage analytics", symbol: "chart.bar", color: .indigo)
-            }
-            .tint(HomeTheme.accentFill)
-            .task(id: userId) {
-                analyticsConsent = Telemetry.hasAnalyticsConsent(for: userId)
-            }
-            .onChange(of: analyticsConsent) { _, granted in
-                Telemetry.setAnalyticsConsent(granted, for: userId)
-            }
-        } header: {
-            Text("Privacy")
-        } footer: {
-            Text("No amounts, descriptions or names are ever included. Crash reports are always sent.")
         }
         .listRowBackground(HomeTheme.surface)
-    }
-
-    private func preferenceLabel(_ title: String, symbol: String, color: Color) -> some View {
-        Label {
-            Text(title)
-                .font(.body)
-                .foregroundStyle(HomeTheme.text)
-        } icon: {
-            CategoryIconTile(systemImage: symbol, color: color, size: 30)
-        }
-        .labelStyle(CompactProfileLabelStyle())
+        .task { await authSession.watchDeletionStatus() }
     }
 
     private var deletionStatusTitle: String {
@@ -580,6 +335,387 @@ struct ProfileView: View {
         case .complete: "Your account and private data have been deleted. Usage analytics are erased by our analytics provider, which can take a few days."
         case .unavailable: "The status service is unavailable. Your secure receipt is saved; try again shortly."
         case .none: ""
+        }
+    }
+}
+
+/// The light, dark or system appearance picker.
+private struct AppearancePicker: View {
+    @AppStorage("loam.appearance") private var appearance: AppAppearance = .system
+
+    var body: some View {
+        Picker(selection: $appearance) {
+            ForEach(AppAppearance.allCases) { mode in
+                Text(mode.title).tag(mode)
+            }
+        } label: {
+            PreferenceLabel(title: "Appearance", symbol: appearance.symbol, color: .indigo)
+        }
+        .pickerStyle(.menu)
+        .tint(HomeTheme.secondary)
+    }
+}
+
+private struct AccentColorPicker: View {
+    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
+
+    var body: some View {
+        Picker(selection: $accentColor) {
+            ForEach(AppAccentColor.allCases) { option in
+                HStack(spacing: 8) {
+                    Image(uiImage: option.menuDot).renderingMode(.original)
+                    Text(option.title).foregroundStyle(HomeTheme.text)
+                }
+                .tag(option)
+            }
+        } label: {
+            PreferenceLabel(title: "Accent color", symbol: "paintbrush.pointed", color: .blue)
+        }
+        .pickerStyle(.menu)
+        .tint(HomeTheme.secondary)
+    }
+}
+
+/// A picker label that matches `ProfileRow` without its trailing detail.
+private struct PreferenceLabel: View {
+    let title: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        Label {
+            Text(title)
+                .font(.body)
+                .foregroundStyle(HomeTheme.text)
+        } icon: {
+            CategoryIconTile(systemImage: symbol, color: color, size: 30)
+        }
+        .labelStyle(CompactProfileLabelStyle())
+    }
+}
+
+private struct DefaultCurrencyRow: View {
+    @AppStorage(AppPreferences.defaultCurrencyKey) private var defaultCurrency = "PLN"
+
+    var body: some View {
+        NavigationLink {
+            DefaultCurrencySettingsView()
+        } label: {
+            ProfileRow("Default currency", symbol: "dollarsign.arrow.circlepath", color: .green, detail: AppPreferences.defaultCurrencyCode)
+        }
+    }
+}
+
+private struct TimeZoneRow: View {
+    @AppStorage(AppPreferences.timeZoneKey) private var timeZoneIdentifier = ""
+
+    var body: some View {
+        NavigationLink {
+            TimeZoneSettingsView()
+        } label: {
+            ProfileRow("Time zone", symbol: "globe", color: .teal, detail: AppPreferences.timeZoneName(timeZoneIdentifier))
+        }
+    }
+}
+
+private struct NotificationsRow: View {
+    @EnvironmentObject private var pushStore: PushNotificationStore
+
+    var body: some View {
+        NavigationLink {
+            NotificationSettingsView()
+        } label: {
+            ProfileRow("Notifications", symbol: "bell.badge", color: .red, detail: detail)
+        }
+    }
+
+    private var detail: String? {
+        switch pushStore.permission {
+        case .allowed: "On"
+        case .denied: "Off"
+        case .unknown, .notDetermined: nil
+        }
+    }
+}
+
+private struct AppLockToggle: View {
+    @EnvironmentObject private var appLock: AppLock
+    /// Redraws the accent-tinted controls when the accent changes in Settings.
+    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { appLock.isEnabled },
+            set: { enabled in Task { await appLock.setEnabled(enabled) } }
+        )) {
+            ProfileRow("\(appLock.method.title) lock", symbol: appLock.method.symbolName, color: .green)
+        }
+        .tint(HomeTheme.accentFill)
+        .disabled(appLock.isAuthenticating || (appLock.method == .unavailable && !appLock.isEnabled))
+    }
+}
+
+/// Explains the app lock for the footer under it.
+private struct AppLockFooter: View {
+    @EnvironmentObject private var appLock: AppLock
+
+    var body: some View {
+        if appLock.method == .unavailable {
+            Text("Set a passcode in iOS Settings to lock Loam.")
+        } else if appLock.method == .passcode {
+            Text("Ask for your iPhone passcode whenever you open Loam.")
+        } else {
+            Text("Ask for \(appLock.method.title) whenever you open Loam. Your iPhone passcode works too.")
+        }
+    }
+}
+
+private struct AnalyticsToggle: View {
+    let userId: UUID
+    @State private var analyticsConsent = false
+    /// Redraws the accent-tinted controls when the accent changes in Settings.
+    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
+
+    var body: some View {
+        Toggle(isOn: $analyticsConsent) {
+            ProfileRow("Share usage analytics", symbol: "chart.bar", color: .indigo)
+        }
+        .tint(HomeTheme.accentFill)
+        .task(id: userId) {
+            analyticsConsent = Telemetry.hasAnalyticsConsent(for: userId)
+        }
+        .onChange(of: analyticsConsent) { _, granted in
+            Telemetry.setAnalyticsConsent(granted, for: userId)
+        }
+    }
+}
+
+/// The account that can share usage analytics, or nil when the switch is hidden.
+@MainActor
+private func analyticsUserId(_ authSession: AuthSession) -> UUID? {
+    guard let userId = authSession.userId, !authSession.usesDemoMode, Telemetry.isAnalyticsAvailable else { return nil }
+    return userId
+}
+
+/// The app's version screen.
+private struct AboutAppView: View {
+    var body: some View {
+        ProfileInfoView(title: "About the app", symbol: "app.badge", message: "A little clarity. Every day.", detail: "A calmer place for your expenses, shared moments, and everything in between.\n\n\(ProfileView.version)")
+    }
+}
+
+private struct SignOutSection: View {
+    @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var appLock: AppLock
+    @State private var showsSignOut = false
+    @State private var isSigningOut = false
+
+    var body: some View {
+        Section {
+            Button { showsSignOut = true } label: {
+                HStack {
+                    ProfileRow("Sign out", symbol: "rectangle.portrait.and.arrow.right", color: .red, destructive: true)
+                    if isSigningOut { ProgressView() }
+                }
+            }
+            .disabled(isSigningOut)
+        }
+        .listRowBackground(HomeTheme.surface)
+        .confirmationDialog("Sign out of Loam?", isPresented: $showsSignOut, titleVisibility: .visible) {
+            Button("Sign out", role: .destructive) {
+                isSigningOut = true
+                Task {
+                    await authSession.signOut()
+                    // The next person to sign in here starts without the lock.
+                    if authSession.state == .signedOut { appLock.reset() }
+                    isSigningOut = false
+                }
+            }
+        } message: {
+            Text("You can sign back in whenever you’re ready.")
+        }
+    }
+}
+
+struct ProfileView: View {
+    static let avatarSize: CGFloat = 96
+
+    @EnvironmentObject private var authSession: AuthSession
+    @State private var webDestination: WebDestination?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ProfileHeader()
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+                // A little more room than between the rows below, so the header stands on its own.
+                .listSectionSpacing(28)
+
+                ProUpgradeSection()
+
+                if authSession.deletionPending {
+                    AccountDeletionSection()
+                }
+
+                Section {
+                    NavigationLink { PersonalDetailsView() } label: {
+                        ProfileRow("Personal details", symbol: "person.text.rectangle", color: .blue)
+                    }
+                    NavigationLink { FriendsView() } label: {
+                        ProfileRow("Friends", symbol: "person.2", color: .teal)
+                    }
+                    CategoriesRow()
+                    SubscriptionRow()
+                }
+                .listRowBackground(HomeTheme.surface)
+
+                Section {
+                    NavigationLink { AppSettingsView() } label: {
+                        ProfileRow("Settings", symbol: "gearshape", color: .gray)
+                    }
+                    Button {
+                        webDestination = .feedback
+                    } label: {
+                        ProfileRow("Give feedback", symbol: "star", color: .orange)
+                    }
+                    .accessibilityHint("Opens Loam's feedback board")
+                    Link(destination: URL(string: "mailto:kprcode@icloud.com")!) {
+                        ProfileRow("Contact support", symbol: "envelope", color: .blue)
+                    }
+                    .accessibilityHint("Opens an email addressed to Loam support")
+                    NavigationLink {
+                        AboutAndLegalView()
+                    } label: {
+                        ProfileRow("About & legal", symbol: "info.circle", color: .purple)
+                    }
+                }
+                .listRowBackground(HomeTheme.surface)
+
+                SignOutSection()
+
+                #if DEBUG
+                Section {
+                    NavigationLink {
+                        ProfileDeveloperView()
+                    } label: {
+                        ProfileRow("Developer", symbol: "hammer", color: .gray)
+                    }
+                }
+                .listRowBackground(HomeTheme.surface)
+                #endif
+            }
+            .listStyle(.insetGrouped)
+            .contentMargins(.top, 2, for: .scrollContent)
+            .scrollContentBackground(.hidden)
+            .background(HomeTheme.background)
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: $webDestination) { destination in
+                SafariView(url: destination.url)
+                    .ignoresSafeArea()
+            }
+        }
+    }
+
+    static var version: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "Version \(version) (\(build))"
+    }
+}
+
+/// Every app preference, one tap below Profile.
+private struct AppSettingsView: View {
+    @EnvironmentObject private var authSession: AuthSession
+
+    var body: some View {
+        List {
+            Section {
+                AppearancePicker()
+                AccentColorPicker()
+            }
+            .listRowBackground(HomeTheme.surface)
+
+            Section {
+                DefaultCurrencyRow()
+                TimeZoneRow()
+                if !authSession.usesDemoMode {
+                    NotificationsRow()
+                }
+            }
+            .listRowBackground(HomeTheme.surface)
+
+            if !authSession.usesDemoMode {
+                Section {
+                    AutoAcceptExpensesToggle()
+                } footer: {
+                    Text("Accept every expense a friend shares with you automatically, without reviewing it first.")
+                }
+                .listRowBackground(HomeTheme.surface)
+            }
+
+            Section {
+                AppLockToggle()
+                if let userId = analyticsUserId(authSession) {
+                    AnalyticsToggle(userId: userId)
+                }
+            } footer: {
+                VStack(alignment: .leading, spacing: 6) {
+                    AppLockFooter()
+                    if analyticsUserId(authSession) != nil {
+                        Text("Usage analytics never include amounts, descriptions or names. Crash reports are always sent.")
+                    }
+                }
+            }
+            .listRowBackground(HomeTheme.surface)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background)
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// The app's version and the legal pages.
+private struct AboutAndLegalView: View {
+    @State private var webDestination: WebDestination?
+
+    var body: some View {
+        List {
+            Section {
+                NavigationLink {
+                    AboutAppView()
+                } label: {
+                    ProfileRow("About the app", symbol: "app.badge", color: .purple)
+                }
+                Button {
+                    webDestination = .privacyPolicy
+                } label: {
+                    ProfileRow("Privacy Policy", symbol: "hand.raised", color: .blue)
+                }
+                .accessibilityHint("Opens Loam's privacy policy")
+                Button {
+                    webDestination = .termsOfUse
+                } label: {
+                    ProfileRow("Terms of Use", symbol: "doc.text", color: .gray)
+                }
+                .accessibilityHint("Opens Loam's terms of use")
+            }
+            .listRowBackground(HomeTheme.surface)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(HomeTheme.background)
+        .navigationTitle("About & legal")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $webDestination) { destination in
+            SafariView(url: destination.url)
+                .ignoresSafeArea()
         }
     }
 }
@@ -622,46 +758,75 @@ private struct ProProfileAvatar: View {
     }
 }
 
-/// The upgrade row at the top of Profile. Only free accounts see it.
+/// The upgrade card at the top of Profile. Only free accounts see it.
 private struct ProUpgradeSection: View {
     @EnvironmentObject private var subscriptions: SubscriptionStore
+    /// Redraws the card's accent wash when the accent changes in Settings.
+    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
     @State private var showsPaywall = false
 
     var body: some View {
         if subscriptions.isAvailable && !subscriptions.isPro {
             Section {
                 Button { showsPaywall = true } label: {
-                    ProUpgradeRow()
+                    ProUpgradeCard()
                 }
                 .buttonStyle(.plain)
                 .proPaywall(isPresented: $showsPaywall)
+                .listRowBackground(ProUpgradeCard.background)
             }
         }
     }
 }
 
-/// A plain list row like the ones below it, ending in the PRO mark instead of a chevron.
-private struct ProUpgradeRow: View {
+/// A card that names what Pro unlocks and ends in an Upgrade button.
+private struct ProUpgradeCard: View {
+    /// Redraws the accent-tinted controls when the accent changes in Settings.
+    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
+
+    /// The row's surface washed with the accent, so the card stands apart from the plain rows below.
+    static var background: some View {
+        HomeTheme.surface
+            .overlay(
+                LinearGradient(
+                    colors: [HomeTheme.solidAccent.opacity(0.16), HomeTheme.solidAccent.opacity(0.04)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+    }
+
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                ProMark(height: 24)
+                    .accessibilityHidden(true)
+                Spacer(minLength: 8)
+                Text("Free plan")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Upgrade to Loam Pro")
-                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
                     .foregroundStyle(.primary)
                 // Names what Pro unlocks instead of repeating the paywall's tagline.
-                Text("Unlimited friends & recurring bills")
+                Text("Unlimited friends, recurring bills and custom categories.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Spacer(minLength: 4)
-            ProMark(height: 22)
-                .accessibilityHidden(true)
+            Text("Upgrade")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(HomeTheme.accentFill, in: Capsule())
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Upgrade to Loam Pro")
-        .accessibilityHint("Unlimited friends and recurring bills")
+        .accessibilityHint("Unlimited friends, recurring bills and custom categories")
         .accessibilityAddTraits(.isButton)
     }
 }
