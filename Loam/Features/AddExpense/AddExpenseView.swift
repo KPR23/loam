@@ -47,6 +47,8 @@ struct AddExpenseView: View {
     @State private var showsPaywall = false
     /// Drives the amount's entrance each time the Add tab is shown. A sheet brings its own motion, so it starts shown.
     @State private var isShown: Bool
+    /// A tab has no dismiss animation of its own, so a saved expense gets a short checkmark before the tab closes.
+    @State private var showsSavedConfirmation = false
     @FocusState private var amountFocused: Bool
     @FocusState private var titleFocused: Bool
     @FocusState private var noteFocused: Bool
@@ -126,6 +128,7 @@ struct AddExpenseView: View {
             isShown = false
             amountFocused = false
         }
+        .overlay { savedConfirmation }
         .hidesFloatingKeyboardButton()
         .sheet(isPresented: $isSplitSheetPresented) {
             splitConfigurationSheet
@@ -215,6 +218,28 @@ struct AddExpenseView: View {
             .scaleEffect(isShown ? 1 : 0.9)
             .opacity(isShown ? 1 : 0)
             .animation(reduceMotion ? nil : .spring(duration: 0.45, bounce: 0.3), value: isShown)
+    }
+
+    /// Covers the form while the keyboard drops, then the tab hands over to Expenses.
+    @ViewBuilder
+    private var savedConfirmation: some View {
+        ZStack {
+            if showsSavedConfirmation {
+                HomeTheme.background
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+            }
+            if showsSavedConfirmation {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 76, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(HomeTheme.accentFill)
+                    .symbolEffect(.bounce, value: showsSavedConfirmation)
+                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+                    .accessibilityLabel("Expense added")
+            }
+        }
+        .allowsHitTesting(showsSavedConfirmation)
     }
 
     // MARK: - Details step
@@ -656,6 +681,15 @@ struct AddExpenseView: View {
                 OfflineSync.shared.showSuccess(isSplit ? "Expense added and shared" : "Expense added", unlessSavedOfflineSince: savedOffline)
             }
             LoamFeedback.success()
+            if isTab {
+                amountFocused = false
+                titleFocused = false
+                noteFocused = false
+                withAnimation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.35)) {
+                    showsSavedConfirmation = true
+                }
+                try? await Task.sleep(for: .milliseconds(700))
+            }
             close(saved: true)
         } catch {
             errorMessage = UserFacingError.message(for: error)
