@@ -135,12 +135,7 @@ struct ActivityView: View {
         Section {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.title3)
-                        .foregroundStyle(HomeTheme.accent)
-                        .frame(width: 40, height: 40)
-                        .background(HomeTheme.accent.opacity(0.12), in: .circle)
-                        .accessibilityHidden(true)
+                    CategoryIconTile(systemImage: "bell.badge.fill", color: HomeTheme.accent, size: 40)
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Get notified")

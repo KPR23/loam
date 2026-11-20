@@ -351,12 +351,7 @@ private struct BalancesHero: View {
 
     private var settled: some View {
         VStack(spacing: 10) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(.green)
-                .frame(width: 64, height: 64)
-                .background(Color.green.opacity(0.14), in: Circle())
-                .accessibilityHidden(true)
+            CategoryIconTile(systemImage: "checkmark.seal.fill", color: .green, size: 64)
             Text("All settled up")
                 .font(.system(.title3, design: .rounded).weight(.semibold))
                 .foregroundStyle(HomeTheme.text)
