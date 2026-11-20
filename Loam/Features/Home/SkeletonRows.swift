@@ -32,8 +32,9 @@ struct SkeletonRows: View {
         HStack(spacing: 12) {
             switch leading {
             case .icon:
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .frame(width: 26, height: 26)
+                // Matches CategoryIconTile, so rows don't shift when they load.
+                RoundedRectangle(cornerRadius: 36 * 0.3, style: .continuous)
+                    .frame(width: 36, height: 36)
             case .avatar(let size):
                 Circle()
                     .frame(width: size, height: size)
