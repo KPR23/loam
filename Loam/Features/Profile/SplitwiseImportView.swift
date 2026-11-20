@@ -161,29 +161,39 @@ struct SplitwiseImportView: View {
             let plan = SplitwiseImport.plan(export, meIndex: meIndex, me: me, mapping: mapping, pendingUsers: accountIds)
             let expenses = ExpenseRepositoryFactory.make()
             let existing = Set(try await expenses.fetchExpenses(ids: plan.expenses.map(\.expense.id)).map(\.id))
-            var created = 0
-            var failed = 0
-            for planned in plan.expenses where !existing.contains(planned.expense.id) {
-                do { _ = try await expenses.create(planned.expense); created += 1 } catch { failed += 1 }
-            }
+            // Replay in date order, expenses before repayments on the same day: the server only
+            // accepts a repayment while the balance at that point owes it.
+            enum Step { case expense(ExpenseRecord), payment(SplitwiseImport.PlannedPayment) }
+            var steps: [(Date, Int, Step)] = plan.expenses.filter { !existing.contains($0.expense.id) }.map { ($0.expense.spentAt, 0, Step.expense($0.expense)) }
+            steps += plan.payments.map { ($0.date, 1, Step.payment($0)) }
+            steps.sort { $0.0 != $1.0 ? $0.0 < $1.0 : $0.1 < $1.1 }
             let balances = BalanceRepositoryFactory.make()
+            var created = 0
             var payments = 0
-            for payment in plan.payments.sorted(by: { $0.date < $1.date }) {
-                do {
-                    if payment.isReceived {
-                        try await balances.createReceivedRepayment(from: payment.personId, to: me, amountMinor: payment.amountMinor, currencyCode: payment.currency, note: payment.note, paidAt: payment.date, operationId: payment.operationId)
-                    } else {
-                        try await balances.createRepayment(from: me, to: payment.personId, amountMinor: payment.amountMinor, currencyCode: payment.currency, note: payment.note, paidAt: payment.date, operationId: payment.operationId)
-                    }
-                    payments += 1
-                } catch { failed += 1 }
+            var failedExpenses = 0
+            var failedPayments = 0
+            for (_, _, step) in steps {
+                switch step {
+                case .expense(let expense):
+                    do { _ = try await expenses.create(expense); created += 1 } catch { failedExpenses += 1 }
+                case .payment(let payment):
+                    do {
+                        if payment.isReceived {
+                            try await balances.createReceivedRepayment(from: payment.personId, to: me, amountMinor: payment.amountMinor, currencyCode: payment.currency, note: payment.note, paidAt: payment.date, operationId: payment.operationId)
+                        } else {
+                            try await balances.createRepayment(from: me, to: payment.personId, amountMinor: payment.amountMinor, currencyCode: payment.currency, note: payment.note, paidAt: payment.date, operationId: payment.operationId)
+                        }
+                        payments += 1
+                    } catch { failedPayments += 1 }
+                }
             }
             await expenseStore.refresh(userId: me)
             await balanceStore.refresh(userId: me)
             let alreadyThere = existing.count
             result = "Imported \(created) expenses and \(payments) repayments."
                 + (alreadyThere > 0 ? " \(alreadyThere) were already imported." : "")
-                + (failed > 0 ? " \(failed) failed, import again to retry them." : "")
+                + (failedExpenses > 0 ? " \(failedExpenses) expenses failed, import again to retry them." : "")
+                + (failedPayments > 0 ? " \(failedPayments) repayments couldn’t be recorded yet. Repayments with friends only work once they accept the expenses; import again afterwards." : "")
             ToastCenter.shared.showSuccess("Splitwise import finished")
         } catch {
             self.error = UserFacingError.message(for: error)

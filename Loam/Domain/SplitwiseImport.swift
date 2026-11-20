@@ -9,6 +9,8 @@ import Foundation
 enum SplitwiseImport {
     struct Row: Equatable, Sendable {
         var index: Int
+        /// Position among earlier rows with the same date, text, amounts and balances.
+        var occurrence = 0
         var date: Date
         var description: String
         var category: String
@@ -17,6 +19,12 @@ enum SplitwiseImport {
         /// Net balance in minor units per column, parallel to `Export.people`.
         var nets: [Int]
         var isPayment: Bool
+
+        /// What makes a row itself, independent of where it sits in the file.
+        var identity: String {
+            let day = SplitwiseImport.dayString(date)
+            return "\(day)|\(description)|\(costMinor)|\(currency)|\(nets)"
+        }
     }
 
     struct Export: Equatable, Sendable {
@@ -98,6 +106,12 @@ enum SplitwiseImport {
                 isPayment: isPayment(category: category, description: description)
             ))
         }
+        var seen: [String: Int] = [:]
+        for i in rows.indices {
+            let key = rows[i].identity
+            rows[i].occurrence = seen[key, default: 0]
+            seen[key, default: 0] += 1
+        }
         guard !rows.isEmpty else { throw ParseError.noRows }
         return Export(people: people, rows: rows)
     }
@@ -116,6 +130,11 @@ enum SplitwiseImport {
         return names == ["date", "description", "category", "cost", "currency"]
     }
 
+    static func dayString(_ date: Date) -> String {
+        let parts = AppPreferences.calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
     private static func parseDate(_ raw: String) -> Date? {
         let formatter = DateFormatter()
         formatter.calendar = AppPreferences.calendar
@@ -132,7 +151,7 @@ enum SplitwiseImport {
         guard !text.isEmpty else { return nil }
         var negative = false
         if text.hasPrefix("-") { negative = true; text.removeFirst() }
-        guard !text.isEmpty, text.allSatisfy({ $0.isNumber || $0 == "." || $0 == "," }) else { return nil }
+        guard !text.isEmpty, text.allSatisfy({ ($0.isASCII && $0.isNumber) || $0 == "." || $0 == "," }) else { return nil }
         let lastSeparator = text.lastIndex(where: { $0 == "." || $0 == "," })
         var whole = text
         var fraction = ""
@@ -145,10 +164,11 @@ enum SplitwiseImport {
                 fraction = String(tail)
             }
         }
-        whole = whole.filter(\.isNumber)
-        guard fraction.count <= 2, fraction.allSatisfy(\.isNumber) else { return nil }
+        whole = whole.filter { $0.isASCII && $0.isNumber }
+        guard fraction.count <= 2, fraction.allSatisfy { $0.isASCII && $0.isNumber } else { return nil }
         guard let major = Int(whole.isEmpty ? "0" : whole) else { return nil }
-        let fractionMinor = fraction.isEmpty ? 0 : (fraction.count == 1 ? Int(fraction)! * 10 : Int(fraction)!)
+        guard let fractionDigits = fraction.isEmpty ? 0 : Int(fraction) else { return nil }
+        let fractionMinor = fraction.count == 1 ? fractionDigits * 10 : fractionDigits
         let (scaled, overflow) = major.multipliedReportingOverflow(by: 100)
         guard !overflow else { return nil }
         let value = scaled + fractionMinor
@@ -229,7 +249,7 @@ enum SplitwiseImport {
                     personId: other,
                     isReceived: recipientColumn == meIndex,
                     amountMinor: row.costMinor,
-                    currency: row.currency,
+                    currency: row.currency.isEmpty ? AppPreferences.defaultCurrencyCode : row.currency,
                     note: "Imported from Splitwise",
                     date: row.date
                 ))
@@ -290,22 +310,28 @@ enum SplitwiseImport {
         }
         if close.count == 1 { return close[0].id }
         let sameFirst = candidates.filter { tokens($0.name).first == first }
-        return sameFirst.count == 1 && exact.isEmpty && close.isEmpty ? sameFirst[0].id : nil
+        // A first name alone is only enough when one side has no last name to contradict it.
+        guard sameFirst.count == 1, exact.isEmpty, close.isEmpty else { return nil }
+        return target.count == 1 || tokens(sameFirst[0].name).count == 1 ? sameFirst[0].id : nil
     }
 
     private static func tokens(_ name: String) -> [String] {
         name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .replacingOccurrences(of: "ł", with: "l")
             .split { !$0.isLetter && !$0.isNumber }
             .map(String.init)
     }
 
     static func mapCategory(_ splitwise: String) -> ExpenseCategory {
         let name = splitwise.lowercased()
-        func has(_ words: String...) -> Bool { words.contains { name.contains($0) } }
+        let words = name.split { !$0.isLetter }.map(String.init)
+        func has(_ keywords: String...) -> Bool {
+            keywords.contains { key in words.contains { $0 == key || (key.count >= 5 && $0.hasPrefix(key)) } }
+        }
         if has("grocer", "supermarket") { return .groceries }
-        if has("dining", "restaurant", "coffee", "food", "liquor", "bar") { return .dining }
+        if has("dining", "restaurant", "coffee", "food", "liquor") { return .dining }
         if has("heat", "electric", "water", "trash", "internet", "phone", "utilit", "cleaning") { return .utilities }
-        if has("taxi", "bus", "train", "car", "gas/fuel", "parking", "bicycle", "transport") { return .transport }
+        if has("taxi", "bus", "train", "car", "fuel", "gas", "parking", "bicycle", "transport") { return .transport }
         if has("hotel", "plane", "vacation", "trip") { return .travel }
         if has("rent", "mortgage", "household", "furniture", "home", "maintenance", "lawn", "pet") { return .housing }
         if has("medical", "health", "pharmac") { return .health }
@@ -316,7 +342,7 @@ enum SplitwiseImport {
 
     /// The same file produces the same ids, so importing it twice doesn't duplicate anything.
     static func stableId(_ kind: String, _ me: UUID, _ row: Row) -> UUID {
-        let key = "splitwise|\(kind)|\(me.uuidString)|\(row.index)|\(row.date.timeIntervalSince1970)|\(row.description)|\(row.costMinor)|\(row.currency)|\(row.nets)"
+        let key = "splitwise|\(kind)|\(me.uuidString)|\(row.identity)|\(row.occurrence)"
         var bytes = Array(SHA256.hash(data: Data(key.utf8)).prefix(16))
         bytes[6] = (bytes[6] & 0x0F) | 0x50
         bytes[8] = (bytes[8] & 0x3F) | 0x80
