@@ -1,6 +1,6 @@
 ---
 name: build-variants
-description: Explains Loam's three side-by-side iOS apps (App Store Loam, TestFlight Loam RC, Xcode Loam Dev) and their bundle IDs, names, icons and backends. Use when changing a bundle ID, app name or icon, adding a variant, setting up App IDs, App Store Connect or Xcode Cloud for a variant, or debugging Sign in with Apple, push or account deletion on staging.
+description: Use when adding or changing a build variant, bundle ID, app icon or display name, setting up TestFlight/Loam RC (App IDs, App Store Connect, Xcode Cloud), configuring staging Apple sign-in or push, or debugging why the Dev, RC and App Store apps collide or fail to sign in, push or delete accounts. Covers Loam's three side-by-side iOS apps and how to verify them.
 ---
 
 # Build variants
