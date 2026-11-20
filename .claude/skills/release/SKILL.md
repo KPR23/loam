@@ -16,6 +16,8 @@ README.md → "Releasing" is the source of truth; read it if anything here looks
 | push to `release/x.y.z` | **production** migrations and functions at once, then Xcode Cloud builds `Loam` (production) |
 | tag `vx.y.z` | GitHub release with generated notes; marks what Apple approved |
 
+TestFlight builds are a separate app (`app.loam.Loam.rc`, "Loam RC") from the App Store one. For bundle IDs, icons, the Loam RC App Store Connect record and staging's Apple and push settings, see the `build-variants` skill.
+
 ## Commands
 
 Always go through the script. Never create rc/v tags, release branches or version bumps by hand.
