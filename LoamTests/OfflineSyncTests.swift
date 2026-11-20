@@ -88,6 +88,35 @@ final class OfflineSyncTests: LocalStorageTestCase {
         XCTAssertTrue(stored.isEmpty)
     }
 
+    func testUndoingAnOfflineExpenseInALoadedMonthKeepsItOutOfTheSavedCopy() async throws {
+        let store = makeStore()
+        await store.refresh(userId: me)
+        online = false
+        let id = try await store.addPersonal(amountMinor: 900, category: .groceries, title: "Lidl", note: nil, spentAt: Date(), userId: me, reloads: false)
+        XCTAssertEqual(store.expenses.map(\.title), ["Lidl"])
+
+        let undone = await store.deleteSaved(id: id, userId: me)
+
+        XCTAssertTrue(undone)
+        XCTAssertTrue(store.expenses.isEmpty)
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 0)
+        let relaunched = makeStore()
+        await relaunched.refresh(userId: me)
+        XCTAssertTrue(relaunched.expenses.isEmpty, "The undone expense isn't shown again offline")
+    }
+
+    func testAnExpenseSavedInTheBackgroundShowsOnceLoamIsOpen() async throws {
+        let store = makeStore()
+        await store.refresh(userId: me)
+        try await store.addPersonal(amountMinor: 900, category: .groceries, title: "Lidl", note: nil, spentAt: Date(), userId: me, reloads: false)
+        XCTAssertTrue(store.expenses.isEmpty)
+
+        await store.refreshIfChangedInBackground(userId: me)
+
+        XCTAssertEqual(store.expenses.map(\.title), ["Lidl"])
+        XCTAssertEqual(store.summary.totalMine.amountMinor, 900)
+    }
+
     func testUndoingAnExpenseThatAlreadySyncedDeletesIt() async throws {
         let store = makeStore()
         let id = try await store.addPersonal(amountMinor: 900, category: .groceries, title: "Lidl", note: nil, spentAt: Date(), userId: me, reloads: false)
