@@ -17,7 +17,8 @@ final class StandardScreenshots: ScreenshotTestCase {
             app.textFields["Amount"].tap()
             app.textFields["Amount"].typeText("42")
             try capture("02-add-expense")
-            app.navigationBars.buttons["Cancel"].tap()
+            // "Cancel" before iOS 26; the system close button (×, labelled "Close") from iOS 26.
+            app.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "Close"])).firstMatch.tap()
         }
 
         tab("Balances").tap()

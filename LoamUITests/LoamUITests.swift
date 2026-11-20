@@ -65,7 +65,7 @@ final class LoamUITests: XCTestCase {
         signInToDemo()
         openAddExpense()
         typeAmount("40")
-        app.navigationBars.buttons["Cancel"].tap()
+        cancelButton.tap()
 
         XCTAssertTrue(app.staticTexts["No expenses this month yet"].waitForExistence(timeout: 5))
     }
@@ -141,6 +141,11 @@ final class LoamUITests: XCTestCase {
     /// The floating button, or the empty month's own button while no expenses exist.
     private var addExpenseButton: XCUIElement {
         app.buttons.matching(NSPredicate(format: "label IN %@", ["Add expense", "Add an expense"])).firstMatch
+    }
+
+    /// "Cancel" before iOS 26; the system close button (×, labelled "Close") from iOS 26.
+    private var cancelButton: XCUIElement {
+        app.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "Close"])).firstMatch
     }
 
     private var amountField: XCUIElement {
