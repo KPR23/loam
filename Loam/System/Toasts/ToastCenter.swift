@@ -1,7 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// One message at the top of the screen: an error, a missing state or a finished action.
+/// One message at the top of the screen: an error, a missing or offline state, or a change that can still be undone.
+/// Plain confirmations of what the person just saw happen get no toast.
 struct Toast: Identifiable {
     enum Style {
         case success, error, warning, info
@@ -18,8 +19,6 @@ struct Toast: Identifiable {
     var message: String
     var action: Action?
     var duration: TimeInterval
-    /// Replaces the style's icon, such as the undo arrow after Undo.
-    var symbolName: String?
     /// Runs once when the toast leaves without its action being tapped: it timed out,
     /// was swiped away, or another toast replaced it. Undoable changes commit here.
     var onExpire: (@MainActor () -> Void)?
@@ -40,11 +39,6 @@ struct Toast: Identifiable {
 
     static func info(_ message: String) -> Toast {
         Toast(style: .info, message: message, duration: 3)
-    }
-
-    /// Confirms an Undo, with an undo arrow in place of the info icon.
-    static func undone(_ message: String) -> Toast {
-        Toast(style: .info, message: message, duration: 2.5, symbolName: "arrow.uturn.backward.circle.fill")
     }
 
     /// A finished change the person can take back for `undoDuration` seconds.
@@ -100,10 +94,6 @@ final class ToastCenter: ObservableObject {
 
     func showError(_ message: String, action: Toast.Action? = nil) {
         show(.error(message, action: action))
-    }
-
-    func showSuccess(_ message: String) {
-        show(.success(message))
     }
 
     /// The action was tapped: it runs instead of the expiry.

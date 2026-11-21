@@ -115,7 +115,6 @@ struct FriendsView: View {
                 Task {
                     do {
                         try await connectionStore.remove(friend)
-                        ToastCenter.shared.showSuccess("Removed \(friend.displayName)")
                     }
                     catch { removalError = UserFacingError.message(for: error) }
                 }
@@ -317,7 +316,6 @@ private struct ConnectionCodePrompt: ViewModifier {
             let friend = try await connectionStore.redeem(code: normalizedCode)
             isPresented = false
             onConnected?(friend)
-            ToastCenter.shared.showSuccess("Connected with \(friend.displayName)")
         } catch { self.error = UserFacingError.message(for: error) }
     }
 }
@@ -362,7 +360,6 @@ private struct PlaceholderFriendPrompt: ViewModifier {
         do {
             onCreated(try await connectionStore.createPlaceholder(name: chosen))
             isPresented = false
-            ToastCenter.shared.showSuccess("Added \(chosen)")
         }
         catch { self.error = UserFacingError.message(for: error) }
     }

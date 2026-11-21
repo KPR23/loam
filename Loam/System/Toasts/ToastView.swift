@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// The toast card and its slide in from the top edge.
+/// The toast card and its drop in from the top edge.
 struct ToastOverlay: View {
     @ObservedObject var center: ToastCenter
     /// Reports each card's frame in window coordinates, or nil once it's gone,
@@ -12,32 +12,31 @@ struct ToastOverlay: View {
 
     var body: some View {
         VStack {
-            if let toast = center.current {
-                ToastCard(
-                    toast: toast,
-                    shownAt: center.shownAt,
-                    duration: center.currentDuration
-                ) {
-                    center.performAction(of: toast.id)
-                }
-                .id(toast.id)
-                .offset(y: min(dragOffset, 0) + max(dragOffset, 0) * 0.15)
-                // Swipe up to dismiss. No tap-to-dismiss: on the card it took taps meant for Undo.
-                .simultaneousGesture(dismissGesture(for: toast.id))
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear
-                            .onAppear { onFrameChange(toast.id, proxy.frame(in: .global)) }
-                            .onChange(of: proxy.frame(in: .global)) { _, frame in onFrameChange(toast.id, frame) }
+            // Stacked, so a replaced card leaves in place while the next one arrives over it.
+            ZStack(alignment: .top) {
+                if let toast = center.current {
+                    ToastCard(
+                        toast: toast,
+                        shownAt: center.shownAt,
+                        duration: center.currentDuration
+                    ) {
+                        center.performAction(of: toast.id)
                     }
-                )
-                // A replaced card can leave after the next one arrives, so each clears only its own frame.
-                .onDisappear { onFrameChange(toast.id, nil) }
-                .transition(
-                    reduceMotion
-                        ? AnyTransition.opacity
-                        : AnyTransition.move(edge: .top).combined(with: .opacity)
-                )
+                    .id(toast.id)
+                    .offset(y: min(dragOffset, 0) + max(dragOffset, 0) * 0.15)
+                    // Swipe up to dismiss. No tap-to-dismiss: on the card it took taps meant for Undo.
+                    .simultaneousGesture(dismissGesture(for: toast.id))
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear
+                                .onAppear { onFrameChange(toast.id, proxy.frame(in: .global)) }
+                                .onChange(of: proxy.frame(in: .global)) { _, frame in onFrameChange(toast.id, frame) }
+                        }
+                    )
+                    // A replaced card can leave after the next one arrives, so each clears only its own frame.
+                    .onDisappear { onFrameChange(toast.id, nil) }
+                    .transition(reduceMotion ? Self.fade : Self.drop)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -45,9 +44,22 @@ struct ToastOverlay: View {
         .padding(.top, 4)
         .frame(maxWidth: 520)
         .frame(maxWidth: .infinity)
-        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.42, dampingFraction: 0.86), value: center.current?.id)
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.5, bounce: 0.22), value: center.current?.id)
         .onChange(of: center.current?.id) { _, _ in dragOffset = 0 }
     }
+
+    /// Drops in from under the status bar with a little settle, and lifts away quicker than it came.
+    private static let drop = AnyTransition.asymmetric(
+        insertion: .move(edge: .top)
+            .combined(with: .modifier(active: ToastMotion(isHidden: true), identity: ToastMotion(isHidden: false)))
+            .animation(.spring(duration: 0.5, bounce: 0.22)),
+        removal: .move(edge: .top)
+            .combined(with: .modifier(active: ToastMotion(isHidden: true), identity: ToastMotion(isHidden: false)))
+            .animation(.smooth(duration: 0.3))
+    )
+
+    /// Reduce Motion: no movement, only a short cross-fade.
+    private static let fade = AnyTransition.opacity.animation(.easeInOut(duration: 0.2))
 
     private func dismissGesture(for id: Toast.ID) -> some Gesture {
         DragGesture(minimumDistance: 6)
@@ -56,9 +68,21 @@ struct ToastOverlay: View {
                 if value.translation.height < -24 || value.predictedEndTranslation.height < -60 {
                     center.dismiss(id)
                 } else {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { dragOffset = 0 }
+                    withAnimation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.2)) { dragOffset = 0 }
                 }
             }
+    }
+}
+
+/// Shrinks, blurs and fades the card at the edges of its transition.
+private struct ToastMotion: ViewModifier {
+    let isHidden: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(isHidden ? 0.92 : 1, anchor: .top)
+            .blur(radius: isHidden ? 6 : 0)
+            .opacity(isHidden ? 0 : 1)
     }
 }
 
@@ -68,53 +92,57 @@ struct ToastCard: View {
     let duration: TimeInterval
     let onAction: () -> Void
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .subheadline) private var minTileSize: CGFloat = 36
+    /// Height of the message beside the tile, which the tile and the action button grow to match.
+    @State private var contentHeight: CGFloat = 0
+
+    /// The gap around the tile: the same on its left, top and bottom.
+    private let inset: CGFloat = 14
 
     private var isDark: Bool { colorScheme == .dark }
-    private var pill: Capsule { Capsule(style: .continuous) }
+
+    /// The same corners as the inset-grouped cards that hold Home's expense rows.
+    private var cardRadius: CGFloat {
+        if #available(iOS 26, *) { 26 } else { 12 }
+    }
+
+    private var card: RoundedRectangle { RoundedRectangle(cornerRadius: cardRadius, style: .continuous) }
+
+    /// A square as tall as the text beside it, so it sits `inset` from the top, bottom and left.
+    /// At accessibility sizes the action moves below, so the tile keeps its own size.
+    private var tileSize: CGFloat {
+        dynamicTypeSize.isAccessibilitySize ? min(minTileSize, 56) : max(minTileSize, contentHeight)
+    }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: toast.symbolName ?? toast.style.symbolName)
-                .font(.system(size: 20, weight: .semibold))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(toast.style == .info ? HomeTheme.text : toast.style.tint)
-                .frame(width: 24)
-                .accessibilityHidden(true)
-
-            Text(toast.message)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(HomeTheme.text)
-                .lineLimit(3)
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let action = toast.action {
-                Button(action: onAction) {
-                    HStack(spacing: 6) {
-                        if toast.onExpire != nil {
-                            ToastCountdown(shownAt: shownAt, duration: duration)
-                        }
-                        Text(action.title)
-                            .font(.subheadline.weight(.semibold))
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                // Large text: the message gets the full width and the action sits under it.
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 12) {
+                        icon
+                        message
                     }
-                    .foregroundStyle(HomeTheme.text)
-                    .padding(.horizontal, 12)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
+                    actionButton
                 }
-                .buttonStyle(.plain)
-                .padding(.trailing, -6)
+            } else {
+                HStack(spacing: 12) {
+                    icon
+                    message
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                    actionButton
+                }
             }
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 16)
-        .padding(.vertical, toast.action == nil ? 14 : 4)
-        .frame(minHeight: 52)
+        .padding(.leading, inset)
+        // With an action, its button mirrors the tile: the same gap to the right edge as the tile's to the left.
+        .padding(.trailing, toast.action == nil ? 16 : inset)
+        .padding(.vertical, inset)
         // White in light mode; in dark mode the gray of a Home expense row.
-        .background(pill.fill(isDark ? HomeTheme.surface : Color.white))
-        .overlay(pill.strokeBorder(Color.primary.opacity(isDark ? 0.18 : 0.06), lineWidth: 1))
-        .shadow(color: .black.opacity(isDark ? 0.5 : 0.14), radius: 18, y: 6)
+        .background(card.fill(isDark ? HomeTheme.surface : Color.white))
+        .overlay(card.strokeBorder(Color.primary.opacity(isDark ? 0.14 : 0.05), lineWidth: 1))
+        .shadow(color: .black.opacity(isDark ? 0.45 : 0.10), radius: 24, y: 8)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(toast.message)
         .accessibilityAddTraits(.isStaticText)
@@ -122,6 +150,56 @@ struct ToastCard: View {
             if let action = toast.action {
                 Button(action.title, action: onAction)
             }
+        }
+    }
+
+    /// The same rounded tile as `CategoryIconTile`, but its glyph keeps the row tile's size
+    /// when the tile grows with longer text.
+    private var icon: some View {
+        Image(systemName: toast.style.symbolName)
+            .font(.system(size: minTileSize * 0.44, weight: .semibold))
+            .foregroundStyle(toast.style.tint)
+            .frame(width: tileSize, height: tileSize)
+            .background(
+                toast.style.tint.opacity(isDark ? 0.22 : 0.14),
+                in: RoundedRectangle(cornerRadius: tileSize * 0.3, style: .continuous)
+            )
+            .accessibilityHidden(true)
+    }
+
+    private var message: some View {
+        Text(toast.message)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(HomeTheme.text)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 6 : 3)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    @ViewBuilder
+    private var actionButton: some View {
+        if let action = toast.action {
+            Button(action: onAction) {
+                HStack(spacing: 6) {
+                    if toast.onExpire != nil {
+                        ToastCountdown(shownAt: shownAt, duration: duration)
+                    }
+                    Text(action.title)
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(HomeTheme.accent)
+                .padding(.horizontal, 12)
+                // As tall as the icon tile, with the same corners, so the two ends of the toast match.
+                .frame(height: tileSize)
+                .background(
+                    HomeTheme.accent.opacity(isDark ? 0.22 : 0.12),
+                    in: RoundedRectangle(cornerRadius: tileSize * 0.3, style: .continuous)
+                )
+                // The tap area reaches past the button to 44 points.
+                .contentShape(Rectangle().inset(by: -6))
+            }
+            .buttonStyle(LoamPressStyle())
         }
     }
 }
@@ -137,13 +215,13 @@ private struct ToastCountdown: View {
             let remaining = max(0, 1 - elapsed / max(duration, 0.1))
             ZStack {
                 Circle()
-                    .stroke(Color.primary.opacity(0.12), lineWidth: 2)
+                    .stroke(HomeTheme.accent.opacity(0.25), lineWidth: 2)
                 Circle()
                     .trim(from: 0, to: remaining)
                     .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
             }
-            .frame(width: 14, height: 14)
+            .frame(width: 16, height: 16)
         }
         .accessibilityHidden(true)
     }
@@ -152,10 +230,10 @@ private struct ToastCountdown: View {
 extension Toast.Style {
     var symbolName: String {
         switch self {
-        case .success: "checkmark.circle.fill"
-        case .error: "exclamationmark.circle.fill"
+        case .success: "checkmark"
+        case .error: "exclamationmark"
         case .warning: "exclamationmark.triangle.fill"
-        case .info: "info.circle.fill"
+        case .info: "info"
         }
     }
 

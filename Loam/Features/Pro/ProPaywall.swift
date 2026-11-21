@@ -333,7 +333,6 @@ private struct ProPaywallView: View {
             let result = try await Purchases.shared.purchase(package: package)
             guard !result.userCancelled else { return }
             LoamFeedback.success()
-            ToastCenter.shared.showSuccess("Welcome to Loam Pro")
             dismiss()
             await subscriptions.didUpdate(result.customerInfo)
         } catch {
@@ -351,7 +350,6 @@ private struct ProPaywallView: View {
             let info = try await Purchases.shared.restorePurchases()
             if info.entitlements.active[SubscriptionStore.entitlementId] != nil {
                 LoamFeedback.success()
-                ToastCenter.shared.showSuccess("Loam Pro restored")
                 dismiss()
                 await subscriptions.didUpdate(info)
             } else {

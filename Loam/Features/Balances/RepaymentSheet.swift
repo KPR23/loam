@@ -238,7 +238,6 @@ struct RepaymentSheet: View {
         isSaving = true
         defer { isSaving = false }
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        let savedOffline = OfflineSync.shared.savedOfflineCount
         do {
             if isReceiving {
                 try await balanceStore.receive(
@@ -259,7 +258,6 @@ struct RepaymentSheet: View {
                     userId: userId
                 )
             }
-            OfflineSync.shared.showSuccess(isReceiving ? "Payment recorded" : "Repayment recorded", unlessSavedOfflineSince: savedOffline)
             LoamFeedback.success()
             dismiss()
         } catch {

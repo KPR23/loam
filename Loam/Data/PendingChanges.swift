@@ -227,8 +227,6 @@ final class OfflineSync: ObservableObject {
     private var userId: UUID?
     private var sendingId: UUID?
     private var flushTask: Task<Int, Never>?
-    /// How many changes have been saved on the device with a toast, so a screen can tell its action was one.
-    private(set) var savedOfflineCount = 0
     /// The version the server gave each expense this device saved, so a queued edit
     /// that follows another one expects the version the first edit produced.
     private var savedVersions: [UUID: Int] = [:]
@@ -256,10 +254,7 @@ final class OfflineSync: ObservableObject {
         load(userId)
         changes = PendingChange.enqueue(change, into: changes, sending: sendingId)
         persist(userId)
-        if announce {
-            savedOfflineCount += 1
-            notice = .savedOffline
-        }
+        if announce { notice = .savedOffline }
     }
 
     /// Sends waiting changes in order and returns how many reached the server. Stops at the
@@ -274,13 +269,6 @@ final class OfflineSync: ObservableObject {
         let synced = await task.value
         flushTask = nil
         return synced
-    }
-
-    /// Confirms an action, unless it was saved on the device since `count`: that toast already
-    /// says so, and a success toast would replace it.
-    func showSuccess(_ message: String, unlessSavedOfflineSince count: Int) {
-        guard savedOfflineCount == count else { return }
-        ToastCenter.shared.showSuccess(message)
     }
 
     /// An account switch or sign-out stops using the previous account's queue.
