@@ -21,7 +21,7 @@ enum WalletPaymentMode: String, AppEnum {
 struct LogWalletPaymentIntent: AppIntent {
     static var title: LocalizedStringResource = "Log Wallet Payment"
     static var description = IntentDescription(
-        "Adds an Apple Pay payment to Loam as a personal expense. Use it in a Transaction automation and pass in the transaction's amount, currency code and merchant."
+        "Adds a card payment to Loam as a personal expense. Use it in a Transaction automation and pass in the transaction's amount, currency code and merchant."
     )
     // Apple Pay often runs while the iPhone is still locked. This only adds an expense and
     // reads nothing back, so it doesn't need the device or App Lock unlocked.
