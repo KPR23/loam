@@ -97,9 +97,11 @@ final class BalanceStore: ObservableObject {
             return false
         }
         do {
-            try await send()
+            // Kept on the device while it's sent, so leaving Loam mid-save can't lose it.
+            try await sync.perform(change, userId: userId, send: send)
             return true
-        } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
+        } catch where sync.isEnabled() && OfflineSync.shouldRetryLater(error) {
+            // No connection, or a server hiccup: kept on the device and sent again later.
             sync.enqueue(change, userId: userId)
             return false
         }

@@ -22,6 +22,7 @@
 		095A6A39CCEE8E5A13CB9C30 /* ExpenseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F54A64AD769F2698E87F475 /* ExpenseRepository.swift */; };
 		0C56CD5037B2181ECD76F37E /* BalancesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311E61CE00D043E5896AF6E2 /* BalancesView.swift */; };
 		0D1113838C34055B6E07D8CF /* NotificationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7E51743FCDD76EA3759058 /* NotificationRepository.swift */; };
+		104F31D5F05457A0D33CB546 /* SyncNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6320A6C4B5842E8D053CD161 /* SyncNotifier.swift */; };
 		126EF1AD57B79B77088CF0D9 /* ExchangeRates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98702872EF571671E266B171 /* ExchangeRates.swift */; };
 		127F94D887AFE6D6CC9C4A23 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 506247FF8FC45BE14B15B178 /* PrivacyInfo.xcprivacy */; };
 		12911FE1A942CD0E6D411A6E /* PendingExpenseActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE4652F8B86C0207F5C6079E /* PendingExpenseActions.swift */; };
@@ -355,6 +356,7 @@
 		4C1F262C926CE9DD1E859578 /* ToastCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastCenter.swift; sourceTree = "<group>"; };
 		5C5190CCFBEB409353A715E3 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		69B20FCC4A367D8CDB5CBC64 /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
+		6320A6C4B5842E8D053CD161 /* SyncNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncNotifier.swift; sourceTree = "<group>"; };
 		AD2694D8353B8ACA4A5A448F /* ToastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -614,6 +616,7 @@
 				5833E6822337A36150F95276 /* AppDelegate.swift */,
 				EA99C2EA69EAA389AB15EE8F /* NotificationCenterClient.swift */,
 				69044BCBD7D53253A1EE6FBB /* PushNotificationStore.swift */,
+				6320A6C4B5842E8D053CD161 /* SyncNotifier.swift */,
 				6C508899799962EDF5213A00 /* WalletPaymentNotifier.swift */,
 			);
 			path = Notifications;
@@ -1118,6 +1121,7 @@
 				33F1ED5603B3BB1925385A6D /* SupabaseClientProvider.swift in Sources */,
 				8B95AFDA7E6069FB3CDE3769 /* SupabaseConnectionRepository.swift in Sources */,
 				EC885C4695DC4841AD1668D2 /* SupabaseExpenseRepository.swift in Sources */,
+				104F31D5F05457A0D33CB546 /* SyncNotifier.swift in Sources */,
 				FDF41AA79A0BDAB289F21E58 /* Telemetry.swift in Sources */,
 				B5333E2BC9ABA402B8BCE74A /* ToastCenter.swift in Sources */,
 				3838CA4EFC4883586C21FE8E /* ToastView.swift in Sources */,

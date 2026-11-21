@@ -140,9 +140,16 @@ struct LoamApp: App {
                     // A change still waiting on Undo is saved before iOS can suspend the app.
                     toastCenter.expireCurrent()
                     appLock.appDidEnterBackground()
+                    // Sends what's waiting, and keeps trying (and tells the person) if it can't.
+                    if let userId = accountId, authSession.state == .signedIn {
+                        SyncNotifier.shared.appDidEnterBackground(userId: userId, hasUnsavedChanges: expenseStore.hasUnsavedChanges) { [expenseStore] in
+                            await expenseStore.settleStagedChanges()
+                        }
+                    }
                 }
                 if phase == .active {
                     appLock.refreshMethod()
+                    SyncNotifier.shared.appDidBecomeActive()
                     Task {
                         // A Wallet payment may have been added or undone while Loam was in the background.
                         await expenseStore.refreshIfChangedInBackground(userId: authSession.userId)

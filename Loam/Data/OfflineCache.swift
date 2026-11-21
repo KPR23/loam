@@ -1,9 +1,11 @@
 import Foundation
 
 /// The last data each screen loaded, saved per account so Loam still opens with it offline.
-/// Changes made offline are stored here too, under `pendingChangesKey`, until they sync.
+/// Changes made offline are stored here too, under `pendingChangesKey`, until they sync, and
+/// changes being sent right now under `inFlightKey`, until the server answers.
 enum OfflineCache {
     static let pendingChangesKey = "pending-changes"
+    static let inFlightKey = "in-flight-changes"
 
     /// Tests point this at a temporary folder.
     static var directory: URL = URL.applicationSupportDirectory.appending(path: "OfflineCache", directoryHint: .isDirectory)
@@ -33,9 +35,9 @@ enum OfflineCache {
     /// so they still reach the server when this account signs in again.
     static func removeSnapshots(for userId: UUID) {
         let folder = folder(for: userId)
-        let keep = file(key: pendingChangesKey, userId: userId).lastPathComponent
+        let keep = [pendingChangesKey, inFlightKey].map { file(key: $0, userId: userId).lastPathComponent }
         let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-        for file in files where file.lastPathComponent != keep {
+        for file in files where !keep.contains(file.lastPathComponent) {
             try? FileManager.default.removeItem(at: file)
         }
     }
