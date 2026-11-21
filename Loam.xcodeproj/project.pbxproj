@@ -684,7 +684,6 @@
 				239C99EE3E670235BE2083E8 /* BalanceSimplifier.swift */,
 				45B398F7B4520CCEC146C3AD /* ExpenseShareAcceptance.swift */,
 				03BFF6113EC068A12DDDFBE5 /* SplitCalculator.swift */,
-				B90349CAE6423C03B8F3CC2D /* SplitwiseImporter.swift */,
 				2565201DD2AFB53D49E85B58 /* SplitwiseImport.swift */,
 				E80E6F1581E3843A2C844271 /* SplitFormSeed.swift */,
 			);
@@ -722,6 +721,7 @@
 				9D7E51743FCDD76EA3759058 /* NotificationRepository.swift */,
 				89EAB827A6FDCA5FF2A11FB3 /* SupabaseActivityRepository.swift */,
 				D044ABEA612ACF723FCB7589 /* SupabaseBalanceRepository.swift */,
+				B90349CAE6423C03B8F3CC2D /* SplitwiseImporter.swift */,
 				C5858412D24B38A4853B26DB /* SupabaseClientProvider.swift */,
 				7E8C8F409F0CF628175F871A /* SupabaseConnectionRepository.swift */,
 				7486D3DFF74F14EF2DB912DB /* SupabaseExpenseRepository.swift */,
