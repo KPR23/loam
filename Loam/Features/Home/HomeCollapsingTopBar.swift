@@ -135,6 +135,27 @@ struct HomeTopBarCalendarButton: View {
     }
 }
 
+/// Opens search on Home. Styled like the calendar button so the two sit together in the top bar.
+struct HomeTopBarSearchButton: View {
+    let onSearch: () -> Void
+
+    var body: some View {
+        if #available(iOS 26, *) {
+            Button(action: { LoamFeedback.tap(); onSearch() }) {
+                Image(systemName: "magnifyingglass")
+            }
+            .accessibilityLabel("Search expenses")
+        } else {
+            Button(action: { LoamFeedback.tap(); onSearch() }) {
+                Image(systemName: "magnifyingglass")
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
+            .accessibilityLabel("Search expenses")
+        }
+    }
+}
+
 struct MonthPickerSheet: View {
     let period: DatePeriod
     let onSelect: (DatePeriod) -> Void
@@ -235,13 +256,10 @@ private struct HomeHeroScrollOffsetKey: PreferenceKey {
 
 struct HomeScrollCollapseModifier: ViewModifier {
     @Binding var collapseProgress: CGFloat
-    var onPullDown: () -> Void = {}
 
     @State private var baselineOffset: CGFloat?
-    @State private var pullArmed = true
 
     private let collapseDistance: CGFloat = 150
-    private let pullDistance: CGFloat = 140
 
     func body(content: Content) -> some View {
         content
@@ -256,24 +274,13 @@ struct HomeScrollCollapseModifier: ViewModifier {
 
                 let scrolled = baselineOffset - minY
                 collapseProgress = min(max(scrolled / collapseDistance, 0), 1)
-
-                // Pull-to-refresh fires first; dragging well past it reveals search. It re-arms once the list settles.
-                if scrolled < -pullDistance, pullArmed {
-                    pullArmed = false
-                    onPullDown()
-                } else if scrolled > -4 {
-                    pullArmed = true
-                }
             }
     }
 }
 
 extension View {
-    func trackHomeScrollCollapse(
-        _ collapseProgress: Binding<CGFloat>,
-        onPullDown: @escaping () -> Void = {}
-    ) -> some View {
-        modifier(HomeScrollCollapseModifier(collapseProgress: collapseProgress, onPullDown: onPullDown))
+    func trackHomeScrollCollapse(_ collapseProgress: Binding<CGFloat>) -> some View {
+        modifier(HomeScrollCollapseModifier(collapseProgress: collapseProgress))
     }
 
     func reportHomeHeroScrollOffset() -> some View {
