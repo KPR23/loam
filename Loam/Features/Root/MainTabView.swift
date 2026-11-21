@@ -119,9 +119,12 @@ struct MainTabView: View {
     }
 
     /// Cancel goes back to the tab the form was opened from; Save goes to Expenses to show the new expense.
-    /// Either way the next visit starts with an empty form.
+    /// Either way the next visit starts with an empty form. A save finishes asynchronously, so if something else
+    /// (say, a notification) has moved to another tab meanwhile, that tab stays.
     private func closeAddExpenseTab(saved: Bool) {
-        selection = saved ? .expenses : lastContentTab
+        if selection == .addExpense {
+            selection = saved ? .expenses : lastContentTab
+        }
         addExpenseFormID = UUID()
     }
 

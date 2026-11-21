@@ -70,6 +70,30 @@ final class LoamUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["No expenses this month yet"].waitForExistence(timeout: 5))
     }
 
+    /// From iOS 26 the form is its own tab: Cancel returns to the tab it was opened from, Save goes to Expenses,
+    /// and each visit starts empty.
+    func testAddTabReturnsToTheRightTabAndStartsEmpty() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("Add expense is a sheet before iOS 26") }
+        signInToDemo()
+
+        tab("Balances").tap()
+        XCTAssertTrue(app.staticTexts["No balances yet"].waitForExistence(timeout: 5))
+        tab("Add expense").tap()
+        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
+        typeAmount("40")
+        cancelButton.tap()
+        XCTAssertTrue(app.staticTexts["No balances yet"].waitForExistence(timeout: 5), "Cancel left Balances")
+
+        tab("Add expense").tap()
+        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Quick add"].isEnabled, "The cancelled amount was kept")
+        typeAmount("15")
+        app.buttons["Quick add"].tap()
+
+        XCTAssertTrue(expenseRow(containing: "Groceries").waitForExistence(timeout: 5), "Save didn't land on Expenses")
+        XCTAssertTrue(monthlyTotal(containing: "15").exists)
+    }
+
     func testDeletingAnExpenseEmptiesTheMonth() {
         signInToDemo()
         addExpense(amount: "30")
