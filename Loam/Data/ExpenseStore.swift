@@ -209,7 +209,9 @@ final class ExpenseStore: ObservableObject {
     /// when an earlier one to the same expense hasn't synced, so the two arrive in order.
     /// A slow `send` (`timeout`) is saved on the device like an offline change and keeps running; the
     /// queued copy then finds the expense already there, or sends it.
-    private func sendOrQueue(_ change: PendingChange, userId: UUID, timeout: Duration? = nil, send: @escaping () async throws -> Void) async throws -> WriteOutcome {
+    private func sendOrQueue(_ change: PendingChange, userId: UUID, timeout: Duration? = nil, send request: @escaping () async throws -> Void) async throws -> WriteOutcome {
+        // Kept on the device while it's sent, so leaving Loam mid-save can't lose it.
+        let send: () async throws -> Void = { [sync] in try await sync.perform(change, userId: userId, send: request) }
         if sync.shouldQueue(change, userId: userId) {
             let offline = !sync.isOnline()
             queue(change, userId: userId, announce: offline)
@@ -234,7 +236,8 @@ final class ExpenseStore: ObservableObject {
                 try await send()
             }
             return .sent
-        } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
+        } catch where sync.isEnabled() && OfflineSync.shouldRetryLater(error) {
+            // No connection, or a server hiccup: kept on the device and sent again later.
             queue(change, userId: userId, announce: true)
             return .queued
         }
@@ -976,6 +979,9 @@ final class ExpenseStore: ObservableObject {
         summary = makeSummary(expenses, userId: userId)
         commitStagedChange(id: id, userId: userId)
     }
+
+    /// A change waiting on Undo or still saving, which leaving Loam must not lose.
+    var hasUnsavedChanges: Bool { !stagedChanges.isEmpty || !commitTasks.isEmpty }
 
     /// Saves every change still waiting on Undo and waits for every save in flight.
     func settleStagedChanges() async {

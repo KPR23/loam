@@ -1,3 +1,4 @@
+import Supabase
 import XCTest
 @testable import Loam
 
@@ -298,6 +299,78 @@ final class OfflineSyncTests: LocalStorageTestCase {
         XCTAssertEqual(repayment.amountMinor, 500)
         XCTAssertFalse(repayment.isReceived)
         XCTAssertEqual(sync.notice?.kind, .savedOffline)
+    }
+
+    // MARK: Leaving the app mid-save
+
+    func testAChangeBeingSentIsKeptOnTheDeviceUntilTheServerAnswers() async throws {
+        let store = makeStore()
+        await store.refresh(userId: me)
+        var keptWhileSending: Int?
+        let change = PendingChange.saveExpense(personalExpense(700), isNew: true, rule: nil)
+
+        try await sync.perform(change, userId: me) {
+            keptWhileSending = OfflineCache.load([PendingChangeEntry].self, key: OfflineCache.inFlightKey, userId: me)?.count
+        }
+
+        XCTAssertEqual(keptWhileSending, 1)
+        XCTAssertNil(OfflineCache.load([PendingChangeEntry].self, key: OfflineCache.inFlightKey, userId: me), "An answered change leaves nothing behind")
+        XCTAssertTrue(sync.changes.isEmpty)
+    }
+
+    func testASaveCutOffByTheAppEndingIsSentOnTheNextLaunch() async throws {
+        // iOS ended Loam while this save was on its way: only the copy on the device is left.
+        let expense = personalExpense(1800)
+        OfflineCache.save([PendingChangeEntry(change: .saveExpense(expense, isNew: true, rule: nil))], key: OfflineCache.inFlightKey, userId: me)
+
+        let relaunched = makeStore()
+        await relaunched.refresh(userId: me)
+
+        let stored = try await repository.fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertEqual(stored.map(\.id), [expense.id])
+        XCTAssertEqual(relaunched.expenses.map(\.id), [expense.id])
+        XCTAssertTrue(sync.changes.isEmpty)
+        XCTAssertNil(OfflineCache.load([PendingChangeEntry].self, key: OfflineCache.inFlightKey, userId: me))
+    }
+
+    func testACutOffSaveJoinsTheQueueInTheOrderItWasMade() async throws {
+        online = false
+        let first = personalExpense(100)
+        var cutOff = PendingChangeEntry(change: .saveExpense(first, isNew: true, rule: nil))
+        cutOff.queuedAt = Date(timeIntervalSinceNow: -60)
+        OfflineCache.save([cutOff], key: OfflineCache.inFlightKey, userId: me)
+        let second = personalExpense(200)
+        OfflineCache.save([PendingChangeEntry(change: .saveExpense(second, isNew: true, rule: nil))], key: OfflineCache.pendingChangesKey, userId: me)
+
+        let ids = sync.pendingChanges(for: me).compactMap(\.expenseId)
+
+        XCTAssertEqual(ids, [first.id, second.id])
+    }
+
+    func testACutOffSaveThatIsAlreadyQueuedIsNotQueuedTwice() {
+        // iOS ended Loam between queueing the change and clearing its in-flight copy.
+        let entry = PendingChangeEntry(change: .saveExpense(personalExpense(300), isNew: true, rule: nil))
+        OfflineCache.save([entry], key: OfflineCache.pendingChangesKey, userId: me)
+        OfflineCache.save([PendingChangeEntry(change: entry.change)], key: OfflineCache.inFlightKey, userId: me)
+
+        XCTAssertEqual(sync.pendingChanges(for: me).count, 1)
+        XCTAssertNil(OfflineCache.load([PendingChangeEntry].self, key: OfflineCache.inFlightKey, userId: me))
+    }
+
+    func testAServerHiccupKeepsTheChangeForLater() {
+        func http(_ status: Int) -> HTTPError {
+            HTTPError(data: Data(), response: HTTPURLResponse(url: URL(string: "https://loam.test")!, statusCode: status, httpVersion: nil, headerFields: nil)!)
+        }
+        XCTAssertTrue(OfflineSync.shouldRetryLater(URLError(.networkConnectionLost)))
+        XCTAssertTrue(OfflineSync.shouldRetryLater(http(503)))
+        XCTAssertTrue(OfflineSync.shouldRetryLater(http(429)))
+        XCTAssertTrue(OfflineSync.shouldRetryLater(http(401)))
+        XCTAssertTrue(OfflineSync.shouldRetryLater(PostgrestError(code: "57014", message: "canceling statement due to statement timeout")))
+        XCTAssertTrue(OfflineSync.shouldRetryLater(PostgrestError(code: "PGRST002", message: "Could not query the database")))
+        XCTAssertTrue(OfflineSync.shouldRetryLater(PostgrestError(message: "Too many requests")), "A gateway or rate limit sends no database code")
+        XCTAssertFalse(OfflineSync.shouldRetryLater(http(400)))
+        XCTAssertFalse(OfflineSync.shouldRetryLater(PostgrestError(code: "P0001", message: "Expense not found")))
+        XCTAssertFalse(OfflineSync.shouldRetryLater(ExpenseRepositoryError.conflict))
     }
 
     // MARK: Queue
