@@ -59,12 +59,14 @@ struct HomeView: View {
             }
             .listStyle(.insetGrouped)
             .coordinateSpace(name: "homeScroll")
-            .trackHomeScrollCollapse($collapseProgress, onPullDown: openSearch)
+            .trackHomeScrollCollapse($collapseProgress)
             .contentMargins(.top, 2, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .homeTranslucentNavigationBar(collapseProgress: collapseProgress)
+            // Search takes the whole screen, so the month pill and buttons step aside while it's open.
+            .toolbar(isSearchPresented ? .hidden : .visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HomeCollapsingTopBar(
@@ -82,8 +84,11 @@ struct HomeView: View {
                         )
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    HomeTopBarSearchButton(onSearch: openSearch)
+                }
             }
-            // The search field stays hidden until the list is pulled down past its top.
+            // The top bar's search button opens this; pulling the list down only refreshes.
             .overlay {
                 if isSearchPresented { searchOverlay }
             }
@@ -151,7 +156,6 @@ struct HomeView: View {
 
     private func openSearch() {
         guard !isSearchPresented else { return }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(reduceMotion ? nil : .snappy) { isSearchPresented = true }
     }
 
@@ -170,6 +174,8 @@ struct HomeView: View {
                         .foregroundStyle(HomeTheme.secondary)
                     TextField("Search expenses", text: $searchText)
                         .focused($isSearchFieldFocused)
+                        // Tapping the search button means "I want to type", so the keyboard comes up straight away.
+                        .onAppear { isSearchFieldFocused = true }
                         .submitLabel(.search)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
