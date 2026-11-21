@@ -319,9 +319,12 @@ enum SplitwiseImport {
     /// Planned expenses that don't already exist, matched one for one so two identical
     /// purchases in the file are not both swallowed by a single existing one.
     static func newExpenses(_ planned: [PlannedExpense], existing: [ExpenseRecord]) -> (new: [PlannedExpense], duplicates: Int) {
+        let plannedIds = Set(planned.map(\.expense.id))
         let existingIds = Set(existing.map(\.id))
+        // Rows already imported are matched by id first, so they don't also use up an
+        // existing expense that a different, new row should be compared against.
         var remaining: [String: Int] = [:]
-        for expense in existing { remaining[duplicateKey(expense), default: 0] += 1 }
+        for expense in existing where !plannedIds.contains(expense.id) { remaining[duplicateKey(expense), default: 0] += 1 }
         var fresh: [PlannedExpense] = []
         var duplicates = 0
         for item in planned {

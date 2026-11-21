@@ -149,4 +149,16 @@ final class SplitwiseImportTests: XCTestCase {
         other.shares = [ExpenseShareRecord(userId: me, amountMinor: 20000), ExpenseShareRecord(userId: julia, amountMinor: 1500)]
         XCTAssertEqual(SplitwiseImport.newExpenses(plan.expenses, existing: [other]).duplicates, 0)
     }
+
+    func testAnImportedRowDoesNotHideANewIdenticalOne() throws {
+        let export = try SplitwiseImport.parse(sample)
+        let plan = SplitwiseImport.plan(export, meIndex: 0, me: me, mapping: [1: julia])
+        let first = plan.expenses[0]
+        // The same purchase twice in a newer file: the second row has a new id (occurrence 1).
+        var twin = first
+        twin.expense.id = UUID()
+        let result = SplitwiseImport.newExpenses([first, twin], existing: [first.expense])
+        XCTAssertEqual(result.duplicates, 1)
+        XCTAssertEqual(result.new.map(\.expense.id), [twin.expense.id])
+    }
 }
