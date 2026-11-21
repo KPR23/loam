@@ -130,4 +130,23 @@ final class SplitwiseImportTests: XCTestCase {
         XCTAssertEqual(SplitwiseImport.mapCategory("Heat/gas"), .utilities)
         XCTAssertEqual(SplitwiseImport.mapCategory("Gas/fuel"), .transport)
     }
+
+    func testSkipsExpensesYouAlreadyHave() throws {
+        let export = try SplitwiseImport.parse(sample)
+        let plan = SplitwiseImport.plan(export, meIndex: 0, me: me, mapping: [1: julia])
+        let fuel = plan.expenses[0].expense
+        // Added by hand earlier: same day, amount, payer and shares, different id and title.
+        let manual = ExpenseRecord(
+            amountMinor: fuel.amountMinor, currency: fuel.currency, category: .other, title: "Tankowanie",
+            spentAt: fuel.spentAt, paidBy: me, createdBy: me,
+            shares: fuel.shares.map { ExpenseShareRecord(userId: $0.userId, amountMinor: $0.amountMinor) }
+        )
+        let result = SplitwiseImport.newExpenses(plan.expenses, existing: [manual])
+        XCTAssertEqual(result.duplicates, 1)
+        XCTAssertEqual(result.new.count, plan.expenses.count - 1)
+        // A different split of the same amount is a different expense.
+        var other = manual
+        other.shares = [ExpenseShareRecord(userId: me, amountMinor: 20000), ExpenseShareRecord(userId: julia, amountMinor: 1500)]
+        XCTAssertEqual(SplitwiseImport.newExpenses(plan.expenses, existing: [other]).duplicates, 0)
+    }
 }

@@ -8,18 +8,16 @@ struct SplitwiseImportView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var expenseStore: ExpenseStore
     @EnvironmentObject private var balanceStore: BalanceStore
+    @EnvironmentObject private var navigator: AppNavigator
+    @ObservedObject private var importer = SplitwiseImporter.shared
+    @Environment(\.dismiss) private var dismiss
 
-    private enum Target: Hashable {
-        case new
-        case existing(UUID)
-    }
+    private typealias Target = SplitwiseImport.Target
 
     @State private var showsImporter = false
     @State private var export: SplitwiseImport.Export?
     @State private var meIndex: Int?
     @State private var targets: [Int: Target] = [:]
-    @State private var isImporting = false
-    @State private var result: String?
     @State private var error: String?
 
     private var friends: [SplitPartnerOption] { connectionStore.connections }
@@ -78,22 +76,15 @@ struct SplitwiseImportView: View {
 
                     Section {
                         summary(export: export, meIndex: meIndex)
-                        Button { Task { await runImport(export: export, meIndex: meIndex, involved: involved) } } label: {
-                            if isImporting { ProgressView() } else { Text("Import") }
-                        }
-                        .disabled(isImporting || hasDuplicateTargets(export: export, involved: involved))
                     } header: {
                         Text("Summary")
                     } footer: {
-                        Text("Importing the same file again won’t create duplicates. Skipped: expenses paid by more than one person, expenses that don’t involve you and currencies Loam doesn’t support.")
+                        Text("Expenses you already have (same day, amount and shares) are skipped, so importing again doesn’t duplicate anything. Also skipped: expenses paid by more than one person, expenses that don’t involve you and currencies Loam doesn’t support.")
                     }
                     .listRowBackground(HomeTheme.surface)
                 }
             }
 
-            if let result {
-                Section { Text(result) }.listRowBackground(HomeTheme.surface)
-            }
         }
         .scrollContentBackground(.hidden)
         .background(HomeTheme.background.ignoresSafeArea())
@@ -102,6 +93,7 @@ struct SplitwiseImportView: View {
         .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.commaSeparatedText, .plainText]) { picked in
             load(picked)
         }
+        .safeAreaInset(edge: .bottom) { importBar }
         .errorToast($error)
         .task { await connectionStore.refresh(userId: authSession.userId) }
     }
@@ -128,7 +120,6 @@ struct SplitwiseImportView: View {
     }
 
     private func load(_ picked: Result<URL, Error>) {
-        result = nil
         do {
             let url = try picked.get()
             let access = url.startAccessingSecurityScopedResource()
@@ -145,62 +136,43 @@ struct SplitwiseImportView: View {
         }
     }
 
-    private func runImport(export: SplitwiseImport.Export, meIndex: Int, involved: [Int]) async {
-        guard let me = authSession.userId else { return }
-        isImporting = true
-        defer { isImporting = false }
-        do {
-            var mapping: [Int: UUID] = [:]
-            for column in involved {
-                switch binding(for: column, export: export).wrappedValue {
-                case .existing(let id): mapping[column] = id
-                case .new:
-                    let created = try await connectionStore.createPlaceholder(name: export.people[column]).userId
-                    mapping[column] = created
-                    // A retry after a partial import must reuse this person, not add another.
-                    targets[column] = .existing(created)
+    @ViewBuilder
+    private var importBar: some View {
+        if let export, let meIndex {
+            let involved = SplitwiseImport.involvedPeople(in: export, meIndex: meIndex)
+            let blocked = hasDuplicateTargets(export: export, involved: involved) || importer.isRunning || authSession.userId == nil
+            let plan = SplitwiseImport.plan(export, meIndex: meIndex, me: authSession.userId ?? UUID(), mapping: previewMapping(export: export, meIndex: meIndex))
+            VStack(spacing: 8) {
+                Button { startImport(export: export, meIndex: meIndex, involved: involved) } label: {
+                    Text("Import \(plan.expenses.count + plan.payments.count) items")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(blocked)
+                if importer.isRunning {
+                    Text("An import is already running.").font(.footnote).foregroundStyle(.secondary)
                 }
             }
-            let accountIds = Set(friends.filter { !$0.isPlaceholder }.map(\.userId))
-            let plan = SplitwiseImport.plan(export, meIndex: meIndex, me: me, mapping: mapping, pendingUsers: accountIds)
-            let expenses = ExpenseRepositoryFactory.make()
-            let existing = Set(try await expenses.fetchExpenses(ids: plan.expenses.map(\.expense.id)).map(\.id))
-            // Replay in file order within each day: the server only
-            // accepts a repayment while the balance at that point owes it.
-            enum Step { case expense(ExpenseRecord), payment(SplitwiseImport.PlannedPayment) }
-            var steps: [(Date, Int, Step)] = plan.expenses.filter { !existing.contains($0.expense.id) }.map { ($0.expense.spentAt, $0.order, Step.expense($0.expense)) }
-            steps += plan.payments.map { ($0.date, $0.order, Step.payment($0)) }
-            steps.sort { $0.0 != $1.0 ? $0.0 < $1.0 : $0.1 < $1.1 }
-            let balances = BalanceRepositoryFactory.make()
-            var created = 0
-            var payments = 0
-            var failedExpenses = 0
-            var failedPayments = 0
-            for (_, _, step) in steps {
-                switch step {
-                case .expense(let expense):
-                    do { _ = try await expenses.create(expense); created += 1 } catch { failedExpenses += 1 }
-                case .payment(let payment):
-                    do {
-                        if payment.isReceived {
-                            try await balances.createReceivedRepayment(from: payment.personId, to: me, amountMinor: payment.amountMinor, currencyCode: payment.currency, note: payment.note, paidAt: payment.date, operationId: payment.operationId)
-                        } else {
-                            try await balances.createRepayment(from: me, to: payment.personId, amountMinor: payment.amountMinor, currencyCode: payment.currency, note: payment.note, paidAt: payment.date, operationId: payment.operationId)
-                        }
-                        payments += 1
-                    } catch { failedPayments += 1 }
-                }
-            }
-            await expenseStore.refresh(userId: me)
-            await balanceStore.refresh(userId: me)
-            let alreadyThere = existing.count
-            result = "Imported \(created) expenses and \(payments) repayments."
-                + (alreadyThere > 0 ? " \(alreadyThere) were already imported." : "")
-                + (failedExpenses > 0 ? " \(failedExpenses) expenses failed, import again to retry them." : "")
-                + (failedPayments > 0 ? " \(failedPayments) repayments couldn’t be recorded yet. Repayments with friends only work once they accept the expenses; import again afterwards." : "")
-            ToastCenter.shared.showSuccess("Splitwise import finished")
-        } catch {
-            self.error = UserFacingError.message(for: error)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.bar)
         }
+    }
+
+    private func startImport(export: SplitwiseImport.Export, meIndex: Int, involved: [Int]) {
+        guard let me = authSession.userId else { return }
+        var chosen: [Int: Target] = [:]
+        for column in involved { chosen[column] = binding(for: column, export: export).wrappedValue }
+        importer.start(
+            export: export, meIndex: meIndex, me: me, targets: chosen,
+            accountIds: Set(friends.filter { !$0.isPlaceholder }.map(\.userId)),
+            connectionStore: connectionStore, expenseStore: expenseStore, balanceStore: balanceStore
+        )
+        // Back to the main screen; the progress stays on top while it uploads.
+        navigator.pendingScreen = .expenses
+        dismiss()
     }
 }
