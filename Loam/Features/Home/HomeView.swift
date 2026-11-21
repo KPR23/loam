@@ -65,6 +65,8 @@ struct HomeView: View {
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .homeTranslucentNavigationBar(collapseProgress: collapseProgress)
+            // Search takes the whole screen, so the month pill and buttons step aside while it's open.
+            .toolbar(isSearchPresented ? .hidden : .visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HomeCollapsingTopBar(
