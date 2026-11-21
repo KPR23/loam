@@ -1,4 +1,6 @@
 import Foundation
+import Supabase
+import UIKit
 
 /// Something the user did offline that still has to reach the server.
 enum PendingChange: Codable, Hashable, Sendable {
@@ -40,6 +42,9 @@ struct PendingChangeEntry: Codable, Hashable, Identifiable, Sendable {
     var id = UUID()
     var queuedAt = Date()
     var change: PendingChange
+    /// When the server first failed it with an error worth retrying. Optional, so queues saved
+    /// before this existed still load.
+    var retryingSince: Date?
 }
 
 enum PendingChangeError: LocalizedError {
@@ -223,9 +228,14 @@ final class OfflineSync: ObservableObject {
     var isEnabled: () -> Bool = { !ExpenseRepositoryFactory.usesLocalStorage }
     var makeExpenseRepository: () -> any ExpenseRepository = { ExpenseRepositoryFactory.make() }
     var makeBalanceRepository: () -> any BalanceRepository = { BalanceRepositoryFactory.make() }
+    /// Whether Loam is on screen, where a toast can tell the person about a failed change.
+    var isActive: @MainActor () -> Bool = { UIApplication.shared.applicationState != .background }
 
     private var userId: UUID?
     private var sendingId: UUID?
+    /// Changes being sent right now, outside the queue. Each is also written to the device
+    /// (`inFlightKey`), so one cut off by iOS ending the app is sent again on the next launch.
+    private var inFlight: [UUID: (userId: UUID, entry: PendingChangeEntry)] = [:]
     private var flushTask: Task<Int, Never>?
     /// How many changes have been saved on the device with a toast, so a screen can tell its action was one.
     private(set) var savedOfflineCount = 0
@@ -250,12 +260,46 @@ final class OfflineSync: ObservableObject {
         return changes.contains { $0.change.expenseId == expenseId }
     }
 
+    /// Sends a change now, keeping a copy on the device until the server answers, and asks iOS
+    /// for time to finish when Loam leaves the screen. If iOS ends the app before the answer
+    /// arrives, the next launch queues the copy and sends it again; the expense's own id and the
+    /// repayment's operation id keep that second attempt from saving anything twice.
+    func perform<Value>(_ change: PendingChange, userId: UUID, send: () async throws -> Value) async throws -> Value {
+        // A late save for an account that is no longer signed in must not switch the queue to it.
+        guard isEnabled(), self.userId == nil || self.userId == userId else { return try await send() }
+        load(userId)
+        let entry = PendingChangeEntry(change: change)
+        inFlight[entry.id] = (userId, entry)
+        persistInFlight(userId)
+        defer {
+            if inFlight.removeValue(forKey: entry.id) != nil { persistInFlight(userId) }
+        }
+        do {
+            return try await BackgroundTime.run("Save change") { try await send() }
+        } catch {
+            // The screen that started it shows the error, but not while Loam is in the background.
+            // One worth retrying is kept on the device by the caller, and one already queued
+            // (a slow create) is retried from the queue, so neither is a failure yet.
+            if !isActive(), !Self.shouldRetryLater(error), inFlight[entry.id] != nil {
+                let reason = UserFacingError.message(for: error) ?? UserFacingError.fallback
+                await SyncNotifier.shared.postFailure("\u{201C}\(change.title)\u{201D} wasn't saved. \(reason)", userId: userId)
+            }
+            throw error
+        }
+    }
+
     /// `announce` shows the "saved on this device" toast; it stays quiet when the change only
     /// waits its turn behind another one while online.
     func enqueue(_ change: PendingChange, userId: UUID, announce: Bool = true) {
         load(userId)
         changes = PendingChange.enqueue(change, into: changes, sending: sendingId)
         persist(userId)
+        // The queued copy now stands in for one still being sent, so a relaunch sends it once.
+        let covered = inFlight.filter { $0.value.userId == userId && $0.value.entry.change == change }.keys
+        if !covered.isEmpty {
+            covered.forEach { inFlight[$0] = nil }
+            persistInFlight(userId)
+        }
         if announce {
             savedOfflineCount += 1
             notice = .savedOffline
@@ -269,7 +313,7 @@ final class OfflineSync: ObservableObject {
         // A second caller waits for the sync already running, so it sees the saved result.
         if let running = flushTask { return await running.value }
         // Its own task, so a screen closing mid-sync doesn't cancel the requests.
-        let task = Task { await self.performFlush(userId: userId) }
+        let task = Task { await BackgroundTime.run("Sync changes") { await self.performFlush(userId: userId) } }
         flushTask = task
         let synced = await task.value
         flushTask = nil
@@ -289,6 +333,7 @@ final class OfflineSync: ObservableObject {
         changes = []
         savedVersions = [:]
         notice = nil
+        SyncNotifier.shared.clearWaitingReminder()
     }
 
     private func performFlush(userId: UUID) async -> Int {
@@ -311,7 +356,14 @@ final class OfflineSync: ObservableObject {
                 try await send(entry.change, userId: userId)
                 synced += 1
             } catch {
-                if Self.shouldRetryLater(error) { break }
+                if Self.shouldRetryLater(error) && !hasRetriedTooLong(entry, after: error) {
+                    // Waiting on a connection is fine for any time; a server that keeps failing it isn't.
+                    if !Connectivity.isOfflineError(error), changes.first?.id == entry.id, entry.retryingSince == nil {
+                        changes[0].retryingSince = Date()
+                        persist(userId)
+                    }
+                    break
+                }
                 failures.append(PendingChange.failureMessage(for: entry.change, error: error))
                 LoamErrorCapture.capture("offline.sync_failed")
             }
@@ -321,7 +373,10 @@ final class OfflineSync: ObservableObject {
         }
 
         if let first = failures.first {
-            notice = .failed(failures.count == 1 ? first : "\(failures.count) offline changes couldn't sync. \(first)")
+            let message = failures.count == 1 ? first : "\(failures.count) offline changes couldn't sync. \(first)"
+            notice = .failed(message)
+            // A toast is missed while Loam is in the background.
+            if !isActive() { await SyncNotifier.shared.postFailure(message, userId: userId) }
         } else if synced > 0 {
             notice = .synced(synced)
         }
@@ -407,11 +462,42 @@ final class OfflineSync: ObservableObject {
         }
     }
 
-    /// Lost connections and cancelled requests keep the change for the next try.
-    private static func shouldRetryLater(_ error: Error) -> Bool {
-        Connectivity.isOfflineError(error)
-            || error is CancellationError
-            || (error as? URLError)?.code == .cancelled
+    /// Lost connections, cancelled requests, an expired session and a server that is briefly
+    /// down or busy keep the change for the next try. Only a real refusal drops it.
+    static func shouldRetryLater(_ error: Error) -> Bool {
+        if Connectivity.isOfflineError(error) || error is CancellationError || (error as? URLError)?.code == .cancelled {
+            return true
+        }
+        if let error = error as? HTTPError {
+            let status = error.response.statusCode
+            return status == 401 || status == 408 || status == 429 || status >= 500
+        }
+        if error is AuthError { return true }
+        if let error = error as? PostgrestError {
+            // No code: a gateway or rate limit answered, not the database.
+            guard let code = error.code else { return true }
+            // PGRST0xx: the API can't reach the database; PGRST3xx: the session's token;
+            // 08, 53, 57: connection, resources, shutdown or timeout;
+            // 40001 and 40P01: a clash with another write that succeeds on a retry.
+            return code.hasPrefix("PGRST0") || code.hasPrefix("PGRST3")
+                || ["08", "53", "57"].contains(String(code.prefix(2))) || code == "40001" || code == "40P01"
+        }
+        return false
+    }
+
+    /// How long the server may keep failing a change before it is dropped with a message,
+    /// so one change can't hold up everything behind it for good.
+    static let retryLimit: TimeInterval = 24 * 60 * 60
+
+    private func hasRetriedTooLong(_ entry: PendingChangeEntry, after error: Error) -> Bool {
+        guard !Connectivity.isOfflineError(error), let since = entry.retryingSince else { return false }
+        return Date().timeIntervalSince(since) > Self.retryLimit
+    }
+
+    /// Changes still on the device: queued, or being sent right now.
+    func waitingCount(for userId: UUID) -> Int {
+        load(userId)
+        return changes.count + inFlight.values.filter { $0.userId == userId }.count
     }
 
     private func load(_ userId: UUID) {
@@ -419,11 +505,37 @@ final class OfflineSync: ObservableObject {
         self.userId = userId
         savedVersions = [:]
         changes = OfflineCache.load([PendingChangeEntry].self, key: OfflineCache.pendingChangesKey, userId: userId) ?? []
+        recoverInterruptedSends(userId)
+    }
+
+    /// Changes whose send was cut off, by iOS ending Loam or a crash, join the queue in the order
+    /// they were made. Ones still being sent in this launch are left to finish.
+    private func recoverInterruptedSends(_ userId: UUID) {
+        let running = Set(inFlight.values.filter { $0.userId == userId }.map(\.entry.id))
+        let saved = OfflineCache.load([PendingChangeEntry].self, key: OfflineCache.inFlightKey, userId: userId) ?? []
+        let queued = Set(changes.map(\.change))
+        let interrupted = saved.filter { !running.contains($0.id) && !queued.contains($0.change) }
+        guard !saved.isEmpty else { return }
+        // They went straight to the server, so nothing queued for the same expense came first.
+        changes = interrupted + changes
+        persist(userId)
+        persistInFlight(userId)
+    }
+
+    private func persistInFlight(_ userId: UUID) {
+        let entries = inFlight.values.filter { $0.userId == userId }.map(\.entry).sorted { $0.queuedAt < $1.queuedAt }
+        if entries.isEmpty {
+            OfflineCache.remove(key: OfflineCache.inFlightKey, userId: userId)
+        } else {
+            OfflineCache.save(entries, key: OfflineCache.inFlightKey, userId: userId)
+        }
     }
 
     private func persist(_ userId: UUID) {
         if changes.isEmpty {
             OfflineCache.remove(key: OfflineCache.pendingChangesKey, userId: userId)
+            // Nothing is waiting any more, so a "not synced yet" reminder would be wrong.
+            SyncNotifier.shared.clearWaitingReminder()
         } else {
             OfflineCache.save(changes, key: OfflineCache.pendingChangesKey, userId: userId)
         }

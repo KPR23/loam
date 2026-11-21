@@ -10,7 +10,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // Tests must never touch the system notification center.
         if !LaunchEnvironment.isAutomatedTest {
             UNUserNotificationCenter.current().delegate = self
-            UNUserNotificationCenter.current().setNotificationCategories(WalletPaymentNotifier.categories)
+            UNUserNotificationCenter.current().setNotificationCategories(WalletPaymentNotifier.categories.union(SyncNotifier.categories))
+            // Must be registered before launch finishes, or iOS can't start it.
+            SyncNotifier.registerRefreshTask()
         }
         return true
     }
