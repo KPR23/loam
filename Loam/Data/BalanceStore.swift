@@ -102,7 +102,7 @@ final class BalanceStore: ObservableObject {
             return true
         } catch where sync.isEnabled() && OfflineSync.shouldRetryLater(error) {
             // No connection, or a server hiccup: kept on the device and sent again later.
-            sync.enqueue(change, userId: userId)
+            sync.enqueue(change, userId: userId, retrying: true)
             return false
         }
     }

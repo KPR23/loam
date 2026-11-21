@@ -238,7 +238,7 @@ final class ExpenseStore: ObservableObject {
             return .sent
         } catch where sync.isEnabled() && OfflineSync.shouldRetryLater(error) {
             // No connection, or a server hiccup: kept on the device and sent again later.
-            queue(change, userId: userId, announce: true)
+            queue(change, userId: userId, announce: true, retrying: true)
             return .queued
         }
     }
@@ -274,8 +274,8 @@ final class ExpenseStore: ObservableObject {
         }
     }
 
-    private func queue(_ change: PendingChange, userId: UUID, announce: Bool) {
-        sync.enqueue(change, userId: userId, announce: announce)
+    private func queue(_ change: PendingChange, userId: UUID, announce: Bool, retrying: Bool = false) {
+        sync.enqueue(change, userId: userId, announce: announce, retrying: retrying)
         guard currentUserId == userId else { return }
         expenses = PendingChange.apply([change], to: expenses, userId: userId, period: period)
         proposalExpenses = PendingChange.apply([change], to: proposalExpenses, userId: userId, period: nil, addsMissing: false)

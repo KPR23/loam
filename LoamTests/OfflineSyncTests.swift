@@ -387,6 +387,29 @@ final class OfflineSyncTests: LocalStorageTestCase {
         XCTAssertEqual(saved.amountMinor, 2000)
     }
 
+    func testARetriedSendGoesAheadOfALaterEditInsteadOfOverwritingIt() {
+        var expense = personalExpense(1000)
+        expense.amountMinor = 3000
+        let later = PendingChange.saveExpense(expense, isNew: false, rule: nil)
+        expense.amountMinor = 2000
+        let earlier = PendingChange.saveExpense(expense, isNew: false, rule: nil)
+
+        let queue = PendingChange.enqueue(earlier, into: PendingChange.enqueue(later, into: []), retrying: true)
+
+        XCTAssertEqual(queue.map(\.change), [earlier, later], "The newer edit is sent last, so it wins")
+    }
+
+    func testALateSaveForASignedOutAccountWaitsInItsOwnQueue() {
+        _ = sync.pendingChanges(for: me)
+        sync.reset()
+        _ = sync.pendingChanges(for: partner)
+
+        sync.enqueue(.saveExpense(personalExpense(400), isNew: true, rule: nil), userId: me)
+
+        XCTAssertTrue(sync.changes.isEmpty, "The signed-in account's queue is untouched")
+        XCTAssertEqual(OfflineCache.load([PendingChangeEntry].self, key: OfflineCache.pendingChangesKey, userId: me)?.count, 1)
+    }
+
     func testDeletingAnEditedExpenseSendsOnlyTheDeletion() {
         let expense = personalExpense(1000)
         var queue = PendingChange.enqueue(.saveExpense(expense, isNew: false, rule: nil), into: [])
