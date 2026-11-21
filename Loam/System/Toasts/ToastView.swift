@@ -93,10 +93,27 @@ struct ToastCard: View {
     let onAction: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .subheadline) private var tileSize: CGFloat = 32
+    @ScaledMetric(relativeTo: .subheadline) private var minTileSize: CGFloat = 36
+    /// Height of the message beside the tile, which the tile and the action button grow to match.
+    @State private var contentHeight: CGFloat = 0
+
+    /// The gap around the tile: the same on its left, top and bottom.
+    private let inset: CGFloat = 14
 
     private var isDark: Bool { colorScheme == .dark }
-    private var card: RoundedRectangle { RoundedRectangle(cornerRadius: 22, style: .continuous) }
+
+    /// The same corners as the inset-grouped cards that hold Home's expense rows.
+    private var cardRadius: CGFloat {
+        if #available(iOS 26, *) { 26 } else { 12 }
+    }
+
+    private var card: RoundedRectangle { RoundedRectangle(cornerRadius: cardRadius, style: .continuous) }
+
+    /// A square as tall as the text beside it, so it sits `inset` from the top, bottom and left.
+    /// At accessibility sizes the action moves below, so the tile keeps its own size.
+    private var tileSize: CGFloat {
+        dynamicTypeSize.isAccessibilitySize ? min(minTileSize, 56) : max(minTileSize, contentHeight)
+    }
 
     var body: some View {
         Group {
@@ -113,14 +130,15 @@ struct ToastCard: View {
                 HStack(spacing: 12) {
                     icon
                     message
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
                     actionButton
                 }
             }
         }
-        .padding(.leading, 12)
-        .padding(.trailing, toast.action == nil ? 16 : 8)
-        .padding(.vertical, toast.action == nil ? 12 : 6)
-        .frame(minHeight: 56)
+        .padding(.leading, inset)
+        // With an action, its button mirrors the tile: the same gap to the right edge as the tile's to the left.
+        .padding(.trailing, toast.action == nil ? 16 : inset)
+        .padding(.vertical, inset)
         // White in light mode; in dark mode the gray of a Home expense row.
         .background(card.fill(isDark ? HomeTheme.surface : Color.white))
         .overlay(card.strokeBorder(Color.primary.opacity(isDark ? 0.14 : 0.05), lineWidth: 1))
@@ -135,12 +153,18 @@ struct ToastCard: View {
         }
     }
 
+    /// The same rounded tile as `CategoryIconTile`, but its glyph keeps the row tile's size
+    /// when the tile grows with longer text.
     private var icon: some View {
-        CategoryIconTile(
-            systemImage: toast.style.symbolName,
-            color: toast.style.tint,
-            size: min(tileSize, 44)
-        )
+        Image(systemName: toast.style.symbolName)
+            .font(.system(size: minTileSize * 0.44, weight: .semibold))
+            .foregroundStyle(toast.style.tint)
+            .frame(width: tileSize, height: tileSize)
+            .background(
+                toast.style.tint.opacity(isDark ? 0.22 : 0.14),
+                in: RoundedRectangle(cornerRadius: tileSize * 0.3, style: .continuous)
+            )
+            .accessibilityHidden(true)
     }
 
     private var message: some View {
@@ -166,11 +190,14 @@ struct ToastCard: View {
                 }
                 .foregroundStyle(HomeTheme.accent)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(HomeTheme.accent.opacity(isDark ? 0.22 : 0.12), in: Capsule(style: .continuous))
-                // The tinted pill stays compact; the tap area still reaches 44 points.
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
+                // As tall as the icon tile, with the same corners, so the two ends of the toast match.
+                .frame(height: tileSize)
+                .background(
+                    HomeTheme.accent.opacity(isDark ? 0.22 : 0.12),
+                    in: RoundedRectangle(cornerRadius: tileSize * 0.3, style: .continuous)
+                )
+                // The tap area reaches past the button to 44 points.
+                .contentShape(Rectangle().inset(by: -6))
             }
             .buttonStyle(LoamPressStyle())
         }
@@ -194,7 +221,7 @@ private struct ToastCountdown: View {
                     .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
             }
-            .frame(width: 14, height: 14)
+            .frame(width: 16, height: 16)
         }
         .accessibilityHidden(true)
     }
@@ -203,10 +230,10 @@ private struct ToastCountdown: View {
 extension Toast.Style {
     var symbolName: String {
         switch self {
-        case .success: "checkmark.circle.fill"
-        case .error: "exclamationmark.circle.fill"
+        case .success: "checkmark"
+        case .error: "exclamationmark"
         case .warning: "exclamationmark.triangle.fill"
-        case .info: "info.circle.fill"
+        case .info: "info"
         }
     }
 
