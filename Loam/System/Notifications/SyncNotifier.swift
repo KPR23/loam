@@ -49,6 +49,8 @@ final class SyncNotifier {
     /// Tests must never touch the system notification center or task scheduler.
     private var isEnabled: Bool { !LaunchEnvironment.isAutomatedTest }
 
+    private var backgroundEntry: Task<Void, Never>?
+
     private init() {}
 
     nonisolated static var categories: Set<UNNotificationCategory> {
@@ -66,7 +68,9 @@ final class SyncNotifier {
     func appDidEnterBackground(userId: UUID, hasUnsavedChanges: Bool, settle: @escaping () async -> Void) {
         guard isEnabled else { return }
         let waiting = OfflineSync.shared.waitingCount(for: userId)
-        Task {
+        // Only the latest trip to the background decides about the reminder and the refresh.
+        backgroundEntry?.cancel()
+        backgroundEntry = Task {
             await BackgroundTime.run("Sync before suspending") {
                 if waiting > 0 || hasUnsavedChanges {
                     scheduleRefresh()
@@ -74,6 +78,7 @@ final class SyncNotifier {
                 }
                 await settle()
                 await OfflineSync.shared.flush(userId: userId)
+                guard !Task.isCancelled else { return }
                 let left = OfflineSync.shared.waitingCount(for: userId)
                 if left == 0 {
                     BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.refreshTaskId)
@@ -113,8 +118,8 @@ final class SyncNotifier {
         // Loam came back on screen meanwhile; it shows what's waiting itself.
         guard UIApplication.shared.applicationState == .background else { return }
         let body = count <= 1
-            ? "Your change is saved on this iPhone. Open Loam once you're online to sync it."
-            : "\(count) changes are saved on this iPhone. Open Loam once you're online to sync them."
+            ? "Your change is saved on this iPhone and will sync on its own. Open Loam to sync it now."
+            : "\(count) changes are saved on this iPhone and will sync on their own. Open Loam to sync them now."
         let content = makeContent(category: Category.waiting, title: "Not synced yet", body: body, userId: userId)
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: Self.reminderDelay, repeats: false)
         // The same id replaces an earlier reminder, so there is only ever one.
@@ -141,8 +146,9 @@ final class SyncNotifier {
 
     /// Called at launch, before iOS can start the task.
     nonisolated static func registerRefreshTask() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: refreshTaskId, using: nil) { task in
-            Task { @MainActor in SyncNotifier.shared.handleRefresh(task) }
+        // On the main queue, so the expiration handler is set before the handler returns.
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: refreshTaskId, using: .main) { task in
+            MainActor.assumeIsolated { SyncNotifier.shared.handleRefresh(task) }
         }
     }
 
