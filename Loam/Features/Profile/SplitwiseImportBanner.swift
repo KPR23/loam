@@ -1,5 +1,19 @@
 import SwiftUI
 
+/// Owns the importer subscription, so each progress tick redraws only the card and not the
+/// tab view underneath it.
+struct SplitwiseImportOverlay: View {
+    @ObservedObject private var importer = SplitwiseImporter.shared
+
+    var body: some View {
+        if importer.progress != nil || importer.finished != nil {
+            SplitwiseImportBanner(importer: importer)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.default, value: importer.progress != nil)
+        }
+    }
+}
+
 /// Floats over the app while a Splitwise import uploads, so the person can keep using Loam,
 /// and stays with the result until it is dismissed.
 struct SplitwiseImportBanner: View {
