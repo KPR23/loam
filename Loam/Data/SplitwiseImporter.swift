@@ -81,6 +81,7 @@ final class SplitwiseImporter: ObservableObject {
             let balances = BalanceRepositoryFactory.make()
             var created = 0, payments = 0, failedExpenses = 0, failedPayments = 0
             progress = Progress(done: 0, total: steps.count, step: "Importing")
+            var lastTick = Date()
             for (index, (_, _, step)) in steps.enumerated() {
                 switch step {
                 case .expense(let expense):
@@ -95,7 +96,11 @@ final class SplitwiseImporter: ObservableObject {
                         payments += 1
                     } catch { failedPayments += 1 }
                 }
-                progress = Progress(done: index + 1, total: steps.count, step: "Importing")
+                // A redraw per item is wasted work; about ten a second reads as continuous.
+                if Date().timeIntervalSince(lastTick) > 0.1 || index + 1 == steps.count {
+                    progress = Progress(done: index + 1, total: steps.count, step: "Importing")
+                    lastTick = Date()
+                }
             }
 
             var message = "Imported \(created) expenses and \(payments) repayments."
