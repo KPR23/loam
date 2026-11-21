@@ -299,6 +299,44 @@ enum SplitwiseImport {
         return plan
     }
 
+    /// Who a Splitwise person becomes in Loam.
+    enum Target: Hashable, Sendable {
+        case new
+        case existing(UUID)
+    }
+
+    /// An expense is the same one when day, amount, currency, payer and everyone's share match.
+    /// Titles and categories are ignored, since they are edited freely after the fact.
+    static func duplicateKey(_ expense: ExpenseRecord) -> String {
+        let shares = expense.shares
+            .filter { $0.amountMinor > 0 }
+            .map { "\($0.userId.uuidString):\($0.amountMinor)" }
+            .sorted()
+            .joined(separator: ",")
+        return "\(dayString(expense.spentAt))|\(expense.amountMinor)|\(expense.currency)|\(expense.paidBy.uuidString)|\(shares)"
+    }
+
+    /// Planned expenses that don't already exist, matched one for one so two identical
+    /// purchases in the file are not both swallowed by a single existing one.
+    static func newExpenses(_ planned: [PlannedExpense], existing: [ExpenseRecord]) -> (new: [PlannedExpense], duplicates: Int) {
+        let existingIds = Set(existing.map(\.id))
+        var remaining: [String: Int] = [:]
+        for expense in existing { remaining[duplicateKey(expense), default: 0] += 1 }
+        var fresh: [PlannedExpense] = []
+        var duplicates = 0
+        for item in planned {
+            if existingIds.contains(item.expense.id) { duplicates += 1; continue }
+            let key = duplicateKey(item.expense)
+            if let count = remaining[key], count > 0 {
+                remaining[key] = count - 1
+                duplicates += 1
+            } else {
+                fresh.append(item)
+            }
+        }
+        return (fresh, duplicates)
+    }
+
     struct Candidate: Equatable, Sendable {
         var id: UUID
         var name: String

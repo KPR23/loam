@@ -21,6 +21,7 @@ struct MainTabView: View {
     @EnvironmentObject private var activityStore: ActivityStore
     @EnvironmentObject private var pushStore: PushNotificationStore
     @EnvironmentObject private var navigator: AppNavigator
+    @ObservedObject private var importer = SplitwiseImporter.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .expenses
     @State private var showAddExpense = false
@@ -37,6 +38,13 @@ struct MainTabView: View {
             }
         }
         .sensoryFeedback(.selection, trigger: selection)
+        .overlay(alignment: .top) {
+            if importer.progress != nil || importer.finished != nil {
+                SplitwiseImportBanner(importer: importer)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.default, value: importer.progress != nil)
         .onChange(of: selection, initial: true) { _, tab in
             Telemetry.screen(tab.screenName)
             // Opening Activity marks its events seen; elsewhere, pick up events that arrived meanwhile.
