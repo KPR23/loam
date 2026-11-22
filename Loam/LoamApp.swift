@@ -249,12 +249,13 @@ enum LoamErrorCapture {
     @discardableResult
     static func withCapture<Value>(
         _ event: String,
+        ignoring isExpected: (Error) -> Bool = { _ in false },
         operation: () async throws -> Value
     ) async throws -> Value {
         do {
             return try await operation()
         } catch {
-            if !isCancellation(error) {
+            if !isCancellation(error) && !isExpected(error) {
                 capture(event)
             }
             throw error

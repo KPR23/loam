@@ -52,7 +52,9 @@ actor SupabaseConnectionRepository: ConnectionRepository {
         do {
             try await client.rpc("remove_connection", params: Params(pUserId: userId)).execute()
         } catch let error as PostgrestError {
-            // The server explains why, for example that money is still owed.
+            // Money still owed is an expected answer, not a failure: keep it apart so it isn't reported.
+            if error.message.hasPrefix("Settle up") { throw ConnectionError.settleUpFirst(error.message) }
+            // Otherwise the server explains why.
             throw ConnectionError.rejected(error.message)
         }
     }
@@ -66,13 +68,14 @@ actor SupabaseConnectionRepository: ConnectionRepository {
     }
 }
 
-enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired, rejected(String)
+enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired, rejected(String), settleUpFirst(String)
     var errorDescription: String? {
         switch self {
         case .unavailable: "That code is unavailable. Check it and try again."
         case .rateLimited: "Too many attempts. Try again in 15 minutes."
         case .proRequired: "Loam Pro is needed to invite more people."
-        case let .rejected(message): message
+        case let .rejected(message), let .settleUpFirst(message): message
         }
     }
+    var asksToSettleUp: Bool { if case .settleUpFirst = self { true } else { false } }
 }
