@@ -11,6 +11,9 @@ struct SplitExpenseSection: View {
     /// When false, at least one partner must stay selected (edit-split / propose-edit flows).
     var requiresPartner: Bool = false
     var onFriendConnected: ((SplitPartnerOption) -> Void)?
+    /// Called instead of selecting someone without an account on the free plan, so the host
+    /// can show the paywall from outside the list.
+    var onRequiresPro: (() -> Void)?
 
     /// Owned by the host, which presents the sheet from outside the list: a sheet attached to a
     /// list row is torn down whenever the row reloads, for example when the keyboard appears.
@@ -341,6 +344,8 @@ struct SplitExpenseSection: View {
                     .foregroundStyle(.primary)
 
                 Spacer(minLength: 0)
+
+                if needsPro(partner) { ProBadge() }
             }
             .contentShape(Rectangle())
         }
@@ -390,12 +395,20 @@ struct SplitExpenseSection: View {
         count == 1 ? "1 person" : "\(count) people"
     }
 
+    /// People without an account are a Loam Pro feature. On Free they stay listed (and stay in
+    /// splits they're already part of) but can't be added to one.
+    private func needsPro(_ partner: SplitPartnerOption) -> Bool {
+        partner.isPlaceholder && !subscriptions.isPro && !selectedPartnerUserIds.contains(partner.userId)
+    }
+
     private func togglePartner(_ userId: UUID) {
         guard userId != myUserId else { return }
         if selectedPartnerUserIds.contains(userId) {
             if requiresPartner, selectedPartnerUserIds.count == 1 { return }
             selectedPartnerUserIds.remove(userId)
             clampPaidByToSplitParticipants()
+        } else if let partner = (availablePartners + retainedPartners).first(where: { $0.userId == userId }), needsPro(partner) {
+            onRequiresPro?()
         } else {
             selectedPartnerUserIds.insert(userId)
         }

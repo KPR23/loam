@@ -42,19 +42,6 @@ enum RequestedScreens {
             try test.capture("friends")
             test.swipeBack()
         },
-        "rename-friend": { test in
-            test.tab("Profile").tap()
-            test.settle(1.5)
-            test.openProfileRow("Friends")
-            let row = test.app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Ola'")).firstMatch
-            XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded person without an account 'Ola' is missing")
-            row.tap()
-            test.settle(1.5)
-            try test.capture("rename-friend")
-            test.app.buttons["Cancel"].tap()
-            test.settle(1)
-            test.swipeBack()
-        },
         "share-code": { test in
             test.tab("Profile").tap()
             test.settle(1.5)

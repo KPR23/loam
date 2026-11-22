@@ -193,9 +193,16 @@ struct SplitwiseImportView: View {
         guard let me = authSession.userId else { return }
         var chosen: [Int: Target] = [:]
         for column in involved { chosen[column] = binding(for: column, export: export).wrappedValue }
-        // New people are added without an account, which is a Loam Pro feature. Matching
-        // everyone to existing friends works on any plan.
-        if !subscriptions.isPro, chosen.values.contains(.new) {
+        // People without an account, new or already added, are a Loam Pro feature. Matching
+        // everyone to friends with an account works on any plan.
+        let placeholderIds = Set(friends.filter(\.isPlaceholder).map(\.userId))
+        let needsPro = chosen.values.contains { target in
+            switch target {
+            case .new: true
+            case let .existing(id): placeholderIds.contains(id)
+            }
+        }
+        if !subscriptions.isPro, needsPro {
             showsPaywall = true
             return
         }

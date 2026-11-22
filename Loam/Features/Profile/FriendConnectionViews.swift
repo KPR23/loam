@@ -474,19 +474,24 @@ private struct PlaceholderFriendPrompt: ViewModifier {
     }
 }
 
-/// Renames someone without an account. Open on any plan, so people added before Pro (or
-/// while subscribed) stay editable.
+/// Renames someone without an account. Like adding them, this is Loam Pro: a free account
+/// sees the paywall first and, once it upgrades, the rename sheet.
 private struct RenamePlaceholderPrompt: ViewModifier {
     @EnvironmentObject private var connectionStore: ConnectionStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @Binding var friend: SplitPartnerOption?
     @State private var name = ""
     @State private var error: String?
     @State private var isWorking = false
+    @State private var showsPaywall = false
+    /// Who to rename once the paywall closes with Pro.
+    @State private var pendingFriend: SplitPartnerOption?
     @FocusState private var isFocused: Bool
 
     func body(content: Content) -> some View {
         content
-            .sheet(item: $friend) { friend in
+            // Never shown without Pro, so a free account doesn't see the sheet flash before the paywall.
+            .sheet(item: Binding(get: { subscriptions.isPro ? friend : nil }, set: { friend = $0 })) { friend in
                 CompactEntrySheet(
                     title: "Rename \(friend.displayName)",
                     message: "Only you see this name. It updates everywhere you split with them.",
@@ -503,9 +508,20 @@ private struct RenamePlaceholderPrompt: ViewModifier {
                         .onAppear { isFocused = true }
                 }
             }
+            .proPaywall(isPresented: $showsPaywall) {
+                // Upgraded on the paywall: carry on to the rename sheet now that it's gone.
+                if subscriptions.isPro { friend = pendingFriend }
+                pendingFriend = nil
+            }
             .errorToast($error)
             .onChange(of: friend?.id) { _, id in
-                if id != nil { name = friend?.displayName ?? ""; error = nil }
+                guard id != nil else { return }
+                name = friend?.displayName ?? ""; error = nil
+                if !subscriptions.isPro {
+                    pendingFriend = friend
+                    friend = nil
+                    showsPaywall = true
+                }
             }
     }
 
@@ -519,6 +535,15 @@ private struct RenamePlaceholderPrompt: ViewModifier {
             try await connectionStore.renamePlaceholder(target, to: chosen)
             friend = nil
         }
+        catch ConnectionError.proRequired where subscriptions.isPro {
+            // A fresh purchase can beat RevenueCat's webhook to the backend.
+            await subscriptions.syncBackendEntitlement()
+            do {
+                try await connectionStore.renamePlaceholder(target, to: chosen)
+                friend = nil
+            } catch { self.error = UserFacingError.message(for: error) }
+        }
+        catch ConnectionError.proRequired { self.error = "Renaming people without an account needs Loam Pro." }
         catch { self.error = UserFacingError.message(for: error) }
     }
 }

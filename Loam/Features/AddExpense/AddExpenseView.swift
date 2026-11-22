@@ -607,6 +607,7 @@ struct AddExpenseView: View {
                     currencyCode: currencyCode,
                     recentPartners: recentSplitPartners,
                     requiresPartner: false,
+                    onRequiresPro: { showsPaywall = true },
                     showsPlaceholderPrompt: $showsPlaceholderPrompt,
                     selectedPartnerUserIds: $selectedPartnerUserIds,
                     splitMode: $splitMode,
