@@ -1,70 +1,21 @@
 import SwiftUI
 
-private struct HomeGlassCapsuleButton<Label: View>: View {
-    let action: () -> Void
-    @ViewBuilder let label: () -> Label
-
-    var body: some View {
-        if #available(iOS 26, *) {
-            Button(action: action, label: label)
-                .buttonStyle(.glass)
-                .buttonBorderShape(.capsule)
-        } else {
-            Button(action: action, label: label)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-        }
-    }
-}
-
+/// The center of Home's top bar: empty at the top of the list, where the arc shows the amount, and the
+/// amount once the list scrolls.
 struct HomeCollapsingTopBar: View {
-    let period: DatePeriod
     let amount: Money
-    let collapseProgress: CGFloat
-    let onPickMonth: () -> Void
+    let isCollapsed: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let pickerOut = HomeCollapsePhase.monthPickerOut.progress(collapseProgress)
-        let amountIn = HomeCollapsePhase.barAmountIn.progress(collapseProgress)
-
-        ZStack {
-            monthPickerButton
-                .opacity(1 - pickerOut)
-                .scaleEffect(1 - 0.06 * pickerOut)
-                .blur(radius: pickerOut * 2)
-
-            collapsedAmount
-                .opacity(amountIn)
-                .scaleEffect(0.94 + 0.06 * amountIn)
-                .offset(y: (1 - amountIn) * 6)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-    }
-
-    private var monthPickerButton: some View {
-        HomeGlassCapsuleButton(action: { LoamFeedback.tap(); onPickMonth() }) {
-            monthPickerLabel
-        }
-        .accessibilityLabel("Selected month, \(period.displayTitle)")
-        .accessibilityHint("Opens month picker")
-    }
-
-    private var monthPickerLabel: some View {
-        HStack(spacing: 5) {
-            Text(period.displayTitle)
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundStyle(HomeTheme.text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-
-            Image(systemName: "chevron.down")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(HomeTheme.secondary)
-        }
+        collapsedAmount
+            .opacity(isCollapsed ? 1 : 0)
+            .scaleEffect(isCollapsed ? 1 : 0.94)
+            .offset(y: isCollapsed ? 0 : 6)
+            .accessibilityHidden(!isCollapsed)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
     }
 
     private var collapsedAmount: some View {
@@ -89,53 +40,68 @@ struct HomeCollapsingTopBar: View {
     }
 }
 
-/// Slices of the scroll collapse, so the hero amount hands off to the bar as the arc closes on its crown.
-enum HomeCollapsePhase {
-    case heroAmountOut
-    case monthPickerOut
-    case barAmountIn
-
-    private var window: ClosedRange<CGFloat> {
-        switch self {
-        // Holds while the horns dissolve, then leaves with the crown.
-        case .heroAmountOut: 0.3...0.8
-        case .monthPickerOut: 0...0.6
-        // Starts once the hero amount is mostly gone, so the two never read as a double.
-        case .barAmountIn: 0.55...1
-        }
-    }
-
-    /// Eased 0...1 within this phase's window of the overall collapse.
-    func progress(_ collapse: CGFloat) -> CGFloat {
-        let t = min(max((collapse - window.lowerBound) / (window.upperBound - window.lowerBound), 0), 1)
-        return t * t * (3 - 2 * t)
-    }
-}
-
-struct HomeTopBarCalendarButton: View {
+/// The month control on the leading side of Home's top bar. A "November 2026" pill at the top of the
+/// list that folds into a calendar icon once the amount takes the center. It's a system toolbar item
+/// like search, so the two always share the same glass height.
+struct HomeTopBarMonthButton: View {
     let period: DatePeriod
+    let isCollapsed: Bool
     let onPickMonth: () -> Void
 
     var body: some View {
+        Button(action: { LoamFeedback.tap(); onPickMonth() }) {
+            if isCollapsed {
+                Image(systemName: "calendar")
+            } else {
+                HStack(spacing: 5) {
+                    Text(period.displayTitle)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(HomeTheme.text)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HomeTheme.secondary)
+                }
+                .fixedSize()
+            }
+        }
+        .modifier(PreGlassBorderedCapsule())
+        .accessibilityLabel("Selected month, \(period.displayTitle)")
+        .accessibilityHint("Opens month picker")
+    }
+}
+
+/// Before iOS 26 toolbar buttons have no glass, so give the month the same bordered look as search.
+private struct PreGlassBorderedCapsule: ViewModifier {
+    func body(content: Content) -> some View {
         if #available(iOS 26, *) {
-            Button(action: { LoamFeedback.tap(); onPickMonth() }) {
-                Image(systemName: "calendar")
-            }
-            .accessibilityLabel("Selected month, \(period.displayTitle)")
-            .accessibilityHint("Opens month picker")
+            content
         } else {
-            Button(action: { LoamFeedback.tap(); onPickMonth() }) {
-                Image(systemName: "calendar")
-            }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
-            .accessibilityLabel("Selected month, \(period.displayTitle)")
-            .accessibilityHint("Opens month picker")
+            content
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
         }
     }
 }
 
-/// Opens search on Home. Styled like the calendar button so the two sit together in the top bar.
+/// One scroll point where Home hands the amount from the arc to the top bar. The arc's amount, the bar's
+/// amount and the top bar's month control all flip here together, with the same animation.
+enum HomeTopBarCollapse {
+    /// Collapse once the arc is mostly dissolved; expand a little earlier on the way back so a list
+    /// resting near the threshold doesn't flicker between the two.
+    static let collapseAt: CGFloat = 0.6
+    static let expandAt: CGFloat = 0.45
+
+    static func isCollapsed(after progress: CGFloat, was wasCollapsed: Bool) -> Bool {
+        wasCollapsed ? progress > expandAt : progress >= collapseAt
+    }
+
+    static func animation(reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.32)
+    }
+}
+
+/// Opens search on Home, at the trailing end of the top bar.
 struct HomeTopBarSearchButton: View {
     let onSearch: () -> Void
 
@@ -314,10 +280,8 @@ private struct HomeTranslucentNavBarModifier: ViewModifier {
 
 #Preview("Expanded") {
     HomeCollapsingTopBar(
-        period: .currentMonth,
         amount: Money(amountMinor: 250_00, currencyCode: "PLN"),
-        collapseProgress: 0,
-        onPickMonth: {}
+        isCollapsed: false
     )
     .padding()
     .background(HomeTheme.background)
@@ -325,10 +289,8 @@ private struct HomeTranslucentNavBarModifier: ViewModifier {
 
 #Preview("Collapsed") {
     HomeCollapsingTopBar(
-        period: .currentMonth,
         amount: Money(amountMinor: 250_00, currencyCode: "PLN"),
-        collapseProgress: 1,
-        onPickMonth: {}
+        isCollapsed: true
     )
     .padding()
     .background(HomeTheme.background)

@@ -13,6 +13,7 @@ struct HomeView: View {
 
     @State private var showMonthPicker = false
     @State private var collapseProgress: CGFloat = 0
+    @State private var isTopBarCollapsed = false
     @State private var arcReveal: Double = 0
     @State private var actionRequest: ExpenseActionRequest?
     @State private var selectedExpense: ExpenseRecord?
@@ -36,6 +37,7 @@ struct HomeView: View {
                         sharedShare: expenseStore.summary.sharedShare,
                         reloadToken: arcReloadToken,
                         collapseProgress: collapseProgress,
+                        isAmountHidden: isTopBarCollapsed,
                         displayedReveal: $arcReveal
                     )
                     .reportHomeHeroScrollOffset()
@@ -65,27 +67,31 @@ struct HomeView: View {
             .background(HomeTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .homeTranslucentNavigationBar(collapseProgress: collapseProgress)
-            // Search takes the whole screen, so the month pill and buttons step aside while it's open.
+            // Search takes the whole screen, so the top bar steps aside while it's open.
             .toolbar(isSearchPresented ? .hidden : .visible, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    HomeCollapsingTopBar(
+                ToolbarItem(placement: .topBarLeading) {
+                    HomeTopBarMonthButton(
                         period: expenseStore.period,
-                        amount: expenseStore.summary.totalMine,
-                        collapseProgress: collapseProgress,
+                        isCollapsed: isTopBarCollapsed,
                         onPickMonth: { showMonthPicker = true }
                     )
                 }
-                if collapseProgress > 0.15 {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        HomeTopBarCalendarButton(
-                            period: expenseStore.period,
-                            onPickMonth: { showMonthPicker = true }
-                        )
-                    }
+                ToolbarItem(placement: .principal) {
+                    HomeCollapsingTopBar(
+                        amount: expenseStore.summary.totalMine,
+                        isCollapsed: isTopBarCollapsed
+                    )
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     HomeTopBarSearchButton(onSearch: openSearch)
+                }
+            }
+            .onChange(of: collapseProgress) { _, progress in
+                let collapsed = HomeTopBarCollapse.isCollapsed(after: progress, was: isTopBarCollapsed)
+                guard collapsed != isTopBarCollapsed else { return }
+                withAnimation(HomeTopBarCollapse.animation(reduceMotion: reduceMotion)) {
+                    isTopBarCollapsed = collapsed
                 }
             }
             // The top bar's search button opens this; pulling the list down only refreshes.
