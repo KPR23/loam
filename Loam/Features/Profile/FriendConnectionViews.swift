@@ -34,7 +34,9 @@ struct FriendsView: View {
                 Button { showsPlaceholderPrompt = true } label: {
                     ProfileRow("Add without an account", symbol: "person.crop.circle.badge.plus", color: .green)
                 }
-                Button { showsSplitwisePicker = true } label: {
+                Button {
+                    if let sample = SplitwiseImportView.sampleExport { splitwiseExport = sample } else { showsSplitwisePicker = true }
+                } label: {
                     ProfileRow("Import from Splitwise", symbol: "square.and.arrow.down", color: .teal)
                 }
             } header: {
@@ -131,8 +133,8 @@ struct FriendsView: View {
             catch CocoaError.userCancelled {}
             catch { self.error = UserFacingError.message(for: error) }
         }
-        .navigationDestination(isPresented: Binding(get: { splitwiseExport != nil }, set: { if !$0 { splitwiseExport = nil } })) {
-            if let splitwiseExport { SplitwiseImportView(export: splitwiseExport) }
+        .sheet(isPresented: Binding(get: { splitwiseExport != nil }, set: { if !$0 { splitwiseExport = nil } })) {
+            if let splitwiseExport { SplitwiseImportSheet(export: splitwiseExport) }
         }
         .errorToast($error)
     }

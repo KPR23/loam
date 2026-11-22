@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 
 /// Reviews a Splitwise CSV export before importing it: expenses become splits with people
 /// without an account, repayments land in Balances history. Friends opens the file picker
-/// first and pushes this screen with the parsed file.
+/// first and shows this screen as a sheet (`SplitwiseImportSheet`) with the parsed file.
 struct SplitwiseImportView: View {
     @EnvironmentObject private var connectionStore: ConnectionStore
     @EnvironmentObject private var authSession: AuthSession
@@ -198,5 +198,37 @@ struct SplitwiseImportView: View {
         // Back to the main screen; the progress stays on top while it uploads.
         navigator.pendingScreen = .expenses
         dismiss()
+    }
+}
+
+
+/// Presents the review screen in its own navigation stack, with a Cancel button.
+struct SplitwiseImportSheet: View {
+    let export: SplitwiseImport.Export
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            SplitwiseImportView(export: export)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                }
+        }
+        .presentationDragIndicator(.visible)
+    }
+}
+
+extension SplitwiseImportView {
+    /// Screenshot runs can't drive the system file picker, so `-splitwiseSample` skips it and opens the
+    /// sheet with this built-in export instead.
+    static var sampleExport: SplitwiseImport.Export? {
+        guard LaunchEnvironment.isUITesting, ProcessInfo.processInfo.arguments.contains("-splitwiseSample") else { return nil }
+        return try? SplitwiseImport.parse("""
+        Date,Description,Category,Cost,Currency,Julia,Philip,Marta Kowalska
+
+        2026-09-02,Dinner,Dining out,90.00,PLN,60.00,-30.00,-30.00
+        2026-09-14,Groceries,Groceries,45.00,PLN,-22.50,45.00,-22.50
+        2026-10-03,Philip paid Julia,Payment,30.00,PLN,30.00,-30.00,0.00
+        """)
     }
 }

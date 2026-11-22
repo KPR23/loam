@@ -95,6 +95,20 @@ enum RequestedScreens {
             test.settle(1)
             test.swipeBack()
         },
+        "splitwise-import": { test in
+            // The system file picker can't be driven, so the app opens the sheet with a built-in export.
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            test.openProfileRow("Friends")
+            let importButton = test.app.buttons["Import from Splitwise"].firstMatch
+            XCTAssertTrue(importButton.waitForExistence(timeout: 5), "Import from Splitwise row is missing")
+            importButton.tap()
+            test.settle(2)
+            try test.capture("splitwise-import")
+            test.app.buttons["Cancel"].firstMatch.tap()
+            test.settle(1)
+            test.swipeBack()
+        },
         "expense-menu": { test in
             let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Weekly shop'")).firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded expense 'Weekly shop' is missing")
@@ -114,6 +128,7 @@ final class RequestedScreenshots: ScreenshotTestCase {
         let unknown = names.filter { RequestedScreens.steps[$0] == nil }
         XCTAssertTrue(unknown.isEmpty, "Unknown screens \(unknown). Known: \(RequestedScreens.steps.keys.sorted()). Add one in RequestedScreenshots.swift.")
 
+        app.launchArguments.append("-splitwiseSample")
         signIn()
         settle(3)
         for name in names {
