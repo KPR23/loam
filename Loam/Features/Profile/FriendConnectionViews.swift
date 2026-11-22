@@ -125,7 +125,7 @@ struct FriendsView: View {
         } message: {
             Text(friendPendingRemoval?.isPlaceholder == true
                  ? "Anything they owe or are owed is settled, and expenses you already shared stay in your history."
-                 : "You won’t be able to share new expenses until you connect again. Expenses you already shared stay in your history.")
+                 : "You won’t be able to share new expenses until you connect again. Expenses between you that are still waiting for an answer are declined, and the rest stay in your history.")
         }
         .fileImporter(isPresented: $showsSplitwisePicker, allowedContentTypes: [.commaSeparatedText, .plainText]) { picked in
             do { splitwiseExport = try SplitwiseImportView.readExport(from: picked) }
