@@ -35,6 +35,7 @@ struct SplitExpenseSheet: View {
 
     @State private var formState: SplitFormState
     @State private var isSaving = false
+    @State private var showsPaywall = false
     @State private var showsPlaceholderPrompt = false
     @State private var errorMessage: String?
 
@@ -88,6 +89,7 @@ struct SplitExpenseSheet: View {
                     currencyCode: expense.currency,
                     recentPartners: recentSplitPartners,
                     requiresPartner: true,
+                    onRequiresPro: { showsPaywall = true },
                     showsPlaceholderPrompt: $showsPlaceholderPrompt,
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
                     splitMode: $formState.splitMode,
@@ -99,6 +101,7 @@ struct SplitExpenseSheet: View {
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
             .task { await connectionStore.refresh(userId: myUserId) }
+            .proPaywall(isPresented: $showsPaywall)
             .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { friend in
                 formState.selectedPartnerUserIds.insert(friend.userId)
             }

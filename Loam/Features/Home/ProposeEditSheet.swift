@@ -49,6 +49,7 @@ struct ProposeEditSheet: View {
 
     @State private var formState: ProposeEditFormState
     @State private var isSaving = false
+    @State private var showsPaywall = false
     @State private var showsPlaceholderPrompt = false
     @State private var errorMessage: String?
 
@@ -129,6 +130,7 @@ struct ProposeEditSheet: View {
                     currencyCode: expense.currency,
                     recentPartners: recentSplitPartners,
                     requiresPartner: true,
+                    onRequiresPro: { showsPaywall = true },
                     showsPlaceholderPrompt: $showsPlaceholderPrompt,
                     selectedPartnerUserIds: $formState.selectedPartnerUserIds,
                     splitMode: $formState.splitMode,
@@ -145,6 +147,7 @@ struct ProposeEditSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(HomeTheme.background.ignoresSafeArea())
+            .proPaywall(isPresented: $showsPaywall)
             .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { friend in
                 formState.selectedPartnerUserIds.insert(friend.userId)
             }

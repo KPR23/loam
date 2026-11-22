@@ -32,6 +32,7 @@ actor SupabaseConnectionRepository: ConnectionRepository {
         do {
             try await client.rpc("rename_placeholder_friend", params: Params(pUserId: userId, pName: name)).execute()
         } catch let error as PostgrestError {
+            if error.message.hasPrefix("People without an account need Loam Pro") { throw ConnectionError.proRequired }
             throw ConnectionError.rejected(error.message)
         }
     }

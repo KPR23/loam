@@ -1,9 +1,9 @@
 -- People without an account become a Loam Pro feature, and their owner can rename them.
 --
--- * Adding someone new needs Pro. People added before this stay as they are, on any plan:
---   they keep showing up in friends, splits and balances, and can still be removed.
--- * Renaming is open to every plan, so someone added on Pro (or before Pro gating) can
---   still fix a typo after the subscription ends.
+-- * Adding and renaming someone needs Pro.
+-- * Nothing is deleted when an account is on Free: people added before (or while subscribed)
+--   stay in friends, past expenses and balances, and can still be removed. The app stops
+--   offering them for new splits until the account upgrades.
 
 create or replace function public.create_placeholder_friend(p_name text)
 returns table(user_id uuid, display_name text)
@@ -28,13 +28,14 @@ end $$;
 revoke all on function public.create_placeholder_friend(text) from public,anon;
 grant execute on function public.create_placeholder_friend(text) to authenticated;
 
--- Only the account that added the person can rename them.
+-- Only the account that added the person can rename them, and only on Pro.
 create function public.rename_placeholder_friend(p_user_id uuid, p_name text)
 returns table(user_id uuid, display_name text)
 language plpgsql security definer set search_path='' as $$
 declare v_name text:=btrim(coalesce(p_name,''));
 begin
   if not public.current_account_is_active() then raise exception 'Not authenticated'; end if;
+  if not private.has_pro(auth.uid()) then raise exception 'People without an account need Loam Pro'; end if;
   if v_name='' or length(v_name)>100 then raise exception 'Name must be 1 to 100 characters'; end if;
   update public.profile p set display_name=v_name
   where p.id=p_user_id and p.managed_by=auth.uid() and p.deleted_at is null;

@@ -1,12 +1,12 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..6' as plan;
+select '1..7' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.e',gen_random_uuid()::text,true),
   set_config('test.f',gen_random_uuid()::text,true);
 insert into auth.users(id,email) values(current_setting('test.a')::uuid,'placeholder-owner@example.invalid'),
   (current_setting('test.f')::uuid,'placeholder-free@example.invalid');
--- Adding people without an account needs Pro; F stays on the free plan.
+-- Adding people without an account needs Pro.
 select public.record_pro_entitlement(current_setting('test.a')::uuid,true,null);
 
 set local role authenticated;
@@ -20,12 +20,6 @@ do $$ begin
 end $$;
 select 'ok 1 - a placeholder is a named friend owned by its creator' as result;
 
--- From here A is back on the free plan: people added on Pro keep working without it.
-reset role;
-select public.record_pro_entitlement(current_setting('test.a')::uuid,false,null);
-set local role authenticated;
-select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
-
 select public.save_expense(jsonb_build_object('id',current_setting('test.e'),'amount_minor',1000,'currency','PLN','category','dining','title','Diner',
  'spent_at',current_date,'paid_by',current_setting('test.a'),'shares',jsonb_build_array(
  jsonb_build_object('user_id',current_setting('test.a'),'amount_minor',500),jsonb_build_object('user_id',current_setting('test.p'),'amount_minor',500))));
@@ -35,17 +29,45 @@ do $$ begin
 end $$;
 select 'ok 2 - expenses split with a placeholder are accepted at once' as result;
 
-do $$ begin
- assert (select error_code is null from public.create_connection_invitation()),'Placeholder used up the free connection';
-end $$;
-select 'ok 3 - placeholders do not count toward the free connection limit' as result;
-
 select public.rename_placeholder_friend(current_setting('test.p')::uuid,'  Zofia ');
 do $$ begin
  assert (select display_name from public.list_connections() where user_id=current_setting('test.p')::uuid)='Zofia','Rename not stored trimmed';
 end $$;
-select 'ok 4 - the owner can rename a placeholder, even off Pro' as result;
 
+-- Back on Free: the placeholder stays, but renaming needs Pro again.
+reset role;
+select public.record_pro_entitlement(current_setting('test.a')::uuid,false,null);
+set local role authenticated;
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+do $$ begin
+ assert exists(select 1 from public.list_placeholder_friends() where user_id=current_setting('test.p')::uuid),'Placeholder lost when Pro ended';
+ begin
+  perform public.rename_placeholder_friend(current_setting('test.p')::uuid,'Zosia');
+  assert false,'A free account renamed a placeholder';
+ exception when raise_exception then
+  assert sqlerrm='People without an account need Loam Pro','Unexpected error: '||sqlerrm;
+ end;
+end $$;
+select 'ok 3 - the owner renames a placeholder on Pro, and it stays on Free' as result;
+
+do $$ begin
+ begin
+  perform public.create_placeholder_friend('Kuba');
+  assert false,'A free account added someone without an account';
+ exception when raise_exception then
+  assert sqlerrm='People without an account need Loam Pro','Unexpected error: '||sqlerrm;
+ end;
+end $$;
+select 'ok 4 - adding someone without an account needs Pro' as result;
+
+do $$ begin
+ assert (select error_code is null from public.create_connection_invitation()),'Placeholder used up the free connection';
+end $$;
+select 'ok 5 - placeholders do not count toward the free connection limit' as result;
+
+reset role;
+select public.record_pro_entitlement(current_setting('test.f')::uuid,true,null);
+set local role authenticated;
 select set_config('request.jwt.claim.sub',current_setting('test.f'),true);
 do $$ begin
  begin
@@ -54,14 +76,8 @@ do $$ begin
  exception when raise_exception then
   assert sqlerrm='Friend not found','Unexpected error: '||sqlerrm;
  end;
- begin
-  perform public.create_placeholder_friend('Kuba');
-  assert false,'A free account added someone without an account';
- exception when raise_exception then
-  assert sqlerrm='People without an account need Loam Pro','Unexpected error: '||sqlerrm;
- end;
 end $$;
-select 'ok 5 - only the owner renames, and adding one needs Pro' as result;
+select 'ok 6 - only the owner can rename a placeholder' as result;
 
 select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
 select public.remove_connection(current_setting('test.p')::uuid);
@@ -70,5 +86,5 @@ do $$ begin
  assert not exists(select 1 from public.list_connections() where user_id=current_setting('test.p')::uuid),'Removed placeholder still listed';
 end $$;
 reset role;
-select 'ok 6 - removing a placeholder settles and hides it' as result;
+select 'ok 7 - removing a placeholder settles and hides it' as result;
 rollback;
