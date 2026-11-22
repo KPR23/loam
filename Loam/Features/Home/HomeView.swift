@@ -77,15 +77,12 @@ struct HomeView: View {
                         isCollapsed: isTopBarCollapsed
                     )
                 }
+                // Adjacent trailing items share one glass capsule on iOS 26, so calendar and search read as a group.
                 ToolbarItem(placement: .topBarTrailing) {
                     HomeTopBarCalendarButton(
                         period: expenseStore.period,
                         onPickMonth: { showMonthPicker = true }
                     )
-                }
-                if #available(iOS 26, *) {
-                    // Keeps the two as separate round buttons instead of one shared glass capsule.
-                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     HomeTopBarSearchButton(onSearch: openSearch)
