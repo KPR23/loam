@@ -81,7 +81,8 @@ enum RequestedScreens {
             test.app.buttons["Remove friend"].firstMatch.tap()
             test.settle(1)
             try test.capture("remove-friend")
-            test.app.buttons["Cancel"].firstMatch.tap()
+            // iOS 26 shows the dialog without a Cancel button; tapping outside dismisses it.
+            test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
             test.settle(1)
             test.swipeBack()
         },
