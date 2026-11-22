@@ -35,6 +35,13 @@ enum RequestedScreens {
             try test.capture("profile-settings")
             test.swipeBack()
         },
+        "friends": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            test.openProfileRow("Friends")
+            try test.capture("friends")
+            test.swipeBack()
+        },
         "profile-about": { test in
             test.tab("Profile").tap()
             test.settle(1.5)

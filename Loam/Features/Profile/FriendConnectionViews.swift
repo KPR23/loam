@@ -22,21 +22,21 @@ struct FriendsView: View {
         List {
             Section {
                 NavigationLink { ShareConnectionCodeView() } label: {
-                    Label("Share my code", systemImage: "square.and.arrow.up")
+                    ProfileRow("Share my code", symbol: "square.and.arrow.up", color: .blue)
                 }
                 Button { showsConnectionCodePrompt = true } label: {
-                    Label("Enter a code", systemImage: "key")
+                    ProfileRow("Enter a code", symbol: "key", color: .orange)
                 }
                 Button { showsPlaceholderPrompt = true } label: {
-                    Label("Add someone without an account", systemImage: "person.badge.plus")
+                    ProfileRow("Add without an account", symbol: "person.badge.plus", color: .green)
                 }
                 NavigationLink { SplitwiseImportView() } label: {
-                    Label("Import from Splitwise", systemImage: "square.and.arrow.down")
+                    ProfileRow("Import from Splitwise", symbol: "square.and.arrow.down", color: .teal)
                 }
             } header: {
                 Text("Add a friend")
             } footer: {
-                Text("Connecting lets you share expenses. It does not reveal personal expenses or automatically approve a split. People without an account are only tracked by you.")
+                Text("Friends only see expenses you share with them. People without an account are tracked by you alone.")
             }
             .listRowBackground(HomeTheme.surface)
 
