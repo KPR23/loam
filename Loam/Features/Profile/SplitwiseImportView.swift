@@ -201,7 +201,6 @@ struct SplitwiseImportView: View {
     }
 }
 
-
 /// Presents the review screen in its own navigation stack, with a Cancel button.
 struct SplitwiseImportSheet: View {
     let export: SplitwiseImport.Export
