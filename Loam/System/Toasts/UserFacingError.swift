@@ -167,6 +167,7 @@ enum UserFacingError {
             ("Repayment exceeds confirmed debt", "That's more than the confirmed balance."),
             ("Repayment not found or already reversed", "This repayment was already undone."),
             ("Custom categories need Loam Pro", "Custom categories need Loam Pro."),
+            ("People without an account need Loam Pro", "Adding people without an account needs Loam Pro."),
             ("Removing categories needs Loam Pro", "Hiding categories needs Loam Pro."),
             ("You can have up to 50 categories", "You can have up to 50 categories."),
             ("Category not found", "This category is no longer available."),

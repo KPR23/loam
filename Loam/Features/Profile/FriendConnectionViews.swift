@@ -7,10 +7,12 @@ import UniformTypeIdentifiers
 struct FriendsView: View {
     @EnvironmentObject private var connectionStore: ConnectionStore
     @EnvironmentObject private var authSession: AuthSession
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var showsConnectionCodePrompt = false
     @State private var showsPlaceholderPrompt = false
     @State private var searchText = ""
     @State private var friendPendingRemoval: SplitPartnerOption?
+    @State private var friendBeingRenamed: SplitPartnerOption?
     @State private var error: String?
     @State private var showsSplitwisePicker = false
     @State private var splitwiseExport: SplitwiseImport.Export?
@@ -32,7 +34,7 @@ struct FriendsView: View {
                     ProfileRow("Enter a code", symbol: "key", color: .orange)
                 }
                 Button { showsPlaceholderPrompt = true } label: {
-                    ProfileRow("Add without an account", symbol: "person.crop.circle.badge.plus", color: .green)
+                    AddWithoutAccountRow(showsProBadge: !subscriptions.isPro)
                 }
                 Button {
                     if let sample = SplitwiseImportView.sampleExport { splitwiseExport = sample } else { showsSplitwisePicker = true }
@@ -69,14 +71,13 @@ struct FriendsView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(visibleFriends) { friend in
-                        HStack(spacing: 12) {
-                            AvatarView(userId: friend.userId, size: 36, name: friend.displayName)
-                            Text(friend.displayName)
-                            Spacer(minLength: 0)
+                        Group {
+                            // People without an account are yours to edit; tapping opens the rename sheet.
                             if friend.isPlaceholder {
-                                Text("No account")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                Button { friendBeingRenamed = friend } label: { FriendRow(friend: friend) }
+                                    .accessibilityHint("Rename")
+                            } else {
+                                FriendRow(friend: friend)
                             }
                         }
                         .swipeActions(edge: .trailing) {
@@ -84,8 +85,14 @@ struct FriendsView: View {
                             // the explicit tint keeps the destructive color the app tint would replace.
                             Button("Remove", systemImage: "person.badge.minus") { confirmRemoval(of: friend) }
                                 .tint(.red)
+                            if friend.isPlaceholder {
+                                Button("Rename", systemImage: "pencil") { friendBeingRenamed = friend }
+                            }
                         }
                         .contextMenu {
+                            if friend.isPlaceholder {
+                                Button("Rename", systemImage: "pencil") { friendBeingRenamed = friend }
+                            }
                             Button("Remove friend", systemImage: "person.badge.minus", role: .destructive) {
                                 confirmRemoval(of: friend)
                             }
@@ -96,7 +103,9 @@ struct FriendsView: View {
                 Text(connectionStore.connections.isEmpty ? "Friends" : "Friends (\(connectionStore.connections.count))")
             } footer: {
                 if !connectionStore.connections.isEmpty {
-                    Text("Swipe a friend to remove them. Past shared expenses stay in your history.")
+                    Text(connectionStore.connections.contains(where: \.isPlaceholder)
+                         ? "Tap someone without an account to rename them. Swipe a friend to remove them. Past shared expenses stay in your history."
+                         : "Swipe a friend to remove them. Past shared expenses stay in your history.")
                 }
             }
             .listRowBackground(HomeTheme.surface)
@@ -108,6 +117,7 @@ struct FriendsView: View {
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search friends")
         .connectionCodePrompt(isPresented: $showsConnectionCodePrompt)
         .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { _ in }
+        .renamePlaceholderPrompt(friend: $friendBeingRenamed)
         .task { await connectionStore.refresh(userId: authSession.userId) }
         .refreshable { await connectionStore.refresh(userId: authSession.userId) }
         .confirmationDialog(
@@ -158,6 +168,38 @@ struct FriendsView: View {
         case nil: "Expenses between you that are still waiting for an answer are declined, and the rest stay in your history."
         }
         return "You won’t be able to share new expenses until you connect again. " + waiting
+    }
+}
+
+private struct FriendRow: View {
+    let friend: SplitPartnerOption
+    var body: some View {
+        HStack(spacing: 12) {
+            AvatarView(userId: friend.userId, size: 36, name: friend.displayName)
+            Text(friend.displayName)
+                .foregroundStyle(HomeTheme.text)
+            Spacer(minLength: 0)
+            if friend.isPlaceholder {
+                Text("No account")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+/// "Add without an account", marked PRO for accounts on the free plan.
+struct AddWithoutAccountRow: View {
+    let showsProBadge: Bool
+    var body: some View {
+        HStack {
+            ProfileRow("Add without an account", symbol: "person.crop.circle.badge.plus", color: .green)
+            if showsProBadge {
+                Spacer(minLength: 8)
+                ProBadge()
+            }
+        }
     }
 }
 
@@ -364,23 +406,29 @@ private struct ConnectionCodePrompt: ViewModifier {
     }
 }
 
-/// Asks for a name and adds someone without an account as a friend.
+/// Asks for a name and adds someone without an account as a friend. Adding people without an
+/// account is a Loam Pro feature, so a free account sees the paywall first and, once it
+/// upgrades, the name sheet.
 private struct PlaceholderFriendPrompt: ViewModifier {
     @EnvironmentObject private var connectionStore: ConnectionStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @Binding var isPresented: Bool
     let onCreated: (SplitPartnerOption) -> Void
     @State private var name = ""
     @State private var error: String?
+    @State private var isWorking = false
+    @State private var showsPaywall = false
     @FocusState private var isFocused: Bool
 
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $isPresented) {
+            // Never shown without Pro, so a free account doesn't see the sheet flash before the paywall.
+            .sheet(isPresented: Binding(get: { isPresented && subscriptions.isPro }, set: { if !$0 { isPresented = false } })) {
                 CompactEntrySheet(
                     title: "Add someone without an account",
                     message: "They appear in your friends like anyone else, and every expense you split with them is accepted right away.",
                     actionTitle: "Add",
-                    actionDisabled: trimmedName.isEmpty,
+                    actionDisabled: trimmedName.isEmpty || isWorking,
                     onCancel: { isPresented = false },
                     onAction: { Task { await create() } }
                 ) {
@@ -390,9 +438,18 @@ private struct PlaceholderFriendPrompt: ViewModifier {
                         .onAppear { isFocused = true }
                 }
             }
+            .proPaywall(isPresented: $showsPaywall) {
+                // Upgraded on the paywall: carry on to the name sheet now that it's gone.
+                if subscriptions.isPro { isPresented = true }
+            }
             .errorToast($error)
             .onChange(of: isPresented) { _, shown in
-                if shown { name = ""; error = nil }
+                guard shown else { return }
+                name = ""; error = nil
+                if !subscriptions.isPro {
+                    isPresented = false
+                    showsPaywall = true
+                }
             }
     }
 
@@ -400,10 +457,69 @@ private struct PlaceholderFriendPrompt: ViewModifier {
 
     private func create() async {
         let chosen = trimmedName
-        guard !chosen.isEmpty else { return }
+        guard !chosen.isEmpty, !isWorking else { return }
+        isWorking = true; defer { isWorking = false }
         do {
             onCreated(try await connectionStore.createPlaceholder(name: chosen))
             isPresented = false
+        }
+        catch ConnectionError.proRequired where subscriptions.isPro {
+            // A fresh purchase can beat RevenueCat's webhook to the backend.
+            await subscriptions.syncBackendEntitlement()
+            do {
+                onCreated(try await connectionStore.createPlaceholder(name: chosen))
+                isPresented = false
+            } catch { self.error = UserFacingError.message(for: error) }
+        }
+        catch ConnectionError.proRequired { self.error = "Adding people without an account needs Loam Pro." }
+        catch { self.error = UserFacingError.message(for: error) }
+    }
+}
+
+/// Renames someone without an account. Open on any plan, so people added before Pro (or
+/// while subscribed) stay editable.
+private struct RenamePlaceholderPrompt: ViewModifier {
+    @EnvironmentObject private var connectionStore: ConnectionStore
+    @Binding var friend: SplitPartnerOption?
+    @State private var name = ""
+    @State private var error: String?
+    @State private var isWorking = false
+    @FocusState private var isFocused: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(item: $friend) { friend in
+                CompactEntrySheet(
+                    title: "Rename \(friend.displayName)",
+                    message: "Only you see this name. It updates everywhere you split with them.",
+                    actionTitle: "Save",
+                    actionDisabled: trimmedName.isEmpty || trimmedName == friend.displayName || isWorking,
+                    onCancel: { self.friend = nil },
+                    onAction: { Task { await save(friend) } }
+                ) {
+                    TextField("Name", text: $name)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                        .onSubmit { Task { await save(friend) } }
+                        .focused($isFocused)
+                        .onAppear { isFocused = true }
+                }
+            }
+            .errorToast($error)
+            .onChange(of: friend?.id) { _, id in
+                if id != nil { name = friend?.displayName ?? ""; error = nil }
+            }
+    }
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private func save(_ target: SplitPartnerOption) async {
+        let chosen = trimmedName
+        guard !chosen.isEmpty, chosen != target.displayName, !isWorking else { return }
+        isWorking = true; defer { isWorking = false }
+        do {
+            try await connectionStore.renamePlaceholder(target, to: chosen)
+            friend = nil
         }
         catch { self.error = UserFacingError.message(for: error) }
     }
@@ -412,6 +528,10 @@ private struct PlaceholderFriendPrompt: ViewModifier {
 extension View {
     func placeholderFriendPrompt(isPresented: Binding<Bool>, onCreated: @escaping (SplitPartnerOption) -> Void) -> some View {
         modifier(PlaceholderFriendPrompt(isPresented: isPresented, onCreated: onCreated))
+    }
+
+    func renamePlaceholderPrompt(friend: Binding<SplitPartnerOption?>) -> some View {
+        modifier(RenamePlaceholderPrompt(friend: friend))
     }
 
     func connectionCodePrompt(isPresented: Binding<Bool>, onConnected: ((SplitPartnerOption) -> Void)? = nil) -> some View {

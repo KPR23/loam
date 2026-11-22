@@ -10,6 +10,7 @@ struct SplitwiseImportView: View {
     @EnvironmentObject private var expenseStore: ExpenseStore
     @EnvironmentObject private var balanceStore: BalanceStore
     @EnvironmentObject private var navigator: AppNavigator
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @ObservedObject private var importer = SplitwiseImporter.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -21,6 +22,7 @@ struct SplitwiseImportView: View {
     @State private var meIndex: Int?
     @State private var targets: [Int: Target] = [:]
     @State private var error: String?
+    @State private var showsPaywall = false
 
     init(export: SplitwiseImport.Export) {
         _export = State(initialValue: export)
@@ -111,6 +113,7 @@ struct SplitwiseImportView: View {
         }
         .safeAreaInset(edge: .bottom) { importBar }
         .errorToast($error)
+        .proPaywall(isPresented: $showsPaywall)
         .task { await connectionStore.refresh(userId: authSession.userId) }
         .onAppear {
             guard !hasSuggestedMe else { return }
@@ -190,6 +193,12 @@ struct SplitwiseImportView: View {
         guard let me = authSession.userId else { return }
         var chosen: [Int: Target] = [:]
         for column in involved { chosen[column] = binding(for: column, export: export).wrappedValue }
+        // New people are added without an account, which is a Loam Pro feature. Matching
+        // everyone to existing friends works on any plan.
+        if !subscriptions.isPro, chosen.values.contains(.new) {
+            showsPaywall = true
+            return
+        }
         importer.start(
             export: export, meIndex: meIndex, me: me, targets: chosen,
             accountIds: Set(friends.filter { !$0.isPlaceholder }.map(\.userId)),

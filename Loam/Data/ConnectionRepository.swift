@@ -15,4 +15,5 @@ protocol ConnectionRepository: Sendable {
     func removeConnection(userId: UUID) async throws
     func pendingShareCount(with userId: UUID) async throws -> Int
     func createPlaceholderFriend(name: String) async throws -> SplitPartnerOption
+    func renamePlaceholderFriend(userId: UUID, name: String) async throws
 }

@@ -54,6 +54,11 @@ final class ConnectionStore: ObservableObject {
         await refresh(userId: accountId)
         return friend
     }
+    func renamePlaceholder(_ friend: SplitPartnerOption, to name: String) async throws {
+        guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }
+        try await LoamErrorCapture.withCapture("connections.placeholder_rename_failed") { try await SupabaseConnectionRepository(client: client).renamePlaceholderFriend(userId: friend.userId, name: name) }
+        await refresh(userId: accountId)
+    }
     func remove(_ friend: SplitPartnerOption) async throws {
         guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }
         // Being asked to settle up first is the server answering as designed, not a failure to report.
