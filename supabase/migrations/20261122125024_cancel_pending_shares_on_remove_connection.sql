@@ -4,16 +4,21 @@
 -- longer settle it: exactly what refusing to remove a friend with an open balance prevents.
 --
 -- Removal now declines every share still pending between the pair: a share one of you owes
--- on an expense the other paid, and a payer's share on an expense the other logged for them.
--- Shares owed to a third person stay as they are. Nothing is logged in Activity, as the
--- removal itself is the event; the expenses stay in history marked as declined.
+-- on an expense the other paid, and a payer's share on an expense the other logged for them
+-- when only the two of them are on it. Shares owed to a third person stay as they are.
+-- Nothing is logged in Activity, as the removal itself is the event; the expenses stay in
+-- history marked as declined.
 
 -- The shares removal would decline, so the app can say how many before asking to confirm.
 create function private.pending_shares_between(p_me uuid,p_other uuid) returns setof public.expense_share
 language sql stable security definer set search_path='' as $$
   select s.* from public.expense_share s join public.expense e on e.id=s.expense_id
   where s.status='pending' and e.paid_by in (p_me,p_other) and s.user_id in (p_me,p_other)
-    and (s.user_id<>e.paid_by or e.created_by=case when s.user_id=p_me then p_other else p_me end)
+    and (s.user_id<>e.paid_by
+      -- A payer's own share decides whether the whole expense counts, so it is only declined
+      -- when nobody else owes on it.
+      or (e.created_by=case when s.user_id=p_me then p_other else p_me end
+          and not exists(select 1 from public.expense_share o where o.expense_id=e.id and o.user_id not in (p_me,p_other))))
 $$;
 revoke all on function private.pending_shares_between(uuid,uuid) from public,anon,authenticated;
 
@@ -33,6 +38,11 @@ begin
   if p_user_id is null or p_user_id=v_uid then raise exception 'Friend not found'; end if;
   -- Serialize removals of one person so overlapping calls can't settle the same balance twice.
   perform pg_advisory_xact_lock(hashtextextended(p_user_id::text,8));
+  -- Decline what is still waiting first: a share accepted a moment earlier then shows up in the
+  -- balance checked below, and a refused removal rolls the declines back.
+  update public.expense_share s set status='rejected',responded_at=now(),accepted_via_trust=false
+  from private.pending_shares_between(v_uid,p_user_id) p
+  where s.expense_id=p.expense_id and s.user_id=p.user_id;
   if exists(select 1 from public.profile p where p.id=p_user_id and p.managed_by=v_uid and p.deleted_at is null) then
     -- Nobody can repay for a placeholder, so removing it settles whatever is left.
     insert into public.repayment(from_user,to_user,amount_minor,currency,note,paid_at,operation_id)
@@ -44,9 +54,6 @@ begin
   elsif exists(select 1 from public.balance_snapshot() b where b.person_id=p_user_id) then
     raise exception 'Settle up before removing this friend.';
   end if;
-  update public.expense_share s set status='rejected',responded_at=now(),accepted_via_trust=false
-  from private.pending_shares_between(v_uid,p_user_id) p
-  where s.expense_id=p.expense_id and s.user_id=p.user_id;
   delete from public.user_connection
   where user_a=least(v_uid,p_user_id) and user_b=greatest(v_uid,p_user_id);
   delete from public.expense_share_trust
