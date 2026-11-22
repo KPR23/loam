@@ -1,8 +1,9 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Imports a Splitwise CSV export: expenses become splits with people without an account,
-/// repayments land in Balances history.
+/// Reviews a Splitwise CSV export before importing it: expenses become splits with people
+/// without an account, repayments land in Balances history. Friends opens the file picker
+/// first and pushes this screen with the parsed file.
 struct SplitwiseImportView: View {
     @EnvironmentObject private var connectionStore: ConnectionStore
     @EnvironmentObject private var authSession: AuthSession
@@ -16,11 +17,26 @@ struct SplitwiseImportView: View {
 
     @State private var showsImporter = false
     @State private var export: SplitwiseImport.Export?
+    @State private var hasSuggestedMe = false
     @State private var meIndex: Int?
     @State private var targets: [Int: Target] = [:]
     @State private var error: String?
 
+    init(export: SplitwiseImport.Export) {
+        _export = State(initialValue: export)
+    }
+
     private var friends: [SplitPartnerOption] { connectionStore.connections }
+
+    /// Reads a picked file into an export. Shared with Friends, which picks the file before this screen opens.
+    static func readExport(from picked: Result<URL, Error>) throws -> SplitwiseImport.Export {
+        let url = try picked.get()
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        let data = try Data(contentsOf: url)
+        guard let text = String(data: data, encoding: .utf8) else { throw SplitwiseImport.ParseError.notSplitwise }
+        return try SplitwiseImport.parse(text)
+    }
 
     private func suggestion(for column: Int, export: SplitwiseImport.Export) -> Target {
         let candidates = friends.map { SplitwiseImport.Candidate(id: $0.userId, name: $0.displayName) }
@@ -40,10 +56,10 @@ struct SplitwiseImportView: View {
         List {
             Section {
                 Button { showsImporter = true } label: {
-                    Label(export == nil ? "Choose Splitwise CSV" : "Choose another file", systemImage: "doc.badge.plus")
+                    ProfileRow("Choose another file", symbol: "doc.badge.plus", color: .teal)
                 }
             } footer: {
-                Text("In Splitwise, open your friend, tap Export as spreadsheet and save the CSV. Everyone in the file is added as a person without an account, so nobody gets notifications.")
+                Text("Everyone in the file is added as a person without an account, so nobody gets notifications.")
             }
             .listRowBackground(HomeTheme.surface)
 
@@ -96,6 +112,18 @@ struct SplitwiseImportView: View {
         .safeAreaInset(edge: .bottom) { importBar }
         .errorToast($error)
         .task { await connectionStore.refresh(userId: authSession.userId) }
+        .onAppear {
+            guard !hasSuggestedMe else { return }
+            hasSuggestedMe = true
+            suggestMe()
+        }
+    }
+
+    /// Preselects the column whose name matches the signed-in user.
+    private func suggestMe() {
+        guard let export else { meIndex = nil; return }
+        let me = [SplitwiseImport.Candidate(id: UUID(), name: authSession.displayName ?? "")]
+        meIndex = export.people.indices.first { SplitwiseImport.suggestMatch(for: export.people[$0], in: me) != nil }
     }
 
     @ViewBuilder
@@ -120,18 +148,14 @@ struct SplitwiseImportView: View {
     }
 
     private func load(_ picked: Result<URL, Error>) {
+        // Picking another file that fails keeps the current one instead of emptying the screen.
         do {
-            let url = try picked.get()
-            let access = url.startAccessingSecurityScopedResource()
-            defer { if access { url.stopAccessingSecurityScopedResource() } }
-            let data = try Data(contentsOf: url)
-            guard let text = String(data: data, encoding: .utf8) else { throw SplitwiseImport.ParseError.notSplitwise }
-            export = try SplitwiseImport.parse(text)
-            let myName = authSession.displayName ?? ""
-            meIndex = export?.people.indices.first { SplitwiseImport.suggestMatch(for: export!.people[$0], in: [.init(id: UUID(), name: myName)]) != nil }
+            export = try Self.readExport(from: picked)
+            suggestMe()
             targets = [:]
+        } catch CocoaError.userCancelled {
+            return
         } catch {
-            export = nil
             self.error = UserFacingError.message(for: error)
         }
     }
