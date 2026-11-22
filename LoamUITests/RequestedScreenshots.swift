@@ -70,6 +70,21 @@ enum RequestedScreens {
             test.swipeBack()
             test.swipeBack()
         },
+        "remove-friend": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            test.openProfileRow("Friends")
+            let row = test.app.staticTexts["Philip"].firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded friend 'Philip' is missing")
+            row.press(forDuration: 1.2)
+            test.settle(1)
+            test.app.buttons["Remove friend"].firstMatch.tap()
+            test.settle(1)
+            try test.capture("remove-friend")
+            test.app.buttons["Cancel"].firstMatch.tap()
+            test.settle(1)
+            test.swipeBack()
+        },
         "expense-menu": { test in
             let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Weekly shop'")).firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded expense 'Weekly shop' is missing")
