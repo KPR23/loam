@@ -14,6 +14,7 @@ struct FriendsView: View {
     @State private var error: String?
     @State private var showsSplitwisePicker = false
     @State private var splitwiseExport: SplitwiseImport.Export?
+    @State private var pendingShareCount: Int?
 
     private var visibleFriends: [SplitPartnerOption] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -79,12 +80,12 @@ struct FriendsView: View {
                         .swipeActions(edge: .trailing) {
                             // Avoid `role: .destructive` — it removes the row before the confirmation;
                             // the explicit tint keeps the destructive color the app tint would replace.
-                            Button("Remove", systemImage: "person.badge.minus") { friendPendingRemoval = friend }
+                            Button("Remove", systemImage: "person.badge.minus") { confirmRemoval(of: friend) }
                                 .tint(.red)
                         }
                         .contextMenu {
                             Button("Remove friend", systemImage: "person.badge.minus", role: .destructive) {
-                                friendPendingRemoval = friend
+                                confirmRemoval(of: friend)
                             }
                         }
                     }
@@ -123,9 +124,7 @@ struct FriendsView: View {
                 }
             }
         } message: {
-            Text(friendPendingRemoval?.isPlaceholder == true
-                 ? "Anything they owe or are owed is settled, and expenses you already shared stay in your history."
-                 : "You won’t be able to share new expenses until you connect again. Expenses between you that are still waiting for an answer are declined, and the rest stay in your history.")
+            Text(removalMessage)
         }
         .fileImporter(isPresented: $showsSplitwisePicker, allowedContentTypes: [.commaSeparatedText, .plainText]) { picked in
             do { splitwiseExport = try SplitwiseImportView.readExport(from: picked) }
@@ -136,6 +135,27 @@ struct FriendsView: View {
             if let splitwiseExport { SplitwiseImportView(export: splitwiseExport) }
         }
         .errorToast($error)
+    }
+
+    /// Asks first how many expenses removal would decline, so the dialog can say so before anything happens.
+    private func confirmRemoval(of friend: SplitPartnerOption) {
+        Task {
+            pendingShareCount = await connectionStore.pendingShareCount(with: friend)
+            friendPendingRemoval = friend
+        }
+    }
+
+    private var removalMessage: String {
+        if friendPendingRemoval?.isPlaceholder == true {
+            return "Anything they owe or are owed is settled, and expenses you already shared stay in your history."
+        }
+        let waiting = switch pendingShareCount {
+        case 0: "Expenses you already shared stay in your history."
+        case 1: "1 expense between you is still waiting for an answer and will be declined. The rest stay in your history."
+        case let count?: "\(count) expenses between you are still waiting for an answer and will be declined. The rest stay in your history."
+        case nil: "Expenses between you that are still waiting for an answer are declined, and the rest stay in your history."
+        }
+        return "You won’t be able to share new expenses until you connect again. " + waiting
     }
 }
 

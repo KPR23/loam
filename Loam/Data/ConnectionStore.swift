@@ -62,6 +62,11 @@ final class ConnectionStore: ObservableObject {
         }
         await refresh(userId: accountId)
     }
+    /// How many waiting expenses removing this friend would decline, or nil when it can't be told.
+    func pendingShareCount(with friend: SplitPartnerOption) async -> Int? {
+        guard !friend.isPlaceholder, let client = SupabaseClientProvider.shared else { return nil }
+        return try? await SupabaseConnectionRepository(client: client).pendingShareCount(with: friend.userId)
+    }
     func redeem(code: String) async throws -> SplitPartnerOption { guard let client = SupabaseClientProvider.shared else { throw ConnectionError.unavailable }; let friend = try await SupabaseConnectionRepository(client: client).redeem(code: code); Telemetry.capture(.friendConnected); await refresh(userId: accountId); return friend }
 }
 

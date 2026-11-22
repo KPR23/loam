@@ -58,6 +58,11 @@ actor SupabaseConnectionRepository: ConnectionRepository {
             throw ConnectionError.rejected(error.message)
         }
     }
+    /// Expenses between the caller and this friend still waiting for an answer, which removing them declines.
+    func pendingShareCount(with userId: UUID) async throws -> Int {
+        struct Params: Encodable { let pUserId: UUID; enum CodingKeys: String, CodingKey { case pUserId = "p_user_id" } }
+        return try await client.rpc("pending_share_count", params: Params(pUserId: userId)).execute().value
+    }
     func redeem(code: String) async throws -> SplitPartnerOption {
         struct Params: Encodable { let pCode: String; enum CodingKeys: String, CodingKey { case pCode = "p_code" } }
         struct Row: Decodable { let userId: UUID?; let displayName: String?; let errorCode: String?; enum CodingKeys: String, CodingKey { case userId = "user_id", displayName = "display_name", errorCode = "error_code" } }
