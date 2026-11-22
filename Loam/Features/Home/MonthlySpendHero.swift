@@ -7,6 +7,8 @@ struct MonthlySpendHero: View {
     /// Bump when Expenses becomes visible again; only used to recover a stuck arc.
     var reloadToken: Int = 0
     var collapseProgress: CGFloat = 0
+    /// Flips with the top bar (see `HomeTopBarCollapse`), so the amount leaves the arc as it lands in the bar.
+    var isAmountHidden = false
     var layout: BudgetArcLayout = .dots
     @Binding var displayedReveal: Double
 
@@ -29,7 +31,7 @@ struct MonthlySpendHero: View {
                 let anchor = layout.labelAnchor(in: geometry.size)
                 let maxLabelWidth = layout.labelMaxWidth(in: geometry.size)
                 let collapseYOffset = easedCollapse * 8
-                let amountOut = HomeCollapsePhase.heroAmountOut.progress(collapseProgress)
+                let amountOut: CGFloat = isAmountHidden ? 1 : 0
 
                 ZStack {
                     BudgetArcMosaic(

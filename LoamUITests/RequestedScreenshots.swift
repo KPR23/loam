@@ -60,6 +60,15 @@ enum RequestedScreens {
             try test.capture("profile-about")
             test.swipeBack()
         },
+        "home-scrolled": { test in
+            // A slow drag with no fling, far enough past the point where the amount moves into the top bar.
+            let start = test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            start.press(forDuration: 0.1, thenDragTo: test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)))
+            test.settle(1.5)
+            try test.capture("home-scrolled")
+            test.app.swipeDown()
+            test.settle(1)
+        },
         "about-app": { test in
             test.tab("Profile").tap()
             test.settle(1.5)
