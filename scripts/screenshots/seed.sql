@@ -51,5 +51,13 @@ from public.expense e
 where e.paid_by = current_setting('seed.julia')::uuid
   and exists (select 1 from public.expense_share s where s.expense_id = e.id and s.user_id = current_setting('seed.philip')::uuid);
 
+-- Someone Julia tracks without an account, for Friends. Adding one needs Pro, so Julia
+-- holds it just for this and stays on the free plan for every other screen.
 reset role;
+select public.record_pro_entitlement(current_setting('seed.julia')::uuid, true, null);
+set local role authenticated;
+select set_config('request.jwt.claim.sub', current_setting('seed.julia'), true);
+select public.create_placeholder_friend('Ola');
+reset role;
+select public.record_pro_entitlement(current_setting('seed.julia')::uuid, false, null);
 commit;

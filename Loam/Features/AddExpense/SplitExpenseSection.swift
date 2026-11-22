@@ -21,6 +21,7 @@ struct SplitExpenseSection: View {
     @Binding var participantPercentages: [UUID: Int]
     @Binding var participantAmountTexts: [UUID: String]
 
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var partnerSearchText = ""
     /// Existing participants missing from `availablePartners` when the form
     /// opened: connections load asynchronously, and a co-participant may not
@@ -119,7 +120,7 @@ struct SplitExpenseSection: View {
             }
             if SupabaseConfig.isConfigured {
                 Button { showsPlaceholderPrompt = true } label: {
-                    ProfileRow("Add without an account", symbol: "person.crop.circle.badge.plus", color: .green)
+                    AddWithoutAccountRow(showsProBadge: !subscriptions.isPro)
                 }
             }
         } header: {

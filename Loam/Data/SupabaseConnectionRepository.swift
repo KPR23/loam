@@ -23,6 +23,15 @@ actor SupabaseConnectionRepository: ConnectionRepository {
             guard let row = rows.first else { throw ConnectionError.unavailable }
             return SplitPartnerOption(userId: row.userId, displayName: row.displayName, isPlaceholder: true)
         } catch let error as PostgrestError {
+            if error.message.hasPrefix("People without an account need Loam Pro") { throw ConnectionError.proRequired }
+            throw ConnectionError.rejected(error.message)
+        }
+    }
+    func renamePlaceholderFriend(userId: UUID, name: String) async throws {
+        struct Params: Encodable { let pUserId: UUID; let pName: String; enum CodingKeys: String, CodingKey { case pUserId = "p_user_id", pName = "p_name" } }
+        do {
+            try await client.rpc("rename_placeholder_friend", params: Params(pUserId: userId, pName: name)).execute()
+        } catch let error as PostgrestError {
             throw ConnectionError.rejected(error.message)
         }
     }

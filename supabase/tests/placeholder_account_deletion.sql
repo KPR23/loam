@@ -5,6 +5,8 @@ select '1..2' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.e',gen_random_uuid()::text,true),
   set_config('test.f',gen_random_uuid()::text,true);
 insert into auth.users(id,email) values(current_setting('test.a')::uuid,'placeholder-deleter@example.invalid');
+-- Adding people without an account needs Pro.
+select public.record_pro_entitlement(current_setting('test.a')::uuid,true,null);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub',current_setting('test.a'),true);

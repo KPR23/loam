@@ -5,17 +5,19 @@ import RevenueCat
 extension View {
     /// Presents the Loam Pro paywall. Its packages (yearly, monthly) and prices
     /// come from the current RevenueCat offering; the layout and copy live here.
-    func proPaywall(isPresented: Binding<Bool>) -> some View {
-        modifier(ProPaywallModifier(isPresented: isPresented))
+    /// `onDismiss` runs once the sheet is fully gone, so it can present another one.
+    func proPaywall(isPresented: Binding<Bool>, onDismiss: (() -> Void)? = nil) -> some View {
+        modifier(ProPaywallModifier(isPresented: isPresented, onDismiss: onDismiss))
     }
 }
 
 private struct ProPaywallModifier: ViewModifier {
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @Binding var isPresented: Bool
+    let onDismiss: (() -> Void)?
 
     func body(content: Content) -> some View {
-        content.sheet(isPresented: $isPresented) {
+        content.sheet(isPresented: $isPresented, onDismiss: onDismiss) {
             Group {
                 if subscriptions.isAvailable {
                     ProPaywallView()
