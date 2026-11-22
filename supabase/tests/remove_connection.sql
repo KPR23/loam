@@ -1,7 +1,7 @@
 -- TAP-compatible, rollback-only integration tests. Use supabase test db.
 begin;
 set local plpgsql.check_asserts=on;
-select '1..3' as plan;
+select '1..4' as plan;
 select set_config('test.a',gen_random_uuid()::text,true),set_config('test.b',gen_random_uuid()::text,true),
  set_config('test.e',gen_random_uuid()::text,true),set_config('test.c',gen_random_uuid()::text,true),
  set_config('test.p1',gen_random_uuid()::text,true),set_config('test.p2',gen_random_uuid()::text,true);
@@ -37,6 +37,13 @@ do $$ declare blocked boolean:=false; begin
 end $$;
 select 'ok 1 - a friend who still owes money cannot be removed' as result;
 
+select set_config('request.jwt.claim.sub',current_setting('test.a'),true);
+do $$ begin
+ assert public.pending_share_count(current_setting('test.b')::uuid)=2,'Pending count between the pair is wrong';
+ assert public.pending_share_count(current_setting('test.c')::uuid)=1,'Pending count with a third person is wrong';
+end $$;
+select 'ok 2 - the app can count what removal would decline' as result;
+
 select set_config('request.jwt.claim.sub',current_setting('test.b'),true);
 select public.create_repayment(current_setting('test.a')::uuid,500,'PLN',null,current_date,gen_random_uuid());
 select public.remove_connection(current_setting('test.a')::uuid);
@@ -45,7 +52,7 @@ do $$ begin
  assert not private.are_connected(current_setting('test.a')::uuid,current_setting('test.b')::uuid),'Pair still connected';
 end $$;
 reset role;
-select 'ok 2 - either side can remove a settled friend' as result;
+select 'ok 3 - either side can remove a settled friend' as result;
 
 do $$ begin
  assert (select status='rejected' from public.expense_share where expense_id=current_setting('test.p1')::uuid and user_id=current_setting('test.b')::uuid),
@@ -61,5 +68,5 @@ do $$ begin
  assert (select coalesce(sum(amount_minor),0)=300 from public.awaiting_acceptance_snapshot()),'Removed friend still counted as waiting to accept';
 end $$;
 reset role;
-select 'ok 3 - removing a friend declines what was still waiting between the two' as result;
+select 'ok 4 - removing a friend declines what was still waiting between the two' as result;
 rollback;
