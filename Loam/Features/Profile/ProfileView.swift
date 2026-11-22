@@ -500,7 +500,7 @@ private func analyticsUserId(_ authSession: AuthSession) -> UUID? {
 /// The app's version screen.
 private struct AboutAppView: View {
     var body: some View {
-        ProfileInfoView(title: "About the app", symbol: "app.badge", message: "A little clarity. Every day.", detail: "A calmer place for your expenses, shared moments, and everything in between.\n\n\(ProfileView.version)")
+        ProfileInfoView(title: "About the app", symbol: "app.badge", message: "Money, kept simple.", detail: "Loam keeps track of what you spend and what you share. Split an expense with a friend and you both see who owes whom, so settling up is easy.\n\nOnly you and the friends you split an expense with can see it.\n\n\(ProfileView.version)")
     }
 }
 

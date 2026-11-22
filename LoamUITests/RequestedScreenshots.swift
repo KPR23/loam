@@ -43,6 +43,16 @@ enum RequestedScreens {
             try test.capture("profile-about")
             test.swipeBack()
         },
+        "about-app": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            for _ in 0..<2 { test.app.swipeUp() }
+            test.openProfileRow("About & legal")
+            test.openProfileRow("About the app")
+            try test.capture("about-app")
+            test.swipeBack()
+            test.swipeBack()
+        },
         "expense-menu": { test in
             let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Weekly shop'")).firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded expense 'Weekly shop' is missing")
