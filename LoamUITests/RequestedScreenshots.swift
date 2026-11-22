@@ -52,13 +52,6 @@ enum RequestedScreens {
             test.swipeBack()
             test.swipeBack()
         },
-        "categories": { test in
-            test.tab("Profile").tap()
-            test.settle(1.5)
-            test.openProfileRow("Categories")
-            try test.capture("categories")
-            test.swipeBack()
-        },
         "profile-about": { test in
             test.tab("Profile").tap()
             test.settle(1.5)
