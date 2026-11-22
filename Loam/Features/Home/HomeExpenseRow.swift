@@ -98,7 +98,7 @@ struct HomeExpenseRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 HStack(spacing: 6) {
                     if isWaitingToSync {
-                        amountAccessoryIcon("arrow.triangle.2.circlepath", color: .orange)
+                        amountAccessoryIcon("icloud.and.arrow.up", color: .orange)
                     }
                     if acceptance == nil {
                         if expense.isRecurring {
