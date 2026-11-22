@@ -23,11 +23,12 @@ struct CategorySettingsView: View {
                 NavigationLink {
                     CategoryOrderView()
                 } label: {
-                    Label("Reorder", systemImage: "arrow.up.arrow.down")
+                    ProfileRow("Reorder", symbol: "arrow.up.arrow.down", color: .gray)
                 }
             } footer: {
                 Text("The order you pick categories in, on every screen.")
             }
+            .listRowBackground(HomeTheme.surface)
 
             Section {
                 ForEach(store.categories) { category in
@@ -46,7 +47,7 @@ struct CategorySettingsView: View {
                     NavigationLink {
                         CustomCategoryEditorView(category: nil)
                     } label: {
-                        Label("Add category", systemImage: "plus")
+                        ProfileRow("Add category", symbol: "plus", color: .blue)
                     }
                 }
             } header: {

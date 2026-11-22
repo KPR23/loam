@@ -42,6 +42,23 @@ enum RequestedScreens {
             try test.capture("friends")
             test.swipeBack()
         },
+        "share-code": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            test.openProfileRow("Friends")
+            test.openProfileRow("Share my code")
+            test.settle(1.5)
+            try test.capture("share-code")
+            test.swipeBack()
+            test.swipeBack()
+        },
+        "categories": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            test.openProfileRow("Categories")
+            try test.capture("categories")
+            test.swipeBack()
+        },
         "profile-about": { test in
             test.tab("Profile").tap()
             test.settle(1.5)

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// Everything about friends in one place: connect with new people, see who you're connected
 /// to, and remove someone. Connections enable shared expenses only.
@@ -10,7 +11,9 @@ struct FriendsView: View {
     @State private var showsPlaceholderPrompt = false
     @State private var searchText = ""
     @State private var friendPendingRemoval: SplitPartnerOption?
-    @State private var removalError: String?
+    @State private var error: String?
+    @State private var showsSplitwisePicker = false
+    @State private var splitwiseExport: SplitwiseImport.Export?
 
     private var visibleFriends: [SplitPartnerOption] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -28,9 +31,9 @@ struct FriendsView: View {
                     ProfileRow("Enter a code", symbol: "key", color: .orange)
                 }
                 Button { showsPlaceholderPrompt = true } label: {
-                    ProfileRow("Add without an account", symbol: "person.badge.plus", color: .green)
+                    ProfileRow("Add without an account", symbol: "person.crop.circle.badge.plus", color: .green)
                 }
-                NavigationLink { SplitwiseImportView() } label: {
+                Button { showsSplitwisePicker = true } label: {
                     ProfileRow("Import from Splitwise", symbol: "square.and.arrow.down", color: .teal)
                 }
             } header: {
@@ -116,7 +119,7 @@ struct FriendsView: View {
                     do {
                         try await connectionStore.remove(friend)
                     }
-                    catch { removalError = UserFacingError.message(for: error) }
+                    catch { self.error = UserFacingError.message(for: error) }
                 }
             }
         } message: {
@@ -124,7 +127,15 @@ struct FriendsView: View {
                  ? "Anything they owe or are owed is settled, and expenses you already shared stay in your history."
                  : "You won’t be able to share new expenses until you connect again. Expenses you already shared stay in your history.")
         }
-        .errorToast($removalError)
+        .fileImporter(isPresented: $showsSplitwisePicker, allowedContentTypes: [.commaSeparatedText, .plainText]) { picked in
+            do { splitwiseExport = try SplitwiseImportView.readExport(from: picked) }
+            catch CocoaError.userCancelled {}
+            catch { self.error = UserFacingError.message(for: error) }
+        }
+        .navigationDestination(isPresented: Binding(get: { splitwiseExport != nil }, set: { if !$0 { splitwiseExport = nil } })) {
+            if let splitwiseExport { SplitwiseImportView(export: splitwiseExport) }
+        }
+        .errorToast($error)
     }
 }
 
@@ -151,9 +162,11 @@ struct ShareConnectionCodeView: View {
                         UIPasteboard.general.string = invitation.code
                         justCopied = true
                     } label: {
-                        Label(justCopied ? "Copied" : "Copy code", systemImage: justCopied ? "checkmark" : "doc.on.doc")
+                        ProfileRow(justCopied ? "Copied" : "Copy code", symbol: justCopied ? "checkmark" : "doc.on.doc", color: justCopied ? .green : .blue)
                     }
-                    Button("Revoke code", role: .destructive) { Task { await revoke() } }
+                    Button { Task { await revoke() } } label: {
+                        ProfileRow("Revoke code", symbol: "xmark", color: .red, destructive: true)
+                    }
                 } header: {
                     Text("Your active code")
                 } footer: {
@@ -163,7 +176,9 @@ struct ShareConnectionCodeView: View {
             }
             if requiresPro {
                 Section {
-                    Button { showsPaywall = true } label: { Label("Upgrade to Loam Pro", systemImage: "sparkles") }
+                    Button { showsPaywall = true } label: {
+                        ProfileRow("Upgrade to Loam Pro", symbol: "arrow.up.circle", color: .blue)
+                    }
                 } header: {
                     Text("Invite more people")
                 } footer: {
@@ -171,7 +186,14 @@ struct ShareConnectionCodeView: View {
                 }
                 .listRowBackground(HomeTheme.surface)
             } else {
-                Section { Button { Task { await create() } } label: { Label(invitation == nil ? "Create code" : "Replace code", systemImage: "arrow.clockwise") }.disabled(isWorking) }
+                Section {
+                    Button { Task { await create() } } label: {
+                        ProfileRow(invitation == nil ? "Create code" : "Replace code", symbol: "arrow.clockwise", color: .orange)
+                    }
+                    .disabled(isWorking)
+                    // ProfileRow sets its own text color, so dim it by hand while a request runs.
+                    .opacity(isWorking ? 0.5 : 1)
+                }
                 .listRowBackground(HomeTheme.surface)
             }
         }
@@ -381,11 +403,15 @@ struct AddFriendView: View {
     @State private var showsConnectionCodePrompt = false
     var body: some View {
         List {
-            Section { Text("Connect to share expenses. Personal expenses stay private, and every split still needs approval.").foregroundStyle(.secondary) }
-            .listRowBackground(HomeTheme.surface)
             Section {
-                NavigationLink("Share my code") { ShareConnectionCodeView() }
-                Button("Enter a code") { showsConnectionCodePrompt = true }
+                NavigationLink { ShareConnectionCodeView() } label: {
+                    ProfileRow("Share my code", symbol: "square.and.arrow.up", color: .blue)
+                }
+                Button { showsConnectionCodePrompt = true } label: {
+                    ProfileRow("Enter a code", symbol: "key", color: .orange)
+                }
+            } footer: {
+                Text("Friends only see expenses you share with them, and every split still needs their approval.")
             }
             .listRowBackground(HomeTheme.surface)
         }

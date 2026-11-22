@@ -115,11 +115,11 @@ struct SplitExpenseSection: View {
                     onFriendConnected?(friend)
                 }
             } label: {
-                Label("Add friend", systemImage: "person.badge.plus")
+                ProfileRow("Add friend", symbol: "person.badge.plus", color: .blue)
             }
             if SupabaseConfig.isConfigured {
                 Button { showsPlaceholderPrompt = true } label: {
-                    Label("Add someone without an account", systemImage: "person.crop.circle.badge.plus")
+                    ProfileRow("Add without an account", symbol: "person.crop.circle.badge.plus", color: .green)
                 }
             }
         } header: {
