@@ -11,7 +11,9 @@ enum ExpenseShareAcceptance {
             let existing = expense.shares.first(where: { $0.userId == share.userId })
             let status = statusForShare(
                 userId: share.userId,
+                amountMinor: share.amountMinor,
                 createdBy: expense.createdBy,
+                paidBy: expense.paidBy,
                 usersTrustingCreator: usersTrustingCreator
             )
             return ExpenseShareRecord(
@@ -31,7 +33,8 @@ enum ExpenseShareAcceptance {
     /// a participant whose own amount is unchanged keeps their answer,
     /// including a rejection. Trust only applies to new or changed amounts.
     /// `forced` users (the creator, a proposer whose change is applied) keep
-    /// the status already assigned.
+    /// the status already assigned. A kept pending answer on a share that now
+    /// owes nothing is accepted, as `accept_zero_share` does on the server.
     static func preservingResponses(
         _ shares: [ExpenseShareRecord],
         from previous: ExpenseRecord,
@@ -49,17 +52,32 @@ enum ExpenseShareAcceptance {
             kept.status = old.status
             kept.respondedAt = old.respondedAt
             kept.acceptedViaTrust = old.acceptedViaTrust
+            if kept.status == .pending, owesNothing(userId: kept.userId, amountMinor: kept.amountMinor, paidBy: paidBy) {
+                kept.status = .accepted
+                kept.respondedAt = Date()
+                kept.acceptedViaTrust = false
+            }
             return kept
         }
     }
 
     static func statusForShare(
         userId: UUID,
+        amountMinor: Int,
         createdBy: UUID,
+        paidBy: UUID,
         usersTrustingCreator: Set<UUID>
     ) -> ExpenseShareStatus {
         if userId == createdBy { return .accepted }
         if usersTrustingCreator.contains(userId) { return .accepted }
+        if owesNothing(userId: userId, amountMinor: amountMinor, paidBy: paidBy) { return .accepted }
         return .pending
+    }
+
+    /// A participant who didn't pay and whose share is 0 has nothing to pay
+    /// back, so there is nothing for them to accept. The payer still answers
+    /// with a 0 share, because they are the one being owed.
+    static func owesNothing(userId: UUID, amountMinor: Int, paidBy: UUID) -> Bool {
+        amountMinor == 0 && userId != paidBy
     }
 }

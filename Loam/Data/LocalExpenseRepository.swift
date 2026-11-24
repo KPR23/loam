@@ -287,7 +287,9 @@ actor LocalExpenseRepository: ExpenseRepository {
             let proposedShares = proposal.shares.map { share in
                 let status: ExpenseShareStatus = share.userId == proposal.proposedBy ? .accepted : ExpenseShareAcceptance.statusForShare(
                     userId: share.userId,
+                    amountMinor: share.amountMinor,
                     createdBy: createdBy,
+                    paidBy: proposal.paidBy,
                     usersTrustingCreator: usersTrustingCreator
                 )
                 return ExpenseShareRecord(

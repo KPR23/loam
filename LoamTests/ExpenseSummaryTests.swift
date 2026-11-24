@@ -252,6 +252,41 @@ final class ExpenseShareAcceptanceTests: XCTestCase {
         XCTAssertNil(shares[1].respondedAt)
     }
 
+    func testParticipantOwingNothingIsNotAskedToAccept() {
+        let draft = sharedExpense(900, createdBy: creator, shares: [])
+        let shares = ExpenseShareAcceptance.sharesWithAcceptance(
+            calculatedShares: [.init(userId: creator, amountMinor: 900), .init(userId: partner, amountMinor: 0)],
+            expense: draft
+        )
+
+        XCTAssertEqual(shares[1].status, .accepted)
+        XCTAssertNotNil(shares[1].respondedAt)
+        XCTAssertFalse(shares[1].acceptedViaTrust)
+    }
+
+    func testPayerWithZeroShareStillAnswers() {
+        let draft = sharedExpense(900, createdBy: creator, paidBy: partner, shares: [])
+        let shares = ExpenseShareAcceptance.sharesWithAcceptance(
+            calculatedShares: [.init(userId: creator, amountMinor: 900), .init(userId: partner, amountMinor: 0)],
+            expense: draft
+        )
+
+        XCTAssertEqual(shares[1].status, .pending)
+    }
+
+    func testKeptPendingZeroShareIsAccepted() {
+        let previous = sharedExpense(1000, createdBy: creator, shares: [
+            ExpenseShareRecord(userId: creator, amountMinor: 1000),
+            ExpenseShareRecord(userId: partner, amountMinor: 0, status: .pending),
+        ])
+        let rebuilt = [
+            ExpenseShareRecord(userId: creator, amountMinor: 1000),
+            ExpenseShareRecord(userId: partner, amountMinor: 0, status: .accepted),
+        ]
+        let kept = ExpenseShareAcceptance.preservingResponses(rebuilt, from: previous, paidBy: creator, currency: "PLN", forced: [creator])
+        XCTAssertEqual(kept[1].status, .accepted)
+    }
+
     func testRecalculatedSharesKeepTheirIds() {
         let existing = ExpenseShareRecord(userId: partner, amountMinor: 500)
         let expense = sharedExpense(1000, createdBy: creator, shares: [ExpenseShareRecord(userId: creator, amountMinor: 500), existing])
