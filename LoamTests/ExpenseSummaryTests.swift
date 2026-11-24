@@ -287,6 +287,20 @@ final class ExpenseShareAcceptanceTests: XCTestCase {
         XCTAssertEqual(kept[1].status, .accepted)
     }
 
+    func testZeroShareRaisedByAnEditAsksAgain() {
+        let previous = sharedExpense(1000, createdBy: creator, shares: [
+            ExpenseShareRecord(userId: creator, amountMinor: 1000),
+            ExpenseShareRecord(userId: partner, amountMinor: 0, status: .accepted, respondedAt: Date()),
+        ])
+        let rebuilt = ExpenseShareAcceptance.sharesWithAcceptance(
+            calculatedShares: [.init(userId: creator, amountMinor: 500), .init(userId: partner, amountMinor: 500)],
+            expense: previous
+        )
+        let kept = ExpenseShareAcceptance.preservingResponses(rebuilt, from: previous, paidBy: creator, currency: "PLN", forced: [creator])
+        XCTAssertEqual(kept[1].status, .pending)
+        XCTAssertNil(kept[1].respondedAt)
+    }
+
     func testRecalculatedSharesKeepTheirIds() {
         let existing = ExpenseShareRecord(userId: partner, amountMinor: 500)
         let expense = sharedExpense(1000, createdBy: creator, shares: [ExpenseShareRecord(userId: creator, amountMinor: 500), existing])
