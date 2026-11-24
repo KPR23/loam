@@ -30,10 +30,13 @@ end $$;
 select 'ok 1 - a participant who owes 0 is not asked to accept' as result;
 
 select public.save_expense(pg_temp.expense('test.a',500,500),pg_temp.version());
-do $$ begin assert (pg_temp.share_of_b()).status='pending','A non-zero share must still wait for an answer'; end $$;
+do $$ begin
+ assert (pg_temp.share_of_b()).status='pending','Raising an accepted 0 share must ask again';
+ assert (pg_temp.share_of_b()).responded_at is null,'Raised share kept its old response time';
+end $$;
 select public.save_expense(pg_temp.expense('test.a',1000,0),pg_temp.version());
 do $$ begin assert (pg_temp.share_of_b()).status='accepted','Editing a share down to 0 left it pending'; end $$;
-select 'ok 2 - editing a share down to 0 accepts it' as result;
+select 'ok 2 - raising a 0 share asks again, lowering it to 0 accepts it' as result;
 
 select public.save_expense(pg_temp.expense('test.b',1000,0),pg_temp.version());
 do $$ begin assert (pg_temp.share_of_b()).status='pending','The payer must still confirm, even with a 0 share'; end $$;
