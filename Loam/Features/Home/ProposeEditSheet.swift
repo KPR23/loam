@@ -100,8 +100,11 @@ struct ProposeEditSheet: View {
                 .listRowBackground(HomeTheme.surface)
 
                 Section("Details") {
-                    TextField("Title (optional)", text: $formState.title)
-                        .textInputAutocapitalization(.sentences)
+                    LabeledContent("Title") {
+                        TextField("Title", text: $formState.title, prompt: Text("Optional"))
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.sentences)
+                    }
                     // Only the creator's categories can file their expense, so offer the built-in ones and the current one.
                     ExpenseCategoryPicker(
                         category: $formState.category,
@@ -109,8 +112,12 @@ struct ProposeEditSheet: View {
                     )
                     DatePicker("Date", selection: $formState.spentAt, displayedComponents: .date)
                     ExpenseLocationPicker(location: $formState.location)
-                    TextField("Note", text: $formState.note, axis: .vertical)
-                        .lineLimit(2...4)
+                    HStack(alignment: .top, spacing: 16) {
+                        Text("Note")
+                        TextField("Note", text: $formState.note, prompt: Text("Optional"), axis: .vertical)
+                            .multilineTextAlignment(.trailing)
+                            .lineLimit(1...4)
+                    }
                 }
                 .listRowBackground(HomeTheme.surface)
 
