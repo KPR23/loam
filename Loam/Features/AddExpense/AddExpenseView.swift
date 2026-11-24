@@ -263,23 +263,31 @@ struct AddExpenseView: View {
                     ExpenseCategoryPicker(category: $category)
                 }
 
-                TextField("Title (optional)", text: $title)
-                    .textInputAutocapitalization(.sentences)
-                    .focused($titleFocused)
+                LabeledContent("Title") {
+                    TextField("Title", text: $title, prompt: Text("Optional"))
+                        .multilineTextAlignment(.trailing)
+                        .textInputAutocapitalization(.sentences)
+                        .focused($titleFocused)
+                }
 
                 DatePicker("Date", selection: $spentAt, displayedComponents: .date)
 
                 // An existing note stays editable after Pro lapses.
                 if subscriptions.isPro || !note.isEmpty {
-                    TextField("Note (optional)", text: $note, axis: .vertical)
-                        .lineLimit(1...3)
-                        .focused($noteFocused)
+                    // The label sits on the first line, so it stays put while the note wraps.
+                    HStack(alignment: .top, spacing: 16) {
+                        Text("Note")
+                        TextField("Note", text: $note, prompt: Text("Optional"), axis: .vertical)
+                            .multilineTextAlignment(.trailing)
+                            .lineLimit(1...3)
+                            .focused($noteFocused)
+                    }
                 } else {
                     Button { showsPaywall = true } label: {
-                        HStack {
-                            Text("Note (optional)").foregroundStyle(.tertiary)
-                            Spacer()
+                        LabeledContent {
                             ProBadge()
+                        } label: {
+                            Text("Note").foregroundStyle(.primary)
                         }
                     }
                 }

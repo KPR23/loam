@@ -51,7 +51,7 @@ final class LoamUITests: XCTestCase {
         typeAmount("80")
         app.buttons["Add details"].tap()
 
-        let title = app.textFields["Title (optional)"]
+        let title = app.textFields["Title"]
         XCTAssertTrue(title.waitForExistence(timeout: 5))
         title.tap()
         title.typeText("Concert tickets")
