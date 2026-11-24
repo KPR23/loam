@@ -23,7 +23,7 @@ actor SupabaseConnectionRepository: ConnectionRepository {
             guard let row = rows.first else { throw ConnectionError.unavailable }
             return SplitPartnerOption(userId: row.userId, displayName: row.displayName, isPlaceholder: true)
         } catch let error as PostgrestError {
-            if error.message.hasPrefix("People without an account need Loam Pro") { throw ConnectionError.proRequired }
+            if error.message.hasPrefix("People without an account need Loam Pro") { throw ConnectionError.placeholderProRequired }
             throw ConnectionError.rejected(error.message)
         }
     }
@@ -32,7 +32,7 @@ actor SupabaseConnectionRepository: ConnectionRepository {
         do {
             try await client.rpc("rename_placeholder_friend", params: Params(pUserId: userId, pName: name)).execute()
         } catch let error as PostgrestError {
-            if error.message.hasPrefix("People without an account need Loam Pro") { throw ConnectionError.proRequired }
+            if error.message.hasPrefix("People without an account need Loam Pro") { throw ConnectionError.placeholderProRequired }
             throw ConnectionError.rejected(error.message)
         }
     }
@@ -83,12 +83,13 @@ actor SupabaseConnectionRepository: ConnectionRepository {
     }
 }
 
-enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired, rejected(String), settleUpFirst(String)
+enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired, placeholderProRequired, rejected(String), settleUpFirst(String)
     var errorDescription: String? {
         switch self {
         case .unavailable: "That code is unavailable. Check it and try again."
         case .rateLimited: "Too many attempts. Try again in 15 minutes."
         case .proRequired: "Loam Pro is needed to invite more people."
+        case .placeholderProRequired: "People without an account need Loam Pro."
         case let .rejected(message), let .settleUpFirst(message): message
         }
     }

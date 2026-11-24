@@ -461,7 +461,7 @@ private struct PlaceholderFriendPrompt: ViewModifier {
             onCreated(try await connectionStore.createPlaceholder(name: chosen))
             isPresented = false
         }
-        catch ConnectionError.proRequired where subscriptions.isPro {
+        catch ConnectionError.placeholderProRequired where subscriptions.isPro {
             // A fresh purchase can beat RevenueCat's webhook to the backend.
             await subscriptions.syncBackendEntitlement()
             do {
@@ -469,7 +469,7 @@ private struct PlaceholderFriendPrompt: ViewModifier {
                 isPresented = false
             } catch { self.error = UserFacingError.message(for: error) }
         }
-        catch ConnectionError.proRequired { self.error = "Adding people without an account needs Loam Pro." }
+        catch ConnectionError.placeholderProRequired { self.error = "Adding people without an account needs Loam Pro." }
         catch { self.error = UserFacingError.message(for: error) }
     }
 }
@@ -535,7 +535,7 @@ private struct RenamePlaceholderPrompt: ViewModifier {
             try await connectionStore.renamePlaceholder(target, to: chosen)
             friend = nil
         }
-        catch ConnectionError.proRequired where subscriptions.isPro {
+        catch ConnectionError.placeholderProRequired where subscriptions.isPro {
             // A fresh purchase can beat RevenueCat's webhook to the backend.
             await subscriptions.syncBackendEntitlement()
             do {
@@ -543,7 +543,7 @@ private struct RenamePlaceholderPrompt: ViewModifier {
                 friend = nil
             } catch { self.error = UserFacingError.message(for: error) }
         }
-        catch ConnectionError.proRequired { self.error = "Renaming people without an account needs Loam Pro." }
+        catch ConnectionError.placeholderProRequired { self.error = "Renaming people without an account needs Loam Pro." }
         catch { self.error = UserFacingError.message(for: error) }
     }
 }
