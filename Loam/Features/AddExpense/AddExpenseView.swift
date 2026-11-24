@@ -45,6 +45,8 @@ struct AddExpenseView: View {
     @State private var errorMessage: String?
     @State private var isSplitSheetPresented = false
     @State private var showsPaywall = false
+    /// The split sheet's own paywall: `showsPaywall` lives on the view under that sheet, which can't present while it's up.
+    @State private var showsSplitPaywall = false
     /// Drives the amount's entrance each time the Add tab is shown. A sheet brings its own motion, so it starts shown.
     @State private var isShown: Bool
     /// A tab has no dismiss animation of its own, so a saved expense gets a short checkmark before the tab closes.
@@ -607,7 +609,7 @@ struct AddExpenseView: View {
                     currencyCode: currencyCode,
                     recentPartners: recentSplitPartners,
                     requiresPartner: false,
-                    onRequiresPro: { showsPaywall = true },
+                    onRequiresPro: { showsSplitPaywall = true },
                     showsPlaceholderPrompt: $showsPlaceholderPrompt,
                     selectedPartnerUserIds: $selectedPartnerUserIds,
                     splitMode: $splitMode,
@@ -624,6 +626,7 @@ struct AddExpenseView: View {
             .disabled(isSaving)
             .interactiveDismissDisabled(isSaving)
             .navigationTitle("Split expense")
+            .proPaywall(isPresented: $showsSplitPaywall)
             .placeholderFriendPrompt(isPresented: $showsPlaceholderPrompt) { friend in
                 selectedPartnerUserIds.insert(friend.userId)
             }
