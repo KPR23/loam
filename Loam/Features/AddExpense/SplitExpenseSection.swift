@@ -345,7 +345,12 @@ struct SplitExpenseSection: View {
 
                 Spacer(minLength: 0)
 
-                if needsPro(partner) { ProBadge() }
+                // Same marker as Friends. Picking one on Free opens the paywall (see `togglePartner`).
+                if partner.isPlaceholder {
+                    Text("No account")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .contentShape(Rectangle())
         }
