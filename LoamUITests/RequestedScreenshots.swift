@@ -130,6 +130,35 @@ enum RequestedScreens {
             test.app.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "Close"])).firstMatch.tap()
             test.settle(1)
         },
+        "friend-remove": { test in
+            test.tab("Profile").tap()
+            test.settle(1.5)
+            test.openProfileRow("Friends")
+            let row = test.app.cells.containing(NSPredicate(format: "label CONTAINS 'Philip'")).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded friend 'Philip' is missing")
+            row.swipeLeft()
+            test.settle(0.5)
+            test.app.buttons["Remove"].firstMatch.tap()
+            test.settle(1)
+            try test.capture("friend-remove")
+            test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)).tap()
+            test.settle(0.5)
+            test.swipeBack()
+        },
+        "repayment": { test in
+            test.tab("Balances").tap()
+            test.settle(2)
+            let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Philip'")).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded balance with 'Philip' is missing")
+            row.tap()
+            test.settle(1.5)
+            test.app.buttons["Record repayment"].firstMatch.tap()
+            test.settle(2)
+            try test.capture("repayment")
+            test.app.buttons["Cancel"].firstMatch.tap()
+            test.settle(1)
+            test.swipeBack()
+        },
     ]
 }
 

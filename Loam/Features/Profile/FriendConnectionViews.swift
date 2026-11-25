@@ -97,6 +97,20 @@ struct FriendsView: View {
                                 confirmRemoval(of: friend)
                             }
                         }
+                        // On the row, so on iOS 26 the confirmation points at the friend being removed
+                        // rather than floating over the top of the list.
+                        .confirmationDialog(
+                            "Remove \(friend.displayName)?",
+                            isPresented: Binding(
+                                get: { friendPendingRemoval?.id == friend.id },
+                                set: { if !$0, friendPendingRemoval?.id == friend.id { friendPendingRemoval = nil } }
+                            ),
+                            titleVisibility: .visible
+                        ) {
+                            Button("Remove friend", role: .destructive) { remove(friend) }
+                        } message: {
+                            Text(removalMessage)
+                        }
                     }
                 }
             } header: {
@@ -120,24 +134,6 @@ struct FriendsView: View {
         .renamePlaceholderPrompt(friend: $friendBeingRenamed)
         .task { await connectionStore.refresh(userId: authSession.userId) }
         .refreshable { await connectionStore.refresh(userId: authSession.userId) }
-        .confirmationDialog(
-            "Remove \(friendPendingRemoval?.displayName ?? "this friend")?",
-            isPresented: Binding(get: { friendPendingRemoval != nil }, set: { if !$0 { friendPendingRemoval = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("Remove friend", role: .destructive) {
-                guard let friend = friendPendingRemoval else { return }
-                friendPendingRemoval = nil
-                Task {
-                    do {
-                        try await connectionStore.remove(friend)
-                    }
-                    catch { self.error = UserFacingError.message(for: error) }
-                }
-            }
-        } message: {
-            Text(removalMessage)
-        }
         .fileImporter(isPresented: $showsSplitwisePicker, allowedContentTypes: [.commaSeparatedText, .plainText]) { picked in
             do { splitwiseExport = try SplitwiseImportView.readExport(from: picked) }
             catch CocoaError.userCancelled {}
@@ -147,6 +143,15 @@ struct FriendsView: View {
             if let splitwiseExport { SplitwiseImportSheet(export: splitwiseExport) }
         }
         .errorToast($error)
+    }
+
+    private func remove(_ friend: SplitPartnerOption) {
+        friendPendingRemoval = nil
+        Task {
+            do {
+                try await connectionStore.remove(friend)
+            } catch { self.error = UserFacingError.message(for: error) }
+        }
     }
 
     /// Asks first how many expenses removal would decline, so the dialog can say so before anything happens.
