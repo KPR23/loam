@@ -117,6 +117,19 @@ enum RequestedScreens {
             try test.capture("expense-menu")
             test.app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
         },
+        "edit-expense": { test in
+            let row = test.app.buttons.containing(NSPredicate(format: "label CONTAINS 'Weekly shop'")).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 5), "Seeded expense 'Weekly shop' is missing")
+            row.press(forDuration: 1.2)
+            let edit = test.app.buttons["Edit"].firstMatch
+            XCTAssertTrue(edit.waitForExistence(timeout: 5), "Edit menu item is missing")
+            edit.tap()
+            test.settle(1.5)
+            try test.capture("edit-expense")
+            // "Cancel" before iOS 26; the system close button (×, labelled "Close") from iOS 26.
+            test.app.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "Close"])).firstMatch.tap()
+            test.settle(1)
+        },
     ]
 }
 
