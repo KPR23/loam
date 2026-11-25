@@ -142,9 +142,9 @@ struct AddExpenseView: View {
     private var navigationTitle: String {
         switch step {
         case .amount:
-            return isEditing ? "Edit expense" : "Add expense"
+            return isEditing ? String(localized: "Edit expense") : String(localized: "Add expense")
         case .details:
-            return isEditing ? "Edit expense" : "Details"
+            return isEditing ? String(localized: "Edit expense") : String(localized: "Details")
         }
     }
 
@@ -172,7 +172,7 @@ struct AddExpenseView: View {
                                 amountFocused = false
                                 Task { await save() }
                             } label: {
-                                Label("Quick add", systemImage: "checkmark")
+                                Label("Add now", systemImage: "checkmark")
                                     .font(.subheadline.weight(.semibold))
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
@@ -359,11 +359,11 @@ struct AddExpenseView: View {
 
                         if repeatPreset == .custom {
                             Stepper(value: $repeatIntervalCount, in: 1...365, step: 1) {
-                                Text("Every \(repeatIntervalCount)")
+                                Text(repeatInterval.scheduleDescription(intervalCount: repeatIntervalCount))
                             }
                             Picker("Unit", selection: $repeatInterval) {
                                 ForEach(RecurringIntervalUnit.allCases) { unit in
-                                    Text(repeatIntervalCount == 1 ? unit.singularName : unit.pluralName)
+                                    Text(unit.pickerName)
                                         .tag(unit)
                                 }
                             }
@@ -520,11 +520,12 @@ struct AddExpenseView: View {
 
     private var splitSummaryText: String {
         let partners = selectedSplitPartners
-        guard !partners.isEmpty else { return "Not split" }
+        guard !partners.isEmpty else { return String(localized: "Not split") }
         if partners.count == 1, let partner = partners.first {
-            return "With \(partner.displayName)"
+            return String(localized: "With \(partner.displayName)")
         }
-        return "\(partners.count) people"
+        let count = partners.count
+        return String(localized: "\(count) people")
     }
 
     private var splitRowSystemImage: String {
@@ -577,9 +578,11 @@ struct AddExpenseView: View {
     }
 
     private var repeatFooterText: String {
-        var text = "Creates a recurring expense like a subscription. Repeats \(repeatScheduleDescription), starting from the date above."
+        let schedule = repeatScheduleDescription
+        var text = String(localized: "Creates a recurring expense like a subscription. Repeats \(schedule), starting from the date above.")
         if repeatHasEndDate {
-            text += " Ends on \(repeatEndDate.formatted(date: .abbreviated, time: .omitted))."
+            let end = repeatEndDate.formatted(date: .abbreviated, time: .omitted)
+            text += " " + String(localized: "Ends on \(end).")
         }
         return text
     }
@@ -604,7 +607,7 @@ struct AddExpenseView: View {
                 SplitExpenseSection(
                     totalMinor: parsedMoney?.amountMinor ?? 0,
                     myUserId: userId,
-                    myDisplayName: authSession.displayName ?? "You",
+                    myDisplayName: authSession.displayName ?? String(localized: "You"),
                     availablePartners: splitPartners,
                     currencyCode: currencyCode,
                     recentPartners: recentSplitPartners,
@@ -664,7 +667,7 @@ struct AddExpenseView: View {
             return
         }
         guard let money = parsedMoney, money.amountMinor > 0 else {
-            errorMessage = "Enter a valid amount."
+            errorMessage = String(localized: "Enter a valid amount.")
             if !isEditing {
                 step = .amount
                 await focusAmountField()

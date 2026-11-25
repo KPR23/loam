@@ -21,7 +21,7 @@ enum PendingChange: Codable, Hashable, Sendable {
     var title: String {
         switch self {
         case let .saveExpense(expense, _, _), let .deleteExpense(expense, _), let .respondToShare(expense, _): expense.displayTitle
-        case let .repayment(repayment): repayment.note?.isEmpty == false ? repayment.note! : "Repayment"
+        case let .repayment(repayment): repayment.note?.isEmpty == false ? repayment.note! : String(localized: "Repayment")
         }
     }
 }
@@ -53,7 +53,7 @@ enum PendingChangeError: LocalizedError {
     case changedBeforeSync
 
     var errorDescription: String? {
-        "It changed before your answer was sent. Review it again."
+        String(localized: "It changed before your answer was sent. Review it again.")
     }
 }
 
@@ -147,13 +147,13 @@ extension PendingChange {
     static func failureMessage(for change: PendingChange, error: Error) -> String {
         let reason: String
         if isConflict(error) {
-            reason = "It changed on another device."
+            reason = String(localized: "It changed on another device.")
         } else if error.localizedDescription.localizedCaseInsensitiveContains("not found") {
-            reason = "It was deleted."
+            reason = String(localized: "It was deleted.")
         } else {
             reason = error.localizedDescription
         }
-        return "\u{201C}\(change.title)\u{201D} couldn't sync. \(reason)"
+        return String(localized: "\u{201C}\(change.title)\u{201D} couldn't sync. \(reason)")
     }
 
     /// The server rejects a save whose expected version is out of date.
@@ -196,19 +196,19 @@ struct OfflineNotice: Identifiable, Equatable {
 
     // Each notice is new, so a second one restarts the toast's timer.
     static var savedOffline: OfflineNotice {
-        OfflineNotice(kind: .savedOffline, message: "Saved on this device. It will sync when you're back online.")
+        OfflineNotice(kind: .savedOffline, message: String(localized: "Saved on this device. It will sync when you're back online."))
     }
 
     static var willRetry: OfflineNotice {
-        OfflineNotice(kind: .savedOffline, message: "Couldn't reach Loam. Saved on this device and trying again shortly.")
+        OfflineNotice(kind: .savedOffline, message: String(localized: "Couldn't reach Loam. Saved on this device and trying again shortly."))
     }
 
     static var wentOffline: OfflineNotice {
-        OfflineNotice(kind: .wentOffline, message: "You're offline. Changes will sync when you're back online.")
+        OfflineNotice(kind: .wentOffline, message: String(localized: "You're offline. Changes will sync when you're back online."))
     }
 
     static func synced(_ count: Int) -> OfflineNotice {
-        OfflineNotice(kind: .synced, message: count == 1 ? "Back online. Your change is synced." : "Back online. \(count) changes are synced.")
+        OfflineNotice(kind: .synced, message: count == 1 ? String(localized: "Back online. Your change is synced.") : String(localized: "Back online. \(count) changes are synced."))
     }
 
     static func failed(_ message: String) -> OfflineNotice {
@@ -297,7 +297,7 @@ final class OfflineSync: ObservableObject {
             // (a slow create) is retried from the queue, so neither is a failure yet.
             if !isActive(), !Self.shouldRetryLater(error), inFlight[entry.id] != nil {
                 let reason = UserFacingError.message(for: error) ?? UserFacingError.fallback
-                await SyncNotifier.shared.postFailure("\u{201C}\(change.title)\u{201D} wasn't saved. \(reason)", userId: userId)
+                await SyncNotifier.shared.postFailure(String(localized: "\u{201C}\(change.title)\u{201D} wasn't saved. \(reason)"), userId: userId)
             }
             throw error
         }
@@ -409,7 +409,7 @@ final class OfflineSync: ObservableObject {
         }
 
         if let first = failures.first {
-            let message = failures.count == 1 ? first : "\(failures.count) offline changes couldn't sync. \(first)"
+            let message = failures.count == 1 ? first : String(localized: "\(failures.count) offline changes couldn't sync. \(first)")
             notice = .failed(message)
             // A toast is missed while Loam is in the background.
             if !isActive() { await SyncNotifier.shared.postFailure(message, userId: userId) }

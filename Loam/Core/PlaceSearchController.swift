@@ -181,7 +181,7 @@ extension ExpenseLocation {
         let trimmedName = mapItem.name?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedName = (trimmedName?.isEmpty == false ? trimmedName! : nil)
             ?? fallbackTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
-            ?? "Place"
+            ?? String(localized: "Place")
 
         let placemarkBits = [
             mapItem.placemark.subThoroughfare,

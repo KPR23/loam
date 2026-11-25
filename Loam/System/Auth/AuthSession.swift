@@ -177,7 +177,7 @@ final class AuthSession: ObservableObject {
               let tokenData = credential.identityToken,
               let idToken = String(data: tokenData, encoding: .utf8) else {
             LoamErrorCapture.capture("auth.apple_identity_token_unavailable")
-            lastError = "Sign in with Apple didn't finish. Try again."
+            lastError = String(localized: "Sign in with Apple didn't finish. Try again.")
             return
         }
 
@@ -308,12 +308,12 @@ final class AuthSession: ObservableObject {
 
     func deleteAccount(credential: ASAuthorizationAppleIDCredential? = nil) async throws {
         guard userId != nil else {
-            throw NSError(domain: "LoamAccount", code: 1, userInfo: [NSLocalizedDescriptionKey: "No account is signed in."])
+            throw NSError(domain: "LoamAccount", code: 1, userInfo: [NSLocalizedDescriptionKey: String(localized: "No account is signed in.")])
         }
 
         #if DEBUG
         guard !isTestAccountActive else {
-            throw NSError(domain: "LoamAccount", code: 2, userInfo: [NSLocalizedDescriptionKey: "Switch back to your main account before deleting it."])
+            throw NSError(domain: "LoamAccount", code: 2, userInfo: [NSLocalizedDescriptionKey: String(localized: "Switch back to your main account before deleting it.")])
         }
         #endif
 
@@ -332,13 +332,13 @@ final class AuthSession: ObservableObject {
         }
 
         guard let client = SupabaseClientProvider.shared else {
-            throw NSError(domain: "LoamAccount", code: 3, userInfo: [NSLocalizedDescriptionKey: "Account deletion is unavailable right now."])
+            throw NSError(domain: "LoamAccount", code: 3, userInfo: [NSLocalizedDescriptionKey: String(localized: "Account deletion is unavailable right now.")])
         }
 
         guard let credential,
               let identityToken = credential.identityToken.flatMap({ String(data: $0, encoding: .utf8) }),
               let authorizationCode = credential.authorizationCode.flatMap({ String(data: $0, encoding: .utf8) }) else {
-            throw NSError(domain: "LoamAccount", code: 4, userInfo: [NSLocalizedDescriptionKey: "Confirm with Apple before deleting your account."])
+            throw NSError(domain: "LoamAccount", code: 4, userInfo: [NSLocalizedDescriptionKey: String(localized: "Confirm with Apple before deleting your account.")])
         }
         guard let deletingAccountId = userId else { return }
         let receipt = try DeletionReceipt.create(for: deletingAccountId)
@@ -370,7 +370,7 @@ final class AuthSession: ObservableObject {
             // The server may have committed acceptance before the response was
             // lost. Preserve the receipt and reconcile against its status endpoint.
             LoamErrorCapture.capture("account_deletion.response_uncertain")
-            lastError = "Couldn't confirm your deletion request. Check its status before trying again."
+            lastError = String(localized: "Couldn't confirm your deletion request. Check its status before trying again.")
             await refreshDeletionStatus()
             try? await client.auth.signOut(scope: .local)
             forgetOfflineData(for: deletingAccountId)
@@ -405,13 +405,13 @@ final class AuthSession: ObservableObject {
     private static func deletionRejectionMessage(for statusCode: Int) -> String {
         switch statusCode {
         case 400:
-            "Apple couldn’t verify this confirmation. Your account is still active; try the deletion flow again."
+            String(localized: "Apple couldn’t verify this confirmation. Your account is still active; try the deletion flow again.")
         case 401:
-            "Your sign-in expired before the deletion request was accepted. Your account is still active; sign in and try again."
+            String(localized: "Your sign-in expired before the deletion request was accepted. Your account is still active; sign in and try again.")
         case 503:
-            "The deletion service is temporarily unavailable. Your account is still active; try again shortly."
+            String(localized: "The deletion service is temporarily unavailable. Your account is still active; try again shortly.")
         default:
-            "The deletion request wasn’t accepted. Your account is still active; try again."
+            String(localized: "The deletion request wasn’t accepted. Your account is still active; try again.")
         }
     }
 
@@ -700,7 +700,7 @@ private enum DeletionReceipt {
         let value = Value(accountId: accountId, operationId: UUID(), secret: UUID().uuidString + UUID().uuidString, status: .submissionUncertain)
         guard save(value) else {
             LoamErrorCapture.capture("account_deletion.receipt_secure_storage_failed")
-            throw NSError(domain: "LoamAccountDeletion", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not securely save the deletion receipt. No deletion request was sent."])
+            throw NSError(domain: "LoamAccountDeletion", code: 1, userInfo: [NSLocalizedDescriptionKey: String(localized: "Could not securely save the deletion receipt. No deletion request was sent.")])
         }
         return (value.operationId, value.secret)
     }

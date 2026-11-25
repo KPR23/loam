@@ -27,7 +27,7 @@ struct EditProposalReviewCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 if expense.amountMinor != proposal.amountMinor {
                     changeRow(
-                        label: "Amount",
+                        label: String(localized: "Amount"),
                         from: MoneyFormatter.string(from: expense.money),
                         to: MoneyFormatter.string(
                             from: Money(amountMinor: proposal.amountMinor, currencyCode: expense.currency)
@@ -36,49 +36,49 @@ struct EditProposalReviewCard: View {
                 }
                 if proposal.changesCategory(of: expense) {
                     changeRow(
-                        label: "Category",
+                        label: String(localized: "Category"),
                         from: expense.spendCategory.displayName,
                         to: proposal.category.displayName
                     )
                 }
                 if normalizedNote(expense.title) != normalizedNote(proposal.title) {
                     changeRow(
-                        label: "Title",
+                        label: String(localized: "Title"),
                         from: displayNote(expense.title),
                         to: displayNote(proposal.title)
                     )
                 }
                 if expense.spentAt != proposal.spentAt {
                     changeRow(
-                        label: "Date",
+                        label: String(localized: "Date"),
                         from: expense.spentAt.formatted(date: .abbreviated, time: .omitted),
                         to: proposal.spentAt.formatted(date: .abbreviated, time: .omitted)
                     )
                 }
                 if normalizedNote(expense.note) != normalizedNote(proposal.note) {
                     changeRow(
-                        label: "Note",
+                        label: String(localized: "Note"),
                         from: displayNote(expense.note),
                         to: displayNote(proposal.note)
                     )
                 }
                 if expense.location != proposal.location {
                     changeRow(
-                        label: "Location",
-                        from: expense.location?.name ?? "None",
-                        to: proposal.location?.name ?? "None"
+                        label: String(localized: "Location"),
+                        from: expense.location?.name ?? String(localized: "None"),
+                        to: proposal.location?.name ?? String(localized: "None")
                     )
                 }
                 if expense.paidBy != proposal.paidBy {
                     changeRow(
-                        label: "Payer",
+                        label: String(localized: "Payer"),
                         from: name(for: expense.paidBy),
                         to: name(for: proposal.paidBy)
                     )
                 }
                 if !sharesMatch(expense.shares, proposal.shares) {
                     changeRow(
-                        label: "Shares",
+                        label: String(localized: "Shares"),
                         from: sharesSummary(expense.shares, currency: expense.currency),
                         to: sharesSummary(proposal.shares, currency: expense.currency)
                     )
@@ -134,7 +134,7 @@ struct EditProposalReviewCard: View {
     }
 
     private func name(for userId: UUID) -> String {
-        userId == viewerId ? "You" : SplitPartnerOption.displayName(for: userId)
+        userId == viewerId ? String(localized: "You") : SplitPartnerOption.displayName(for: userId)
     }
 
     private func normalizedNote(_ note: String?) -> String {
@@ -143,7 +143,7 @@ struct EditProposalReviewCard: View {
 
     private func displayNote(_ note: String?) -> String {
         let trimmed = normalizedNote(note)
-        return trimmed.isEmpty ? "None" : trimmed
+        return trimmed.isEmpty ? String(localized: "None") : trimmed
     }
 
     private func sharesMatch(_ lhs: [ExpenseShareRecord], _ rhs: [ExpenseShareRecord]) -> Bool {
@@ -163,14 +163,14 @@ struct EditProposalReviewCard: View {
     /// The names of the fields a proposal would change, in display order.
     static func changedFieldLabels(expense: ExpenseRecord, proposal: ExpenseEditProposal) -> [String] {
         var labels: [String] = []
-        if expense.amountMinor != proposal.amountMinor { labels.append("Amount") }
-        if proposal.changesCategory(of: expense) { labels.append("Category") }
-        if normalizedNote(expense.title) != normalizedNote(proposal.title) { labels.append("Title") }
-        if expense.spentAt != proposal.spentAt { labels.append("Date") }
-        if normalizedNote(expense.note) != normalizedNote(proposal.note) { labels.append("Note") }
-        if expense.location != proposal.location { labels.append("Location") }
-        if expense.paidBy != proposal.paidBy { labels.append("Payer") }
-        if !sharesMatch(expense.shares, proposal.shares) { labels.append("Shares") }
+        if expense.amountMinor != proposal.amountMinor { labels.append(String(localized: "Amount")) }
+        if proposal.changesCategory(of: expense) { labels.append(String(localized: "Category")) }
+        if normalizedNote(expense.title) != normalizedNote(proposal.title) { labels.append(String(localized: "Title")) }
+        if expense.spentAt != proposal.spentAt { labels.append(String(localized: "Date")) }
+        if normalizedNote(expense.note) != normalizedNote(proposal.note) { labels.append(String(localized: "Note")) }
+        if expense.location != proposal.location { labels.append(String(localized: "Location")) }
+        if expense.paidBy != proposal.paidBy { labels.append(String(localized: "Payer")) }
+        if !sharesMatch(expense.shares, proposal.shares) { labels.append(String(localized: "Shares")) }
         return labels
     }
 
@@ -247,9 +247,12 @@ struct EditProposalSummaryCard: View {
     private var summary: String {
         let fields = EditProposalReviewCard.changedFieldLabels(expense: expense, proposal: proposal)
         switch fields.count {
-        case 0: return "No changes"
-        case 1: return "\(fields[0]) changed"
-        default: return "\(fields.count) fields changed \u{2022} \(fields.joined(separator: ", "))"
+        case 0: return String(localized: "No changes")
+        case 1: return String(localized: "\(fields[0]) changed")
+        default:
+            let count = fields.count
+            let list = fields.joined(separator: ", ")
+            return String(localized: "\(count) fields changed \u{2022} \(list)")
         }
     }
 }

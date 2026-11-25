@@ -28,7 +28,7 @@ struct ActivityView: View {
                         Section {
                             ForEach(requests) { event in requestRow(event) }
                         } header: {
-                            sectionHeader("Waiting on you")
+                            sectionHeader(String(localized: "Waiting on you"))
                         }
                         .listRowBackground(HomeTheme.surface)
                     }
@@ -117,8 +117,8 @@ struct ActivityView: View {
 
     private var emptyState: some View {
         LoamEmptyState(
-            title: "You’re all caught up",
-            message: "When a friend splits an expense with you, suggests an edit, or records a repayment, it shows up here for you to review. Read items stay in each expense’s history.",
+            title: String(localized: "You’re all caught up"),
+            message: String(localized: "When a friend splits an expense with you, suggests an edit, or records a repayment, it shows up here for you to review. Read items stay in each expense’s history."),
             systemImage: "tray"
         )
         .onAppear { Telemetry.capture(.emptyStateViewed(.activity)) }
@@ -191,7 +191,7 @@ struct ActivityView: View {
         if let fetched = await expenseStore.fetchExpense(id: expenseId, userId: userId) {
             selectedExpense = fetched
         } else {
-            ToastCenter.shared.show(.warning("This expense was deleted or you no longer have access to it."))
+            ToastCenter.shared.show(.warning(String(localized: "This expense was deleted or you no longer have access to it.")))
         }
     }
 
@@ -244,14 +244,14 @@ struct ActivityView: View {
 
     private func open(_ event: ActivityEvent) {
         guard let id = event.expenseId, let userId = authSession.userId else {
-            ToastCenter.shared.show(.warning("This expense is no longer available."))
+            ToastCenter.shared.show(.warning(String(localized: "This expense is no longer available.")))
             return
         }
         Task {
             if let fetched = await expenseStore.fetchExpense(id: id, userId: userId) {
                 selectedExpense = fetched
             } else {
-                ToastCenter.shared.show(.warning("This expense was deleted or you no longer have access to it."))
+                ToastCenter.shared.show(.warning(String(localized: "This expense was deleted or you no longer have access to it.")))
             }
         }
     }
@@ -263,7 +263,7 @@ struct ActivityView: View {
         let showsDate = request != nil && !Calendar.current.isDateInToday(event.occurredAt)
         var parts: [String] = []
         if let request { parts.append(request.title) }
-        if event.kind.isRepayment, event.expenseTitle != "Repayment" { parts.append(event.expenseTitle) }
+        if event.kind.isRepayment, event.expenseTitle != "Repayment", event.expenseTitle != String(localized: "Repayment") { parts.append(event.expenseTitle) }
         parts.append(event.occurredAt.formatted(date: showsDate ? .abbreviated : .omitted, time: .shortened))
         return parts.joined(separator: " · ")
     }
@@ -351,8 +351,8 @@ private enum ActivityRequestKind {
 
     var title: String {
         switch self {
-        case .response: "Needs your response"
-        case .review: "Review suggestion"
+        case .response: String(localized: "Needs your response")
+        case .review: String(localized: "Review suggestion")
         }
     }
 }

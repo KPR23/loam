@@ -8,24 +8,24 @@ enum OnboardingPage: Int, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .welcome: "Know where your money goes"
-        case .month: "Your month at a glance"
-        case .split: "Split bills, skip the math"
-        case .permissions: "Stay in the loop"
+        case .welcome: String(localized: "Know where your money goes")
+        case .month: String(localized: "Your month at a glance")
+        case .split: String(localized: "Split bills, skip the math")
+        case .permissions: String(localized: "Stay in the loop")
         }
     }
 
     var message: String {
         switch self {
-        case .welcome: "Track what you spend and share bills with friends, all in one place."
-        case .month: "Every expense lights up the arc in its category's color."
-        case .split: "Add a shared expense once. Your friend accepts it and Loam keeps the balance."
-        case .permissions: "It's optional. You can change it anytime in Settings."
+        case .welcome: String(localized: "Track what you spend and share bills with friends, all in one place.")
+        case .month: String(localized: "Every expense lights up the arc in its category's color.")
+        case .split: String(localized: "Add a shared expense once. Your friend accepts it and Loam keeps the balance.")
+        case .permissions: String(localized: "It's optional. You can change it anytime in Settings.")
         }
     }
 
     var actionTitle: String {
-        self == .welcome ? "Get started" : "Continue"
+        self == .welcome ? String(localized: "Get started") : String(localized: "Continue")
     }
 
     var next: OnboardingPage? {

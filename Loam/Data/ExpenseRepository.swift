@@ -47,7 +47,7 @@ enum ExpenseRepositoryError: LocalizedError {
         case .conflict: return "Expense changed. Refresh and try again."
         case .notFound: return "Expense not found."
         case .invalidShares: return "Shares must sum to the expense total."
-        case .notSignedIn: return "Sign in to manage expenses."
+        case .notSignedIn: return String(localized: "Sign in to manage expenses.")
         }
     }
 }

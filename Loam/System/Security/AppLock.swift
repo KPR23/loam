@@ -15,7 +15,7 @@ enum DeviceUnlockMethod: Equatable {
         case .faceID: "Face ID"
         case .touchID: "Touch ID"
         case .opticID: "Optic ID"
-        case .passcode, .unavailable: "Passcode"
+        case .passcode, .unavailable: String(localized: "Passcode")
         }
     }
 
@@ -125,7 +125,7 @@ final class AppLock: ObservableObject {
         isAuthenticating = true
         defer { isAuthenticating = false }
         let generation = lockGeneration
-        let result = await authenticator.authenticate(reason: "Unlock Loam")
+        let result = await authenticator.authenticate(reason: String(localized: "Unlock Loam"))
         guard generation == lockGeneration else { return }
         switch result {
         case .success:
@@ -145,7 +145,7 @@ final class AppLock: ObservableObject {
         guard enabled != isEnabled, !isAuthenticating else { return }
         isAuthenticating = true
         defer { isAuthenticating = false }
-        let reason = enabled ? "Turn on the app lock" : "Turn off the app lock"
+        let reason = enabled ? String(localized: "Turn on the app lock") : String(localized: "Turn off the app lock")
         let generation = lockGeneration
         let result = await authenticator.authenticate(reason: reason)
         // The app left mid-prompt and is locked again; the change waits for the owner to come back.

@@ -1,0 +1,40 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSFaceIDUsageDescription" : {
+      "comment" : "Privacy - Face ID Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam uses Face ID to unlock the app when App Lock is on."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam używa Face ID do odblokowania aplikacji, gdy włączona jest blokada aplikacji."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "comment" : "Privacy - Location When In Use Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam uses your location to suggest nearby stores when adding an expense."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam używa Twojej lokalizacji, aby podpowiadać pobliskie sklepy podczas dodawania wydatku."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

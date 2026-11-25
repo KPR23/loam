@@ -72,6 +72,6 @@ enum OfflineError: LocalizedError {
     case requiresConnection
 
     var errorDescription: String? {
-        "You're offline. Try again when you're back online."
+        String(localized: "You're offline. Try again when you're back online.")
     }
 }

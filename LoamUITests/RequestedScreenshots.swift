@@ -6,6 +6,9 @@ import XCTest
 /// starts on the Expenses tab, does whatever setup the screen needs (open a sheet, pull down for search,
 /// long-press a row) and calls `capture`. It should leave the app on a tab screen again.
 enum RequestedScreens {
+    /// Names that run a whole flow of their own instead of one screen, such as `polish`.
+    static let flows = ["polish"]
+
     static let steps: [String: (ScreenshotTestCase) throws -> Void] = [
         "activity": { test in
             test.tab("Activity").tap()
@@ -167,17 +170,49 @@ final class RequestedScreenshots: ScreenshotTestCase {
     func testRequestedScreens() throws {
         let names = Self.requestedNames.filter { $0 != "standard" }
         try XCTSkipIf(names.isEmpty, "No extra screens requested")
-        let unknown = names.filter { RequestedScreens.steps[$0] == nil }
-        XCTAssertTrue(unknown.isEmpty, "Unknown screens \(unknown). Known: \(RequestedScreens.steps.keys.sorted()). Add one in RequestedScreenshots.swift.")
+        let unknown = names.filter { RequestedScreens.steps[$0] == nil && !RequestedScreens.flows.contains($0) }
+        XCTAssertTrue(unknown.isEmpty, "Unknown screens \(unknown). Known: \((Array(RequestedScreens.steps.keys) + RequestedScreens.flows).sorted()). Add one in RequestedScreenshots.swift.")
+        let screens = names.filter { RequestedScreens.steps[$0] != nil }
+        try XCTSkipIf(screens.isEmpty, "Only whole flows were requested")
 
         app.launchArguments.append("-splitwiseSample")
         signIn()
         settle(3)
-        for name in names {
+        for name in screens {
             tab("Expenses").tap()
             settle(1)
             try RequestedScreens.steps[name]?(self)
         }
+    }
+}
+
+/// The main screens in Polish, for a PR that changes copy or translations: `Screenshots: polish`.
+/// Tabs are found by position, since their titles are translated.
+final class PolishScreenshots: ScreenshotTestCase {
+    override static var languageArguments: [String] { ["-AppleLanguages", "(pl)", "-AppleLocale", "pl_PL"] }
+
+    func testPolishScreens() throws {
+        try XCTSkipUnless(Self.requestedNames.contains("polish"), "Polish screens weren't requested")
+        signIn(buttonTitle: "Kontynuuj jako Julia")
+        settle(3)
+        try capture("pl-01-home")
+
+        let addExpense = app.buttons["Dodaj wydatek"].firstMatch
+        if addExpense.waitForExistence(timeout: 5) {
+            addExpense.tap()
+            settle(1.5)
+            try capture("pl-02-add-expense")
+            app.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Anuluj", "Zamknij", "Close"])).firstMatch.tap()
+        }
+
+        for (index, name) in ["pl-03-balances", "pl-04-activity", "pl-05-profile"].enumerated() {
+            app.tabBars.buttons.element(boundBy: index + 1).tap()
+            settle(2)
+            try capture(name)
+        }
+
+        openProfileRow("Ustawienia")
+        try capture("pl-06-settings")
     }
 }
 

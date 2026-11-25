@@ -200,7 +200,7 @@ final class PushNotificationStore: ObservableObject {
             } catch {
                 guard session == current else { return }
                 preferences = savedPreferences
-                lastError = "Couldn't save your notification settings. Try again."
+                lastError = String(localized: "Couldn't save your notification settings. Try again.")
                 return
             }
         }

@@ -164,15 +164,14 @@ struct FriendsView: View {
 
     private var removalMessage: String {
         if friendPendingRemoval?.isPlaceholder == true {
-            return "Anything they owe or are owed is settled, and expenses you already shared stay in your history."
+            return String(localized: "Anything they owe or are owed is settled, and expenses you already shared stay in your history.")
         }
         let waiting = switch pendingShareCount {
-        case 0: "Expenses you already shared stay in your history."
-        case 1: "1 expense between you is still waiting for an answer and will be declined. The rest stay in your history."
-        case let count?: "\(count) expenses between you are still waiting for an answer and will be declined. The rest stay in your history."
-        case nil: "Expenses between you that are still waiting for an answer are declined, and the rest stay in your history."
+        case 0: String(localized: "Expenses you already shared stay in your history.")
+        case let count?: String(localized: "\(count) expenses between you are still waiting for an answer and will be declined. The rest stay in your history.")
+        case nil: String(localized: "Expenses between you that are still waiting for an answer are declined, and the rest stay in your history.")
         }
-        return "You won’t be able to share new expenses until you connect again. " + waiting
+        return String(localized: "You won’t be able to share new expenses until you connect again.") + " " + waiting
     }
 }
 
@@ -239,7 +238,7 @@ struct ShareConnectionCodeView: View {
                 } header: {
                     Text("Your active code")
                 } footer: {
-                    Text("Send this code to someone you trust. They’ll enter it in Loam to connect with you.")
+                    Text("Share this code with a friend you want to connect with. They’ll enter it in Loam.")
                 }
                 .listRowBackground(HomeTheme.surface)
             }
@@ -362,11 +361,11 @@ private struct ConnectionCodePrompt: ViewModifier {
         content
             .sheet(isPresented: $isPresented) {
                 CompactEntrySheet(
-                    title: inviterName.map { "Connect with \($0)?" } ?? "Enter a code",
+                    title: inviterName.map { String(localized: "Connect with \($0)?") } ?? String(localized: "Enter a code"),
                     message: inviterName == nil
-                        ? "Enter the eight-character code your friend shared with you."
-                        : "Connecting allows shared expenses. It does not expose personal expenses or approve splits automatically.",
-                    actionTitle: inviterName == nil ? "Continue" : "Connect",
+                        ? String(localized: "Enter the eight-character code your friend shared with you.")
+                        : String(localized: "Connecting allows shared expenses. It does not expose personal expenses or approve splits automatically."),
+                    actionTitle: inviterName == nil ? String(localized: "Continue") : String(localized: "Connect"),
                     actionDisabled: isWorking || (inviterName == nil && normalizedCode.count < 8),
                     onCancel: { isPresented = false },
                     onAction: { Task { if inviterName == nil { await preview() } else { await redeem() } } }
@@ -397,7 +396,7 @@ private struct ConnectionCodePrompt: ViewModifier {
     }
     private var normalizedCode: String { code.uppercased().filter { $0.isLetter || $0.isNumber } }
     private func preview() async {
-        guard normalizedCode.count == 8 else { error = "Codes are eight characters long. Check it and try again."; return }
+        guard normalizedCode.count == 8 else { error = String(localized: "Codes are eight characters long. Check it and try again."); return }
         isWorking = true; defer { isWorking = false }
         do { inviterName = try await connectionStore.preview(code: normalizedCode) } catch { self.error = UserFacingError.message(for: error) }
     }
@@ -430,9 +429,9 @@ private struct PlaceholderFriendPrompt: ViewModifier {
             // Never shown without Pro, so a free account doesn't see the sheet flash before the paywall.
             .sheet(isPresented: Binding(get: { isPresented && subscriptions.isPro }, set: { if !$0 { isPresented = false } })) {
                 CompactEntrySheet(
-                    title: "Add someone without an account",
-                    message: "They appear in your friends like anyone else, and every expense you split with them is accepted right away.",
-                    actionTitle: "Add",
+                    title: String(localized: "Add someone without an account"),
+                    message: String(localized: "They appear in your friends like anyone else, and every expense you split with them is accepted right away."),
+                    actionTitle: String(localized: "Add"),
                     actionDisabled: trimmedName.isEmpty || isWorking,
                     onCancel: { isPresented = false },
                     onAction: { Task { await create() } }
@@ -476,7 +475,7 @@ private struct PlaceholderFriendPrompt: ViewModifier {
                 isPresented = false
             } catch { self.error = UserFacingError.message(for: error) }
         }
-        catch ConnectionError.placeholderProRequired { self.error = "Adding people without an account needs Loam Pro." }
+        catch ConnectionError.placeholderProRequired { self.error = String(localized: "Adding people without an account needs Loam Pro.") }
         catch { self.error = UserFacingError.message(for: error) }
     }
 }
@@ -500,9 +499,9 @@ private struct RenamePlaceholderPrompt: ViewModifier {
             // Never shown without Pro, so a free account doesn't see the sheet flash before the paywall.
             .sheet(item: Binding(get: { subscriptions.isPro ? friend : nil }, set: { friend = $0 })) { friend in
                 CompactEntrySheet(
-                    title: "Rename \(friend.displayName)",
-                    message: "Only you see this name. It updates everywhere you split with them.",
-                    actionTitle: "Save",
+                    title: String(localized: "Rename \(friend.displayName)"),
+                    message: String(localized: "Only you see this name. It updates everywhere you split with them."),
+                    actionTitle: String(localized: "Save"),
                     actionDisabled: trimmedName.isEmpty || trimmedName == friend.displayName || isWorking,
                     onCancel: { self.friend = nil },
                     onAction: { Task { await save(friend) } }
@@ -550,7 +549,7 @@ private struct RenamePlaceholderPrompt: ViewModifier {
                 friend = nil
             } catch { self.error = UserFacingError.message(for: error) }
         }
-        catch ConnectionError.placeholderProRequired { self.error = "Renaming people without an account needs Loam Pro." }
+        catch ConnectionError.placeholderProRequired { self.error = String(localized: "Renaming people without an account needs Loam Pro.") }
         catch { self.error = UserFacingError.message(for: error) }
     }
 }

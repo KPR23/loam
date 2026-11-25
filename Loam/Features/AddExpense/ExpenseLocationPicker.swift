@@ -17,7 +17,7 @@ struct ExpenseLocationPicker: View {
                         .frame(width: 22, alignment: .center)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(location?.name ?? "Location")
+                        Text(location?.name ?? String(localized: "Location"))
                             .font(.system(.body, design: .rounded))
                             .foregroundStyle(location == nil ? .secondary : .primary)
                             .lineLimit(1)
@@ -128,7 +128,7 @@ private struct PlacePickerSheet: View {
                         && abs($0.longitude - coordinate.longitude) < 0.00001
                 } ?? false
 
-                Annotation(item.name ?? "Place", coordinate: coordinate) {
+                Annotation(item.name ?? String(localized: "Place"), coordinate: coordinate) {
                     Button {
                         search.selectMapItem(item)
                         searchFocused = false

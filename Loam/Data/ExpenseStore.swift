@@ -622,10 +622,10 @@ final class ExpenseStore: ObservableObject {
                     kind: .save(updated),
                     original: originalExpense,
                     index: nil,
-                    failureMessage: "Couldn't save your changes to \u{201C}\(updated.displayTitle)\u{201D}.",
+                    failureMessage: String(localized: "Couldn't save your changes to \u{201C}\(updated.displayTitle)\u{201D}."),
                     persist: persist
                 ),
-                message: "Expense updated",
+                message: String(localized: "Expense updated"),
                 userId: userId
             )
         } else {
@@ -701,13 +701,13 @@ final class ExpenseStore: ObservableObject {
             await delete(id: id, userId: userId, recurringMode: recurringMode)
             return
         }
-        let message = recurringMode == .stopRecurring ? "Expense deleted and stopped repeating" : "Expense deleted"
+        let message = recurringMode == .stopRecurring ? String(localized: "Expense deleted and stopped repeating") : String(localized: "Expense deleted")
         stage(
             StagedChange(
                 kind: .delete,
                 original: expense,
                 index: expenses.firstIndex(where: { $0.id == id }),
-                failureMessage: "Couldn't delete \u{201C}\(expense.displayTitle)\u{201D}.",
+                failureMessage: String(localized: "Couldn't delete \u{201C}\(expense.displayTitle)\u{201D}."),
                 persist: { [self] in
                     do {
                         try await performDelete(expense: expense, id: id, userId: userId, recurringMode: recurringMode)
@@ -755,7 +755,7 @@ final class ExpenseStore: ObservableObject {
             try await primaryRepository.deleteAllCreatedBy(userId)
             await refresh(userId: userId)
             if !expenses.isEmpty {
-                lastError = "Cleared expenses you created. \(expenses.count) shared expense(s) from others remain."
+                lastError = String(localized: "Cleared expenses you created. \(expenses.count) shared expenses from others remain.")
             }
         } catch {
             lastError = UserFacingError.message(for: error)
@@ -862,10 +862,10 @@ final class ExpenseStore: ObservableObject {
                     kind: .save(updated),
                     original: originalExpense,
                     index: nil,
-                    failureMessage: "Couldn't save the split for \u{201C}\(updated.displayTitle)\u{201D}.",
+                    failureMessage: String(localized: "Couldn't save the split for \u{201C}\(updated.displayTitle)\u{201D}."),
                     persist: persist
                 ),
-                message: originalExpense.isShared ? "Split updated" : "Expense split",
+                message: originalExpense.isShared ? String(localized: "Split updated") : String(localized: "Expense split"),
                 userId: userId
             )
         } else {
@@ -950,7 +950,7 @@ final class ExpenseStore: ObservableObject {
             if let failure {
                 let reason = UserFacingError.message(for: failure) ?? UserFacingError.fallback
                 // The sheet is closed by now, so Retry keeps the change instead of losing it.
-                ToastCenter.shared.showError("\(change.failureMessage) \(reason)", action: Toast.Action(title: "Retry") { [weak self] in
+                ToastCenter.shared.showError("\(change.failureMessage) \(reason)", action: Toast.Action(title: String(localized: "Retry")) { [weak self] in
                     guard let self, self.currentUserId == userId, self.stagedChanges[id] == nil else { return }
                     self.retry(change, userId: userId)
                 })
@@ -1035,7 +1035,7 @@ final class ExpenseStore: ObservableObject {
             } catch {
                 // The chosen expenses are still answered; only the older ones can't be found.
                 LoamErrorCapture.capture("expense.pending_lookup_failed")
-                lookupWarning = "Couldn't check for older requests from this person. They are still waiting for your answer."
+                lookupWarning = String(localized: "Couldn't check for older requests from this person. They are still waiting for your answer.")
             }
             var handled = Set(targets.map(\.id))
             for expense in candidates where trustedCreators.contains(expense.createdBy)
@@ -1208,7 +1208,7 @@ final class ExpenseStore: ObservableObject {
         let event = ActivityEvent(
             kind: kind,
             actorId: actorId,
-            actorName: SplitPartnerOption.displayName(for: actorId, fallback: "You"),
+            actorName: SplitPartnerOption.displayName(for: actorId, fallback: String(localized: "You")),
             recipientId: recipients.count == 1 ? recipients[0] : nil,
             recipientName: recipients.count == 1 ? SplitPartnerOption.displayName(for: recipients[0]) : nil,
             recipientNames: recipients.map { SplitPartnerOption.displayName(for: $0) },

@@ -21,7 +21,7 @@ final class AppleDeletionAuthorization: NSObject, ASAuthorizationControllerDeleg
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-            continuation?.resume(throwing: NSError(domain: "LoamAccount", code: 5, userInfo: [NSLocalizedDescriptionKey: "Apple returned an unexpected credential."]))
+            continuation?.resume(throwing: NSError(domain: "LoamAccount", code: 5, userInfo: [NSLocalizedDescriptionKey: String(localized: "Apple returned an unexpected credential.")]))
             continuation = nil
             return
         }

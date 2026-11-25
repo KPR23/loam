@@ -30,16 +30,16 @@ enum ExpenseCategory: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var defaultDisplayName: String {
         switch self {
-        case .groceries: return "Groceries"
-        case .dining: return "Dining"
-        case .transport: return "Transport"
-        case .housing: return "Housing"
-        case .utilities: return "Utilities"
-        case .health: return "Health"
-        case .entertainment: return "Entertainment"
-        case .shopping: return "Shopping"
-        case .travel: return "Travel"
-        case .other: return "Other"
+        case .groceries: return String(localized: "Groceries")
+        case .dining: return String(localized: "Dining")
+        case .transport: return String(localized: "Transport")
+        case .housing: return String(localized: "Housing")
+        case .utilities: return String(localized: "Utilities")
+        case .health: return String(localized: "Health")
+        case .entertainment: return String(localized: "Entertainment")
+        case .shopping: return String(localized: "Shopping")
+        case .travel: return String(localized: "Travel")
+        case .other: return String(localized: "Other")
         }
     }
 

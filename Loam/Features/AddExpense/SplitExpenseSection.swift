@@ -397,7 +397,7 @@ struct SplitExpenseSection: View {
 
     /// Only people with a share count; someone at 0% takes no part of the expense.
     private func peopleCount(_ count: Int) -> String {
-        count == 1 ? "1 person" : "\(count) people"
+        String(localized: "\(count) people")
     }
 
     /// People without an account are a Loam Pro feature. On Free they stay listed (and stay in
@@ -427,8 +427,8 @@ struct SplitExpenseSection: View {
     }
 
     private func displayName(for userId: UUID) -> String {
-        if userId == myUserId { return "You" }
-        return selectedPartners.first(where: { $0.userId == userId })?.displayName ?? "Partner"
+        if userId == myUserId { return String(localized: "You") }
+        return selectedPartners.first(where: { $0.userId == userId })?.displayName ?? String(localized: "Partner")
     }
 
     private var participantIds: [UUID] {
@@ -579,9 +579,9 @@ struct SplitExpenseSection: View {
         participantAmountTexts: [UUID: String]
     ) -> String? {
         if selectedPartnerCount == 0 {
-            return requiresPartner ? "Select at least one person to split with." : nil
+            return requiresPartner ? String(localized: "Select at least one person to split with.") : nil
         }
-        guard totalMinor > 0 else { return "Enter a valid amount." }
+        guard totalMinor > 0 else { return String(localized: "Enter a valid amount.") }
 
         switch splitMode {
         case .equal:
@@ -590,10 +590,10 @@ struct SplitExpenseSection: View {
             let percentages = participantUserIds.compactMap { participantPercentages[$0] }
             guard percentages.count == participantUserIds.count,
                   percentages.allSatisfy({ $0 >= 0 }) else {
-                return "Enter a percentage for every person."
+                return String(localized: "Enter a percentage for every person.")
             }
             guard percentages.reduce(0, +) == 100 else {
-                return "Percentage shares must total 100%."
+                return String(localized: "Percentage shares must total 100%.")
             }
             return nil
         case .exactAmount:
@@ -601,10 +601,10 @@ struct SplitExpenseSection: View {
                 participantAmountTexts[userId].flatMap { Money(majorString: $0)?.amountMinor }
             }
             guard amounts.count == participantUserIds.count else {
-                return "Enter an amount for every person."
+                return String(localized: "Enter an amount for every person.")
             }
             guard amounts.reduce(0, +) == totalMinor else {
-                return "Exact shares must total the expense amount."
+                return String(localized: "Exact shares must total the expense amount.")
             }
             return nil
         }

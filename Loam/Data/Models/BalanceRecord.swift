@@ -9,7 +9,7 @@ struct PersonBalance: Identifiable, Codable, Hashable, Sendable {
 
     var id: String { "\(personId.uuidString)-\(currencyCode.uppercased())" }
     var money: Money { Money(amountMinor: abs(amountMinor), currencyCode: currencyCode) }
-    var direction: String { amountMinor >= 0 ? "Owes you" : "You owe" }
+    var direction: String { amountMinor >= 0 ? String(localized: "Owes you") : String(localized: "You owe") }
 }
 
 /// What someone owes the viewer for expenses the viewer paid that they haven't accepted yet.

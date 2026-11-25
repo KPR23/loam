@@ -12,19 +12,19 @@ enum NotificationCategory: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .requests: "Requests"
-        case .replies: "Replies"
-        case .changes: "Changes"
-        case .repayments: "Repayments"
+        case .requests: String(localized: "Requests")
+        case .replies: String(localized: "Replies")
+        case .changes: String(localized: "Changes")
+        case .repayments: String(localized: "Repayments")
         }
     }
 
     var detail: String {
         switch self {
-        case .requests: "A friend shares an expense with you or suggests changes to one."
-        case .replies: "A friend accepts or declines your expense or your suggested changes."
-        case .changes: "A shared expense is edited or deleted, or you're removed from it."
-        case .repayments: "A friend records or reverses a repayment to you."
+        case .requests: String(localized: "A friend shares an expense with you or suggests changes to one.")
+        case .replies: String(localized: "A friend accepts or declines your expense or your suggested changes.")
+        case .changes: String(localized: "A shared expense is edited or deleted, or you're removed from it.")
+        case .repayments: String(localized: "A friend records or reverses a repayment to you.")
         }
     }
 

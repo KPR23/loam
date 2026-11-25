@@ -206,109 +206,117 @@ enum SiriText {
         let what = title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? category.displayName
         let amount = MoneyFormatter.string(from: money)
         if let friend {
-            return "Added \(amount) for \(what), split equally with \(friend). They'll be asked to accept it."
+            return String(localized: "Added \(amount) for \(what), split equally with \(friend). They'll be asked to accept it.")
         }
-        return "Added \(amount) for \(what)."
+        return String(localized: "Added \(amount) for \(what).")
     }
 
     static func monthlySpending(_ summary: MonthSpendSummary, category: ExpenseCategory?) -> String {
         var text: String
         if let category {
             let amount = summary.categoryBreakdown.first { $0.category == .builtIn(category) }?.amountMinor ?? 0
-            let money = Money(amountMinor: amount, currencyCode: summary.totalMine.currencyCode)
-            text = "You've spent \(MoneyFormatter.string(from: money)) on \(category.displayName) this month."
+            let money = MoneyFormatter.string(from: Money(amountMinor: amount, currencyCode: summary.totalMine.currencyCode))
+            let name = category.displayName
+            text = String(localized: "You've spent \(money) on \(name) this month.")
         } else {
-            text = "You've spent \(MoneyFormatter.string(from: summary.totalMine)) this month"
+            let total = MoneyFormatter.string(from: summary.totalMine)
             if summary.sharedShare.amountMinor > 0 {
-                text += ", including \(MoneyFormatter.string(from: summary.sharedShare)) as your share of split expenses"
+                let share = MoneyFormatter.string(from: summary.sharedShare)
+                text = String(localized: "You've spent \(total) this month, including \(share) as your share of split expenses.")
+            } else {
+                text = String(localized: "You've spent \(total) this month.")
             }
-            text += "."
         }
         if summary.unconvertedCount > 0 {
-            let noun = summary.unconvertedCount == 1 ? "expense" : "expenses"
-            text += " \(summary.unconvertedCount) \(noun) in another currency aren't counted yet."
+            let count = summary.unconvertedCount
+            text += " " + String(localized: "\(count) expenses in another currency aren't counted yet.")
         }
         return text
     }
 
     static func balances(_ snapshot: BalanceSnapshot, friend: LoamFriendEntity?) -> String {
         if let friend {
+            let name = friend.name
             let lines = snapshot.balances
                 .filter { $0.personId == friend.id && $0.amountMinor != 0 }
-                .map { balanceLine($0, name: friend.name) }
-            var text = lines.isEmpty ? "You and \(friend.name) are settled up." : lines.joined(separator: " ")
+                .map { balanceLine($0, name: name) }
+            var text = lines.isEmpty ? String(localized: "You and \(name) are settled up.") : lines.joined(separator: " ")
             let awaiting = snapshot.awaiting(from: friend.id)
             if !awaiting.isEmpty {
-                let amounts = awaiting.map { MoneyFormatter.string(from: $0.money) }.joined(separator: " and ")
-                text += " Another \(amounts) is waiting for \(friend.name) to accept."
+                let amounts = join(awaiting.map(\.money))
+                text += " " + String(localized: "Another \(amounts) is waiting for \(name) to accept.")
             }
             return text
         }
 
         let open = snapshot.balances.filter { $0.amountMinor != 0 }
         // Split expenses friends haven't accepted yet aren't in the balance, but they are still owed.
-        let awaiting = snapshot.awaitingTotals.isEmpty
-            ? nil
-            : "\(join(snapshot.awaitingTotals)) is waiting for friends to accept."
+        let awaiting = snapshot.awaitingTotals.isEmpty ? nil : join(snapshot.awaitingTotals)
         guard !open.isEmpty else {
-            return awaiting.map { "You're settled up, but another \($0)" } ?? "You're all settled up."
+            return awaiting.map { String(localized: "You're settled up, but another \($0) is waiting for friends to accept.") }
+                ?? String(localized: "You're all settled up.")
         }
         let summary: String
+        let owed = join(snapshot.owedToYou)
+        let owe = join(snapshot.youOwe)
         switch (snapshot.owedToYou.isEmpty, snapshot.youOwe.isEmpty) {
-        case (false, false): summary = "You're owed \(join(snapshot.owedToYou)) and you owe \(join(snapshot.youOwe))."
-        case (false, true): summary = "You're owed \(join(snapshot.owedToYou))."
-        default: summary = "You owe \(join(snapshot.youOwe))."
+        case (false, false): summary = String(localized: "You're owed \(owed) and you owe \(owe).")
+        case (false, true): summary = String(localized: "You're owed \(owed).")
+        default: summary = String(localized: "You owe \(owe).")
         }
         let people = open
             .sorted { abs($0.amountMinor) > abs($1.amountMinor) }
             .prefix(5)
             .map { balanceLine($0, name: $0.displayName) }
-        let pending = awaiting.map { ["Another \($0)"] } ?? []
+        let pending = awaiting.map { [String(localized: "Another \($0) is waiting for friends to accept.")] } ?? []
         return ([summary] + people + pending).joined(separator: " ")
     }
 
     static func repaymentPrompt(_ direction: RepaymentDirection, money: Money, friend: String) -> String {
         let amount = MoneyFormatter.string(from: money)
         switch direction {
-        case .iPaidThem: return "Record that you paid \(friend) \(amount)?"
-        case .theyPaidMe: return "Record that \(friend) paid you \(amount)?"
+        case .iPaidThem: return String(localized: "Record that you paid \(friend) \(amount)?")
+        case .theyPaidMe: return String(localized: "Record that \(friend) paid you \(amount)?")
         }
     }
 
     static func repaymentLimit(_ direction: RepaymentDirection, balance: Money, friend: String) -> String {
         let amount = MoneyFormatter.string(from: balance)
         switch direction {
-        case .iPaidThem: return "You only owe \(friend) \(amount). How much did you pay?"
-        case .theyPaidMe: return "\(friend) only owes you \(amount). How much did they pay?"
+        case .iPaidThem: return String(localized: "You only owe \(friend) \(amount). How much did you pay?")
+        case .theyPaidMe: return String(localized: "\(friend) only owes you \(amount). How much did they pay?")
         }
     }
 
     static func repaymentRecorded(_ direction: RepaymentDirection, money: Money, friend: String) -> String {
         let amount = MoneyFormatter.string(from: money)
         switch direction {
-        case .iPaidThem: return "Recorded that you paid \(friend) \(amount)."
-        case .theyPaidMe: return "Recorded that \(friend) paid you \(amount)."
+        case .iPaidThem: return String(localized: "Recorded that you paid \(friend) \(amount).")
+        case .theyPaidMe: return String(localized: "Recorded that \(friend) paid you \(amount).")
         }
     }
 
     static func pendingExpenses(_ expenses: [ExpenseRecord]) -> String {
-        guard !expenses.isEmpty else { return "Nothing is waiting for your answer." }
-        let noun = expenses.count == 1 ? "expense is" : "expenses are"
+        guard !expenses.isEmpty else { return String(localized: "Nothing is waiting for your answer.") }
         var creators: [UUID] = []
         for expense in expenses where !creators.contains(expense.createdBy) {
             creators.append(expense.createdBy)
         }
-        let names = SplitPartnerOption.displayNames(for: creators, fallback: "a friend")
-        return "\(expenses.count) \(noun) waiting for your answer, from \(names). Open Activity in Loam to review them."
+        let names = SplitPartnerOption.displayNames(for: creators, fallback: String(localized: "a friend"))
+        let count = expenses.count
+        return String(localized: "\(count) expenses are waiting for your answer, from \(names). Open Activity in Loam to review them.")
     }
 
     private static func balanceLine(_ balance: PersonBalance, name: String) -> String {
         let amount = MoneyFormatter.string(from: balance.money)
-        return balance.amountMinor > 0 ? "\(name) owes you \(amount)." : "You owe \(name) \(amount)."
+        return balance.amountMinor > 0
+            ? String(localized: "\(name) owes you \(amount).")
+            : String(localized: "You owe \(name) \(amount).")
     }
 
+    /// "15 zł and 3 €", in the app's language.
     private static func join(_ amounts: [Money]) -> String {
-        amounts.map { MoneyFormatter.string(from: $0) }.joined(separator: " and ")
+        amounts.map { MoneyFormatter.string(from: $0) }.formatted(.list(type: .and))
     }
 }
 

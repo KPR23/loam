@@ -66,7 +66,7 @@ struct CategorySettingsView: View {
                             name: category.displayName,
                             symbol: category.systemImage,
                             color: category.color,
-                            detail: CategoryCustomizer.shared.savedStyle(for: category) != nil ? "Customized" : nil
+                            detail: CategoryCustomizer.shared.savedStyle(for: category) != nil ? String(localized: "Customized") : nil
                         )
                     }
                     .swipeActions(edge: .trailing) {
@@ -202,7 +202,7 @@ private struct CustomCategoryEditorView: View {
     var body: some View {
         Form {
             Section {
-                CategoryPreview(name: trimmedName.isEmpty ? "New category" : trimmedName, symbol: symbol, color: Color(hex: colorHex) ?? .gray)
+                CategoryPreview(name: trimmedName.isEmpty ? String(localized: "New category") : trimmedName, symbol: symbol, color: Color(hex: colorHex) ?? .gray)
             }
             .listRowBackground(HomeTheme.surface)
             Section("Name") {
@@ -375,7 +375,7 @@ private struct CategoryColorSection: View {
         Section("Color") {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 6), spacing: 12) {
                 if let defaultColor {
-                    swatch(hex: "", color: defaultColor, label: "Default")
+                    swatch(hex: "", color: defaultColor, label: String(localized: "Default"))
                 }
                 ForEach(CategoryStyleOptions.colors, id: \.hex) { option in
                     swatch(hex: option.hex, color: Color(hex: option.hex) ?? .gray, label: option.name)

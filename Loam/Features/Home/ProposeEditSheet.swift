@@ -125,7 +125,7 @@ struct ProposeEditSheet: View {
                 SplitExpenseSection(
                     totalMinor: Money(majorString: formState.amountText, currencyCode: expense.currency)?.amountMinor ?? 0,
                     myUserId: myUserId,
-                    myDisplayName: authSession.displayName ?? "You",
+                    myDisplayName: authSession.displayName ?? String(localized: "You"),
                     availablePartners: splitPartners,
                     currencyCode: expense.currency,
                     recentPartners: recentSplitPartners,
@@ -185,7 +185,7 @@ struct ProposeEditSheet: View {
     private func submit() async {
         guard !isSaving else { return }
         guard let amountMinor = Money(majorString: formState.amountText, currencyCode: expense.currency)?.amountMinor, amountMinor > 0 else {
-            errorMessage = "Enter a valid amount."
+            errorMessage = String(localized: "Enter a valid amount.")
             return
         }
 
@@ -238,7 +238,7 @@ struct ProposeEditSheet: View {
     private var validationError: String? {
         guard let amountMinor = Money(majorString: formState.amountText, currencyCode: expense.currency)?.amountMinor,
               amountMinor > 0 else {
-            return "Enter a valid amount."
+            return String(localized: "Enter a valid amount.")
         }
         return SplitExpenseSection.validationError(
             totalMinor: amountMinor,

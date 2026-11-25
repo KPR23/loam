@@ -73,7 +73,7 @@ actor LocalBalanceRepository: BalanceRepository {
             entries.append(BalanceHistoryEntry(
                 id: payment.id,
                 kind: payment.isReversed ? .reversal : .repayment,
-                title: payment.note ?? "Repayment",
+                title: payment.note ?? String(localized: "Repayment"),
                 amountMinor: payment.toUserId == userId ? -payment.amountMinor : payment.amountMinor,
                 occurredAt: payment.paidAt,
                 status: nil,

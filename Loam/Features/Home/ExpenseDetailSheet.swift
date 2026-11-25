@@ -380,7 +380,7 @@ struct ExpenseDetailSheet: View {
         return EditProposalReviewCard(
             proposal: proposal,
             expense: expense,
-            proposerName: proposerIsMe ? "You" : SplitPartnerOption.displayName(for: proposal.proposedBy),
+            proposerName: proposerIsMe ? String(localized: "You") : SplitPartnerOption.displayName(for: proposal.proposedBy),
             viewerId: myUserId,
             awaitingReviewFrom: isOwner ? nil : ownerName,
             onAccept: isOwner && !isResponding ? { respond(to: proposal, accept: true) } : nil,
@@ -417,15 +417,16 @@ struct ExpenseDetailSheet: View {
 
     private var statusFooter: String {
         let shares = affectedShares
-        guard !shares.isEmpty else { return "Everyone else's share stays the same." }
+        guard !shares.isEmpty else { return String(localized: "Everyone else's share stays the same.") }
         let accepted = shares.filter { $0.status == .accepted }.count
         let declined = shares.filter { $0.status == .rejected }.count
         let waiting = shares.count - accepted - declined
         var parts: [String] = []
-        if accepted > 0 { parts.append("\(accepted) accepted") }
-        if declined > 0 { parts.append("\(declined) declined") }
-        if waiting > 0 { parts.append("\(waiting) awaiting a response") }
-        return "This change affects \(parts.joined(separator: ", "))."
+        if accepted > 0 { parts.append(String(localized: "\(accepted) accepted")) }
+        if declined > 0 { parts.append(String(localized: "\(declined) declined")) }
+        if waiting > 0 { parts.append(String(localized: "\(waiting) awaiting a response")) }
+        let affected = parts.joined(separator: ", ")
+        return String(localized: "This change affects \(affected).")
     }
 
     @ViewBuilder
@@ -440,7 +441,7 @@ struct ExpenseDetailSheet: View {
         }
     }
 
-    private func responseLabel(_ title: String, systemImage: String, color: Color, compact: Bool = false) -> some View {
+    private func responseLabel(_ title: LocalizedStringKey, systemImage: String, color: Color, compact: Bool = false) -> some View {
         HStack(spacing: 4) {
             Image(systemName: systemImage)
             Text(title)
@@ -540,7 +541,7 @@ struct ExpenseDetailSheet: View {
             return SplitPartnerOption.displayName(for: expense.paidBy)
         }
         return expense.paidBy == myUserId
-            ? "You"
+            ? String(localized: "You")
             : SplitPartnerOption.displayName(for: expense.paidBy)
     }
 
@@ -558,7 +559,7 @@ struct ExpenseDetailSheet: View {
         guard let myUserId else {
             return SplitPartnerOption.displayName(for: userId)
         }
-        return userId == myUserId ? "You" : SplitPartnerOption.displayName(for: userId)
+        return userId == myUserId ? String(localized: "You") : SplitPartnerOption.displayName(for: userId)
     }
 
     private func shareMoney(for share: ExpenseShareRecord) -> Money {
@@ -795,18 +796,18 @@ private struct ExpenseActionsHost: ViewModifier {
         if expense.isShared, let userId = authSession.userId {
             let partnerIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: userId)
             let partnerNames = SplitPartnerOption.displayNames(for: partnerIds)
-            message += "\n\nThis will also remove the expense for \(partnerNames)."
+            message += "\n\n" + String(localized: "This will also remove the expense for \(partnerNames).")
         }
         return message
     }
 
     private func recurringDeleteConfirmationMessage(for expense: ExpenseRecord) -> String {
         var message = "\(expense.displayTitle) · \(MoneyFormatter.string(from: expense.money))"
-        message += "\n\nChoose whether to remove only this month's charge or stop the recurring expense entirely."
+        message += "\n\n" + String(localized: "Choose whether to remove only this month's charge or stop the recurring expense entirely.")
         if expense.isShared, let userId = authSession.userId {
             let partnerIds = SplitPartnerOption.partnerUserIds(in: expense, myUserId: userId)
             let partnerNames = SplitPartnerOption.displayNames(for: partnerIds)
-            message += "\n\nEither option removes this occurrence for \(partnerNames)."
+            message += "\n\n" + String(localized: "Either option removes this occurrence for \(partnerNames).")
         }
         return message
     }

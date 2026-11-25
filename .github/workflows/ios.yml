@@ -38,7 +38,7 @@ jobs:
           # A new branch or a force push has no usable base, so it builds.
           if ! git cat-file -e "$BASE^{commit}" 2>/dev/null \
             || git diff --name-only "$BASE"...HEAD \
-              | grep -qE '^(Loam/|LoamTests/|LoamUITests/|Loam\.xcodeproj/|project\.yml$|\.github/workflows/ios\.yml$)'; then
+              | grep -qE '^(Loam/|LoamTests/|LoamUITests/|Loam\.xcodeproj/|project\.yml$|scripts/check-localizations\.py$|\.github/workflows/ios\.yml$)'; then
             echo app=true >> "$GITHUB_OUTPUT"
           else
             echo app=false >> "$GITHUB_OUTPUT"
@@ -137,6 +137,7 @@ jobs:
 
       # Nothing reads the index on CI, so writing it only slows the compile.
       - name: Build
+        id: build
         if: env.APP_CHANGED == 'true'
         run: |
           set -o pipefail
@@ -174,6 +175,13 @@ jobs:
             -disableAutomaticPackageResolution \
             -collect-test-diagnostics never \
             -resultBundlePath "$RUNNER_TEMP/Loam.xcresult"
+
+      # The build extracts every localizable string into .stringsdata files, so this lists any
+      # sentence the code uses that the String Catalog doesn't have, or that isn't translated yet.
+      # It runs after the tests so a missing translation never hides a test failure.
+      - name: Check localizations
+        if: always() && env.APP_CHANGED == 'true' && steps.build.outcome == 'success'
+        run: python3 scripts/check-localizations.py --stringsdata "$RUNNER_TEMP/DerivedData"
 
       # Diagnostics are off, so the result bundle is what shows why a CI-only failure happened.
       - name: Upload test results

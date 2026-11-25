@@ -121,7 +121,9 @@ private struct ProPaywallView: View {
     /// paywalls that show a trial more prominently than the price billed after it.
     private var yearlyHint: String? {
         guard let annualSavings else { return nil }
-        return isAnnualSelected ? "You save \(annualSavings)% with Yearly" : "Save \(annualSavings)% with Yearly"
+        return isAnnualSelected
+            ? String(localized: "You save \(annualSavings)% with Yearly")
+            : String(localized: "Save \(annualSavings)% with Yearly")
     }
 
     /// The segmented control can't color part of a label, so Yearly's discount sits below it.
@@ -186,7 +188,7 @@ private struct ProPaywallView: View {
             }
             .buttonStyle(LoamPressStyle())
             .disabled(isLoading || isBusy)
-            .accessibilityLabel(isPurchasing ? "Purchasing" : ctaTitle)
+            .accessibilityLabel(isPurchasing ? String(localized: "Purchasing") : ctaTitle)
 
             HStack(spacing: 20) {
                 Button {
@@ -255,36 +257,38 @@ private struct ProPaywallView: View {
     // MARK: Copy
 
     private var ctaTitle: String {
-        guard selected != nil else { return isLoading ? "" : "Try Again" }
-        return selectedTrial == nil ? "Subscribe" : "Start Free Trial"
+        guard selected != nil else { return isLoading ? "" : String(localized: "Try Again") }
+        return selectedTrial == nil ? String(localized: "Subscribe") : String(localized: "Start Free Trial")
     }
 
     /// "99,99 zł/year": what each renewal charges.
     private func billedPrice(_ package: Package) -> String {
         let price = package.storeProduct.localizedPriceString
         guard let period = package.billingPeriod else { return price }
-        return "\(price)/\(period)"
+        return String(localized: "\(price)/\(period)", comment: "A price and how often it's billed, e.g. 99,99 zł/year")
     }
 
     private func billingTerms(_ package: Package) -> String {
         let product = package.storeProduct
         if let trial = selectedTrial {
-            let then = package.billingPeriod.map { "\(product.localizedPriceString)/\($0)" } ?? product.localizedPriceString
-            return "Free for \(trial.durationText.lowercased()), then \(then). Renews until cancelled."
+            let price = product.localizedPriceString
+            let then = package.billingPeriod.map { String(localized: "\(price)/\($0)", comment: "A price and how often it's billed, e.g. 99,99 zł/year") } ?? price
+            let duration = trial.durationText.lowercased()
+            return String(localized: "Free for \(duration), then \(then). Renews until cancelled.")
         }
         switch package.packageType {
         case .monthly:
-            return "Renews monthly until cancelled."
+            return String(localized: "Renews monthly until cancelled.")
         case .annual:
             if let perMonth = product.localizedPricePerMonth {
-                return "Billed yearly, about \(perMonth)/month. Renews until cancelled."
+                return String(localized: "Billed yearly, about \(perMonth)/month. Renews until cancelled.")
             }
-            return "Renews yearly until cancelled."
+            return String(localized: "Renews yearly until cancelled.")
         default:
-            if let period = package.billingPeriod { return "Renews every \(period) until cancelled." }
+            if let period = package.billingPeriod { return String(localized: "Renews every \(period) until cancelled.") }
             return product.productType == .autoRenewableSubscription
-                ? "Renews until cancelled."
-                : "One-time purchase."
+                ? String(localized: "Renews until cancelled.")
+                : String(localized: "One-time purchase.")
         }
     }
 
@@ -340,7 +344,7 @@ private struct ProPaywallView: View {
         } catch {
             if (error as? ErrorCode) == .purchaseCancelledError { return }
             LoamErrorCapture.capture("subscriptions.purchase_failed")
-            ToastCenter.shared.showError(Self.message(for: error, failure: "Purchase didn't go through."))
+            ToastCenter.shared.showError(Self.message(for: error, failure: String(localized: "Purchase didn't go through.")))
         }
     }
 
@@ -356,11 +360,11 @@ private struct ProPaywallView: View {
                 await subscriptions.didUpdate(info)
             } else {
                 await subscriptions.didUpdate(info)
-                ToastCenter.shared.show(.warning("This Apple Account has no Loam Pro purchase."))
+                ToastCenter.shared.show(.warning(String(localized: "This Apple Account has no Loam Pro purchase.")))
             }
         } catch {
             LoamErrorCapture.capture("subscriptions.restore_failed")
-            ToastCenter.shared.showError(Self.message(for: error, failure: "Couldn't restore purchases."))
+            ToastCenter.shared.showError(Self.message(for: error, failure: String(localized: "Couldn't restore purchases.")))
         }
     }
 
@@ -368,13 +372,13 @@ private struct ProPaywallView: View {
     private static func message(for error: Error, failure: String) -> String {
         switch error as? ErrorCode {
         case .networkError?, .offlineConnectionError?: return UserFacingError.offline
-        case .paymentPendingError?: return "Your purchase is waiting for approval."
-        case .productAlreadyPurchasedError?: return "You already have Loam Pro. Try Restore."
-        case .purchaseNotAllowedError?: return "Purchases aren't allowed on this device."
-        case .purchaseInvalidError?, .invalidReceiptError?: return "\(failure) Check your payment method."
-        case .storeProblemError?: return "\(failure) The App Store had a problem. Try again."
-        case .productNotAvailableForPurchaseError?: return "Loam Pro isn't available right now."
-        default: return "\(failure) Try again."
+        case .paymentPendingError?: return String(localized: "Your purchase is waiting for approval.")
+        case .productAlreadyPurchasedError?: return String(localized: "You already have Loam Pro. Try Restore.")
+        case .purchaseNotAllowedError?: return String(localized: "Purchases aren't allowed on this device.")
+        case .purchaseInvalidError?, .invalidReceiptError?: return String(localized: "\(failure) Check your payment method.")
+        case .storeProblemError?: return String(localized: "\(failure) The App Store had a problem. Try again.")
+        case .productNotAvailableForPurchaseError?: return String(localized: "Loam Pro isn't available right now.")
+        default: return String(localized: "\(failure) Try again.")
         }
     }
 }
@@ -594,34 +598,34 @@ private struct ProFeature: Identifiable {
 
     static let all = [
         ProFeature(
-            title: "Personal & shared expenses",
+            title: String(localized: "Personal & shared expenses"),
             free: .included,
             pro: .included,
-            accessibilityLabel: "Personal and shared expenses: included on Free and Pro"
+            accessibilityLabel: String(localized: "Personal and shared expenses: included on Free and Pro")
         ),
         ProFeature(
-            title: "Connections",
+            title: String(localized: "Connections"),
             free: .limit("\(SubscriptionStore.freeConnectionLimit)"),
             pro: .limit("∞"),
-            accessibilityLabel: "Connections: \(SubscriptionStore.freeConnectionLimit) on Free, unlimited on Pro"
+            accessibilityLabel: String(localized: "Connections: \(SubscriptionStore.freeConnectionLimit) on Free, unlimited on Pro")
         ),
         ProFeature(
-            title: "Recurring expenses",
+            title: String(localized: "Recurring expenses"),
             free: .missing,
             pro: .included,
-            accessibilityLabel: "Recurring expenses: Pro only"
+            accessibilityLabel: String(localized: "Recurring expenses: Pro only")
         ),
         ProFeature(
-            title: "Notes on expenses",
+            title: String(localized: "Notes on expenses"),
             free: .missing,
             pro: .included,
-            accessibilityLabel: "Notes on expenses: Pro only"
+            accessibilityLabel: String(localized: "Notes on expenses: Pro only")
         ),
         ProFeature(
-            title: "Custom categories",
+            title: String(localized: "Custom categories"),
             free: .missing,
             pro: .included,
-            accessibilityLabel: "Custom categories: Pro only"
+            accessibilityLabel: String(localized: "Custom categories: Pro only")
         ),
     ]
 }
@@ -629,8 +633,8 @@ private struct ProFeature: Identifiable {
 private extension Package {
     var paywallTitle: String {
         switch packageType {
-        case .monthly: "Monthly"
-        case .annual: "Yearly"
+        case .monthly: String(localized: "plan-monthly", defaultValue: "Monthly", comment: "A plan's name on the paywall's plan switch")
+        case .annual: String(localized: "plan-yearly", defaultValue: "Yearly", comment: "A plan's name on the paywall's plan switch")
         default: storeProduct.localizedTitle
         }
     }
@@ -639,15 +643,14 @@ private extension Package {
     /// Read from the product, since the offering can gain packages without an app update.
     var billingPeriod: String? {
         guard let period = storeProduct.subscriptionPeriod else { return nil }
-        let unit: String
+        let count = period.value
         switch period.unit {
-        case .day: unit = "day"
-        case .week: unit = "week"
-        case .month: unit = "month"
-        case .year: unit = "year"
+        case .day: return String(localized: "billing-period-day \(count)", comment: "How often a plan is billed, after a price and a slash: day, 3 days")
+        case .week: return String(localized: "billing-period-week \(count)", comment: "How often a plan is billed, after a price and a slash: week, 3 weeks")
+        case .month: return String(localized: "billing-period-month \(count)", comment: "How often a plan is billed, after a price and a slash: month, 3 months")
+        case .year: return String(localized: "billing-period-year \(count)", comment: "How often a plan is billed, after a price and a slash: year, 2 years")
         @unknown default: return nil
         }
-        return period.value == 1 ? unit : "\(period.value) \(unit)s"
     }
 }
 
@@ -660,14 +663,12 @@ private extension StoreProductDiscount {
             count /= 7
             unit = .week
         }
-        let name = switch unit {
-        case .day: "Day"
-        case .week: "Week"
-        case .month: "Month"
-        case .year: "Year"
-        @unknown default: "Day"
+        switch unit {
+        case .week: return String(localized: "trial-length-week \(count)", comment: "A free trial's length, in title case for a button: 1 Week, 2 Weeks")
+        case .month: return String(localized: "trial-length-month \(count)", comment: "A free trial's length, in title case for a button: 1 Month, 3 Months")
+        case .year: return String(localized: "trial-length-year \(count)", comment: "A free trial's length, in title case for a button: 1 Year, 2 Years")
+        default: return String(localized: "trial-length-day \(count)", comment: "A free trial's length, in title case for a button: 1 Day, 3 Days")
         }
-        return "\(count) \(name)\(count == 1 ? "" : "s")"
     }
 }
 

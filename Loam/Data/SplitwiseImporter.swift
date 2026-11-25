@@ -32,7 +32,7 @@ final class SplitwiseImporter: ObservableObject {
     ) {
         guard !isRunning else { return }
         finished = nil
-        progress = Progress(done: 0, total: 0, step: "Preparing")
+        progress = Progress(done: 0, total: 0, step: String(localized: "Preparing"))
         Task {
             let message = await run(
                 export: export, meIndex: meIndex, me: me, targets: targets, accountIds: accountIds,
@@ -64,7 +64,7 @@ final class SplitwiseImporter: ObservableObject {
             let plan = SplitwiseImport.plan(export, meIndex: meIndex, me: me, mapping: mapping, pendingUsers: accountIds)
             let expenses = ExpenseRepositoryFactory.make()
 
-            progress = Progress(done: 0, total: 0, step: "Checking what you already have")
+            progress = Progress(done: 0, total: 0, step: String(localized: "Checking what you already have"))
             var existing: [ExpenseRecord] = []
             let months = Set(plan.expenses.map { DatePeriod(from: $0.expense.spentAt).anchorDate })
             for month in months.sorted() {
@@ -80,7 +80,7 @@ final class SplitwiseImporter: ObservableObject {
 
             let balances = BalanceRepositoryFactory.make()
             var created = 0, payments = 0, failedExpenses = 0, failedPayments = 0
-            progress = Progress(done: 0, total: steps.count, step: "Importing")
+            progress = Progress(done: 0, total: steps.count, step: String(localized: "Importing"))
             var lastTick = Date()
             for (index, (_, _, step)) in steps.enumerated() {
                 switch step {
@@ -98,18 +98,20 @@ final class SplitwiseImporter: ObservableObject {
                 }
                 // A redraw per item is wasted work; about ten a second reads as continuous.
                 if Date().timeIntervalSince(lastTick) > 0.1 || index + 1 == steps.count {
-                    progress = Progress(done: index + 1, total: steps.count, step: "Importing")
+                    progress = Progress(done: index + 1, total: steps.count, step: String(localized: "Importing"))
                     lastTick = Date()
                 }
             }
 
-            var message = "Imported \(created) expenses and \(payments) repayments."
-            if duplicates > 0 { message += " Skipped \(duplicates) you already had." }
-            if failedExpenses > 0 { message += " \(failedExpenses) expenses failed; import again to retry them." }
-            if failedPayments > 0 { message += " \(failedPayments) repayments couldn’t be recorded yet. Repayments with friends only work once they accept the expenses; import again afterwards." }
+            var message = String(localized: "Imported \(created) expenses and \(payments) repayments.")
+            if duplicates > 0 { message += " " + String(localized: "Skipped \(duplicates) you already had.") }
+            if failedExpenses > 0 { message += " " + String(localized: "\(failedExpenses) expenses failed; import again to retry them.") }
+            if failedPayments > 0 {
+                message += " " + String(localized: "\(failedPayments) repayments couldn’t be recorded yet. Repayments with friends only work once they accept the expenses; import again afterwards.")
+            }
             return message
         } catch {
-            return "Import stopped: \(UserFacingError.message(for: error)) Nothing was lost; import again to continue."
+            return String(localized: "Import stopped: \(UserFacingError.message(for: error) ?? UserFacingError.fallback) Nothing was lost; import again to continue.")
         }
     }
 }

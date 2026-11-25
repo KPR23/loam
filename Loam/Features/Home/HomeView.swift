@@ -460,8 +460,8 @@ struct HomeView: View {
     private var emptyState: some View {
         if expenseStore.period == .currentMonth {
             LoamEmptyState(
-                title: "No expenses this month yet",
-                message: "Log what you spend and Loam totals your month by category. Split any expense with a friend to keep track of who owes whom.",
+                title: String(localized: "No expenses this month yet"),
+                message: String(localized: "Log what you spend and Loam totals your month by category. Split any expense with a friend to keep track of who owes whom."),
                 systemImage: "creditcard"
             ) {
                 Button {
@@ -476,8 +476,8 @@ struct HomeView: View {
             .onAppear { Telemetry.capture(.emptyStateViewed(.expenses)) }
         } else {
             LoamEmptyState(
-                title: "No expenses in \(expenseStore.period.displayTitle)",
-                message: "Nothing was logged this month. Tap the month at the top to see another one.",
+                title: String(localized: "No expenses in \(expenseStore.period.displayTitle)"),
+                message: String(localized: "Nothing was logged this month. Tap the month at the top to see another one."),
                 systemImage: "calendar"
             )
             .onAppear { Telemetry.capture(.emptyStateViewed(.pastMonth)) }
@@ -536,8 +536,9 @@ struct HomeView: View {
     private var conversionNote: String? {
         let summary = expenseStore.summary
         guard summary.unconvertedCount > 0 else { return nil }
-        let count = summary.unconvertedCount == 1 ? "1 expense" : "\(summary.unconvertedCount) expenses"
-        return "\(count) in another currency \(summary.unconvertedCount == 1 ? "isn't" : "aren't") counted in \(summary.totalMine.currencyCode) totals until exchange rates load."
+        let count = summary.unconvertedCount
+        let currency = summary.totalMine.currencyCode
+        return String(localized: "\(count) expenses in another currency aren't counted in \(currency) totals until exchange rates load.")
     }
 
     private func expenseRow(_ expense: ExpenseRecord) -> some View {

@@ -151,19 +151,20 @@ struct HomeExpenseRow: View {
     private var amountAccessibilityLabel: String {
         var parts: [String] = []
         if showsShareBreakdown {
+            let share = MoneyFormatter.string(from: myShare)
             if let myUserId, expense.paidBy == myUserId {
-                parts.append("Your share \(MoneyFormatter.string(from: myShare)), you paid shared expense")
+                parts.append(String(localized: "Your share \(share), you paid shared expense"))
             } else {
-                parts.append("Your share \(MoneyFormatter.string(from: myShare)), shared expense")
+                parts.append(String(localized: "Your share \(share), shared expense"))
             }
         } else {
             parts.append(MoneyFormatter.string(from: myShare))
         }
         if expense.isRecurring {
-            parts.append("recurring")
+            parts.append(String(localized: "recurring"))
         }
         if isWaitingToSync {
-            parts.append("waiting to sync")
+            parts.append(String(localized: "waiting to sync"))
         }
         return parts.joined(separator: ", ")
     }

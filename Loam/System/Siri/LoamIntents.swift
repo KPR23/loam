@@ -160,7 +160,8 @@ struct SettleUpIntent: AppIntent {
         case .needsAmount:
             throw $amount.needsValueError("How much did you settle with \(friend.name)?")
         case .nothingToSettle:
-            let text = "There's nothing to settle that way. \(SiriText.balances(snapshot, friend: friend))"
+            let balances = SiriText.balances(snapshot, friend: friend)
+            let text = String(localized: "There's nothing to settle that way. \(balances)")
             return .result(dialog: "\(text)")
         case let .exceedsBalance(direction, balance):
             let text = SiriText.repaymentLimit(direction, balance: balance, friend: friend.name)

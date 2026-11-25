@@ -358,18 +358,18 @@ struct PendingExpensesSheet: View {
     private var declineAlertTitle: String {
         switch bulkDeclineTarget {
         case .creator(_, let name):
-            return "Decline all from \(name)?"
+            return String(localized: "Decline all from \(name)?")
         case .all, .none:
-            return "Decline all pending expenses?"
+            return String(localized: "Decline all pending expenses?")
         }
     }
 
     private var declineAlertMessage: String {
         switch bulkDeclineTarget {
         case .creator(_, let name):
-            return "This declines every pending expense added by \(name)."
+            return String(localized: "This declines every pending expense added by \(name).")
         case .all, .none:
-            return "This declines every expense waiting for your approval."
+            return String(localized: "This declines every expense waiting for your approval.")
         }
     }
 }

@@ -37,7 +37,7 @@ enum AppPreferences {
     }
 
     static func timeZoneName(_ identifier: String) -> String {
-        guard !identifier.isEmpty else { return "Device time zone" }
+        guard !identifier.isEmpty else { return String(localized: "Device time zone") }
         return TimeZone(identifier: identifier)?.localizedName(for: .standard, locale: .current) ?? identifier
     }
 }
