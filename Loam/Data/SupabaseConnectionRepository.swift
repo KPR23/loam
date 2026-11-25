@@ -86,10 +86,10 @@ actor SupabaseConnectionRepository: ConnectionRepository {
 enum ConnectionError: LocalizedError { case unavailable, rateLimited, proRequired, placeholderProRequired, rejected(String), settleUpFirst(String)
     var errorDescription: String? {
         switch self {
-        case .unavailable: "That code is unavailable. Check it and try again."
-        case .rateLimited: "Too many attempts. Try again in 15 minutes."
-        case .proRequired: "Loam Pro is needed to invite more people."
-        case .placeholderProRequired: "People without an account need Loam Pro."
+        case .unavailable: String(localized: "That code is unavailable. Check it and try again.")
+        case .rateLimited: String(localized: "Too many attempts. Try again in 15 minutes.")
+        case .proRequired: String(localized: "Loam Pro is needed to invite more people.")
+        case .placeholderProRequired: String(localized: "People without an account need Loam Pro.")
         case let .rejected(message), let .settleUpFirst(message): message
         }
     }

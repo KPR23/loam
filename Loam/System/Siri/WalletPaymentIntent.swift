@@ -70,7 +70,7 @@ struct LogWalletPaymentIntent: AppIntent {
             )
         } catch let LoamIntentError.unsupportedCurrency(code) {
             let text = WalletPaymentText.unsupportedCurrency(code)
-            await notifier.postProblem(title: merchant ?? "Apple Pay payment", body: text, userId: userId)
+            await notifier.postProblem(title: merchant ?? String(localized: "Apple Pay payment"), body: text, userId: userId)
             return .result(dialog: "\(text)")
         } catch {
             // Wallet sometimes sends an empty amount; don't lose the payment, ask for it.

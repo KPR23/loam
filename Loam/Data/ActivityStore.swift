@@ -11,7 +11,7 @@ final class ActivityStore: ObservableObject {
         didSet {
             guard let lastError else { return }
             let userId = accountId
-            ToastCenter.shared.showError(lastError, action: Toast.Action(title: "Retry") { [weak self] in
+            ToastCenter.shared.showError(lastError, action: Toast.Action(title: String(localized: "Retry")) { [weak self] in
                 Task { await self?.refresh(userId: userId) }
             })
         }

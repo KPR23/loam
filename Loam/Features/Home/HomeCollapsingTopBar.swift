@@ -9,6 +9,10 @@ struct HomeCollapsingTopBar: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// About the widest a principal item can be and stay centered between the edge and the
+    /// two trailing buttons on a 393pt-wide iPhone.
+    static let maxCenteredWidth: CGFloat = 130
+
     var body: some View {
         ZStack {
             monthTitle
@@ -23,7 +27,11 @@ struct HomeCollapsingTopBar: View {
                 .offset(y: isCollapsed ? 0 : 6)
                 .accessibilityHidden(!isCollapsed)
         }
-        .frame(maxWidth: .infinity)
+        // The bar centers this only while it clears the calendar and search buttons on both sides;
+        // anything wider gets pushed left. Its width is the wider of the title and the (hidden)
+        // amount, so cap it, and both scale down to fit. "November 2026" plus a large amount
+        // overflowed on a 393pt iPhone without this, while "Listopad 2026" still fit.
+        .frame(maxWidth: Self.maxCenteredWidth)
         .frame(height: 44)
     }
 
@@ -33,7 +41,7 @@ struct HomeCollapsingTopBar: View {
             .fontWeight(.semibold)
             .foregroundStyle(HomeTheme.text)
             .lineLimit(1)
-            .minimumScaleFactor(0.85)
+            .minimumScaleFactor(0.7)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -138,7 +146,9 @@ struct MonthPickerSheet: View {
         let calendar = Calendar.current
         let currentYear = calendar.component(.year, from: Date())
         years = Array((currentYear - 20)...currentYear)
-        monthNames = calendar.monthSymbols
+        // Standalone names, which some languages inflect differently than in a date
+        // ("listopad", not "listopada"), capitalized because they start a wheel row.
+        monthNames = calendar.standaloneMonthSymbols.map { $0.prefix(1).uppercased() + $0.dropFirst() }
 
         switch period {
         case let .month(year, month):

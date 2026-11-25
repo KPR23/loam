@@ -104,18 +104,19 @@ enum DatePeriod: Equatable {
     }
 
     var displayTitle: String {
-        switch self {
-        case let .month(year, month):
-            var components = DateComponents()
-            components.year = year
-            components.month = month
-            components.day = 1
-            let date = AppPreferences.calendar.date(from: components) ?? Date()
-            let formatter = DateFormatter()
-            formatter.timeZone = AppPreferences.timeZone
-            formatter.dateFormat = "MMMM yyyy"
-            return formatter.string(from: date)
-        }
+        Self.monthTitle(for: anchorDate)
+    }
+
+    /// A month and year as a title, such as "November 2026" or "Listopad 2026".
+    static func monthTitle(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeZone = AppPreferences.timeZone
+        // A template, not a fixed format, so each language gets its own order and its
+        // standalone month name ("listopad 2026", not "listopada 2026"). Languages that write
+        // month names in lowercase still start the title with a capital: "Listopad 2026".
+        formatter.setLocalizedDateFormatFromTemplate("MMMMyyyy")
+        let title = formatter.string(from: date)
+        return title.prefix(1).uppercased(with: .current) + title.dropFirst()
     }
 
     /// Inclusive start / exclusive end as calendar dates (YYYY-MM-DD semantics).
@@ -148,12 +149,14 @@ enum DaySectionTitle {
 
         let prefix: String
         if calendar.isDateInToday(date) {
-            prefix = "Today"
+            prefix = String(localized: "Today")
         } else if calendar.isDateInYesterday(date) {
-            prefix = "Yesterday"
+            prefix = String(localized: "Yesterday")
         } else {
-            prefix = date.formatted(style.weekday(.wide))
+            // Some languages write weekdays in lowercase; this one starts a title.
+            let weekday = date.formatted(style.weekday(.wide))
+            prefix = weekday.prefix(1).uppercased() + weekday.dropFirst()
         }
-        return "\(prefix), \(dayMonth)"
+        return String(localized: "\(prefix), \(dayMonth)", comment: "Day section title: a day name, then the date")
     }
 }

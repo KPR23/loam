@@ -84,7 +84,7 @@ struct SplitExpenseSheet: View {
                 SplitExpenseSection(
                     totalMinor: expense.amountMinor,
                     myUserId: myUserId,
-                    myDisplayName: authSession.displayName ?? "You",
+                    myDisplayName: authSession.displayName ?? String(localized: "You"),
                     availablePartners: splitPartners,
                     currencyCode: expense.currency,
                     recentPartners: recentSplitPartners,

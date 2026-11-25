@@ -108,7 +108,7 @@ final class SyncNotifier {
     func postFailure(_ message: String, userId: UUID) async {
         // A change from an account that has since signed out isn't this person's to hear about.
         guard AppServices.shared.authSession.userId == userId, await canNotify() else { return }
-        let content = makeContent(category: Category.failed, title: "A change couldn't sync", body: message, userId: userId)
+        let content = makeContent(category: Category.failed, title: String(localized: "A change couldn't sync"), body: message, userId: userId)
         try? await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
@@ -118,9 +118,9 @@ final class SyncNotifier {
         // Loam came back on screen meanwhile; it shows what's waiting itself.
         guard UIApplication.shared.applicationState == .background else { return }
         let body = count <= 1
-            ? "Your change is saved on this iPhone and will sync on its own. Open Loam to sync it now."
-            : "\(count) changes are saved on this iPhone and will sync on their own. Open Loam to sync them now."
-        let content = makeContent(category: Category.waiting, title: "Not synced yet", body: body, userId: userId)
+            ? String(localized: "Your change is saved on this iPhone and will sync on its own. Open Loam to sync it now.")
+            : String(localized: "\(count) changes are saved on this iPhone and will sync on their own. Open Loam to sync them now.")
+        let content = makeContent(category: Category.waiting, title: String(localized: "Not synced yet"), body: body, userId: userId)
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: Self.reminderDelay, repeats: false)
         // The same id replaces an earlier reminder, so there is only ever one.
         try? await center.add(UNNotificationRequest(identifier: Self.waitingId, content: content, trigger: trigger))

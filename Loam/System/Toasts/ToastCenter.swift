@@ -50,7 +50,7 @@ struct Toast: Identifiable {
         Toast(
             style: .success,
             message: message,
-            action: Action(title: "Undo", perform: undo),
+            action: Action(title: String(localized: "Undo"), perform: undo),
             duration: undoDuration,
             onExpire: commit
         )
@@ -137,7 +137,7 @@ final class ToastCenter: ObservableObject {
 
     private func announcement(for toast: Toast) -> String {
         guard let action = toast.action else { return toast.message }
-        return "\(toast.message) \(action.title) is available."
+        return String(localized: "\(toast.message) \(action.title) is available.")
     }
 }
 

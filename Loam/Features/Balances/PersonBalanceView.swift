@@ -151,7 +151,7 @@ struct PersonBalanceView: View {
             .listRowBackground(HomeTheme.surface)
         } else if let loadError, history.isEmpty {
             Section {
-                LoamEmptyState(title: "Couldn’t load history", message: loadError, systemImage: "exclamationmark.triangle") {
+                LoamEmptyState(title: String(localized: "Couldn’t load history"), message: loadError, systemImage: "exclamationmark.triangle") {
                     Button {
                         Task { await loadHistory() }
                     } label: {
@@ -164,8 +164,8 @@ struct PersonBalanceView: View {
         } else if history.isEmpty {
             Section {
                 LoamEmptyState(
-                    title: "Nothing shared yet",
-                    message: "Expenses you split with \(person.displayName) and repayments between you will show up here.",
+                    title: String(localized: "Nothing shared yet"),
+                    message: String(localized: "Expenses you split with \(person.displayName) and repayments between you will show up here."),
                     systemImage: "clock.arrow.circlepath"
                 )
             }
@@ -177,7 +177,7 @@ struct PersonBalanceView: View {
                         BalanceHistoryRow(entry: entry)
                     }
                 } header: {
-                    Text(group.month.formatted(.dateTime.month(.wide).year()))
+                    Text(DatePeriod.monthTitle(for: group.month))
                         .font(.subheadline.weight(.semibold))
                         .textCase(nil)
                 }
@@ -265,7 +265,7 @@ private struct BalanceHistoryRow: View {
                     .monospacedDigit()
                     .strikethrough(!counts)
                     .foregroundStyle(counts ? HomeTheme.text : HomeTheme.tertiary)
-                    .accessibilityLabel(entry.currencyCode == nil ? "\(amountText), currency unavailable" : amountText)
+                    .accessibilityLabel(entry.currencyCode == nil ? String(localized: "\(amountText), currency unavailable") : amountText)
                 Text(status)
                     .font(.system(.caption, design: .rounded).weight(.medium))
                     .foregroundStyle(statusColor)
@@ -293,14 +293,14 @@ private struct BalanceHistoryRow: View {
         switch entry.kind {
         case .purchase:
             switch entry.purchaseStatus {
-            case .pending: return "Awaiting"
-            case .rejected: return "Declined"
-            default: return entry.amountMinor > 0 ? "You lent" : "You borrowed"
+            case .pending: return String(localized: "Awaiting")
+            case .rejected: return String(localized: "Declined")
+            default: return entry.amountMinor > 0 ? String(localized: "You lent") : String(localized: "You borrowed")
             }
         case .repayment:
-            return entry.amountMinor > 0 ? "You paid" : "Paid you"
+            return entry.amountMinor > 0 ? String(localized: "You paid") : String(localized: "Paid you")
         case .reversal:
-            return "Reversed"
+            return String(localized: "Reversed")
         }
     }
 

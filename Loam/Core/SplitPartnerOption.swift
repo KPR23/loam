@@ -88,7 +88,7 @@ struct SplitPartnerOption: Identifiable, Equatable, Hashable, Codable, Sendable 
         return ordered
     }
 
-    static func displayName(for userId: UUID, fallback: String = "Partner") -> String {
+    static func displayName(for userId: UUID, fallback: String = String(localized: "Partner")) -> String {
         if let name = ConnectionDirectory.shared.name(for: userId) { return name }
         #if DEBUG
         if let account = TestAccount.configured.first(where: { $0.userId == userId }) {
@@ -98,16 +98,11 @@ struct SplitPartnerOption: Identifiable, Equatable, Hashable, Codable, Sendable 
         return fallback
     }
 
-    static func displayNames(for userIds: some Sequence<UUID>, fallback: String = "Partner") -> String {
+    static func displayNames(for userIds: some Sequence<UUID>, fallback: String = String(localized: "Partner")) -> String {
         let names = userIds.map { displayName(for: $0, fallback: fallback) }
-        switch names.count {
-        case 0: return fallback
-        case 1: return names[0]
-        case 2: return "\(names[0]) and \(names[1])"
-        default:
-            let head = names.dropLast().joined(separator: ", ")
-            return "\(head), and \(names.last!)"
-        }
+        guard !names.isEmpty else { return fallback }
+        // "Anna, Bob, and Carol" in English, "Anna, Bob i Carol" in Polish.
+        return names.formatted(.list(type: .and))
     }
 
 }

@@ -81,10 +81,10 @@ struct RepaymentSheet: View {
                         .padding(.bottom, 16)
                 } else {
                     LoamEmptyState(
-                        title: balances.isEmpty ? "Nothing left to settle" : "That balance changed",
+                        title: balances.isEmpty ? String(localized: "Nothing left to settle") : String(localized: "That balance changed"),
                         message: balances.isEmpty
-                            ? "Nobody owes anything right now."
-                            : "It was settled or updated while you were away. Choose who it was with.",
+                            ? String(localized: "Nobody owes anything right now.")
+                            : String(localized: "It was settled or updated while you were away. Choose who it was with."),
                         systemImage: "checkmark.circle"
                     ) {
                         if !balances.isEmpty {
@@ -189,7 +189,9 @@ struct RepaymentSheet: View {
             } label: {
                 label()
             }
-            .accessibilityLabel("\(isReceiving ? "Received from" : "Paying") \(target.displayName)")
+            .accessibilityLabel(isReceiving
+                ? String(localized: "Received from \(target.displayName)")
+                : String(localized: "Paying \(target.displayName)"))
             .accessibilityHint("Choose who the repayment was with")
         } else {
             label()

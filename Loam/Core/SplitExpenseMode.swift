@@ -9,9 +9,9 @@ enum SplitExpenseMode: String, CaseIterable, Identifiable, Sendable {
 
     var displayName: String {
         switch self {
-        case .equal: "Split equally"
-        case .percentage: "By percentage"
-        case .exactAmount: "By exact amount"
+        case .equal: String(localized: "Split equally")
+        case .percentage: String(localized: "By percentage")
+        case .exactAmount: String(localized: "By exact amount")
         }
     }
 

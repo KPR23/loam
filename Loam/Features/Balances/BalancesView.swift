@@ -67,8 +67,8 @@ struct BalancesView: View {
                         }
                     }
 
-                    peopleSection("Owed to you", balances: credits)
-                    peopleSection("You owe", balances: debts)
+                    peopleSection(String(localized: "Owed to you"), balances: credits)
+                    peopleSection(String(localized: "You owe"), balances: debts)
 
                     if !settledPeople.isEmpty {
                         Section {
@@ -77,7 +77,7 @@ struct BalancesView: View {
                                     BalancePersonRow(
                                         personId: person.userId,
                                         name: person.displayName,
-                                        caption: "Settled up",
+                                        caption: String(localized: "Settled up"),
                                         captionColor: HomeTheme.tertiary,
                                         awaitingNote: awaitingNote(for: person.userId)
                                     ) {
@@ -86,7 +86,7 @@ struct BalancesView: View {
                                 }
                             }
                         } header: {
-                            sectionHeader("Settled up")
+                            sectionHeader(String(localized: "Settled up"))
                         }
                         .listRowBackground(HomeTheme.surface)
                     }
@@ -191,7 +191,7 @@ struct BalancesView: View {
         }
         guard !awaiting.isEmpty else { return nil }
         let amounts = awaiting.map { MoneyFormatter.string(from: $0.money) }.joined(separator: " + ")
-        return "\(amounts) awaiting acceptance"
+        return String(localized: "\(amounts) awaiting acceptance")
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -202,8 +202,8 @@ struct BalancesView: View {
 
     private var emptyState: some View {
         LoamEmptyState(
-            title: "No balances yet",
-            message: "Connect with a friend using a code, then split an expense with them. Once they accept it, who owes whom shows up here.",
+            title: String(localized: "No balances yet"),
+            message: String(localized: "Connect with a friend using a code, then split an expense with them. Once they accept it, who owes whom shows up here."),
             systemImage: "person.2"
         ) {
             Button {
@@ -302,16 +302,17 @@ private struct BalancesHero: View {
     }
 
     private func netTitle(_ netMinor: Int) -> String {
-        if netMinor > 0 { return "You’re owed overall" }
-        if netMinor < 0 { return "You owe overall" }
-        return "You’re even overall"
+        if netMinor > 0 { return String(localized: "You’re owed overall") }
+        if netMinor < 0 { return String(localized: "You owe overall") }
+        return String(localized: "You’re even overall")
     }
 
     private func otherCurrencies(_ others: [CurrencyPosition]) -> some View {
         HStack(spacing: 8) {
             ForEach(others) { position in
                 let money = Money(amountMinor: abs(position.netMinor), currencyCode: position.currencyCode)
-                Text("\(position.netMinor < 0 ? "You owe" : "Owed") \(MoneyFormatter.string(from: money))")
+                let amount = MoneyFormatter.string(from: money)
+                Text(position.netMinor < 0 ? "You owe \(amount)" : "Owed \(amount)")
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(BalanceTone.color(for: position.netMinor))

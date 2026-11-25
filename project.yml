@@ -5,12 +5,17 @@ options:
     iOS: "17.0"
   xcodeVersion: "16.0"
   createIntermediateGroups: true
+  developmentLanguage: en
   groupSortPosition: top
 settings:
   base:
     SWIFT_VERSION: "5.0"
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_CFBundleDisplayName: Loam
+    # Strings live in Loam/Resources/*.xcstrings. Xcode adds each new string to the catalog
+    # when it builds, and scripts/check-localizations.py fails CI on any left untranslated.
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
     MARKETING_VERSION: "1.2.0"
     CURRENT_PROJECT_VERSION: "7"
     DEVELOPMENT_TEAM: XXJA67J9AN

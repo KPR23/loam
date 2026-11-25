@@ -215,7 +215,7 @@ struct MainTabView: View {
     /// alone; earlier systems draw no bar background, so titles stay.
     @available(iOS 18.0, *)
     @ViewBuilder
-    private func tabLabel(_ title: String, systemImage: String) -> some View {
+    private func tabLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
         if #available(iOS 26.0, *) {
             Label(title, systemImage: systemImage)
                 .labelStyle(.iconOnly)

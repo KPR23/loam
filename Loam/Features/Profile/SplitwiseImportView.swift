@@ -80,7 +80,7 @@ struct SplitwiseImportView: View {
                         ForEach(involved, id: \.self) { column in
                             Picker(export.people[column], selection: binding(for: column, export: export)) {
                                 Text("Add as new person").tag(Target.new)
-                                ForEach(friends) { Text($0.isPlaceholder ? $0.displayName : "\($0.displayName) (friend)").tag(Target.existing($0.userId)) }
+                                ForEach(friends) { Text($0.isPlaceholder ? $0.displayName : String(localized: "\($0.displayName) (friend)")).tag(Target.existing($0.userId)) }
                             }
                         }
                     } header: {

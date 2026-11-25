@@ -7,6 +7,9 @@ import Foundation
 /// Each export row holds the net balance of every person (paid − owed). Loam keeps a single
 /// payer per expense, so a row is importable when exactly one person paid.
 enum SplitwiseImport {
+    /// Stored on each imported expense and seen by friends in their own language, so it stays English.
+    static let importNote = "Imported from Splitwise"
+
     struct Row: Equatable, Sendable {
         var index: Int
         /// Position among earlier rows with the same date, text, amounts and balances.
@@ -38,8 +41,8 @@ enum SplitwiseImport {
 
         var errorDescription: String? {
             switch self {
-            case .notSplitwise: return "This doesn’t look like a Splitwise export. Export your group as a spreadsheet (CSV) and try again."
-            case .noRows: return "No expenses found in this file."
+            case .notSplitwise: return String(localized: "This doesn’t look like a Splitwise export. Export your group as a spreadsheet (CSV) and try again.")
+            case .noRows: return String(localized: "No expenses found in this file.")
             }
         }
     }
@@ -261,7 +264,7 @@ enum SplitwiseImport {
                     isReceived: recipientColumn == meIndex,
                     amountMinor: row.costMinor,
                     currency: row.currency.isEmpty ? AppPreferences.defaultCurrencyCode : row.currency,
-                    note: "Imported from Splitwise",
+                    note: Self.importNote,
                     date: row.date
                 ))
                 continue
@@ -287,7 +290,7 @@ enum SplitwiseImport {
                 currency: row.currency.isEmpty ? AppPreferences.defaultCurrencyCode : row.currency,
                 category: mapCategory(row.category),
                 title: row.description.isEmpty ? nil : row.description,
-                note: "Imported from Splitwise",
+                note: Self.importNote,
                 spentAt: row.date,
                 paidBy: payerId,
                 createdBy: me,

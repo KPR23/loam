@@ -25,6 +25,8 @@
 		104F31D5F05457A0D33CB546 /* SyncNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6320A6C4B5842E8D053CD161 /* SyncNotifier.swift */; };
 		126EF1AD57B79B77088CF0D9 /* ExchangeRates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98702872EF571671E266B171 /* ExchangeRates.swift */; };
 		127F94D887AFE6D6CC9C4A23 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 506247FF8FC45BE14B15B178 /* PrivacyInfo.xcprivacy */; };
+		A1C0FFEE0000000000000102 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000101 /* Localizable.xcstrings */; };
+		A1C0FFEE0000000000000104 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000103 /* InfoPlist.xcstrings */; };
 		12911FE1A942CD0E6D411A6E /* PendingExpenseActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE4652F8B86C0207F5C6079E /* PendingExpenseActions.swift */; };
 		1423F9D1B80E8BA997D419E8 /* MoneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0704D45C9ECCF37BB8E48B /* MoneyTests.swift */; };
 		16FE4CEDBA2F073370C476C9 /* LocalActivityRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACAD5F32C6AA82B9023FCEF /* LocalActivityRepository.swift */; };
@@ -253,6 +255,8 @@
 		4EA6A778794AE887AAF81BA6 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		4F4BD07622490320E4F0F158 /* ProPaywall.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProPaywall.swift; sourceTree = "<group>"; };
 		506247FF8FC45BE14B15B178 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000101 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000103 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		54E27DC7E441F9167DCEB57D /* PendingExpensesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingExpensesSheet.swift; sourceTree = "<group>"; };
 		5607AF86E6B5DA32B91136B6 /* TestPartner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPartner.swift; sourceTree = "<group>"; };
 		5614B3035CE6B96ADF47AE16 /* RepaymentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepaymentSheet.swift; sourceTree = "<group>"; };
@@ -540,6 +544,8 @@
 				A1C0FFEE0000000000000003 /* AppIcon-Dev.icon */,
 				A1C0FFEE0000000000000001 /* AppIcon-RC.icon */,
 				D1AB0D6B9B8D67FFFE420B7B /* Assets.xcassets */,
+				A1C0FFEE0000000000000103 /* InfoPlist.xcstrings */,
+				A1C0FFEE0000000000000101 /* Localizable.xcstrings */,
 				506247FF8FC45BE14B15B178 /* PrivacyInfo.xcprivacy */,
 			);
 			path = Resources;
@@ -897,6 +903,7 @@
 			knownRegions = (
 				Base,
 				en,
+				pl,
 			);
 			mainGroup = 58B2FDCD8D3B991C33456F31;
 			minimizedProjectReferenceProxies = 1;
@@ -928,6 +935,8 @@
 				A1C0FFEE0000000000000002 /* AppIcon-RC.icon in Resources */,
 				2740165736ACD1860265CAD9 /* Assets.xcassets in Resources */,
 				127F94D887AFE6D6CC9C4A23 /* PrivacyInfo.xcprivacy in Resources */,
+				A1C0FFEE0000000000000104 /* InfoPlist.xcstrings in Resources */,
+				A1C0FFEE0000000000000102 /* Localizable.xcstrings in Resources */,
 				C6FACF2D20BA51AFCF76432D /* budget-arc.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1287,12 +1296,14 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Loam;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 			};
@@ -1349,12 +1360,14 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Loam;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 			};
@@ -1451,6 +1464,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Loam;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -1458,6 +1472,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -1573,12 +1588,14 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Loam;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 			};

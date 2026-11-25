@@ -7,8 +7,8 @@ struct OnboardingPermissionList: View {
 
     var body: some View {
         OnboardingPermissionRow(
-            title: "Notifications",
-            message: "Know when a friend adds a bill or pays you back.",
+            title: String(localized: "Notifications"),
+            message: String(localized: "Know when a friend adds a bill or pays you back."),
             systemImage: "bell.badge.fill",
             tint: .red,
             status: permissions.notifications,

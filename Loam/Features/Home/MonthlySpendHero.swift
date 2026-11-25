@@ -84,16 +84,17 @@ struct MonthlySpendHero: View {
               amount.amountMinor > 0,
               sharedShare.currencyCode == amount.currencyCode else { return nil }
         if sharedShare.amountMinor >= amount.amountMinor {
-            return "all of it is shared"
+            return String(localized: "all of it from splits")
         }
-        return "of which \(MoneyFormatter.string(from: sharedShare)) is shared"
+        return String(localized: "including \(MoneyFormatter.string(from: sharedShare)) from splits")
     }
 
-    /// Short form for the hero: "90 zł shared" or "All shared". Nil in the same cases as the caption.
+    /// Short form for the hero: "incl. 90 zł from splits" or "All from splits". It is the viewer's
+    /// share of split expenses, already counted in the total. Nil in the same cases as the caption.
     private var sharedLabel: String? {
         guard sharedCaption != nil else { return nil }
-        if sharedShare.amountMinor >= amount.amountMinor { return "All shared" }
-        return "\(MoneyFormatter.string(from: sharedShare)) shared"
+        if sharedShare.amountMinor >= amount.amountMinor { return String(localized: "All from splits") }
+        return String(localized: "incl. \(MoneyFormatter.string(from: sharedShare)) from splits")
     }
 
     private func sharedLine(_ label: String) -> some View {
@@ -109,19 +110,19 @@ struct MonthlySpendHero: View {
     }
 
     private var accessibilityTitle: String {
-        let spent = "You spent \(MoneyFormatter.string(from: amount)) this month"
+        let spent = String(localized: "You spent \(MoneyFormatter.string(from: amount)) this month")
         guard let sharedCaption else { return spent }
         return "\(spent), \(sharedCaption)"
     }
 
     private var accessibilityBreakdownValue: String {
-        guard hasCategoryMix else { return "No spending yet" }
+        guard hasCategoryMix else { return String(localized: "No spending yet") }
         let totalMinor = categoryBreakdown.reduce(0) { $0 + $1.amountMinor }
-        guard totalMinor > 0 else { return "No spending yet" }
+        guard totalMinor > 0 else { return String(localized: "No spending yet") }
 
         return categoryBreakdown.map { slice in
             let percent = Int((Double(slice.amountMinor) / Double(totalMinor) * 100).rounded())
-            return "\(slice.category.displayName) \(percent) percent"
+            return String(localized: "\(slice.category.displayName) \(percent) percent")
         }
         .joined(separator: ", ")
     }

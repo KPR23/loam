@@ -10,28 +10,20 @@ enum RecurringIntervalUnit: String, CaseIterable, Codable, Identifiable, Sendabl
 
     var displayName: String {
         switch self {
-        case .day: return "Daily"
-        case .week: return "Weekly"
-        case .month: return "Monthly"
-        case .year: return "Yearly"
+        case .day: return String(localized: "Daily")
+        case .week: return String(localized: "Weekly")
+        case .month: return String(localized: "Monthly")
+        case .year: return String(localized: "Yearly")
         }
     }
 
-    var singularName: String {
+    /// The unit's name in the custom repeat picker, next to a stepper that reads "Every 3 weeks".
+    var pickerName: String {
         switch self {
-        case .day: return "day"
-        case .week: return "week"
-        case .month: return "month"
-        case .year: return "year"
-        }
-    }
-
-    var pluralName: String {
-        switch self {
-        case .day: return "days"
-        case .week: return "weeks"
-        case .month: return "months"
-        case .year: return "years"
+        case .day: return String(localized: "Days")
+        case .week: return String(localized: "Weeks")
+        case .month: return String(localized: "Months")
+        case .year: return String(localized: "Years")
         }
     }
 
@@ -40,7 +32,12 @@ enum RecurringIntervalUnit: String, CaseIterable, Codable, Identifiable, Sendabl
         if count == 1 {
             return displayName
         }
-        return "Every \(count) \(pluralName)"
+        switch self {
+        case .day: return String(localized: "Every \(count) days")
+        case .week: return String(localized: "Every \(count) weeks")
+        case .month: return String(localized: "Every \(count) months")
+        case .year: return String(localized: "Every \(count) years")
+        }
     }
 }
 
@@ -58,13 +55,13 @@ enum RecurringPreset: String, CaseIterable, Identifiable, Sendable {
 
     var displayName: String {
         switch self {
-        case .daily: return "Daily"
-        case .weekly: return "Weekly"
-        case .biweekly: return "Every 2 weeks"
-        case .monthly: return "Monthly"
-        case .quarterly: return "Every 3 months"
-        case .yearly: return "Yearly"
-        case .custom: return "Custom"
+        case .daily: return String(localized: "Daily")
+        case .weekly: return String(localized: "Weekly")
+        case .biweekly: return String(localized: "Every 2 weeks")
+        case .monthly: return String(localized: "Monthly")
+        case .quarterly: return String(localized: "Every 3 months")
+        case .yearly: return String(localized: "Yearly")
+        case .custom: return String(localized: "Custom")
         }
     }
 
@@ -194,7 +191,7 @@ struct RecurringRuleRecord: Identifiable, Codable, Hashable, Sendable {
     }
 
     var endDateDisplay: String {
-        guard let endDate else { return "Never" }
+        guard let endDate else { return String(localized: "Never") }
         return endDate.formatted(date: .abbreviated, time: .omitted)
     }
 

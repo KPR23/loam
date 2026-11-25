@@ -56,7 +56,7 @@ struct AnalyticsConsentSheet: View {
         .presentationDetents([.large])
     }
 
-    private func point(_ symbol: String, _ color: Color, _ text: String) -> some View {
+    private func point(_ symbol: String, _ color: Color, _ text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: symbol)
                 .font(.body.weight(.semibold))

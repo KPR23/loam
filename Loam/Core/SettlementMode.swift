@@ -6,17 +6,17 @@ enum SettlementMode: String, Codable, CaseIterable, Sendable {
 
     var displayName: String {
         switch self {
-        case .shared: return "Shared pot"
-        case .ledger: return "Settle up"
+        case .shared: return String(localized: "Shared pot")
+        case .ledger: return String(localized: "Settle up")
         }
     }
 
     var detail: String {
         switch self {
         case .shared:
-            return "One shared pot — no balances between people."
+            return String(localized: "One shared pot — no balances between people.")
         case .ledger:
-            return "Separate wallets — track who owes whom."
+            return String(localized: "Separate wallets — track who owes whom.")
         }
     }
 }

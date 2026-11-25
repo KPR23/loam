@@ -114,10 +114,10 @@ final class BalanceStore: ObservableObject {
         let event = ActivityEvent(
             kind: kind,
             actorId: userId,
-            actorName: SplitPartnerOption.displayName(for: userId, fallback: "You"),
+            actorName: SplitPartnerOption.displayName(for: userId, fallback: String(localized: "You")),
             recipientId: personId,
             recipientName: SplitPartnerOption.displayName(for: personId),
-            expenseTitle: trimmedNote.isEmpty ? "Repayment" : trimmedNote,
+            expenseTitle: trimmedNote.isEmpty ? String(localized: "Repayment") : trimmedNote,
             category: .other,
             affectedShareMinor: amountMinor,
             expenseTotalMinor: amountMinor,

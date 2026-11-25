@@ -68,3 +68,13 @@ jobs:
       - name: Lint
         if: env.SWIFT_CHANGED == 'true'
         run: swiftlint lint --strict --reporter github-actions-logging
+
+  # Every language in the project must have every string translated, with all its plural forms.
+  # Reading the catalogs is cheap, so it runs on every PR without a path filter.
+  localizations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check string catalogs
+        run: python3 scripts/check-localizations.py

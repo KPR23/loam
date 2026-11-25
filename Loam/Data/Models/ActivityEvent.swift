@@ -76,123 +76,197 @@ struct ActivityEvent: Identifiable, Codable, Hashable, Sendable {
         currency = try values.decode(String.self, forKey: .currency)
     }
 
+    /// Each case spells out who did what to whom, so every language can phrase "you" and
+    /// another person's name its own way.
     func sentence(viewerId: UUID) -> String {
-        let actorIsViewer = actorId == viewerId
-        let actor = actorIsViewer ? "You" : actorName
-        let recipient = recipientId == viewerId ? "you" : (recipientName ?? "a participant")
+        let byViewer = actorId == viewerId
+        let toViewer = recipientId == viewerId
+        let actor = actorName
+        let recipient = recipientName ?? String(localized: "a participant")
+        let someone = recipientName ?? String(localized: "someone")
         switch kind {
         case .shared:
-            return "\(actor) shared an expense with \(list(recipientMentions(viewerId: viewerId)))"
+            let people = list(recipientMentions(viewerId: viewerId))
+            return byViewer
+                ? String(localized: "You shared an expense with \(people)")
+                : String(localized: "\(actor) shared an expense with \(people)")
         case .accepted:
-            return "\(actor) accepted \(Self.possessive(recipient)) expense"
+            switch (byViewer, toViewer) {
+            case (true, true): return String(localized: "You accepted your expense")
+            case (true, false): return String(localized: "You accepted \(recipient)'s expense")
+            case (false, true): return String(localized: "\(actor) accepted your expense")
+            case (false, false): return String(localized: "\(actor) accepted \(recipient)'s expense")
+            }
         case .rejected:
-            return "\(actor) declined \(Self.possessive(recipient)) expense"
+            switch (byViewer, toViewer) {
+            case (true, true): return String(localized: "You declined your expense")
+            case (true, false): return String(localized: "You declined \(recipient)'s expense")
+            case (false, true): return String(localized: "\(actor) declined your expense")
+            case (false, false): return String(localized: "\(actor) declined \(recipient)'s expense")
+            }
         case .proposalAccepted:
-            return "\(actor) accepted \(Self.possessive(recipient)) suggested changes"
+            switch (byViewer, toViewer) {
+            case (true, true): return String(localized: "You accepted your suggested changes")
+            case (true, false): return String(localized: "You accepted \(recipient)'s suggested changes")
+            case (false, true): return String(localized: "\(actor) accepted your suggested changes")
+            case (false, false): return String(localized: "\(actor) accepted \(recipient)'s suggested changes")
+            }
         case .proposalRejected:
-            return "\(actor) declined \(Self.possessive(recipient)) suggested changes"
+            switch (byViewer, toViewer) {
+            case (true, true): return String(localized: "You declined your suggested changes")
+            case (true, false): return String(localized: "You declined \(recipient)'s suggested changes")
+            case (false, true): return String(localized: "\(actor) declined your suggested changes")
+            case (false, false): return String(localized: "\(actor) declined \(recipient)'s suggested changes")
+            }
         case .edited:
-            return "\(actor) edited a shared expense"
+            return byViewer
+                ? String(localized: "You edited a shared expense")
+                : String(localized: "\(actor) edited a shared expense")
         case .participantRemoved:
             // Remote rows only reach the removed people; local rows also reach the actor.
-            let removed = actorIsViewer ? list(recipientMentions(viewerId: viewerId)) : "you"
-            return "\(actor) removed \(removed) from an expense"
+            if byViewer {
+                let removed = list(recipientMentions(viewerId: viewerId))
+                return String(localized: "You removed \(removed) from an expense")
+            }
+            return String(localized: "\(actor) removed you from an expense")
         case .deleted:
-            return "\(actor) deleted a shared expense"
+            return byViewer
+                ? String(localized: "You deleted a shared expense")
+                : String(localized: "\(actor) deleted a shared expense")
         case .proposalCreated:
-            if recipientId == nil { return "\(actor) suggested changes" }
-            return "\(actor) suggested changes to \(Self.possessive(recipient)) expense"
+            if recipientId == nil {
+                return byViewer ? String(localized: "You suggested changes") : String(localized: "\(actor) suggested changes")
+            }
+            switch (byViewer, toViewer) {
+            case (true, true): return String(localized: "You suggested changes to your expense")
+            case (true, false): return String(localized: "You suggested changes to \(recipient)'s expense")
+            case (false, true): return String(localized: "\(actor) suggested changes to your expense")
+            case (false, false): return String(localized: "\(actor) suggested changes to \(recipient)'s expense")
+            }
         case .autoAccepted:
-            return "\(Self.possessive(actor)) expense was accepted automatically"
+            return byViewer
+                ? String(localized: "Your expense was accepted automatically")
+                : String(localized: "\(actor)'s expense was accepted automatically")
         case .proposalSuperseded:
-            return "\(Self.possessive(actor)) suggested changes were replaced"
+            return byViewer
+                ? String(localized: "Your suggested changes were replaced")
+                : String(localized: "\(actor)'s suggested changes were replaced")
         case .repaymentRecorded:
-            return actorIsViewer
-                ? "You recorded a repayment to \(recipientName ?? "someone")"
-                : "\(actor) recorded a repayment to you"
+            return byViewer
+                ? String(localized: "You recorded a repayment to \(someone)")
+                : String(localized: "\(actor) recorded a repayment to you")
         case .repaymentReceived:
-            return actorIsViewer
-                ? "You recorded a repayment from \(recipientName ?? "someone")"
-                : "\(actor) recorded a repayment from you"
+            return byViewer
+                ? String(localized: "You recorded a repayment from \(someone)")
+                : String(localized: "\(actor) recorded a repayment from you")
         case .repaymentReversed:
-            return actorIsViewer
-                ? "You reversed a repayment to \(recipientName ?? "someone")"
-                : "\(actor) reversed a repayment to you"
+            return byViewer
+                ? String(localized: "You reversed a repayment to \(someone)")
+                : String(localized: "\(actor) reversed a repayment to you")
         }
     }
 
     /// Feed sentence that names the expense in bold, e.g. "Anna accepted **Dinner**".
     /// `sentence(viewerId:)` stays title-free for the expense's own history.
     func headline(viewerId: UUID) -> AttributedString {
-        let actorIsViewer = actorId == viewerId
-        let actor = actorIsViewer ? "You" : actorName
-        let recipient = recipientId == viewerId ? "you" : (recipientName ?? "a participant")
-        var title = AttributedString(expenseTitle)
-        title.inlinePresentationIntent = .stronglyEmphasized
-        func around(_ before: String, _ after: String = "") -> AttributedString {
-            AttributedString(before) + title + AttributedString(after)
-        }
+        let byViewer = actorId == viewerId
+        let toViewer = recipientId == viewerId
+        let actor = actorName
+        let recipient = recipientName ?? String(localized: "a participant")
+        // Stands in for the title, so a translation can put it anywhere in the sentence.
+        let title = Self.titleSlot
+        let text: String
         switch kind {
         case .shared:
-            return around("\(actor) shared ", " with \(list(recipientMentions(viewerId: viewerId)))")
+            let people = list(recipientMentions(viewerId: viewerId))
+            text = byViewer
+                ? String(localized: "You shared \(title) with \(people)")
+                : String(localized: "\(actor) shared \(title) with \(people)")
         case .accepted:
-            return around("\(actor) accepted ")
+            text = byViewer ? String(localized: "You accepted \(title)") : String(localized: "\(actor) accepted \(title)")
         case .rejected:
-            return around("\(actor) declined ")
+            text = byViewer ? String(localized: "You declined \(title)") : String(localized: "\(actor) declined \(title)")
         case .proposalAccepted:
-            return around("\(actor) accepted \(Self.possessive(recipient)) changes to ")
+            switch (byViewer, toViewer) {
+            case (true, true): text = String(localized: "You accepted your changes to \(title)")
+            case (true, false): text = String(localized: "You accepted \(recipient)'s changes to \(title)")
+            case (false, true): text = String(localized: "\(actor) accepted your changes to \(title)")
+            case (false, false): text = String(localized: "\(actor) accepted \(recipient)'s changes to \(title)")
+            }
         case .proposalRejected:
-            return around("\(actor) declined \(Self.possessive(recipient)) changes to ")
+            switch (byViewer, toViewer) {
+            case (true, true): text = String(localized: "You declined your changes to \(title)")
+            case (true, false): text = String(localized: "You declined \(recipient)'s changes to \(title)")
+            case (false, true): text = String(localized: "\(actor) declined your changes to \(title)")
+            case (false, false): text = String(localized: "\(actor) declined \(recipient)'s changes to \(title)")
+            }
         case .edited:
-            return around("\(actor) edited ")
+            text = byViewer ? String(localized: "You edited \(title)") : String(localized: "\(actor) edited \(title)")
         case .participantRemoved:
-            let removed = actorIsViewer ? list(recipientMentions(viewerId: viewerId)) : "you"
-            return around("\(actor) removed \(removed) from ")
+            if byViewer {
+                let removed = list(recipientMentions(viewerId: viewerId))
+                text = String(localized: "You removed \(removed) from \(title)")
+            } else {
+                text = String(localized: "\(actor) removed you from \(title)")
+            }
         case .deleted:
-            return around("\(actor) deleted ")
+            text = byViewer ? String(localized: "You deleted \(title)") : String(localized: "\(actor) deleted \(title)")
         case .proposalCreated:
-            return around("\(actor) suggested changes to ")
+            text = byViewer
+                ? String(localized: "You suggested changes to \(title)")
+                : String(localized: "\(actor) suggested changes to \(title)")
         case .autoAccepted:
-            return around("", " was accepted automatically")
+            text = String(localized: "\(title) was accepted automatically")
         case .proposalSuperseded:
-            return around("\(Self.possessive(actor)) changes to ", " were replaced")
+            text = byViewer
+                ? String(localized: "Your changes to \(title) were replaced")
+                : String(localized: "\(actor)'s changes to \(title) were replaced")
         case .repaymentRecorded:
-            return AttributedString(actorIsViewer ? "You paid \(recipientName ?? "someone") back" : "\(actor) paid you back")
+            let someone = recipientName ?? String(localized: "someone")
+            return AttributedString(byViewer ? String(localized: "You paid \(someone) back") : String(localized: "\(actor) paid you back"))
         case .repaymentReceived:
-            return AttributedString(actorIsViewer ? "\(recipientName ?? "Someone") paid you back" : "You paid \(actor) back")
+            let someone = recipientName ?? String(localized: "Someone")
+            return AttributedString(byViewer ? String(localized: "\(someone) paid you back") : String(localized: "You paid \(actor) back"))
         case .repaymentReversed:
-            return AttributedString(actorIsViewer
-                ? "You reversed a repayment to \(recipientName ?? "someone")"
-                : "\(actor) reversed a repayment to you")
+            let someone = recipientName ?? String(localized: "someone")
+            return AttributedString(byViewer
+                ? String(localized: "You reversed a repayment to \(someone)")
+                : String(localized: "\(actor) reversed a repayment to you"))
         }
+        return Self.emphasizing(expenseTitle, in: text)
+    }
+
+    private static let titleSlot = "\u{FFFC}"
+
+    /// Puts the bold title where the translated sentence has `titleSlot`.
+    private static func emphasizing(_ expenseTitle: String, in text: String) -> AttributedString {
+        var title = AttributedString(expenseTitle)
+        title.inlinePresentationIntent = .stronglyEmphasized
+        guard let slot = text.range(of: titleSlot) else { return AttributedString(text) }
+        return AttributedString(String(text[..<slot.lowerBound])) + title + AttributedString(String(text[slot.upperBound...]))
     }
 
     /// Recipient names with the viewer as "you", listed first.
     private func recipientMentions(viewerId: UUID) -> [String] {
-        guard !recipientNames.isEmpty else { return [recipientId == viewerId ? "you" : (recipientName ?? "a participant")] }
+        let you = String(localized: "you", comment: "The person using the app, in a list of people")
+        guard !recipientNames.isEmpty else { return [recipientId == viewerId ? you : (recipientName ?? String(localized: "a participant"))] }
         guard recipientIds.count == recipientNames.count else { return recipientNames }
         var others: [String] = []
         var includesViewer = false
         for (id, name) in zip(recipientIds, recipientNames) {
             if id == viewerId { includesViewer = true } else { others.append(name) }
         }
-        return includesViewer ? ["you"] + others : others
-    }
-
-    private static func possessive(_ name: String) -> String {
-        switch name {
-        case "you": return "your"
-        case "You": return "Your"
-        default: return name.hasSuffix("s") ? "\(name)'" : "\(name)'s"
-        }
+        return includesViewer ? [you] + others : others
     }
 
     private func list(_ names: [String]) -> String {
         switch names.count {
-        case 0: return "a participant"
+        case 0: return String(localized: "a participant")
         case 1: return names[0]
-        case 2: return "\(names[0]) and \(names[1])"
-        default: return "\(names[0]), \(names[1]) and \(names.count - 2) more"
+        case 2: return String(localized: "\(names[0]) and \(names[1])")
+        default:
+            let more = names.count - 2
+            return String(localized: "\(names[0]), \(names[1]) and \(more) more")
         }
     }
 

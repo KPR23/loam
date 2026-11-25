@@ -104,7 +104,7 @@ private final class KeyboardDismissalView: UIView, UIGestureRecognizerDelegate {
 
         let button = UIButton(configuration: configuration)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.accessibilityLabel = "Hide keyboard"
+        button.accessibilityLabel = String(localized: "Hide keyboard")
         button.layer.shadowColor = UIColor.black.cgColor
         button.layer.shadowOpacity = 0.12
         button.layer.shadowRadius = 4

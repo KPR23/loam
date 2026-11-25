@@ -24,7 +24,7 @@ final class LoamUITests: XCTestCase {
         signInToDemo()
         openAddExpense()
 
-        let quickAdd = app.buttons["Quick add"]
+        let quickAdd = app.buttons["Add now"]
         let details = app.buttons["Add details"]
         XCTAssertFalse(quickAdd.isEnabled)
         XCTAssertFalse(details.isEnabled)
@@ -86,9 +86,9 @@ final class LoamUITests: XCTestCase {
 
         tab("Add expense").tap()
         XCTAssertTrue(amountField.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Quick add"].isEnabled, "The cancelled amount was kept")
+        XCTAssertFalse(app.buttons["Add now"].isEnabled, "The cancelled amount was kept")
         typeAmount("15")
-        app.buttons["Quick add"].tap()
+        app.buttons["Add now"].tap()
 
         XCTAssertTrue(expenseRow(containing: "Groceries").waitForExistence(timeout: 5), "Save didn't land on Expenses")
         XCTAssertTrue(monthlyTotal(containing: "15").exists)
@@ -184,7 +184,7 @@ final class LoamUITests: XCTestCase {
     private func addExpense(amount: String) {
         openAddExpense()
         typeAmount(amount)
-        app.buttons["Quick add"].tap()
+        app.buttons["Add now"].tap()
         XCTAssertTrue(addExpenseButton.waitForExistence(timeout: 5))
     }
 

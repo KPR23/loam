@@ -75,7 +75,7 @@ final class AvatarStore: ObservableObject {
 
     func upload(_ imageData: Data, for userId: UUID) async throws {
         guard let client = SupabaseClientProvider.shared else {
-            throw NSError(domain: "LoamAvatar", code: 1, userInfo: [NSLocalizedDescriptionKey: "Sign in to add a profile photo."])
+            throw NSError(domain: "LoamAvatar", code: 1, userInfo: [NSLocalizedDescriptionKey: String(localized: "Sign in to add a profile photo.")])
         }
         let path = "\(userId.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
         let storage = client.storage.from("avatars")
@@ -203,7 +203,13 @@ struct AvatarView: View {
 enum AppAppearance: String, CaseIterable, Identifiable {
     case system, light, dark
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .system: String(localized: "System")
+        case .light: String(localized: "Light")
+        case .dark: String(localized: "Dark")
+        }
+    }
     var symbol: String {
         switch self {
         case .system, .light: "sun.max"
@@ -252,9 +258,9 @@ private struct ProfileHeader: View {
                 AvatarView(userId: authSession.userId, size: ProfileView.avatarSize, name: authSession.displayName)
             }
             VStack(spacing: 4) {
-                Text(authSession.displayName ?? "You")
+                Text(authSession.displayName ?? String(localized: "You"))
                     .font(.system(.title, design: .rounded).weight(.semibold))
-                Text(authSession.email ?? "Your own little corner of Loam.")
+                Text(authSession.email ?? String(localized: "Your own little corner of Loam."))
                     .font(.subheadline)
                     .foregroundStyle(HomeTheme.secondary)
                     .textSelection(.enabled)
@@ -307,7 +313,7 @@ private struct AccountDeletionSection: View {
         .task { await authSession.watchDeletionStatus() }
     }
 
-    private var deletionStatusTitle: String {
+    private var deletionStatusTitle: LocalizedStringKey {
         switch authSession.deletionStatus {
         case .submissionUncertain: "Request status needs checking"
         case .processing: "Deletion in progress"
@@ -327,7 +333,7 @@ private struct AccountDeletionSection: View {
         }
     }
 
-    private var deletionStatusDetail: String {
+    private var deletionStatusDetail: LocalizedStringKey {
         switch authSession.deletionStatus {
         case .submissionUncertain: "We couldn’t confirm the request response. Check its status before trying again."
         case .processing: "Your account is closed. Deletion usually finishes within a few minutes."
@@ -378,7 +384,7 @@ private struct AccentColorPicker: View {
 
 /// A picker label that matches `ProfileRow` without its trailing detail.
 private struct PreferenceLabel: View {
-    let title: String
+    let title: LocalizedStringKey
     let symbol: String
     let color: Color
 
@@ -391,6 +397,35 @@ private struct PreferenceLabel: View {
             CategoryIconTile(systemImage: symbol, color: color, size: 30)
         }
         .labelStyle(CompactProfileLabelStyle())
+    }
+}
+
+/// Loam follows the language iOS keeps for each app, so this opens Loam's page in Settings
+/// instead of keeping a second choice of its own.
+private struct LanguageRow: View {
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        Button {
+            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+        } label: {
+            // Where the other rows show a chevron, this one shows that it leaves for the Settings app.
+            HStack(spacing: 8) {
+                ProfileRow("Language", symbol: "character.bubble", color: .orange, detail: Self.currentLanguage)
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens Loam in the Settings app, where you can change its language")
+    }
+
+    private static var currentLanguage: String? {
+        guard let code = Bundle.main.preferredLocalizations.first else { return nil }
+        return Locale.current.localizedString(forIdentifier: code)?.capitalized(with: .current)
     }
 }
 
@@ -431,8 +466,8 @@ private struct NotificationsRow: View {
 
     private var detail: String? {
         switch pushStore.permission {
-        case .allowed: "On"
-        case .denied: "Off"
+        case .allowed: String(localized: "On")
+        case .denied: String(localized: "Off")
         case .unknown, .notDetermined: nil
         }
     }
@@ -443,12 +478,20 @@ private struct AppLockToggle: View {
     /// Redraws the accent-tinted controls when the accent changes in Settings.
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
 
+    /// "Face ID lock", or "Passcode lock" on its own key so a language can inflect it.
+    private var lockTitle: LocalizedStringKey {
+        switch appLock.method {
+        case .passcode, .unavailable: "Passcode lock"
+        default: "\(appLock.method.title) lock"
+        }
+    }
+
     var body: some View {
         Toggle(isOn: Binding(
             get: { appLock.isEnabled },
             set: { enabled in Task { await appLock.setEnabled(enabled) } }
         )) {
-            ProfileRow("\(appLock.method.title) lock", symbol: appLock.method.symbolName, color: .green)
+            ProfileRow(lockTitle, symbol: appLock.method.symbolName, color: .green)
         }
         .tint(HomeTheme.accentFill)
         .disabled(appLock.isAuthenticating || (appLock.method == .unavailable && !appLock.isEnabled))
@@ -465,7 +508,7 @@ private struct AppLockFooter: View {
         } else if appLock.method == .passcode {
             Text("Ask for your iPhone passcode whenever you open Loam.")
         } else {
-            Text("Ask for \(appLock.method.title) whenever you open Loam. Your iPhone passcode works too.")
+            Text("Ask for \(appLock.method.title) whenever you open Loam.")
         }
     }
 }
@@ -624,7 +667,7 @@ struct ProfileView: View {
     static var version: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "Version \(version) (\(build))"
+        return String(localized: "Version \(version) (\(build))")
     }
 }
 
@@ -641,6 +684,7 @@ private struct AppSettingsView: View {
             .listRowBackground(HomeTheme.surface)
 
             Section {
+                LanguageRow()
                 DefaultCurrencyRow()
                 TimeZoneRow()
                 if !authSession.usesDemoMode {
@@ -807,7 +851,7 @@ private struct ProUpgradeCard: View {
                     .foregroundStyle(.secondary)
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text("Upgrade to Loam Pro")
+                Text("Loam Pro")
                     .font(.system(.title3, design: .rounded).weight(.semibold))
                     .foregroundStyle(.primary)
                 // Names what Pro unlocks instead of repeating the paywall's tagline.
@@ -815,7 +859,7 @@ private struct ProUpgradeCard: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Text("Upgrade")
+            Text("Upgrade to Loam Pro")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -869,7 +913,7 @@ private struct SubscriptionRow: View {
                 "Subscription",
                 symbol: "creditcard",
                 color: .pink,
-                detail: subscriptions.isPro ? "Loam Pro" : "Free"
+                detail: subscriptions.isPro ? "Loam Pro" : String(localized: "subscription-free", defaultValue: "Free", comment: "The Subscription row's value on the free plan")
             )
         }
     }
@@ -932,29 +976,29 @@ private struct SubscriptionView: View {
 
     private var statusDetail: String {
         guard subscriptions.isPro else {
-            return "You’re on the free plan. Upgrade to share every bill, with everyone."
+            return String(localized: "You’re on the free plan. Upgrade to share every bill, with everyone.")
         }
         guard let entitlement = subscriptions.customerInfo?.entitlements[SubscriptionStore.entitlementId],
               let expiration = entitlement.expirationDate
-        else { return "Thanks for supporting Loam." }
+        else { return String(localized: "Thanks for supporting Loam.") }
         let date = expiration.formatted(date: .long, time: .omitted)
         if entitlement.periodType == .trial {
-            return entitlement.willRenew ? "Free trial, Pro starts on \(date)." : "Free trial, ends on \(date)."
+            return entitlement.willRenew ? String(localized: "Free trial, Pro starts on \(date).") : String(localized: "Free trial, ends on \(date).")
         }
-        return entitlement.willRenew ? "Renews on \(date)." : "Ends on \(date)."
+        return entitlement.willRenew ? String(localized: "Renews on \(date).") : String(localized: "Ends on \(date).")
     }
 }
 
 /// Icon-and-title row used across Profile. Internal so rows in other files, such as
 /// `AutoAcceptExpensesToggle`, match its icon size and spacing.
 struct ProfileRow: View {
-    let title: String
+    let title: LocalizedStringKey
     let symbol: String
     let color: Color
     var detail: String? = nil
     var destructive = false
 
-    init(_ title: String, symbol: String, color: Color, detail: String? = nil, destructive: Bool = false) {
+    init(_ title: LocalizedStringKey, symbol: String, color: Color, detail: String? = nil, destructive: Bool = false) {
         self.title = title
         self.symbol = symbol
         self.color = color
@@ -1028,7 +1072,7 @@ private struct PersonalDetailsView: View {
                         .onSubmit { if canSave { save() } }
                 }
                 LabeledContent("E-mail") {
-                    Text(authSession.email ?? "Not provided")
+                    Text(authSession.email ?? String(localized: "Not provided"))
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .textSelection(.enabled)
@@ -1084,7 +1128,7 @@ private struct PersonalDetailsView: View {
                     guard let data = try await photo.loadTransferable(type: Data.self),
                           let image = UIImage(data: data),
                           let jpeg = Self.avatarJPEG(from: image) else {
-                        throw NSError(domain: "LoamAvatar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Couldn't read that photo. Try another one."])
+                        throw NSError(domain: "LoamAvatar", code: 2, userInfo: [NSLocalizedDescriptionKey: String(localized: "Couldn't read that photo. Try another one.")])
                     }
                     try await AvatarStore.shared.upload(jpeg, for: userId)
                 } catch { photoError = UserFacingError.message(for: error) }
@@ -1265,7 +1309,7 @@ private struct TimeZoneSettingsView: View {
     var body: some View {
         List {
             Section {
-                timeZoneRow(identifier: "", title: "Device time zone", subtitle: TimeZone.current.localizedName(for: .standard, locale: .current) ?? TimeZone.current.identifier)
+                timeZoneRow(identifier: "", title: String(localized: "Device time zone"), subtitle: TimeZone.current.localizedName(for: .standard, locale: .current) ?? TimeZone.current.identifier)
             } footer: {
                 Text("Used for calendar dates and recurring expenses.")
             }
@@ -1325,10 +1369,10 @@ private struct TimeZoneSettingsView: View {
 }
 
 private struct ProfileInfoView: View {
-    let title: String
+    let title: LocalizedStringKey
     let symbol: String
-    let message: String
-    let detail: String
+    let message: LocalizedStringKey
+    let detail: LocalizedStringKey
 
     var body: some View {
         ScrollView {
@@ -1449,26 +1493,26 @@ private struct ProfileDeveloperView: View {
     }
     private var returnToMainAccountTitle: String {
         if let name = authSession.savedMainAccountDisplayName, !name.isEmpty {
-            return "Back to \(name)"
+            return String(localized: "Back to \(name)")
         }
-        return "Back to my account"
+        return String(localized: "Back to my account")
     }
 
     private var testAccountsUnavailableMessage: String {
         if SupabaseConfig.environment != .testing {
-            return "Disabled outside the Debug testing configuration."
+            return String(localized: "Disabled outside the Debug testing configuration.")
         }
         if !SupabaseConfig.allowsTestAccounts {
-            return "The active Supabase URL does not match the allowlisted test project."
+            return String(localized: "The active Supabase URL does not match the allowlisted test project.")
         }
-        return "Add the Julia and Philip ID, email, and password variables to Secrets.xcconfig."
+        return String(localized: "Add the Julia and Philip ID, email, and password variables to Secrets.xcconfig.")
     }
 
     private var clearExpensesConfirmationMessage: String {
         if SupabaseConfig.isConfigured {
-            return "Deletes synced expenses and recurring rules you created. Shared expenses created by others stay. This can’t be undone."
+            return String(localized: "Deletes synced expenses and recurring rules you created. Shared expenses created by others stay. This can’t be undone.")
         }
-        return "Deletes local demo expenses and recurring rules you created. This can’t be undone."
+        return String(localized: "Deletes local demo expenses and recurring rules you created. This can’t be undone.")
     }
 }
 #endif

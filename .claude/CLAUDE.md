@@ -12,3 +12,7 @@
 ## Skills
 
 - `.claude/skills/swiftui-pro` is vendored from twostraws/swiftui-agent-skill (pinned in `skills-lock.json`) with local changes: the nested `skills/` copy and `.claude-plugin/` manifest are removed, and `references/api.md` only requires the `Tab` API on iOS 18+. Re-running `npx skills add` overwrites these, so reapply them after updating.
+
+## Localization
+
+- Every user-facing string must be localizable and translated into Polish in `Loam/Resources/Localizable.xcstrings`; `scripts/check-localizations.py` fails CI otherwise. See `docs/localization.md` for the patterns.

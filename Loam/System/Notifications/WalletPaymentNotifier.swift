@@ -32,8 +32,8 @@ final class WalletPaymentNotifier {
     /// Called at launch, before any of these notifications can be answered.
     nonisolated static var categories: Set<UNNotificationCategory> {
         // Unlocking first keeps someone holding a locked phone from changing expenses.
-        let undo = UNNotificationAction(identifier: Action.undo, title: "Undo", options: [.destructive, .authenticationRequired])
-        let add = UNNotificationAction(identifier: Action.add, title: "Add", options: [.authenticationRequired])
+        let undo = UNNotificationAction(identifier: Action.undo, title: String(localized: "Undo"), options: [.destructive, .authenticationRequired])
+        let add = UNNotificationAction(identifier: Action.add, title: String(localized: "Add"), options: [.authenticationRequired])
         return [
             UNNotificationCategory(identifier: Category.added, actions: [undo], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.ask, actions: [add], intentIdentifiers: []),
@@ -71,7 +71,7 @@ final class WalletPaymentNotifier {
         let merchant = merchant?.trimmingCharacters(in: .whitespacesAndNewlines)
         await post(
             category: Category.missingAmount,
-            title: (merchant?.isEmpty == false ? merchant : nil) ?? "Apple Pay payment",
+            title: (merchant?.isEmpty == false ? merchant : nil) ?? String(localized: "Apple Pay payment"),
             body: WalletPaymentText.missingAmount,
             userInfo: [Key.userId: userId.uuidString]
         )
@@ -111,7 +111,7 @@ final class WalletPaymentNotifier {
         case (Category.added, Action.undo):
             guard let id = userInfo[Key.expenseId].flatMap(UUID.init(uuidString:)) else { return true }
             if !(await services.expenseStore.deleteSaved(id: id, userId: userId)) {
-                await postProblem(title: "Couldn't undo", body: "Open Loam to delete the expense yourself.", userId: userId)
+                await postProblem(title: String(localized: "Couldn't undo"), body: String(localized: "Open Loam to delete the expense yourself."), userId: userId)
             }
         case (Category.ask, Action.add), (Category.ask, UNNotificationDefaultActionIdentifier):
             guard let json = userInfo[Key.payment],
@@ -123,7 +123,7 @@ final class WalletPaymentNotifier {
                 LoamErrorCapture.capture("wallet_payment.add_failed")
                 if action == Action.add {
                     // Tapping this one opens a new expense to add by hand.
-                    await postProblem(title: WalletPaymentText.title(payment), body: "Couldn't add this payment. Tap to add it yourself.", userId: userId)
+                    await postProblem(title: WalletPaymentText.title(payment), body: String(localized: "Couldn't add this payment. Tap to add it yourself."), userId: userId)
                 } else {
                     services.expenseStore.lastError = UserFacingError.message(for: error)
                     services.navigator.pendingScreen = .newExpense

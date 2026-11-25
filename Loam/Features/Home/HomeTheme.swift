@@ -5,7 +5,16 @@ enum AppAccentColor: String, CaseIterable, Identifiable {
     case blue, purple, pink, orange, green, black
 
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .blue: String(localized: "Blue")
+        case .purple: String(localized: "Purple")
+        case .pink: String(localized: "Pink")
+        case .orange: String(localized: "Orange")
+        case .green: String(localized: "Green")
+        case .black: String(localized: "Black")
+        }
+    }
 
     var color: Color {
         switch self {
@@ -94,7 +103,7 @@ struct SheetCloseButton: View {
 /// Menu / context-menu SF Symbols stay accent-tinted even with `role: .destructive`.
 /// Bake systemRed into an always-original image so UIMenu cannot recolor the icon.
 struct DestructiveMenuLabel: View {
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
 
     var body: some View {
@@ -164,7 +173,7 @@ struct LoamPrimaryButtonStyle: ButtonStyle {
 
 /// Keep the action's width stable while communicating an in-flight save.
 struct SavingActionLabel: View {
-    let title: String
+    let title: LocalizedStringKey
     let isSaving: Bool
 
     var body: some View {

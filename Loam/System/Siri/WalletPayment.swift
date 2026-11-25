@@ -105,23 +105,23 @@ enum WalletPaymentText {
     }
 
     static func added(_ payment: WalletPayment) -> String {
-        "Added to \(payment.category.displayName). Tap Undo if it wasn't yours."
+        String(localized: "Added to \(payment.category.displayName). Tap Undo if it wasn't yours.")
     }
 
     static func askToAdd(_ payment: WalletPayment) -> String {
-        "Add it to Loam as \(payment.category.displayName)?"
+        String(localized: "Add it to Loam as \(payment.category.displayName)?")
     }
 
     static func dialogAdded(_ payment: WalletPayment) -> String {
-        "Added \(MoneyFormatter.string(from: payment.money)) for \(payment.merchant ?? payment.category.displayName)."
+        String(localized: "Added \(MoneyFormatter.string(from: payment.money)) for \(payment.merchant ?? payment.category.displayName).")
     }
 
-    static let missingAmount = "Wallet didn't send the amount. Tap to add the expense yourself."
+    static let missingAmount = String(localized: "Wallet didn't send the amount. Tap to add the expense yourself.")
 
-    static let refundSkipped = "That was a refund, so nothing was added."
+    static let refundSkipped = String(localized: "That was a refund, so nothing was added.")
 
     static func unsupportedCurrency(_ code: String) -> String {
-        "Loam can't save payments in \(code) yet. Tap to add it in złoty, euros or dollars."
+        String(localized: "Loam can't save payments in \(code) yet. Tap to add it in złoty, euros or dollars.")
     }
 }
 

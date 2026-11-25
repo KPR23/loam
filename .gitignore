@@ -31,3 +31,7 @@ supabase/.temp
 .claude/settings.local.json
 
 .sentryclirc
+
+# Python
+__pycache__/
+*.pyc

@@ -15,8 +15,8 @@ enum BalanceRepositoryError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidAmount: return "Enter a positive amount."
-        case .exceedsDebt: return "That payment is larger than the confirmed debt."
+        case .invalidAmount: return String(localized: "Enter a positive amount.")
+        case .exceedsDebt: return String(localized: "That payment is larger than the confirmed debt.")
         }
     }
 }

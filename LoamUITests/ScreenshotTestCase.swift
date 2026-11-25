@@ -6,12 +6,15 @@ import XCTest
 class ScreenshotTestCase: XCTestCase {
     private(set) var app: XCUIApplication!
 
+    /// The app's language and region for this flow. A subclass overrides it to capture a translation.
+    class var languageArguments: [String] { ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"] }
+
     override func setUpWithError() throws {
         try super.setUpWithError()
         try XCTSkipUnless(Self.outputDirectory != nil, "Screenshot flows only run in the screenshots workflow")
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["-uiTesting", "-resetLocalData", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-uiTesting", "-resetLocalData"] + Self.languageArguments
         // The backend's address is only known once the workflow's tunnel is up, which is after the app is
         // built, so it reaches the app at launch (TEST_RUNNER_SCREENSHOT_BACKEND_URL / _ANON_KEY).
         let environment = ProcessInfo.processInfo.environment
@@ -34,13 +37,14 @@ class ScreenshotTestCase: XCTestCase {
 
     // MARK: - Steps
 
-    /// Launches the app and signs in as the seeded sample user.
-    func signIn(as name: String = "Julia") {
+    /// Launches the app and signs in as the seeded sample user. `buttonTitle` is the sign-in button's
+    /// title in the flow's language.
+    func signIn(as name: String = "Julia", buttonTitle: String? = nil) {
         app.launch()
-        let button = app.buttons["Continue as \(name)"]
+        let button = app.buttons[buttonTitle ?? "Continue as \(name)"]
         XCTAssertTrue(button.waitForExistence(timeout: 15), "No test account button; is the app pointed at the local backend?")
         button.tap()
-        XCTAssertTrue(tab("Expenses").waitForExistence(timeout: 20))
+        XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 20))
     }
 
     func tab(_ name: String) -> XCUIElement {

@@ -68,7 +68,7 @@ struct AuthView: View {
         switch result {
         case .success(let authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-                authSession.lastError = "Sign in with Apple didn't finish. Try again."
+                authSession.lastError = String(localized: "Sign in with Apple didn't finish. Try again.")
                 return
             }
             await authSession.signInWithApple(credential: credential)
@@ -162,7 +162,7 @@ struct AuthView: View {
         .background(HomeTheme.surface, in: RoundedRectangle(cornerRadius: 20))
     }
 
-    private var deletionTitle: String {
+    private var deletionTitle: LocalizedStringKey {
         switch authSession.deletionStatus {
         case .submissionUncertain: "Request status needs checking"
         case .processing: "Deletion in progress"
@@ -182,7 +182,7 @@ struct AuthView: View {
         }
     }
 
-    private var deletionDetail: String {
+    private var deletionDetail: LocalizedStringKey {
         switch authSession.deletionStatus {
         case .submissionUncertain: "We saved your request securely. We’re checking whether it reached the server. Retry this check; don’t assume the request failed."
         case .processing: "Your account is closed. We’ll finish deleting its data, usually within a few minutes."
