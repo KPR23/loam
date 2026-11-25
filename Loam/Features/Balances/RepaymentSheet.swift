@@ -16,7 +16,8 @@ struct RepaymentSheet: View {
     @State private var note = ""
     @State private var paidAt = Date()
     @State private var isSaving = false
-        @State private var errorMessage: String?
+    @State private var showsDatePicker = false
+    @State private var errorMessage: String?
     @FocusState private var amountFocused: Bool
     @FocusState private var noteFocused: Bool
 
@@ -59,11 +60,6 @@ struct RepaymentSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 if let target {
-                    recipientPicker(target)
-                        .padding(.top, 8)
-                    dateButton
-                        .padding(.top, 10)
-
                     Spacer(minLength: 0)
 
                     AmountEntryField(
@@ -73,7 +69,10 @@ struct RepaymentSheet: View {
                         isInvalid: exceedsDebt
                     )
                     debtCaption(target)
-                        .padding(.top, 10)
+                        .padding(.top, 6)
+                    detailSentence(target)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 18)
 
                     Spacer(minLength: 0)
 
@@ -125,25 +124,80 @@ struct RepaymentSheet: View {
             .onChange(of: target?.id) { _, _ in amountText = fullAmountText }
             .errorToast($errorMessage)
         }
+        // Like Add expense, the keyboard stays up under the actions, so the floating hide button
+        // would sit on Record repayment. Tapping outside the fields still hides the keyboard.
+        .hidesFloatingKeyboardButton()
     }
 
-    // MARK: - Recipient
+    // MARK: - Recipient and date
 
+    /// One line under the amount that reads as a sentence, "Paid to Philip · Today, 24 Nov",
+    /// where the name and the date are tappable chips. Wraps onto two lines when it doesn't fit.
+    private func detailSentence(_ target: PersonBalance) -> some View {
+        let name = recipientMenu(target) {
+            sentenceToken(target.displayName, showsChevron: showsRecipientChevron) {
+                AvatarView(userId: target.personId, size: 22, name: target.displayName)
+            }
+        }
+        .buttonStyle(.plain)
+        let lead = Text(isReceiving ? "Received from" : "Paid to").foregroundStyle(HomeTheme.secondary)
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 6) {
+                lead
+                name
+                Text("·").foregroundStyle(HomeTheme.tertiary)
+                dateToken
+            }
+            VStack(spacing: 6) {
+                HStack(spacing: 6) { lead; name }
+                HStack(spacing: 6) { Text("on").foregroundStyle(HomeTheme.secondary); dateToken }
+            }
+        }
+        .font(.system(.body, design: .rounded).weight(.medium))
+    }
+
+    /// A tinted capsule for the tappable parts of the sentence, led by the person's avatar or a calendar glyph.
+    private func sentenceToken<Leading: View>(
+        _ title: String,
+        showsChevron: Bool,
+        @ViewBuilder leading: () -> Leading
+    ) -> some View {
+        HStack(spacing: 6) {
+            leading()
+            Text(title)
+                .lineLimit(1)
+            if showsChevron {
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+            }
+        }
+        .fontWeight(.semibold)
+        .foregroundStyle(HomeTheme.solidAccent)
+        .padding(.leading, 6)
+        .padding(.trailing, 12)
+        .padding(.vertical, 6)
+        .background(HomeTheme.solidAccent.opacity(0.12), in: Capsule())
+        .contentShape(Capsule())
+    }
+
+    /// Wraps a recipient label in the person picker when there is more than one open balance.
     @ViewBuilder
-    private func recipientPicker(_ target: PersonBalance) -> some View {
+    private func recipientMenu<Label: View>(_ target: PersonBalance, @ViewBuilder label: () -> Label) -> some View {
         if balances.count > 1 {
             Menu {
                 recipientOptions
             } label: {
-                recipientChip(target, showsChevron: true)
+                label()
             }
             .accessibilityLabel("\(isReceiving ? "Received from" : "Paying") \(target.displayName)")
             .accessibilityHint("Choose who the repayment was with")
         } else {
-            recipientChip(target, showsChevron: false)
+            label()
                 .accessibilityElement(children: .combine)
         }
     }
+
+    private var showsRecipientChevron: Bool { balances.count > 1 }
 
     private var recipientOptions: some View {
         Picker("Person", selection: $selectedId) {
@@ -151,25 +205,6 @@ struct RepaymentSheet: View {
                 Text("\(balance.displayName) · \(balance.direction.lowercased()) \(MoneyFormatter.string(from: balance.money))").tag(balance.id)
             }
         }
-    }
-
-    private func recipientChip(_ target: PersonBalance, showsChevron: Bool) -> some View {
-        HStack(spacing: 8) {
-            AvatarView(userId: target.personId, size: 28, name: target.displayName)
-            Text("\(isReceiving ? "From" : "To") \(target.displayName)")
-                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                .foregroundStyle(HomeTheme.text)
-                .lineLimit(1)
-            if showsChevron {
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(HomeTheme.secondary)
-            }
-        }
-        .padding(.leading, 4)
-        .padding(.trailing, showsChevron ? 12 : 14)
-        .padding(.vertical, 4)
-        .background(HomeTheme.surface, in: Capsule())
     }
 
     // MARK: - Amount context
@@ -191,9 +226,36 @@ struct RepaymentSheet: View {
 
     // MARK: - Date
 
-    private var dateButton: some View {
+    private var dateToken: some View {
+        Button(action: openDatePicker) {
+            sentenceToken(paidOnText, showsChevron: false) {
+                Image(systemName: "calendar")
+                    .font(.subheadline.weight(.semibold))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Paid on \(paidOnText)")
+        .accessibilityHint("Choose the day of the repayment")
+        .popover(isPresented: $showsDatePicker) { datePickerPopover }
+    }
+
+    private var paidOnText: String { DaySectionTitle.string(for: paidAt, showsYearOutsideCurrent: true) }
+
+    private func openDatePicker() {
+        LoamFeedback.tap()
+        amountFocused = false
+        noteFocused = false
+        showsDatePicker = true
+    }
+
+    private var datePickerPopover: some View {
         DatePicker("Paid on", selection: $paidAt, in: ...Date(), displayedComponents: .date)
+            .datePickerStyle(.graphical)
             .labelsHidden()
+            .padding(.horizontal, 12)
+            .frame(width: 320)
+            .presentationCompactAdaptation(.popover)
+            .onChange(of: paidAt) { _, _ in showsDatePicker = false }
     }
 
     // MARK: - Controls
