@@ -25,6 +25,7 @@ final class WalletPaymentTests: LocalStorageTestCase {
         let me = signIn()
         let intent = LogWalletPaymentIntent()
         intent.amount = IntentCurrencyAmount(amount: 8, currencyCode: "EUR")
+        intent.currencyCode = "PLN"
         intent.merchant = "Lidl"
         intent.mode = .addNow
         _ = try await intent.perform()
