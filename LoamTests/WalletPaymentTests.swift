@@ -1,3 +1,4 @@
+import AppIntents
 import XCTest
 @testable import Loam
 
@@ -15,9 +16,22 @@ final class WalletPaymentTests: LocalStorageTestCase {
     // MARK: Reading Wallet's values
 
     func testAmountKeepsItsCents() throws {
-        let payment = try WalletPayment.make(amount: 12.3, currencyCode: "PLN", merchant: "Żabka", category: nil, paidAt: Date())
+        let payment = try WalletPayment.make(amount: Decimal(string: "12.3"), currencyCode: "PLN", merchant: "Żabka", category: nil, paidAt: Date())
         XCTAssertEqual(payment.money, Money(amountMinor: 1230, currencyCode: "PLN"))
         XCTAssertEqual(payment.merchant, "Żabka")
+    }
+
+    func testTheAmountsOwnCurrencyWins() async throws {
+        let me = signIn()
+        let intent = LogWalletPaymentIntent()
+        intent.amount = IntentCurrencyAmount(amount: 8, currencyCode: "EUR")
+        intent.merchant = "Lidl"
+        intent.mode = .addNow
+        _ = try await intent.perform()
+
+        let saved = try await LocalExpenseRepository().fetchExpenses(for: me, in: .currentMonth)
+        XCTAssertEqual(saved.first?.currency, "EUR")
+        XCTAssertEqual(LogWalletPaymentIntent.currency(of: IntentCurrencyAmount(amount: 1, currencyCode: ""), fallback: "USD"), "USD")
     }
 
     func testZeroOrMissingAmountIsRejected() {
@@ -77,8 +91,7 @@ final class WalletPaymentTests: LocalStorageTestCase {
     func testAddRightAwaySavesAPersonalExpense() async throws {
         let me = signIn()
         let intent = LogWalletPaymentIntent()
-        intent.amount = 23.99
-        intent.currencyCode = "PLN"
+        intent.amount = IntentCurrencyAmount(amount: Decimal(string: "23.99")!, currencyCode: "PLN")
         intent.merchant = "Biedronka"
         intent.mode = .addNow
         _ = try await intent.perform()
@@ -96,7 +109,7 @@ final class WalletPaymentTests: LocalStorageTestCase {
     func testAMissingAmountSavesNothing() async throws {
         let me = signIn()
         let intent = LogWalletPaymentIntent()
-        intent.amount = 0
+        intent.amount = IntentCurrencyAmount(amount: 0, currencyCode: "PLN")
         intent.merchant = "Lidl"
         intent.mode = .addNow
         _ = try await intent.perform()
@@ -108,8 +121,7 @@ final class WalletPaymentTests: LocalStorageTestCase {
     func testAnUnsupportedCurrencySavesNothing() async throws {
         let me = signIn()
         let intent = LogWalletPaymentIntent()
-        intent.amount = 15
-        intent.currencyCode = "GBP"
+        intent.amount = IntentCurrencyAmount(amount: Decimal(string: "15")!, currencyCode: "GBP")
         intent.merchant = "Pret"
         intent.mode = .addNow
         _ = try await intent.perform()
@@ -121,8 +133,7 @@ final class WalletPaymentTests: LocalStorageTestCase {
     func testARefundSavesNothing() async throws {
         let me = signIn()
         let intent = LogWalletPaymentIntent()
-        intent.amount = -20
-        intent.currencyCode = "PLN"
+        intent.amount = IntentCurrencyAmount(amount: Decimal(string: "-20")!, currencyCode: "PLN")
         intent.merchant = "Zara"
         intent.mode = .addNow
         _ = try await intent.perform()
@@ -134,8 +145,7 @@ final class WalletPaymentTests: LocalStorageTestCase {
     func testAskFirstWithoutNotificationsAddsRightAway() async throws {
         let me = signIn()
         let intent = LogWalletPaymentIntent()
-        intent.amount = 7
-        intent.currencyCode = "PLN"
+        intent.amount = IntentCurrencyAmount(amount: Decimal(string: "7")!, currencyCode: "PLN")
         intent.merchant = "Żabka"
         intent.mode = .askFirst
         _ = try await intent.perform()
