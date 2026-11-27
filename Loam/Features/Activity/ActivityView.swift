@@ -121,7 +121,6 @@ struct ActivityView: View {
             message: String(localized: "When a friend splits an expense with you, suggests an edit, or records a repayment, it shows up here for you to review. Read items stay in each expense’s history."),
             systemImage: "tray"
         )
-        .onAppear { Telemetry.capture(.emptyStateViewed(.activity)) }
     }
 
     // MARK: - Notifications

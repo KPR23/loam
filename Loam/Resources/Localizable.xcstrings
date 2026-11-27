@@ -7120,12 +7120,12 @@
         }
       }
     },
-    "Share usage data linked to your account so we can see which screens are used and where the app gets in your way." : {
+    "Share a few usage counts tied to a random account ID so we can see how people get started and what they use." : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Udostępniaj dane o użyciu powiązane z Twoim kontem, abyśmy widzieli, z których ekranów korzystasz i gdzie aplikacja przeszkadza."
+            "value" : "Udostępnij kilka danych o użyciu powiązanych z losowym identyfikatorem konta, abyśmy widzieli, jak ludzie zaczynają i z czego korzystają."
           }
         }
       }
@@ -8644,12 +8644,12 @@
         }
       }
     },
-    "Usage analytics never include amounts, descriptions or names. Crash reports are always sent." : {
+    "Usage analytics are tied to a random account ID, never your email or name, and never include amounts or descriptions. Crash reports are always sent." : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dane analityczne nigdy nie zawierają kwot, opisów ani imion. Raporty o awariach są wysyłane zawsze."
+            "value" : "Dane analityczne są powiązane z losowym identyfikatorem konta, nigdy z adresem e-mail ani imieniem, i nie zawierają kwot ani opisów. Raporty o awariach są wysyłane zawsze."
           }
         }
       }
@@ -8824,12 +8824,12 @@
         }
       }
     },
-    "Which screens and features you use, and short screen recordings with all text and images hidden." : {
+    "When you open the app, how onboarding went, and actions like adding an expense, repaying or connecting a friend." : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Z których ekranów i funkcji korzystasz oraz krótkie nagrania ekranu z ukrytymi tekstami i obrazami."
+            "value" : "Kiedy otwierasz aplikację, jak przebiegło wprowadzenie oraz czynności takie jak dodanie wydatku, spłata czy połączenie ze znajomym."
           }
         }
       }

@@ -711,7 +711,7 @@ private struct AppSettingsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     AppLockFooter()
                     if analyticsUserId(authSession) != nil {
-                        Text("Usage analytics never include amounts, descriptions or names. Crash reports are always sent.")
+                        Text("Usage analytics are tied to a random account ID, never your email or name, and never include amounts or descriptions. Crash reports are always sent.")
                     }
                 }
             }

@@ -207,14 +207,12 @@ struct BalancesView: View {
             systemImage: "person.2"
         ) {
             Button {
-                Telemetry.capture(.emptyStateActionTapped(.balances))
                 showAddFriend = true
             } label: {
                 Label("Add a friend", systemImage: "person.badge.plus")
                     .fontWeight(.semibold)
             }
         }
-        .onAppear { Telemetry.capture(.emptyStateViewed(.balances)) }
     }
 }
 
@@ -338,7 +336,6 @@ private struct BalancesHero: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .accessibilityElement(children: .combine)
-        .onAppear { Telemetry.capture(.emptyStateViewed(.balancesSettled)) }
     }
 }
 

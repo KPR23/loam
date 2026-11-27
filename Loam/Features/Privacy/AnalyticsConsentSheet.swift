@@ -17,14 +17,14 @@ struct AnalyticsConsentSheet: View {
             VStack(spacing: 8) {
                 Text("Help improve Loam")
                     .font(.system(.title2, design: .rounded).weight(.semibold))
-                Text("Share usage data linked to your account so we can see which screens are used and where the app gets in your way.")
+                Text("Share a few usage counts tied to a random account ID so we can see how people get started and what they use.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             .multilineTextAlignment(.center)
 
             VStack(alignment: .leading, spacing: 14) {
-                point("checkmark.circle.fill", .green, "Which screens and features you use, and short screen recordings with all text and images hidden.")
+                point("checkmark.circle.fill", .green, "When you open the app, how onboarding went, and actions like adding an expense, repaying or connecting a friend.")
                 point("xmark.circle.fill", .red, "Never amounts, descriptions, notes, names or photos.")
                 point("slider.horizontal.3", .secondary, "Change your mind any time in Profile under Privacy. Crash reports are always sent.")
             }
