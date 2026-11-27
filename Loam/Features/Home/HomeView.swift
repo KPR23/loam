@@ -103,7 +103,7 @@ struct HomeView: View {
                 await runSearch()
             }
             .task(id: authSession.userId) {
-                await expenseStore.refresh(userId: authSession.userId)
+                await expenseStore.loadIfNeeded(userId: authSession.userId)
             }
             .refreshable {
                 await expenseStore.refresh(userId: authSession.userId)
@@ -357,7 +357,7 @@ struct HomeView: View {
 
     @ViewBuilder
     private var expenseList: some View {
-        if expenseStore.isLoading && expenseStore.expenses.isEmpty {
+        if !expenseStore.hasLoadedPeriod && expenseStore.isLoading && expenseStore.expenses.isEmpty {
             Section {
                 SkeletonRows()
             }

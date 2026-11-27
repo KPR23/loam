@@ -15,7 +15,7 @@ struct ActivityView: View {
         NavigationStack {
             List {
                 if showsNotificationPrompt { notificationPrompt }
-                if activityStore.isLoading && activityStore.events.isEmpty {
+                if !activityStore.hasLoaded && activityStore.isLoading && activityStore.events.isEmpty {
                     Section {
                         SkeletonRows(count: 4, leading: .avatar(40), showsAmount: false)
                     }
@@ -67,7 +67,7 @@ struct ActivityView: View {
                     }
                 }
             }
-            .task(id: authSession.userId) { await reload() }
+            .task(id: authSession.userId) { await activityStore.loadIfNeeded(userId: authSession.userId) }
             .task(id: responseExpenseIds) {
                 // Requests can sit outside the Expenses period; load them so they can be answered here.
                 guard let userId = authSession.userId, !responseExpenseIds.isEmpty else { return }

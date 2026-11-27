@@ -14,12 +14,22 @@ struct PersonBalanceView: View {
     @EnvironmentObject private var authSession: AuthSession
     @EnvironmentObject private var balanceStore: BalanceStore
     @Environment(\.scenePhase) private var scenePhase
-    @State private var history: [BalanceHistoryEntry] = []
+    @State private var loadedHistory: [BalanceHistoryEntry] = []
     @State private var hasLoaded = false
     /// Bumped by every load; only the newest may update the screen.
     @State private var historyRequest = 0
     @State private var loadError: String?
     @State private var showsRepayment = false
+    @State private var seenSnapshot: BalanceSnapshot?
+
+    /// What this screen loaded, or the last copy from an earlier visit while the first load is still out.
+    private var history: [BalanceHistoryEntry] {
+        hasLoaded ? loadedHistory : (balanceStore.cachedHistory(with: person.personId) ?? [])
+    }
+
+    private var hasHistory: Bool {
+        hasLoaded || balanceStore.cachedHistory(with: person.personId) != nil
+    }
 
     private var balances: [PersonBalance] {
         balanceStore.snapshot.balances.filter { $0.personId == person.personId }
@@ -58,7 +68,13 @@ struct PersonBalanceView: View {
             }
         }
         // Reload whenever balances change, e.g. after a repayment or a pull to refresh.
-        .task(id: balanceStore.snapshot) { await loadHistory() }
+        // An earlier visit's history shows at once; it loads again only when balances change or on a pull.
+        .task(id: balanceStore.snapshot) {
+            let isFirstRun = seenSnapshot == nil
+            seenSnapshot = balanceStore.snapshot
+            if isFirstRun, hasHistory, !balanceStore.isHistoryStale(for: person.personId) { return }
+            await loadHistory()
+        }
         // A friend can accept or decline while the app is away without changing any balance.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await loadHistory() } }
@@ -144,7 +160,7 @@ struct PersonBalanceView: View {
 
     @ViewBuilder
     private var historySections: some View {
-        if !hasLoaded {
+        if !hasHistory {
             Section {
                 SkeletonRows(count: 4)
             }
@@ -203,7 +219,7 @@ struct PersonBalanceView: View {
         do {
             let loaded = try await balanceStore.history(with: person.personId, userId: userId)
             guard request == historyRequest else { return }
-            history = loaded
+            loadedHistory = loaded
             loadError = nil
         } catch {
             // Leaving the screen cancels the load; that is not a failure.
