@@ -3,15 +3,18 @@ import PostHog
 import Sentry
 
 /// Sentry reports crashes and handled errors for every user of a TestFlight or App Store
-/// build. PostHog analytics and session replay run only in App Store builds, which alone
-/// carry PostHog keys, and only for a signed-in user who opted in, so nothing reaches PostHog
-/// without that user's consent. Consent is stored per account: another account signing in on
-/// the same device starts opted out. Both tools share the Supabase user ID so a crash can be
-/// matched to the user's path in PostHog.
+/// build. PostHog analytics run only in App Store builds, which alone carry PostHog keys,
+/// and only for a signed-in user who opted in, so nothing reaches PostHog without that
+/// user's consent. Consent is stored per account: another account signing in on the same
+/// device starts opted out. PostHog gets the Supabase user ID, a random identifier and the only
+/// identity sent: no email, name or other person properties. Sentry gets no user at all, so
+/// crash reports are not linked to an account, and Settings can turn them off. See docs/data-collection.md.
 @MainActor
 enum Telemetry {
     private static let analyticsConsentKeyPrefix = "loam.analyticsConsent."
     private static let analyticsAnsweredKeyPrefix = "loam.analyticsAnswered."
+
+    private static let crashReportsKey = "loam.crashReports.enabled"
 
     private static var postHogStarted = false
     private static var userId: String?
@@ -25,6 +28,27 @@ enum Telemetry {
         startPostHog()
     }
 
+    /// False in Debug builds and builds without a Sentry DSN, which never report crashes.
+    static var isCrashReportingAvailable: Bool {
+        #if DEBUG
+        false
+        #else
+        infoString("SENTRY_DSN") != nil
+        #endif
+    }
+
+    /// On unless the user turned it off in Settings. Applies to every account on the device.
+    static var crashReportsEnabled: Bool {
+        UserDefaults.standard.object(forKey: crashReportsKey) as? Bool ?? true
+    }
+
+    static func setCrashReportsEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: crashReportsKey)
+        #if !DEBUG
+        if enabled { startSentry() } else { SentrySDK.close() }
+        #endif
+    }
+
     /// False in builds without PostHog keys, which never send analytics.
     static var isAnalyticsAvailable: Bool {
         postHogStarted
@@ -34,7 +58,6 @@ enum Telemetry {
     static func setUser(_ id: UUID?) {
         // Supabase stores UUIDs in lowercase; match it so IDs can be looked up in the database.
         userId = id.map(normalizedId)
-        SentrySDK.setUser(userId.map { Sentry.User(userId: $0) })
         applyAnalyticsConsent()
     }
 
@@ -57,24 +80,18 @@ enum Telemetry {
         applyAnalyticsConsent()
     }
 
-    static func screen(_ name: String) {
-        guard postHogStarted else { return }
-        PostHogSDK.shared.screen(name)
-    }
-
     static func capture(_ event: ProductEvent) {
         guard postHogStarted else { return }
         PostHogSDK.shared.capture(event.name, properties: event.properties)
     }
 
     private static func startSentry() {
-        guard let dsn = infoString("SENTRY_DSN") else { return }
+        guard crashReportsEnabled, let dsn = infoString("SENTRY_DSN") else { return }
 
         SentrySDK.start { options in
             options.dsn = dsn
             options.environment = environment
             options.sendDefaultPii = false
-            // PostHog records sessions; a second recorder would double the cost.
             options.sessionReplay.sessionSampleRate = 0
             options.sessionReplay.onErrorSampleRate = 0
         }
@@ -101,16 +118,8 @@ enum Telemetry {
         // Sentry owns error reporting.
         config.errorTrackingConfig.autoCapture = false
 
-        config.sessionReplay = true
-        // Wireframe mode with every text and image masked keeps amounts, descriptions,
-        // names and avatars out of recordings. Masking happens on the device.
-        config.sessionReplayConfig.screenshotMode = false
-        config.sessionReplayConfig.maskAllTextInputs = true
-        config.sessionReplayConfig.maskAllImages = true
-        config.sessionReplayConfig.maskAllSandboxedViews = true
-        // Supabase request URLs carry record IDs and filters.
-        config.sessionReplayConfig.captureNetworkTelemetry = false
-        config.sessionReplayConfig.captureLogs = false
+        // Session replay stays off: Loam only counts a few actions, it never watches screens.
+        config.sessionReplay = false
 
         PostHogSDK.shared.setup(config)
         postHogStarted = true
@@ -129,6 +138,7 @@ enum Telemetry {
 
         postHog.optIn()
         identify(userId)
+        OnboardingProgress.reportIfNeeded()
     }
 
     private static func identify(_ id: String) {
@@ -164,35 +174,16 @@ enum Telemetry {
 enum ProductEvent {
     case expenseCreated(shared: Bool, recurring: Bool, participantCount: Int)
     case repaymentRecorded
-    case emptyStateViewed(EmptyStateScreen)
-    case emptyStateActionTapped(EmptyStateScreen)
-    case addExpenseOpened(source: AddExpenseSource)
     case friendConnected
-
-    /// A tab whose list can be empty. `balancesSettled` is Balances for a user who already has friends.
-    enum EmptyStateScreen: String {
-        case expenses
-        case pastMonth = "past_month"
-        case balances
-        case balancesSettled = "balances_settled"
-        case activity
-    }
-
-    enum AddExpenseSource: String {
-        case homeButton = "home_button"
-        case emptyState = "empty_state"
-        case siri
-        case tabBar = "tab_bar"
-    }
+    /// How far onboarding got. Recorded on the device before sign-in and sent once, after opt-in.
+    case onboardingFinished(furthestPage: String, skipped: Bool, notificationsAllowed: Bool)
 
     var name: String {
         switch self {
         case .expenseCreated: "expense created"
         case .repaymentRecorded: "repayment recorded"
-        case .emptyStateViewed: "empty state viewed"
-        case .emptyStateActionTapped: "empty state action tapped"
-        case .addExpenseOpened: "add expense opened"
         case .friendConnected: "friend connected"
+        case .onboardingFinished: "onboarding finished"
         }
     }
 
@@ -200,10 +191,8 @@ enum ProductEvent {
         switch self {
         case let .expenseCreated(shared, recurring, participantCount):
             ["shared": shared, "recurring": recurring, "participant_count": participantCount]
-        case let .emptyStateViewed(screen), let .emptyStateActionTapped(screen):
-            ["screen": screen.rawValue]
-        case let .addExpenseOpened(source):
-            ["source": source.rawValue]
+        case let .onboardingFinished(furthestPage, skipped, notificationsAllowed):
+            ["furthest_page": furthestPage, "skipped": skipped, "notifications_allowed": notificationsAllowed]
         case .repaymentRecorded, .friendConnected:
             nil
         }

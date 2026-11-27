@@ -84,6 +84,7 @@
 		699C700B7D9C668D32D611EB /* ExpenseStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F561A8049815F88C76AE4F79 /* ExpenseStoreTests.swift */; };
 		6B297C4A80E3ECD96020C518 /* OnboardingPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24AF2D0CE65D63EEB40B2678 /* OnboardingPageView.swift */; };
 		6EDEAC6D3C1288015F254D22 /* OnboardingPermissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91EF8A33477674847BDE93AF /* OnboardingPermissions.swift */; };
+		4648430905F69F5E83751D73 /* OnboardingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2177355D91BF642C5E08F49B /* OnboardingProgress.swift */; };
 		7326C39296D12B70AB7C7609 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 21BC58A6AC60D3347EDFACC0 /* Supabase */; };
 		79787A468210099635E5B3EB /* ExpenseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 591C0E16AC62C2272FA783EA /* ExpenseStore.swift */; };
 		79D96C7D97FE719A2FAC5622 /* ExpenseLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B225EA738D0900ECF5C69 /* ExpenseLocation.swift */; };
@@ -295,6 +296,7 @@
 		9084B4E031E8FBBF01EF74AD /* OnboardingSplitPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSplitPreview.swift; sourceTree = "<group>"; };
 		914274A331517EC93002CE6C /* HomeExpenseRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeExpenseRow.swift; sourceTree = "<group>"; };
 		91EF8A33477674847BDE93AF /* OnboardingPermissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPermissions.swift; sourceTree = "<group>"; };
+		2177355D91BF642C5E08F49B /* OnboardingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProgress.swift; sourceTree = "<group>"; };
 		96B191DF77DB109E7AB03FE5 /* LoamTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LoamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		98702872EF571671E266B171 /* ExchangeRates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExchangeRates.swift; sourceTree = "<group>"; };
 		99A7E2ACFDFFA08B0048B9C9 /* ExpenseSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseSummaryTests.swift; sourceTree = "<group>"; };
@@ -497,6 +499,7 @@
 				A609DF87CDFA5FA17F506EBF /* OnboardingPermissionList.swift */,
 				A004CCBA117B55E7F6E163F6 /* OnboardingPermissionRow.swift */,
 				91EF8A33477674847BDE93AF /* OnboardingPermissions.swift */,
+				2177355D91BF642C5E08F49B /* OnboardingProgress.swift */,
 				9084B4E031E8FBBF01EF74AD /* OnboardingSplitPreview.swift */,
 				7ED14FCC8BE665AC6D564E88 /* OnboardingView.swift */,
 			);
@@ -1099,6 +1102,7 @@
 				22976C815B867287FDA7EBB4 /* OnboardingPermissionList.swift in Sources */,
 				2E598C87AD84483A80C87724 /* OnboardingPermissionRow.swift in Sources */,
 				6EDEAC6D3C1288015F254D22 /* OnboardingPermissions.swift in Sources */,
+				4648430905F69F5E83751D73 /* OnboardingProgress.swift in Sources */,
 				191B04124AAAB00289C6631A /* OnboardingSplitPreview.swift in Sources */,
 				23D2DE4DB3F88CEC96B5AAA8 /* OnboardingView.swift in Sources */,
 				12911FE1A942CD0E6D411A6E /* PendingExpenseActions.swift in Sources */,

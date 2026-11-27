@@ -245,7 +245,6 @@ struct HomeView: View {
     /// Matches Record repayment on Balances: a full-width accent capsule with subheadline text.
     private var addExpenseButton: some View {
         Button {
-            Telemetry.capture(.addExpenseOpened(source: .homeButton))
             onAddExpense()
         } label: {
             Label("Add expense", systemImage: "plus")
@@ -465,22 +464,18 @@ struct HomeView: View {
                 systemImage: "creditcard"
             ) {
                 Button {
-                    Telemetry.capture(.emptyStateActionTapped(.expenses))
-                    Telemetry.capture(.addExpenseOpened(source: .emptyState))
                     onAddExpense()
                 } label: {
                     Label("Add an expense", systemImage: "plus")
                         .fontWeight(.semibold)
                 }
             }
-            .onAppear { Telemetry.capture(.emptyStateViewed(.expenses)) }
         } else {
             LoamEmptyState(
                 title: String(localized: "No expenses in \(expenseStore.period.displayTitle)"),
                 message: String(localized: "Nothing was logged this month. Tap the month at the top to see another one."),
                 systemImage: "calendar"
             )
-            .onAppear { Telemetry.capture(.emptyStateViewed(.pastMonth)) }
         }
     }
 

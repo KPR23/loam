@@ -47,6 +47,11 @@ struct AuthView: View {
                             .foregroundStyle(HomeTheme.secondary)
                             .tint(HomeTheme.text)
                             .multilineTextAlignment(.center)
+
+                        Text("Loam sends crash reports and, only if you agree after signing in, a few usage counts.")
+                            .font(.footnote)
+                            .foregroundStyle(HomeTheme.secondary)
+                            .multilineTextAlignment(.center)
                     }
                 }
                 .padding(.horizontal, 24)

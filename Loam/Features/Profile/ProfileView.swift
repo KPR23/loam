@@ -533,6 +533,22 @@ private struct AnalyticsToggle: View {
     }
 }
 
+private struct CrashReportsToggle: View {
+    @State private var enabled = Telemetry.crashReportsEnabled
+    /// Redraws the accent-tinted controls when the accent changes in Settings.
+    @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
+
+    var body: some View {
+        Toggle(isOn: $enabled) {
+            ProfileRow("Send crash reports", symbol: "ladybug", color: .orange)
+        }
+        .tint(HomeTheme.accentFill)
+        .onChange(of: enabled) { _, newValue in
+            Telemetry.setCrashReportsEnabled(newValue)
+        }
+    }
+}
+
 /// The account that can share usage analytics, or nil when the switch is hidden.
 @MainActor
 private func analyticsUserId(_ authSession: AuthSession) -> UUID? {
@@ -707,11 +723,17 @@ private struct AppSettingsView: View {
                 if let userId = analyticsUserId(authSession) {
                     AnalyticsToggle(userId: userId)
                 }
+                if Telemetry.isCrashReportingAvailable {
+                    CrashReportsToggle()
+                }
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
                     AppLockFooter()
+                    if Telemetry.isCrashReportingAvailable {
+                        Text("Crash reports are not linked to your account. They hold your device model, iOS and app version and technical details, never your expenses.")
+                    }
                     if analyticsUserId(authSession) != nil {
-                        Text("Usage analytics never include amounts, descriptions or names. Crash reports are always sent.")
+                        Text("Usage analytics are tied to a random account ID, never your email or name, and never include amounts or descriptions.")
                     }
                 }
             }

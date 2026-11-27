@@ -8,16 +8,6 @@ struct MainTabView: View {
         case profile
         /// The Add expense form, set apart at the end of the tab bar on iOS 26 and later.
         case addExpense
-
-        var screenName: String {
-            switch self {
-            case .expenses: "Expenses"
-            case .balances: "Balances"
-            case .activity: "Activity"
-            case .profile: "Profile"
-            case .addExpense: "Add expense"
-            }
-        }
     }
 
     @EnvironmentObject private var authSession: AuthSession
@@ -31,8 +21,6 @@ struct MainTabView: View {
     @State private var lastContentTab: AppTab = .expenses
     /// A new value gives the Add expense tab a fresh, empty form.
     @State private var addExpenseFormID = UUID()
-    /// Set when code, not a tab bar tap, opens the Add expense tab, so the open isn't counted twice.
-    @State private var addExpenseOpenedInCode = false
     @State private var expensesReloadToken = 0
     @State private var showsAnalyticsPrompt = false
     @AppStorage("loam.accentColor") private var accentColor: AppAccentColor = .blue
@@ -50,12 +38,7 @@ struct MainTabView: View {
             if newValue == .expenses {
                 expensesReloadToken += 1
             }
-            if newValue == .addExpense {
-                if !addExpenseOpenedInCode {
-                    Telemetry.capture(.addExpenseOpened(source: .tabBar))
-                }
-                addExpenseOpenedInCode = false
-            } else {
+            if newValue != .addExpense {
                 lastContentTab = newValue
             }
         }
@@ -65,7 +48,6 @@ struct MainTabView: View {
         }
         .overlay(alignment: .top) { SplitwiseImportOverlay() }
         .onChange(of: selection, initial: true) { _, tab in
-            Telemetry.screen(tab.screenName)
             // Opening Activity marks its events seen; elsewhere, pick up events that arrived meanwhile.
             activityStore.isInboxVisible = tab == .activity
             Task {
@@ -111,7 +93,6 @@ struct MainTabView: View {
     private func openAddExpense() {
         if Self.usesAddExpenseTab {
             guard selection != .addExpense else { return }
-            addExpenseOpenedInCode = true
             selection = .addExpense
         } else {
             showAddExpense = true
@@ -137,7 +118,6 @@ struct MainTabView: View {
         case .profile: selection = .profile
         case .newExpense:
             if !Self.usesAddExpenseTab { selection = .expenses }
-            Telemetry.capture(.addExpenseOpened(source: .siri))
             openAddExpense()
         }
     }

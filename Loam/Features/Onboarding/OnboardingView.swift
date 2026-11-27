@@ -50,6 +50,7 @@ struct OnboardingView: View {
         .background(HomeTheme.background)
         .animation(reduceMotion ? nil : .snappy, value: page)
         .task { await permissions.refresh() }
+        .onChange(of: page) { _, newPage in OnboardingProgress.reached(newPage) }
         .onChange(of: scenePhase) { _, phase in
             // People who turned notifications on in Settings come back to a checkmark.
             if phase == .active { Task { await permissions.refresh() } }
@@ -61,6 +62,7 @@ struct OnboardingView: View {
         if let next = page.next {
             page = next
         } else {
+            OnboardingProgress.finished(notificationsAllowed: permissions.notifications == .allowed)
             onFinish()
         }
     }
@@ -68,6 +70,7 @@ struct OnboardingView: View {
     /// Skipping the story still lands on permissions, which people can then decline in one tap.
     private func skip() {
         LoamFeedback.tap()
+        OnboardingProgress.skipped()
         page = .permissions
     }
 }

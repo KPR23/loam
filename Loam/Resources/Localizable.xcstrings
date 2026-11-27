@@ -70,36 +70,6 @@
         }
       }
     },
-    "%@ Check your payment method." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ Sprawdź metodę płatności."
-          }
-        }
-      }
-    },
-    "%@ The App Store had a problem. Try again." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ Wystąpił problem z App Store. Spróbuj ponownie."
-          }
-        }
-      }
-    },
-    "%@ Try again." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ Spróbuj ponownie."
-          }
-        }
-      }
-    },
     "%@ accepted %@" : {
       "localizations" : {
         "pl" : {
@@ -196,6 +166,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zmieniono: %@"
+          }
+        }
+      }
+    },
+    "%@ Check your payment method." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Sprawdź metodę płatności."
           }
         }
       }
@@ -476,6 +456,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ proponuje zmiany w Twoim wydatku"
+          }
+        }
+      }
+    },
+    "%@ The App Store had a problem. Try again." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Wystąpił problem z App Store. Spróbuj ponownie."
+          }
+        }
+      }
+    },
+    "%@ Try again." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Spróbuj ponownie."
           }
         }
       }
@@ -1382,6 +1382,16 @@
         }
       }
     },
+    "a friend" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "znajomy"
+          }
+        }
+      }
+    },
     "A friend accepts or declines your expense or your suggested changes." : {
       "localizations" : {
         "pl" : {
@@ -1418,6 +1428,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Odrobina jasności. Każdego dnia."
+          }
+        }
+      }
+    },
+    "a participant" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "uczestnik"
           }
         }
       }
@@ -1622,16 +1642,6 @@
         }
       }
     },
-    "Add Expense" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj wydatek"
-          }
-        }
-      }
-    },
     "Add a friend" : {
       "localizations" : {
         "pl" : {
@@ -1698,6 +1708,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dodaj szczegóły"
+          }
+        }
+      }
+    },
+    "Add Expense" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj wydatek"
           }
         }
       }
@@ -1882,6 +1902,16 @@
         }
       }
     },
+    "all of it from splits" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "całość z podziałów"
+          }
+        }
+      }
+    },
     "All settled up" : {
       "localizations" : {
         "pl" : {
@@ -1982,22 +2012,22 @@
         }
       }
     },
-    "Apple Pay payment" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Płatność Apple Pay"
-          }
-        }
-      }
-    },
     "Apple couldn’t verify this confirmation. Your account is still active; try the deletion flow again." : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apple nie mogło zweryfikować tego potwierdzenia. Twoje konto jest nadal aktywne; spróbuj usunąć je ponownie."
+          }
+        }
+      }
+    },
+    "Apple Pay payment" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Płatność Apple Pay"
           }
         }
       }
@@ -2224,6 +2254,218 @@
         }
       }
     },
+    "billing-period-day %lld" : {
+      "comment" : "How often a plan is billed, after a price and a slash: day, 3 days",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "day"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld days"
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "dzień"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dni"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dni"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dnia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "billing-period-month %lld" : {
+      "comment" : "How often a plan is billed, after a price and a slash: month, 3 months",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "month"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld months"
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "miesiąc"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld miesiące"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld miesięcy"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld miesiąca"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "billing-period-week %lld" : {
+      "comment" : "How often a plan is billed, after a price and a slash: week, 3 weeks",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "week"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld weeks"
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "tydzień"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tygodnie"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tygodni"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tygodnia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "billing-period-year %lld" : {
+      "comment" : "How often a plan is billed, after a price and a slash: year, 2 years",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "year"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld years"
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "rok"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lata"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lat"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld roku"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Black" : {
       "localizations" : {
         "pl" : {
@@ -2334,12 +2576,12 @@
         }
       }
     },
-    "Change your mind any time in Profile under Privacy. Crash reports are always sent." : {
+    "Change your mind any time in Settings. Crash reports (device model, iOS and app version, never your expenses) are sent unless you turn them off there." : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zmienisz zdanie w dowolnej chwili w Profilu, w sekcji Prywatność. Raporty o awariach są wysyłane zawsze."
+            "value" : "Zmienisz zdanie w dowolnej chwili w Ustawieniach. Raporty o awariach (model urządzenia, wersja iOS i aplikacji, nigdy Twoje wydatki) są wysyłane, o ile ich tam nie wyłączysz."
           }
         }
       }
@@ -2424,16 +2666,6 @@
         }
       }
     },
-    "Choose Splitwise CSV" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wybierz plik CSV ze Splitwise"
-          }
-        }
-      }
-    },
     "Choose a date." : {
       "localizations" : {
         "pl" : {
@@ -2480,6 +2712,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wybierz miesiąc"
+          }
+        }
+      }
+    },
+    "Choose Splitwise CSV" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz plik CSV ze Splitwise"
           }
         }
       }
@@ -2992,6 +3234,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nie udało się wczytać znajomych."
+          }
+        }
+      }
+    },
+    "Crash reports are not linked to your account. They hold your device model, iOS and app version and technical details, never your expenses." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raporty o awariach nie są powiązane z Twoim kontem. Zawierają model urządzenia, wersję iOS i aplikacji oraz dane techniczne, nigdy Twoje wydatki."
           }
         }
       }
@@ -4184,22 +4436,22 @@
         }
       }
     },
-    "Free trial, Pro starts on %@." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Okres próbny, Pro zaczyna się %@."
-          }
-        }
-      }
-    },
     "Free trial, ends on %@." : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Okres próbny, kończy się %@."
+          }
+        }
+      }
+    },
+    "Free trial, Pro starts on %@." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Okres próbny, Pro zaczyna się %@."
           }
         }
       }
@@ -4314,6 +4566,16 @@
         }
       }
     },
+    "Get balances with ${friend}" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż salda: ${friend}"
+          }
+        }
+      }
+    },
     "Get Loam Pro" : {
       "localizations" : {
         "pl" : {
@@ -4334,32 +4596,22 @@
         }
       }
     },
-    "Get Pending Expenses" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokaż oczekujące wydatki"
-          }
-        }
-      }
-    },
-    "Get balances with ${friend}" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokaż salda: ${friend}"
-          }
-        }
-      }
-    },
     "Get notified" : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Otrzymuj powiadomienia"
+          }
+        }
+      }
+    },
+    "Get Pending Expenses" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż oczekujące wydatki"
           }
         }
       }
@@ -4780,6 +5032,26 @@
         }
       }
     },
+    "incl. %@ from splits" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ z podziałów"
+          }
+        }
+      }
+    },
+    "including %@ from splits" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "w tym %@ z podziałów"
+          }
+        }
+      }
+    },
     "Indigo" : {
       "localizations" : {
         "pl" : {
@@ -5000,56 +5272,6 @@
         }
       }
     },
-    "Loam Free includes one connection. Upgrade to invite more. Joining with a code someone sends you is always free." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loam Free obejmuje jedno połączenie. Przejdź na Pro, aby zaprosić więcej osób. Dołączanie za pomocą otrzymanego kodu jest zawsze bezpłatne."
-          }
-        }
-      }
-    },
-    "Loam Pro" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loam Pro"
-          }
-        }
-      }
-    },
-    "Loam Pro is needed to invite more people." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aby zaprosić więcej osób, potrzebujesz Loam Pro."
-          }
-        }
-      }
-    },
-    "Loam Pro isn't available right now." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loam Pro jest teraz niedostępne."
-          }
-        }
-      }
-    },
-    "Loam Pro isn’t available yet" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loam Pro nie jest jeszcze dostępne"
-          }
-        }
-      }
-    },
     "Loam asks iOS for permission the first time. You can change it later." : {
       "localizations" : {
         "pl" : {
@@ -5086,6 +5308,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Loam nie obsługuje waluty %@. Użyj złotych, euro lub dolarów."
+          }
+        }
+      }
+    },
+    "Loam Free includes one connection. Upgrade to invite more. Joining with a code someone sends you is always free." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam Free obejmuje jedno połączenie. Przejdź na Pro, aby zaprosić więcej osób. Dołączanie za pomocą otrzymanego kodu jest zawsze bezpłatne."
           }
         }
       }
@@ -5136,6 +5368,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Loam śledzi, ile wydajesz i co dzielisz z innymi. Podziel wydatek ze znajomym, a oboje zobaczycie, kto komu ile jest winien, więc rozliczenie się jest proste.\n\nWidzisz go tylko Ty i znajomi, z którymi go dzielisz.\n\n%@"
+          }
+        }
+      }
+    },
+    "Loam Pro" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam Pro"
+          }
+        }
+      }
+    },
+    "Loam Pro is needed to invite more people." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aby zaprosić więcej osób, potrzebujesz Loam Pro."
+          }
+        }
+      }
+    },
+    "Loam Pro isn't available right now." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam Pro jest teraz niedostępne."
+          }
+        }
+      }
+    },
+    "Loam Pro isn’t available yet" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam Pro nie jest jeszcze dostępne"
+          }
+        }
+      }
+    },
+    "Loam sends crash reports and, only if you agree after signing in, a few usage counts." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loam wysyła raporty o awariach oraz, tylko za Twoją zgodą po zalogowaniu, kilka danych o użyciu."
           }
         }
       }
@@ -5370,22 +5652,22 @@
         }
       }
     },
-    "New Expense" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nowy wydatek"
-          }
-        }
-      }
-    },
     "New category" : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nowa kategoria"
+          }
+        }
+      }
+    },
+    "New Expense" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowy wydatek"
           }
         }
       }
@@ -5730,6 +6012,16 @@
         }
       }
     },
+    "of %@" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z %@"
+          }
+        }
+      }
+    },
     "Off" : {
       "localizations" : {
         "pl" : {
@@ -5746,6 +6038,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Włączone"
+          }
+        }
+      }
+    },
+    "on" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dnia"
           }
         }
       }
@@ -5800,6 +6102,16 @@
         }
       }
     },
+    "Open iOS Settings" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz Ustawienia iOS"
+          }
+        }
+      }
+    },
     "Open Loam and sign in first." : {
       "localizations" : {
         "pl" : {
@@ -5830,12 +6142,12 @@
         }
       }
     },
-    "Open iOS Settings" : {
+    "Opens an email addressed to Loam support" : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Otwórz Ustawienia iOS"
+            "value" : "Otwiera e-mail do pomocy Loam"
           }
         }
       }
@@ -5886,16 +6198,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Otwiera warunki korzystania z Loam"
-          }
-        }
-      }
-    },
-    "Opens an email addressed to Loam support" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otwiera e-mail do pomocy Loam"
           }
         }
       }
@@ -5986,16 +6288,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ma Ci do oddania"
-          }
-        }
-      }
-    },
-    "PRO" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PRO"
           }
         }
       }
@@ -6230,6 +6522,40 @@
         }
       }
     },
+    "plan-monthly" : {
+      "comment" : "A plan's name on the paywall's plan switch",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miesięczny"
+          }
+        }
+      }
+    },
+    "plan-yearly" : {
+      "comment" : "A plan's name on the paywall's plan switch",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yearly"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Roczny"
+          }
+        }
+      }
+    },
     "Preparing" : {
       "localizations" : {
         "pl" : {
@@ -6256,6 +6582,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Polityka prywatności"
+          }
+        }
+      }
+    },
+    "PRO" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PRO"
           }
         }
       }
@@ -6336,6 +6672,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fioletowy"
+          }
+        }
+      }
+    },
+    "Read the privacy policy" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przeczytaj politykę prywatności"
           }
         }
       }
@@ -6446,6 +6792,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cykliczny"
+          }
+        }
+      }
+    },
+    "recurring" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cykliczny"
           }
         }
       }
@@ -6990,12 +7346,12 @@
         }
       }
     },
-    "Share this code with a friend you want to connect with. They’ll enter it in Loam." : {
+    "Send crash reports" : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Udostępnij ten kod znajomemu, z którym chcesz się połączyć. Wpisze go w Loam."
+            "value" : "Wysyłaj raporty o awariach"
           }
         }
       }
@@ -7080,6 +7436,16 @@
         }
       }
     },
+    "Share a few usage counts tied to a random account ID so we can see how people get started and what they use." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udostępnij kilka danych o użyciu powiązanych z losowym identyfikatorem konta, abyśmy widzieli, jak ludzie zaczynają i z czego korzystają."
+          }
+        }
+      }
+    },
     "Share every bill, with everyone" : {
       "localizations" : {
         "pl" : {
@@ -7100,6 +7466,16 @@
         }
       }
     },
+    "Share this code with a friend you want to connect with. They’ll enter it in Loam." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udostępnij ten kod znajomemu, z którym chcesz się połączyć. Wpisze go w Loam."
+          }
+        }
+      }
+    },
     "Share usage analytics" : {
       "localizations" : {
         "pl" : {
@@ -7116,16 +7492,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Udostępniaj dane o użyciu"
-          }
-        }
-      }
-    },
-    "Share usage data linked to your account so we can see which screens are used and where the app gets in your way." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Udostępniaj dane o użyciu powiązane z Twoim kontem, abyśmy widzieli, z których ekranów korzystasz i gdzie aplikacja przeszkadza."
           }
         }
       }
@@ -7352,6 +7718,16 @@
         }
       }
     },
+    "someone" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ktoś"
+          }
+        }
+      }
+    },
     "Someone in this split isn't available anymore." : {
       "localizations" : {
         "pl" : {
@@ -7398,16 +7774,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatyczny podział 50/50."
-          }
-        }
-      }
-    },
-    "Split With" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Podziel z"
           }
         }
       }
@@ -7510,6 +7876,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zaktualizowano podział"
+          }
+        }
+      }
+    },
+    "Split With" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podziel z"
           }
         }
       }
@@ -7620,6 +7996,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Subskrypcja"
+          }
+        }
+      }
+    },
+    "subscription-free" : {
+      "comment" : "The Subscription row's value on the free plan",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Darmowa"
           }
         }
       }
@@ -8074,16 +8467,6 @@
         }
       }
     },
-    "This Apple Account has no Loam Pro purchase." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To Konto Apple nie ma zakupu Loam Pro."
-          }
-        }
-      }
-    },
     "This account can't sign in." : {
       "localizations" : {
         "pl" : {
@@ -8110,6 +8493,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "To konto zostało usunięte."
+          }
+        }
+      }
+    },
+    "This Apple Account has no Loam Pro purchase." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To Konto Apple nie ma zakupu Loam Pro."
           }
         }
       }
@@ -8220,6 +8613,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ten wydatek został usunięty lub nie masz już do niego dostępu."
+          }
+        }
+      }
+    },
+    "this friend" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tego znajomego"
           }
         }
       }
@@ -8474,6 +8877,218 @@
         }
       }
     },
+    "trial-length-day %lld" : {
+      "comment" : "A free trial's length, in title case for a button: 1 Day, 3 Days",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Day"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Days"
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dzień"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dni"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dni"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dnia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "trial-length-month %lld" : {
+      "comment" : "A free trial's length, in title case for a button: 1 Month, 3 Months",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Month"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Months"
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld miesiąc"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld miesiące"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld miesięcy"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld miesiąca"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "trial-length-week %lld" : {
+      "comment" : "A free trial's length, in title case for a button: 1 Week, 2 Weeks",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Week"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Weeks"
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tydzień"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tygodnie"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tygodni"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tygodnia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "trial-length-year %lld" : {
+      "comment" : "A free trial's length, in title case for a button: 1 Year, 2 Years",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Year"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Years"
+                }
+              }
+            }
+          }
+        },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld rok"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lata"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lat"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld roku"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Try Again" : {
       "localizations" : {
         "pl" : {
@@ -8644,12 +9259,12 @@
         }
       }
     },
-    "Usage analytics never include amounts, descriptions or names. Crash reports are always sent." : {
+    "Usage analytics are tied to a random account ID, never your email or name, and never include amounts or descriptions." : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dane analityczne nigdy nie zawierają kwot, opisów ani imion. Raporty o awariach są wysyłane zawsze."
+            "value" : "Dane analityczne są powiązane z losowym identyfikatorem konta, nigdy z adresem e-mail ani imieniem, i nie zawierają kwot ani opisów."
           }
         }
       }
@@ -8720,6 +9335,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Czeka na Ciebie"
+          }
+        }
+      }
+    },
+    "waiting to sync" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "czeka na synchronizację"
           }
         }
       }
@@ -8804,6 +9429,16 @@
         }
       }
     },
+    "When you open the app, how onboarding went, and actions like adding an expense, repaying or connecting a friend." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiedy otwierasz aplikację, jak przebiegło wprowadzenie oraz czynności takie jak dodanie wydatku, spłata czy połączenie ze znajomym."
+          }
+        }
+      }
+    },
     "Which one are you?" : {
       "localizations" : {
         "pl" : {
@@ -8820,16 +9455,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Który ekran?"
-          }
-        }
-      }
-    },
-    "Which screens and features you use, and short screen recordings with all text and images hidden." : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Z których ekranów i funkcji korzystasz oraz krótkie nagrania ekranu z ukrytymi tekstami i obrazami."
           }
         }
       }
@@ -8915,6 +9540,17 @@
       }
     },
     "You" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ty"
+          }
+        }
+      }
+    },
+    "you" : {
+      "comment" : "The person using the app, in a list of people",
       "localizations" : {
         "pl" : {
           "stringUnit" : {
@@ -9900,602 +10536,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Łącznie należy Ci się"
-          }
-        }
-      }
-    },
-    "a friend" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "znajomy"
-          }
-        }
-      }
-    },
-    "a participant" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "uczestnik"
-          }
-        }
-      }
-    },
-    "all of it from splits" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "całość z podziałów"
-          }
-        }
-      }
-    },
-    "billing-period-day %lld" : {
-      "comment" : "How often a plan is billed, after a price and a slash: day, 3 days",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "day"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld days"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "dzień"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dni"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dni"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dnia"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "billing-period-month %lld" : {
-      "comment" : "How often a plan is billed, after a price and a slash: month, 3 months",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "month"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld months"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "miesiąc"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld miesiące"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld miesięcy"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld miesiąca"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "billing-period-week %lld" : {
-      "comment" : "How often a plan is billed, after a price and a slash: week, 3 weeks",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "week"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld weeks"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "tydzień"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld tygodnie"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld tygodni"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld tygodnia"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "billing-period-year %lld" : {
-      "comment" : "How often a plan is billed, after a price and a slash: year, 2 years",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "year"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld years"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "rok"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld lata"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld lat"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld roku"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "incl. %@ from splits" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ z podziałów"
-          }
-        }
-      }
-    },
-    "including %@ from splits" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "w tym %@ z podziałów"
-          }
-        }
-      }
-    },
-    "of %@" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "z %@"
-          }
-        }
-      }
-    },
-    "on" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "dnia"
-          }
-        }
-      }
-    },
-    "plan-monthly" : {
-      "comment" : "A plan's name on the paywall's plan switch",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Monthly"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Miesięczny"
-          }
-        }
-      }
-    },
-    "plan-yearly" : {
-      "comment" : "A plan's name on the paywall's plan switch",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Yearly"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Roczny"
-          }
-        }
-      }
-    },
-    "recurring" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cykliczny"
-          }
-        }
-      }
-    },
-    "someone" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ktoś"
-          }
-        }
-      }
-    },
-    "subscription-free" : {
-      "comment" : "The Subscription row's value on the free plan",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Free"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Darmowa"
-          }
-        }
-      }
-    },
-    "this friend" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "tego znajomego"
-          }
-        }
-      }
-    },
-    "trial-length-day %lld" : {
-      "comment" : "A free trial's length, in title case for a button: 1 Day, 3 Days",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Day"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Days"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dzień"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dni"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dni"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dnia"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "trial-length-month %lld" : {
-      "comment" : "A free trial's length, in title case for a button: 1 Month, 3 Months",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Month"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Months"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld miesiąc"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld miesiące"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld miesięcy"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld miesiąca"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "trial-length-week %lld" : {
-      "comment" : "A free trial's length, in title case for a button: 1 Week, 2 Weeks",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Week"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Weeks"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld tydzień"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld tygodnie"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld tygodni"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld tygodnia"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "trial-length-year %lld" : {
-      "comment" : "A free trial's length, in title case for a button: 1 Year, 2 Years",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Year"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Years"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld rok"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld lata"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld lat"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld roku"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "waiting to sync" : {
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "czeka na synchronizację"
-          }
-        }
-      }
-    },
-    "you" : {
-      "comment" : "The person using the app, in a list of people",
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ty"
           }
         }
       }
