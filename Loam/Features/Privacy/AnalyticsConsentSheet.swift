@@ -26,9 +26,12 @@ struct AnalyticsConsentSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 point("checkmark.circle.fill", .green, "When you open the app, how onboarding went, and actions like adding an expense, repaying or connecting a friend.")
                 point("xmark.circle.fill", .red, "Never amounts, descriptions, notes, names or photos.")
-                point("slider.horizontal.3", .secondary, "Change your mind any time in Profile under Privacy. Crash reports are always sent.")
+                point("slider.horizontal.3", .secondary, "Change your mind any time in Settings. Crash reports (device model, iOS and app version, never your expenses) are sent unless you turn them off there.")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            Link("Read the privacy policy", destination: LegalPages.privacyPolicy)
+                .font(.subheadline)
 
             Spacer(minLength: 0)
 

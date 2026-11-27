@@ -30,8 +30,8 @@ People who leave before sign-in or decline analytics are not counted.
 
 ## Sentry (crashes and errors)
 
-Every TestFlight and App Store user. Crash diagnostics (device model, iOS and app version, stack
-traces), not tied to an account (no `setUser`). No PII, no session replay.
+Every TestFlight and App Store user who has not turned crash reports off. Crash diagnostics (device model, iOS and app version, stack
+traces), not tied to an account (no `setUser`). Settings > "Send crash reports" turns them off (stored as `loam.crashReports.enabled`, on by default). No PII, no session replay.
 
 ## Dashboard
 

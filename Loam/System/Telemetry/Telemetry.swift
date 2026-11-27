@@ -8,11 +8,13 @@ import Sentry
 /// user's consent. Consent is stored per account: another account signing in on the same
 /// device starts opted out. PostHog gets the Supabase user ID, a random identifier and the only
 /// identity sent: no email, name or other person properties. Sentry gets no user at all, so
-/// crash reports are not linked to an account. See docs/data-collection.md.
+/// crash reports are not linked to an account, and Settings can turn them off. See docs/data-collection.md.
 @MainActor
 enum Telemetry {
     private static let analyticsConsentKeyPrefix = "loam.analyticsConsent."
     private static let analyticsAnsweredKeyPrefix = "loam.analyticsAnswered."
+
+    private static let crashReportsKey = "loam.crashReports.enabled"
 
     private static var postHogStarted = false
     private static var userId: String?
@@ -24,6 +26,27 @@ enum Telemetry {
         startSentry()
         #endif
         startPostHog()
+    }
+
+    /// False in Debug builds and builds without a Sentry DSN, which never report crashes.
+    static var isCrashReportingAvailable: Bool {
+        #if DEBUG
+        false
+        #else
+        infoString("SENTRY_DSN") != nil
+        #endif
+    }
+
+    /// On unless the user turned it off in Settings. Applies to every account on the device.
+    static var crashReportsEnabled: Bool {
+        UserDefaults.standard.object(forKey: crashReportsKey) as? Bool ?? true
+    }
+
+    static func setCrashReportsEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: crashReportsKey)
+        #if !DEBUG
+        if enabled { startSentry() } else { SentrySDK.close() }
+        #endif
     }
 
     /// False in builds without PostHog keys, which never send analytics.
@@ -63,7 +86,7 @@ enum Telemetry {
     }
 
     private static func startSentry() {
-        guard let dsn = infoString("SENTRY_DSN") else { return }
+        guard crashReportsEnabled, let dsn = infoString("SENTRY_DSN") else { return }
 
         SentrySDK.start { options in
             options.dsn = dsn
