@@ -17,7 +17,9 @@ final class AppServices {
     /// Replaces the friend lookup, so tests never reach the backend.
     var friendsOverride: [SplitPartnerOption]?
 
-    private init() {}
+    private init() {
+        expenseStore.onExpensesReloaded = { [balanceStore] in balanceStore.markStale() }
+    }
 
     /// The signed-in account, after the launch sign-in check has finished.
     func signedInUserId() async throws -> UUID {

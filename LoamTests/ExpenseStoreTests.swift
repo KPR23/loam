@@ -18,6 +18,29 @@ final class ExpenseStoreTests: LocalStorageTestCase {
         RecurringRuleRecord(ownerUserId: me, amountMinor: 1000, category: .transport, intervalUnit: .day, startDate: daysAgo(count))
     }
 
+    func testLoadIfNeededLoadsOnceAndRefreshStillReloads() async throws {
+        let store = ExpenseStore()
+        XCTAssertFalse(store.hasLoadedPeriod)
+        await store.loadIfNeeded(userId: me)
+        XCTAssertTrue(store.hasLoadedPeriod)
+
+        // Written behind the store's back, so only a real load can show it.
+        _ = try await LocalExpenseRepository().create(ExpenseRecord(amountMinor: 700, currency: "PLN", category: .dining, paidBy: me, createdBy: me, shares: [ExpenseShareRecord(userId: me, amountMinor: 700)]))
+        await store.loadIfNeeded(userId: me)
+        XCTAssertTrue(store.expenses.isEmpty)
+
+        await store.refresh(userId: me)
+        XCTAssertEqual(store.expenses.count, 1)
+    }
+
+    func testChangingMonthLoadsThatMonthAgain() async throws {
+        let store = ExpenseStore()
+        await store.loadIfNeeded(userId: me)
+        await store.setPeriod(.month(year: 2020, month: 1), userId: me)
+        XCTAssertTrue(store.hasLoadedPeriod)
+        XCTAssertEqual(store.period, .month(year: 2020, month: 1))
+    }
+
     func testAddingAPersonalExpenseTrimsTextAndUpdatesTheSummary() async throws {
         let store = ExpenseStore()
         try await store.addPersonal(amountMinor: 1250, currency: "PLN", category: .groceries, title: "  Weekly shop ", note: "   ", spentAt: Date(), userId: me)

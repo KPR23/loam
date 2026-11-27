@@ -17,11 +17,36 @@ final class BalanceStore: ObservableObject {
 
     private static let cacheKey = "balances"
 
+    /// Loads once per account; later visits keep what is on screen until a pull to refresh.
+    func loadIfNeeded(userId: UUID?) async {
+        guard !(hasLoaded && accountId == userId && !isStale) else { return }
+        await refresh(userId: userId)
+    }
+
+    /// A person's history as last loaded in this run, shown at once while a newer one loads.
+    func cachedHistory(with personId: UUID) -> [BalanceHistoryEntry]? { historyCache[personId] }
+    private var historyCache: [UUID: [BalanceHistoryEntry]] = [:]
+    private var staleHistoryIds: Set<UUID> = []
+    /// Set when expenses changed since the balances loaded; the next visit loads them again, with the old ones still showing.
+    private var staleEpoch = 0
+    private var loadedEpoch = 0
+    private var isStale: Bool { staleEpoch != loadedEpoch }
+
+    /// Expenses changed (an edit, an accepted share), so balances and histories are out of date.
+    func markStale() {
+        guard hasLoaded else { return }
+        staleEpoch += 1
+        staleHistoryIds = Set(historyCache.keys)
+    }
+
+    func isHistoryStale(for personId: UUID) -> Bool { staleHistoryIds.contains(personId) }
+
     func refresh(userId: UUID?) async {
         // Never show one account's balances to the next one on this device.
-        if userId != accountId { snapshot = .empty; hasLoaded = false; lastError = nil; accountId = userId }
+        if userId != accountId { snapshot = .empty; hasLoaded = false; lastError = nil; accountId = userId; historyCache = [:] }
         guard let userId else { return }
         isLoading = true
+        let epoch = staleEpoch
         // A load cancelled by leaving the tab hasn't finished, so the placeholder stays for the next one.
         defer { isLoading = false; if accountId == userId, !Task.isCancelled { hasLoaded = true } }
         // Repayments made offline go first, so the balances below include them.
@@ -31,6 +56,10 @@ final class BalanceStore: ObservableObject {
             let fetched = try await BalanceRepositoryFactory.make().fetchBalances(for: userId)
             guard accountId == userId else { return }
             snapshot = fetched; lastError = nil
+            // Only a finished load clears the flag; one cancelled by leaving the tab leaves it set.
+            // Histories can have changed whether or not the totals did, so they load again on their next visit.
+            loadedEpoch = epoch
+            staleHistoryIds = Set(historyCache.keys)
             if sync.isEnabled() { OfflineCache.save(fetched, key: Self.cacheKey, userId: userId) }
         } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
             guard accountId == userId else { return }
@@ -54,9 +83,11 @@ final class BalanceStore: ObservableObject {
         do {
             let history = try await BalanceRepositoryFactory.make().fetchHistory(for: userId, personId: personId)
             if sync.isEnabled() { OfflineCache.save(history, key: key, userId: userId) }
+            if accountId == userId { historyCache[personId] = history; staleHistoryIds.remove(personId) }
             return history
         } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
             guard let saved = OfflineCache.load([BalanceHistoryEntry].self, key: key, userId: userId) else { throw error }
+            if accountId == userId { historyCache[personId] = saved }
             return saved
         }
     }

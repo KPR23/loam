@@ -5,6 +5,8 @@ final class ActivityStore: ObservableObject {
     /// Unread events only; read ones live on in each expense's history.
     @Published private(set) var events: [ActivityEvent] = []
     @Published private(set) var isLoading = false
+    /// True once the inbox has loaded for the signed-in account; the skeleton shows only before that.
+    @Published private(set) var hasLoaded = false
     @Published private(set) var canLoadMore = false
     @Published var lastError: String? {
         // Every failure reaches the person as a toast, wherever they are in the app.
@@ -45,13 +47,20 @@ final class ActivityStore: ObservableObject {
         await refreshBadgeCount(userId: userId)
     }
 
+    /// Loads the inbox only if it hasn't been loaded for this account yet.
+    func loadIfNeeded(userId: UUID?) async {
+        guard !(hasLoaded && accountId == userId && userId != nil) else { return }
+        await refresh(userId: userId)
+    }
+
     func refresh(userId: UUID?) async {
         guard let userId else {
-            accountId = nil; events = []; foldedIds = [:]; canLoadMore = false; nextCursor = nil; lastError = nil; badgeCount = 0
+            hasLoaded = false; accountId = nil; events = []; foldedIds = [:]; canLoadMore = false; nextCursor = nil; lastError = nil; badgeCount = 0
             return
         }
         generation += 1
         let current = generation
+        if accountId != userId { hasLoaded = false }
         accountId = userId; isLoading = true; lastError = nil
         defer { if generation == current { isLoading = false } }
         let repository = ActivityRepositoryFactory.make()
@@ -59,12 +68,14 @@ final class ActivityStore: ObservableObject {
         do {
             let page = try await repository.fetchUnreadEvents(for: userId, before: nil)
             guard accountId == userId, generation == current else { return }
+            hasLoaded = true
             setEvents(page.events); nextCursor = page.nextCursor; canLoadMore = page.hasMore && page.nextCursor != nil
             if keepsCopy { OfflineCache.save(page.events, key: Self.cacheKey, userId: userId) }
         } catch where keepsCopy && Connectivity.isOfflineError(error) {
             // Offline: the inbox as last loaded; more pages come back with the connection.
             guard accountId == userId, generation == current else { return }
             if let saved = OfflineCache.load([ActivityEvent].self, key: Self.cacheKey, userId: userId) { setEvents(saved) }
+            hasLoaded = true
             nextCursor = nil; canLoadMore = false
             return
         } catch { guard accountId == userId else { return }; lastError = UserFacingError.message(for: error) }

@@ -14,6 +14,9 @@ final class ExpenseStore: ObservableObject {
     @Published private(set) var failingRecurringRules: [RecurringRuleRecord] = []
     @Published private(set) var summary: MonthSpendSummary = .zero(currency: AppPreferences.defaultCurrencyCode)
     @Published private(set) var isLoading = false
+    /// True once the active month has loaded for the signed-in account. Later visits to Expenses
+    /// show it as is; only a pull to refresh (or a change of month or account) loads it again.
+    @Published private(set) var hasLoadedPeriod = false
     @Published var lastError: String? {
         // Every failure reaches the person as a toast, wherever they are in the app.
         didSet { if let lastError { ToastCenter.shared.showError(lastError) } }
@@ -29,6 +32,8 @@ final class ExpenseStore: ObservableObject {
 
     /// `recurringId` → rule `startDate` for expenses in the active period (drives first-occurrence highlight).
     private var recurringStartDatesById: [UUID: Date] = [:]
+    /// Called whenever expenses were reloaded, so screens built on them (Balances) can catch up on their next visit.
+    var onExpensesReloaded: (@MainActor () -> Void)?
     /// Set by background writes that skipped the reload, so the list catches up once Loam is open.
     private var changedInBackground = false
 
@@ -72,6 +77,7 @@ final class ExpenseStore: ObservableObject {
     func setPeriod(_ newPeriod: DatePeriod, userId: UUID?) async {
         guard period != newPeriod else { return }
         period = newPeriod
+        hasLoadedPeriod = false
         await refresh(userId: userId)
     }
 
@@ -84,6 +90,7 @@ final class ExpenseStore: ObservableObject {
         if let year = old.year, let month = old.month, period == .month(year: year, month: month) {
             period = DatePeriod(from: now)
         }
+        hasLoadedPeriod = false
         await refresh(userId: userId)
     }
 
@@ -108,9 +115,20 @@ final class ExpenseStore: ObservableObject {
         await refresh(userId: userId)
     }
 
+    /// Loads the active month only if it hasn't been loaded yet, so switching back to Expenses keeps what is shown.
+    func loadIfNeeded(userId: UUID?) async {
+        guard !(hasLoadedPeriod && currentUserId == userId && userId != nil) else {
+            await refreshIfChangedInBackground(userId: userId)
+            return
+        }
+        await refresh(userId: userId)
+    }
+
     func refresh(userId: UUID?) async {
         changedInBackground = false
         let sameAccount = currentUserId == userId
+        if !sameAccount { hasLoadedPeriod = false }
+        let loadedPeriod = period
         // Changes waiting on Undo belong to the account that made them.
         if userId != currentUserId { stagedChanges = [:] }
         currentUserId = userId
@@ -122,17 +140,23 @@ final class ExpenseStore: ObservableObject {
             failingRecurringRules = []
             recurringStartDatesById = [:]
             summary = .zero(currency: AppPreferences.defaultCurrencyCode)
+            hasLoadedPeriod = false
             return
         }
 
         isLoading = true
         lastError = nil
-        defer { isLoading = false }
+        defer { isLoading = false; onExpensesReloaded?() }
+        // Marked loaded only once everything below has finished; leaving Expenses mid-load cancels the
+        // later requests (proposals, say), which would otherwise be skipped for good.
+        var succeeded = false
+        defer { if succeeded, !Task.isCancelled, period == loadedPeriod { hasLoadedPeriod = true } }
 
         // Changes made offline go first, so the fetch below already includes them.
         await sync.flush(userId: userId)
         guard isUsableOnline else {
             showSavedCopy(userId: userId, sameAccount: sameAccount)
+            succeeded = true
             return
         }
 
@@ -143,8 +167,10 @@ final class ExpenseStore: ObservableObject {
             summary = makeSummary(expenses, userId: userId)
             recurringStartDatesById = await loadRecurringStartDates(for: fetched)
             lastError = nil
+            succeeded = true
         } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
             showSavedCopy(userId: userId, sameAccount: sameAccount)
+            succeeded = true
             return
         } catch {
             lastError = UserFacingError.message(for: error)

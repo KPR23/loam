@@ -8,6 +8,7 @@ struct AutoAcceptExpensesToggle: View {
     @EnvironmentObject private var expenseStore: ExpenseStore
     @State private var isOn = false
     @State private var hasLoaded = false
+    @State private var loadedUserId: UUID?
     @State private var isSaving = false
     @State private var error: String?
 
@@ -29,8 +30,9 @@ struct AutoAcceptExpensesToggle: View {
     }
 
     private func load() async {
-        hasLoaded = false
-        guard let userId = authSession.userId, let client = SupabaseClientProvider.shared else { return }
+        // Reopening Profile keeps the switch as loaded; only another account loads it again.
+        if loadedUserId != authSession.userId { hasLoaded = false }
+        guard let userId = authSession.userId, !(hasLoaded && loadedUserId == userId), let client = SupabaseClientProvider.shared else { return }
         struct Row: Decodable {
             let autoAccept: Bool
             enum CodingKeys: String, CodingKey { case autoAccept = "auto_accept_expenses" }
@@ -43,6 +45,7 @@ struct AutoAcceptExpensesToggle: View {
                 .execute().value
             isOn = row.autoAccept
             hasLoaded = true
+            loadedUserId = userId
         } catch {
             // Stays disabled; reopening Profile retries.
         }

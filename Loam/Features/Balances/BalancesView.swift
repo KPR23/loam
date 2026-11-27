@@ -114,7 +114,7 @@ struct BalancesView: View {
                     }
                 }
             }
-            .task(id: authSession.userId) { await balanceStore.refresh(userId: authSession.userId) }
+            .task(id: authSession.userId) { await balanceStore.loadIfNeeded(userId: authSession.userId) }
             .refreshable { await balanceStore.refresh(userId: authSession.userId) }
             // Others accept shares and record repayments while the app is in the background.
             .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await balanceStore.refresh(userId: authSession.userId) } } }
