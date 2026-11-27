@@ -10,17 +10,14 @@ struct WalletPayment: Equatable, Codable, Sendable {
 
     /// Nil when Wallet sent no usable amount, so the caller asks the user instead of guessing.
     static func make(
-        amount: Double?,
+        amount: Decimal?,
         currencyCode: String?,
         merchant: String?,
         category: ExpenseCategory?,
         paidAt: Date
     ) throws -> WalletPayment {
         guard let amount, amount.isFinite, amount > 0 else { throw LoamIntentError.invalidAmount }
-        let code = currency(from: currencyCode)
-        // Through the string, so 12.3 stays 12.30 and never becomes 12.29999.
-        let decimal = Decimal(string: String(amount), locale: Locale(identifier: "en_US_POSIX")) ?? Decimal(amount)
-        let money = try SiriAmount.money(amount: decimal, currencyCode: code)
+        let money = try SiriAmount.money(amount: amount, currencyCode: currency(from: currencyCode))
         let merchant = merchant?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         return WalletPayment(
             money: money,

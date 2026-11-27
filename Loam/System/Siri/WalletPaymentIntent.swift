@@ -16,21 +16,23 @@ enum WalletPaymentMode: String, AppEnum {
     ]
 }
 
-/// Meant for a Shortcuts "Transaction" automation: pass the Wallet transaction's Amount, its
-/// Currency Code and the Merchant into this action, and turn on Run Immediately.
+/// Meant for a Shortcuts Wallet automation ("When card is tapped" on iOS 27, the Transaction
+/// automation before): pass the transaction's Amount and Merchant into this action. The Amount
+/// is a currency amount, so it carries its own currency.
 struct LogWalletPaymentIntent: AppIntent {
     static var title: LocalizedStringResource = "Log Wallet Payment"
     static var description = IntentDescription(
-        "Adds a card payment to Loam as a personal expense. Use it in a Transaction automation and pass in the transaction's amount, currency code and merchant."
+        "Adds a card payment to Loam as a personal expense. Use it in a Wallet card-tap automation and pass in the transaction's amount and merchant."
     )
     // Apple Pay often runs while the iPhone is still locked. This only adds an expense and
     // reads nothing back, so it doesn't need the device or App Lock unlocked.
     static var authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
 
     @Parameter(title: "Amount")
-    var amount: Double?
+    var amount: IntentCurrencyAmount?
 
-    @Parameter(title: "Currency Code")
+    /// Only for an amount passed as a plain number; a currency amount's own code wins.
+    @Parameter(title: "Currency Code", description: "Leave empty. Used only when the amount has no currency.")
     var currencyCode: String?
 
     @Parameter(title: "Merchant")
@@ -43,9 +45,10 @@ struct LogWalletPaymentIntent: AppIntent {
     var mode: WalletPaymentMode
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Log \(\.$amount) \(\.$currencyCode) at \(\.$merchant)") {
+        Summary("Log \(\.$amount) at \(\.$merchant)") {
             \.$mode
             \.$category
+            \.$currencyCode
         }
     }
 
@@ -56,14 +59,14 @@ struct LogWalletPaymentIntent: AppIntent {
         let notifier = WalletPaymentNotifier.shared
 
         // A refund arrives as a negative amount; it isn't an expense.
-        if let amount, amount < 0 {
+        if let amount, amount.amount < 0 {
             return .result(dialog: "\(WalletPaymentText.refundSkipped)")
         }
         let payment: WalletPayment
         do {
             payment = try WalletPayment.make(
-                amount: amount,
-                currencyCode: currencyCode,
+                amount: amount?.amount,
+                currencyCode: Self.currency(of: amount, fallback: currencyCode),
                 merchant: merchant,
                 category: category,
                 paidAt: Date()
@@ -87,6 +90,12 @@ struct LogWalletPaymentIntent: AppIntent {
         let id = try await Self.save(payment, userId: userId)
         await notifier.postAdded(payment, expenseId: id, userId: userId)
         return .result(dialog: "\(WalletPaymentText.dialogAdded(payment))")
+    }
+
+    /// The amount's own currency, else the one typed in the action, else the default.
+    static func currency(of amount: IntentCurrencyAmount?, fallback: String?) -> String? {
+        let own = amount?.currencyCode.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return own.isEmpty ? fallback : own
     }
 
     @MainActor

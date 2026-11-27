@@ -1842,12 +1842,12 @@
         }
       }
     },
-    "Adds a card payment to Loam as a personal expense. Use it in a Transaction automation and pass in the transaction's amount, currency code and merchant." : {
+    "Adds a card payment to Loam as a personal expense. Use it in a Wallet card-tap automation and pass in the transaction's amount and merchant." : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dodaje płatność kartą do Loam jako wydatek osobisty. Użyj tego w automatyzacji Transakcja i przekaż kwotę, kod waluty i sprzedawcę."
+            "value" : "Dodaje płatność kartą do Loam jako wydatek osobisty. Użyj tego w automatyzacji zbliżenia karty w Portfelu i przekaż kwotę transakcji oraz sprzedawcę."
           }
         }
       }
@@ -4930,6 +4930,16 @@
         }
       }
     },
+    "Leave empty. Used only when the amount has no currency." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zostaw puste. Używane tylko, gdy kwota nie ma waluty."
+          }
+        }
+      }
+    },
     "Leave empty to guess from the merchant." : {
       "localizations" : {
         "pl" : {
@@ -5160,12 +5170,12 @@
         }
       }
     },
-    "Log ${amount} ${currencyCode} at ${merchant}" : {
+    "Log ${amount} at ${merchant}" : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zapisz ${amount} ${currencyCode} – ${merchant}"
+            "value" : "Zapisz ${amount} – ${merchant}"
           }
         }
       }
