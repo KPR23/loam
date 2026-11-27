@@ -147,12 +147,16 @@ final class ExpenseStore: ObservableObject {
         isLoading = true
         lastError = nil
         defer { isLoading = false; onExpensesReloaded?() }
+        // Marked loaded only once everything below has finished; leaving Expenses mid-load cancels the
+        // later requests (proposals, say), which would otherwise be skipped for good.
+        var succeeded = false
+        defer { if succeeded, !Task.isCancelled, period == loadedPeriod { hasLoadedPeriod = true } }
 
         // Changes made offline go first, so the fetch below already includes them.
         await sync.flush(userId: userId)
         guard isUsableOnline else {
             showSavedCopy(userId: userId, sameAccount: sameAccount)
-            hasLoadedPeriod = period == loadedPeriod
+            succeeded = true
             return
         }
 
@@ -163,10 +167,10 @@ final class ExpenseStore: ObservableObject {
             summary = makeSummary(expenses, userId: userId)
             recurringStartDatesById = await loadRecurringStartDates(for: fetched)
             lastError = nil
-            hasLoadedPeriod = period == loadedPeriod
+            succeeded = true
         } catch where sync.isEnabled() && Connectivity.isOfflineError(error) {
             showSavedCopy(userId: userId, sameAccount: sameAccount)
-            hasLoadedPeriod = period == loadedPeriod
+            succeeded = true
             return
         } catch {
             lastError = UserFacingError.message(for: error)
