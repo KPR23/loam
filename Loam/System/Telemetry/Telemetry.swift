@@ -6,8 +6,9 @@ import Sentry
 /// build. PostHog analytics run only in App Store builds, which alone carry PostHog keys,
 /// and only for a signed-in user who opted in, so nothing reaches PostHog without that
 /// user's consent. Consent is stored per account: another account signing in on the same
-/// device starts opted out. Both tools share the Supabase user ID, a random identifier and
-/// the only identity sent: no email, name or other person properties. See docs/data-collection.md.
+/// device starts opted out. PostHog gets the Supabase user ID, a random identifier and the only
+/// identity sent: no email, name or other person properties. Sentry gets no user at all, so
+/// crash reports are not linked to an account. See docs/data-collection.md.
 @MainActor
 enum Telemetry {
     private static let analyticsConsentKeyPrefix = "loam.analyticsConsent."
@@ -34,7 +35,6 @@ enum Telemetry {
     static func setUser(_ id: UUID?) {
         // Supabase stores UUIDs in lowercase; match it so IDs can be looked up in the database.
         userId = id.map(normalizedId)
-        SentrySDK.setUser(userId.map { Sentry.User(userId: $0) })
         applyAnalyticsConsent()
     }
 
